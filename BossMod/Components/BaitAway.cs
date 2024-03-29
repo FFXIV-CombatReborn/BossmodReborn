@@ -188,6 +188,7 @@ namespace BossMod.Components
     public class BaitAwayCast : GenericBaitAway
     {
         public AOEShape Shape;
+        public bool EndsOnCastEvent;
 
         public BaitAwayCast(ActionID aid, AOEShape shape, bool centerAtTarget = false) : base(aid, centerAtTarget: centerAtTarget)
         {
@@ -202,7 +203,13 @@ namespace BossMod.Components
 
         public override void OnCastFinished(BossModule module, Actor caster, ActorCastInfo spell)
         {
-            if (spell.Action == WatchedAction)
+            if (spell.Action == WatchedAction && !EndsOnCastEvent)
+                CurrentBaits.RemoveAll(b => b.Source == caster);
+        }
+
+        public override void OnEventCast(BossModule module, Actor caster, ActorCastEvent spell)
+        {
+            if (spell.Action == WatchedAction && EndsOnCastEvent)
                 CurrentBaits.RemoveAll(b => b.Source == caster);
         }
     }

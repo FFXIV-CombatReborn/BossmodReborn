@@ -35,7 +35,7 @@ namespace BossMod.Shadowbringers.Dungeon.D03QitanaRavel.D032Batsquatch
         public Subsonics() : base(ActionID.MakeSpell(AID.Subsonics), "Raidwide x11") { }
     }
 
-    class RipperFang : Components.SingleTargetCast
+    class RipperFang : Components.SingleTargetDelayableCast
     {
         public RipperFang() : base(ActionID.MakeSpell(AID.RipperFang)) { }
     }

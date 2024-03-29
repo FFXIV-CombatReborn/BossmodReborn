@@ -49,7 +49,7 @@ namespace BossMod.Stormblood.TreasureHunt.ShiftingAltarsOfUznair.AltarAiravata
         public BarbarousScream() : base(ActionID.MakeSpell(AID.BarbarousScream), new AOEShapeCircle(13)) { }
     }
 
-    class Huff : Components.SingleTargetCast
+    class Huff : Components.SingleTargetDelayableCast
     {
         public Huff() : base(ActionID.MakeSpell(AID.Huff)) { }
     }

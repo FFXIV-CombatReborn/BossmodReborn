@@ -36,7 +36,7 @@ namespace BossMod.Shadowbringers.Dungeon.D01Holminser.D012TesleentheForgiven
         Stackmarker = 62, // player
     };
 
-    class TheTickler : Components.SingleTargetCast
+    class TheTickler : Components.SingleTargetDelayableCast
     {
         public TheTickler() : base(ActionID.MakeSpell(AID.TheTickler)) { }
     }
@@ -48,8 +48,6 @@ namespace BossMod.Shadowbringers.Dungeon.D01Holminser.D012TesleentheForgiven
 
     class FeveredFlagellation : Components.GenericBaitAway
     {
-        private static readonly AOEShapeRect rect = new AOEShapeRect(0, 2);
-
         public override void Update(BossModule module)
         {
             foreach (var b in CurrentBaits)
@@ -64,14 +62,9 @@ namespace BossMod.Shadowbringers.Dungeon.D01Holminser.D012TesleentheForgiven
 
         public override void OnEventIcon(BossModule module, Actor actor, uint iconID)
         {
-            if (iconID == (uint)IconID.Icon1)
-                CurrentBaits.Add(new(module.PrimaryActor, actor, rect));
-            if (iconID == (uint)IconID.Icon2)
-                CurrentBaits.Add(new(module.PrimaryActor, actor, rect));
-            if (iconID == (uint)IconID.Icon3)
-                CurrentBaits.Add(new(module.PrimaryActor, actor, rect));
-            if (iconID == (uint)IconID.Icon4)
-                CurrentBaits.Add(new(module.PrimaryActor, actor, rect));
+            var icon = (IconID)iconID;
+            if (icon >= IconID.Icon1 && icon <= IconID.Icon4)
+                CurrentBaits.Add(new(module.PrimaryActor, actor, new AOEShapeRect(0, 2)));
         }
     }
 
