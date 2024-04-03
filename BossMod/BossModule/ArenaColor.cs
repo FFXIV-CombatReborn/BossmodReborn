@@ -5,7 +5,7 @@ public static class ArenaColor
 {
     public const uint Background = 0xFF0f0f0f;
     public const uint Border = 0xffffffff;
-    public const uint AOE = 0xff00ffff; 
+    public const uint AOE = 0xDD00ffff; 
     public const uint SafeFromAOE = 0xff00ff00;
     public const uint Danger = 0xff00A5ff;
     public const uint Safe = 0xff00ff00;
