@@ -3,11 +3,11 @@
 // common color constants (ABGR)
 public static class ArenaColor
 {
-    public const uint Background = 0xc00f0f0f;
+    public const uint Background = 0xFF0f0f0f;
     public const uint Border = 0xffffffff;
-    public const uint AOE = 0x80008080;
-    public const uint SafeFromAOE = 0x80008000;
-    public const uint Danger = 0xff00ffff;
+    public const uint AOE = 0xff00ffff; 
+    public const uint SafeFromAOE = 0xff00ff00;
+    public const uint Danger = 0xff00A5ff;
     public const uint Safe = 0xff00ff00;
     public const uint PC = 0xff00ff00;
     public const uint Enemy = 0xff0000ff;
