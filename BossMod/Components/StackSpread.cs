@@ -167,41 +167,44 @@ public abstract class GenericStackSpread(BossModule module, bool alwaysShowSprea
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        // forbid standing next to spread markers
-        // TODO: think how to improve this, current implementation works, but isn't particularly good - e.g. nearby players tend to move to same spot, turn around, etc.
-        // ideally we should provide per-mechanic spread spots, but for simple cases we should try to let melee spread close and healers/rdd spread far from main target...
-        foreach (var spreadFrom in ActiveSpreads.Where(s => s.Target != actor))
-            hints.AddForbiddenZone(ShapeDistance.Circle(spreadFrom.Target.Position.Quantized(), spreadFrom.Radius + ExtraAISpreadThreshold), spreadFrom.Activation);
-        foreach (var spreadFrom in ActiveSpreads.Where(s => s.Target == actor))
-            foreach (var x in Raid.WithoutSlot())
-                if (!ActiveSpreads.Any(s => s.Target == x))
-                    hints.AddForbiddenZone(ShapeDistance.Circle(x.Position.Quantized(), spreadFrom.Radius + ExtraAISpreadThreshold), spreadFrom.Activation);
-        foreach (var avoid in ActiveStacks.Where(s => s.Target != actor && (s.ForbiddenPlayers[slot] || !s.IsInside(actor) && (s.CorrectAmountInside(Module) || s.TooManyInside(Module)) || s.IsInside(actor) && s.TooManyInside(Module))))
-            hints.AddForbiddenZone(ShapeDistance.Circle(avoid.Target.Position.Quantized(), avoid.Radius), avoid.Activation);
-
-        if (Stacks.FirstOrDefault(s => s.Target == actor) is var actorStack && actorStack.Target != null)
+        if (Module.Info == null || !Module.Info.MultiboxSupport)
         {
-            // forbid standing next to other stack markers or overlapping them
-            foreach (var stackWith in ActiveStacks.Where(s => s.Target != actor))
-                hints.AddForbiddenZone(ShapeDistance.Circle(stackWith.Target.Position.Quantized(), stackWith.Radius * 2), stackWith.Activation);
-            // if player got stackmarker and is playing with NPCs, go to a NPC to stack with them since they will likely not come to you
-            if (Raid.WithoutSlot().Any(x => x.Type == ActorType.Buddy))
+            // forbid standing next to spread markers
+            // TODO: think how to improve this, current implementation works, but isn't particularly good - e.g. nearby players tend to move to same spot, turn around, etc.
+            // ideally we should provide per-mechanic spread spots, but for simple cases we should try to let melee spread close and healers/rdd spread far from main target...
+            foreach (var spreadFrom in ActiveSpreads.Where(s => s.Target != actor))
+                hints.AddForbiddenZone(ShapeDistance.Circle(spreadFrom.Target.Position.Quantized(), spreadFrom.Radius + ExtraAISpreadThreshold), spreadFrom.Activation);
+            foreach (var spreadFrom in ActiveSpreads.Where(s => s.Target == actor))
+                foreach (var x in Raid.WithoutSlot())
+                    if (!ActiveSpreads.Any(s => s.Target == x))
+                        hints.AddForbiddenZone(ShapeDistance.Circle(x.Position.Quantized(), spreadFrom.Radius + ExtraAISpreadThreshold), spreadFrom.Activation);
+            foreach (var avoid in ActiveStacks.Where(s => s.Target != actor && (s.ForbiddenPlayers[slot] || !s.IsInside(actor) && (s.CorrectAmountInside(Module) || s.TooManyInside(Module)) || s.IsInside(actor) && s.TooManyInside(Module))))
+                hints.AddForbiddenZone(ShapeDistance.Circle(avoid.Target.Position.Quantized(), avoid.Radius), avoid.Activation);
+
+            if (Stacks.FirstOrDefault(s => s.Target == actor) is var actorStack && actorStack.Target != null)
+            {
+                // forbid standing next to other stack markers or overlapping them
+                foreach (var stackWith in ActiveStacks.Where(s => s.Target != actor))
+                    hints.AddForbiddenZone(ShapeDistance.Circle(stackWith.Target.Position.Quantized(), stackWith.Radius * 2), stackWith.Activation);
+                // if player got stackmarker and is playing with NPCs, go to a NPC to stack with them since they will likely not come to you
+                if (Raid.WithoutSlot().Any(x => x.Type == ActorType.Buddy))
+                {
+                    var forbidden = new List<Func<WPos, float>>();
+                    foreach (var stackWith in ActiveStacks.Where(s => s.Target == actor))
+                        forbidden.Add(ShapeDistance.InvertedCircle(Raid.WithoutSlot().FirstOrDefault(x => !x.IsDead && !IsSpreadTarget(x) && !IsStackTarget(x))!.Position, actorStack.Radius * 0.33f));
+                    if (forbidden.Count > 0)
+                        hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), actorStack.Activation);
+                }
+            }
+            else if (!IsSpreadTarget(actor) && !IsStackTarget(actor))
             {
                 var forbidden = new List<Func<WPos, float>>();
-                foreach (var stackWith in ActiveStacks.Where(s => s.Target == actor))
-                    forbidden.Add(ShapeDistance.InvertedCircle(Raid.WithoutSlot().FirstOrDefault(x => !x.IsDead && !IsSpreadTarget(x) && !IsStackTarget(x))!.Position, actorStack.Radius * 0.33f));
+                foreach (var s in ActiveStacks.Where(x => !x.ForbiddenPlayers[slot] && (x.IsInside(actor) && !x.TooManyInside(Module)
+                || !x.IsInside(actor) && x.InsufficientAmountInside(Module))))
+                    forbidden.Add(ShapeDistance.InvertedCircle(s.Target.Position.Quantized(), s.Radius - 0.25f));
                 if (forbidden.Count > 0)
-                    hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), actorStack.Activation);
+                    hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), ActiveStacks.FirstOrDefault().Activation);
             }
-        }
-        else if (!IsSpreadTarget(actor) && !IsStackTarget(actor))
-        {
-            var forbidden = new List<Func<WPos, float>>();
-            foreach (var s in ActiveStacks.Where(x => !x.ForbiddenPlayers[slot] && (x.IsInside(actor) && !x.TooManyInside(Module)
-            || !x.IsInside(actor) && x.InsufficientAmountInside(Module))))
-                forbidden.Add(ShapeDistance.InvertedCircle(s.Target.Position.Quantized(), s.Radius - 0.25f));
-            if (forbidden.Count > 0)
-                hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), ActiveStacks.FirstOrDefault().Activation);
         }
 
         if (RaidwideOnResolve)
@@ -605,6 +608,11 @@ public abstract class GenericBaitStack(BossModule module, uint aid = default, bo
             var angle = Angle.FromDirection(b.Target.Position - origin);
             if (b.Target != actor && !isBaitTarget)
             {
+                if (Module.Info != null && Module.Info.MultiboxSupport)
+                {
+                    continue;
+                }
+
                 if (!b.Forbidden[slot])
                 {
                     forbiddenInverted.Add(b.Shape.InvertedDistance(origin, angle));
