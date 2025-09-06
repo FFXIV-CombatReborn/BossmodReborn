@@ -167,7 +167,7 @@ public abstract class GenericStackSpread(BossModule module, bool alwaysShowSprea
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (Module.Info == null || !Module.Info.MultiboxSupport)
+        if (Module.Info == null || !(Module.Info.MultiboxSupport && Service.Config.Get<BossMod.AI.AIConfig>().MultiboxMode))
         {
             // forbid standing next to spread markers
             // TODO: think how to improve this, current implementation works, but isn't particularly good - e.g. nearby players tend to move to same spot, turn around, etc.
@@ -608,7 +608,7 @@ public abstract class GenericBaitStack(BossModule module, uint aid = default, bo
             var angle = Angle.FromDirection(b.Target.Position - origin);
             if (b.Target != actor && !isBaitTarget)
             {
-                if (Module.Info != null && Module.Info.MultiboxSupport)
+                if (Module.Info != null && Module.Info.MultiboxSupport && Service.Config.Get<BossMod.AI.AIConfig>().MultiboxMode)
                 {
                     continue;
                 }

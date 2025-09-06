@@ -183,7 +183,7 @@ public class GenericBaitAway(BossModule module, uint aid = default, bool alwaysD
             ref var bait = ref baits[i];
             if (bait.Target != actor)
             {
-                if (Module.Info != null && Module.Info.MultiboxSupport)
+                if (Module.Info != null && Module.Info.MultiboxSupport && Service.Config.Get<BossMod.AI.AIConfig>().MultiboxMode)
                 {
                     continue;
                 }
@@ -219,7 +219,7 @@ public class GenericBaitAway(BossModule module, uint aid = default, bool alwaysD
             {
                 continue;
             }
-            if (Module.Info != null && Module.Info.MultiboxSupport)
+            if (Module.Info != null && Module.Info.MultiboxSupport && Service.Config.Get<BossMod.AI.AIConfig>().MultiboxMode)
             {
                 continue;
             }
