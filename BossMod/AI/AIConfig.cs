@@ -69,6 +69,8 @@ sealed class AIConfig : ConfigNode
 
     [PropertyDisplay("Idle while mounted")]
     public bool ForbidAIMovementMounted = false;
+    [PropertyDisplay("Multiboxing mode: use party roles config to better support multiboxing.")]
+    public bool MultiboxMode = false;
 
     [PropertyDisplay("Echo slash commands to chat")]
     public bool EchoToChat = true;
