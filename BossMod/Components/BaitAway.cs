@@ -185,6 +185,10 @@ public class GenericBaitAway(BossModule module, uint aid = default, bool alwaysD
             ref var bait = ref baits[i];
             if (bait.Target != actor)
             {
+                if (Module.Info != null && Module.Info.MultiboxSupport && Service.Config.Get<BossMod.AI.AIConfig>().MultiboxMode)
+                {
+                    continue;
+                }
                 hints.AddForbiddenZone(bait.Shape, BaitOrigin(ref bait), bait.Rotation, bait.Activation);
             }
             else
@@ -214,6 +218,10 @@ public class GenericBaitAway(BossModule module, uint aid = default, bool alwaysD
         {
             var a = raid[i];
             if (a == actor)
+            {
+                continue;
+            }
+            if (Module.Info != null && Module.Info.MultiboxSupport && Service.Config.Get<BossMod.AI.AIConfig>().MultiboxMode)
             {
                 continue;
             }

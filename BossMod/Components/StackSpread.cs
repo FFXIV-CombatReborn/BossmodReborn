@@ -284,133 +284,137 @@ public abstract class GenericStackSpread(BossModule module, bool alwaysShowSprea
         // ideally we should provide per-mechanic spread spots, but for simple cases we should try to let melee spread close and healers/rdd spread far from main target...
 
         var spreads = CollectionsMarshal.AsSpan(ActiveSpreads);
-        var lenSpreads = spreads.Length;
-        var isSpreadTarget = false;
-
-        for (var i = 0; i < lenSpreads; ++i)
-        {
-            ref var s = ref spreads[i];
-            var t = s.Target;
-            if (t != actor)
-            {
-                hints.AddForbiddenZone(new SDCircle(t.Position.Quantized(), s.Radius + ExtraAISpreadThreshold), s.Activation);
-            }
-            else
-            {
-                isSpreadTarget = true;
-
-                var partyWOS = Raid.WithoutSlot();
-                var lenPWOS = partyWOS.Length;
-                var radius = s.Radius;
-                var act = s.Activation;
-                for (var j = 0; j < lenPWOS; ++j)
-                {
-                    var p = partyWOS[j];
-
-                    for (var k = 0; k < lenSpreads; ++k)
-                    {
-                        if (spreads[k].Target == p)
-                        {
-                            goto done; // no need to add avoid hints for players who are also spread targets
-                        }
-                    }
-
-                    hints.AddForbiddenZone(new SDCircle(p.Position.Quantized(), radius + ExtraAISpreadThreshold), act);
-                done:
-                    ;
-                }
-            }
-        }
-
         var stacks = CollectionsMarshal.AsSpan(ActiveStacks);
-        var lenStacks = stacks.Length;
-        var isStackTarget = false;
 
-        for (var i = 0; i < lenStacks; ++i)
+        if (Module.Info == null || !(Module.Info.MultiboxSupport && Service.Config.Get<AI.AIConfig>().MultiboxMode))
         {
-            ref var s = ref stacks[i];
-            var t = s.Target;
-            if (s.Target == actor)
+            var lenSpreads = spreads.Length;
+            var isSpreadTarget = false;
+
+            for (var i = 0; i < lenSpreads; ++i)
             {
-                isStackTarget = true;
-                var partyWOS = Raid.WithSlot();
-                var lenPWOS = partyWOS.Length;
-                var radius = s.Radius;
-                var act = s.Activation;
-                for (var j = 0; j < lenPWOS; ++j) // if player got stackmarker we should try finding a good candidate to stack with
+                ref var s = ref spreads[i];
+                var t = s.Target;
+                if (t != actor)
                 {
-                    ref var p = ref partyWOS[j];
-                    var a = p.Item2;
-                    if (t != a)
+                    hints.AddForbiddenZone(new SDCircle(t.Position.Quantized(), s.Radius + ExtraAISpreadThreshold), s.Activation);
+                }
+                else
+                {
+                    isSpreadTarget = true;
+
+                    var partyWOS = Raid.WithoutSlot();
+                    var lenPWOS = partyWOS.Length;
+                    var radius = s.Radius;
+                    var act = s.Activation;
+                    for (var j = 0; j < lenPWOS; ++j)
                     {
-                        if (s.ForbiddenPlayers[p.Item1]) // party member is forbidden from stacking
-                        {
-                            continue;
-                        }
+                        var p = partyWOS[j];
+
                         for (var k = 0; k < lenSpreads; ++k)
                         {
-                            if (spreads[k].Target == a)
+                            if (spreads[k].Target == p)
                             {
-                                goto done; // player got a spread marker
+                                goto done; // no need to add avoid hints for players who are also spread targets
                             }
                         }
-                        for (var k = 0; k < lenStacks; ++k)
-                        {
-                            if (stacks[k].Target == a)
-                            {
-                                goto done; // player got a stack marker and we don't want to stack stacks
-                            }
-                        }
-                        // buddy is not target of stacks or spreads, so a good candidate
-                        hints.AddForbiddenZone(new SDInvertedCircle(a.Position, radius * 0.5f), act);
-                        break;
+
+                        hints.AddForbiddenZone(new SDCircle(p.Position.Quantized(), radius + ExtraAISpreadThreshold), act);
                     done:
                         ;
                     }
                 }
             }
-        }
 
-        var stacksIFz = new List<ShapeDistance>();
-        for (var i = 0; i < lenStacks; ++i)
-        {
-            ref var s = ref stacks[i];
-            var t = s.Target;
-            var targetPos = t.Position.Quantized();
-            var act = s.Activation;
-            var radius = s.Radius;
-            if (s.Target != actor)
-            {
-                if (s.ForbiddenPlayers[slot])
-                {
-                    goto addfz;
-                }
-                var numInside = s.NumInside(Module);
-                var isInside = s.IsInside(actor);
-                var max = s.MaxSize;
-                if (!isSpreadTarget && (!isInside && numInside < max || isInside && numInside <= max))  // don't try to stack if spread target
-                {
-                    stacksIFz.Add(new SDInvertedCircle(targetPos, radius));
-                    continue;
-                }
-            addfz:
-                // avoid stack if forbidden or enough players inside
-                // double radius if stack target to prevent standing next to other stack markers or overlapping them
-                hints.AddForbiddenZone(new SDCircle(targetPos, !isStackTarget ? radius : 2f * radius), act);
-            }
-        }
+            var lenStacks = stacks.Length;
+            var isStackTarget = false;
 
-        var countIFz = stacksIFz.Count;
-        if (countIFz > 0)
-        {
-            var act = stacks[0].Activation;
-            if (countIFz == 1)
+            for (var i = 0; i < lenStacks; ++i)
             {
-                hints.AddForbiddenZone(stacksIFz[0], act);
+                ref var s = ref stacks[i];
+                var t = s.Target;
+                if (s.Target == actor)
+                {
+                    isStackTarget = true;
+                    var partyWOS = Raid.WithSlot();
+                    var lenPWOS = partyWOS.Length;
+                    var radius = s.Radius;
+                    var act = s.Activation;
+                    for (var j = 0; j < lenPWOS; ++j) // if player got stackmarker we should try finding a good candidate to stack with
+                    {
+                        ref var p = ref partyWOS[j];
+                        var a = p.Item2;
+                        if (t != a)
+                        {
+                            if (s.ForbiddenPlayers[p.Item1]) // party member is forbidden from stacking
+                            {
+                                continue;
+                            }
+                            for (var k = 0; k < lenSpreads; ++k)
+                            {
+                                if (spreads[k].Target == a)
+                                {
+                                    goto done; // player got a spread marker
+                                }
+                            }
+                            for (var k = 0; k < lenStacks; ++k)
+                            {
+                                if (stacks[k].Target == a)
+                                {
+                                    goto done; // player got a stack marker and we don't want to stack stacks
+                                }
+                            }
+                            // buddy is not target of stacks or spreads, so a good candidate
+                            hints.AddForbiddenZone(new SDInvertedCircle(a.Position, radius * 0.5f), act);
+                            break;
+                        done:
+                            ;
+                        }
+                    }
+                }
             }
-            else
+
+            var stacksIFz = new List<ShapeDistance>();
+            for (var i = 0; i < lenStacks; ++i)
             {
-                hints.AddForbiddenZone(new SDOutsideOfUnion([.. stacksIFz]), act);
+                ref var s = ref stacks[i];
+                var t = s.Target;
+                var targetPos = t.Position.Quantized();
+                var act = s.Activation;
+                var radius = s.Radius;
+                if (s.Target != actor)
+                {
+                    if (s.ForbiddenPlayers[slot])
+                    {
+                        goto addfz;
+                    }
+                    var numInside = s.NumInside(Module);
+                    var isInside = s.IsInside(actor);
+                    var max = s.MaxSize;
+                    if (!isSpreadTarget && (!isInside && numInside < max || isInside && numInside <= max))  // don't try to stack if spread target
+                    {
+                        stacksIFz.Add(new SDInvertedCircle(targetPos, radius));
+                        continue;
+                    }
+                addfz:
+                    // avoid stack if forbidden or enough players inside
+                    // double radius if stack target to prevent standing next to other stack markers or overlapping them
+                    hints.AddForbiddenZone(new SDCircle(targetPos, !isStackTarget ? radius : 2f * radius), act);
+                }
+            }
+
+            var countIFz = stacksIFz.Count;
+            if (countIFz > 0)
+            {
+                var act = stacks[0].Activation;
+                if (countIFz == 1)
+                {
+                    hints.AddForbiddenZone(stacksIFz[0], act);
+                }
+                else
+                {
+                    hints.AddForbiddenZone(new SDOutsideOfUnion([.. stacksIFz]), act);
+                }
             }
         }
 
@@ -819,6 +823,11 @@ public abstract class GenericBaitStack(BossModule module, uint aid = default, bo
             var angle = Angle.FromDirection(b.Target.Position - origin);
             if (b.Target != actor && !isBaitTarget)
             {
+                if (Module.Info != null && Module.Info.MultiboxSupport && Service.Config.Get<BossMod.AI.AIConfig>().MultiboxMode)
+                {
+                    continue;
+                }
+
                 if (!b.Forbidden[slot])
                 {
                     forbiddenInverted.Add(b.Shape.InvertedDistance(origin, angle));
