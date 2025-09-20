@@ -282,9 +282,12 @@ public abstract class GenericStackSpread(BossModule module, bool alwaysShowSprea
         // forbid standing next to spread markers
         // TODO: think how to improve this, current implementation works, but isn't particularly good - e.g. nearby players tend to move to same spot, turn around, etc.
         // ideally we should provide per-mechanic spread spots, but for simple cases we should try to let melee spread close and healers/rdd spread far from main target...
-        if (Module.Info == null || !(Module.Info.MultiboxSupport && Service.Config.Get<BossMod.AI.AIConfig>().MultiboxMode))
+
+        var spreads = CollectionsMarshal.AsSpan(ActiveSpreads);
+        var stacks = CollectionsMarshal.AsSpan(ActiveStacks);
+
+        if (Module.Info == null || !(Module.Info.MultiboxSupport && Service.Config.Get<AI.AIConfig>().MultiboxMode))
         {
-            var spreads = CollectionsMarshal.AsSpan(ActiveSpreads);
             var lenSpreads = spreads.Length;
             var isSpreadTarget = false;
 
@@ -323,7 +326,6 @@ public abstract class GenericStackSpread(BossModule module, bool alwaysShowSprea
                 }
             }
 
-            var stacks = CollectionsMarshal.AsSpan(ActiveStacks);
             var lenStacks = stacks.Length;
             var isStackTarget = false;
 
