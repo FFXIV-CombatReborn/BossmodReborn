@@ -13,7 +13,7 @@ sealed class WildfireWard(BossModule module) : Components.SimpleKnockbacks(modul
             {
                 var x = (int)c.Origin.X;
                 var pos = x == -777 ? south : x == -726 ? east : west;
-                hints.AddForbiddenZone(ShapeDistance.InvertedRect(pos, c.Direction + 90f.Degrees(), 2f, 1f, 1f), act);
+                hints.AddForbiddenZone(new SDInvertedRect(pos, c.Direction + 90f.Degrees(), 2f, 1f, 1f), act);
             }
         }
     }

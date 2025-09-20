@@ -76,5 +76,6 @@ class D031LozatlStates : StateMachineBuilder
 public class D031Lozatl(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     public static readonly WPos ArenaCenter = new(default, 315f);
-    private static readonly ArenaBoundsCustom arena = new([new Polygon(ArenaCenter, 19.5f * CosPI.Pi40th, 40)], [new Rectangle(new(default, 335.1f), 20f, 2f), new Rectangle(new(default, 294.5f), 20f, 2f)]);
+    private static readonly ArenaBoundsCustom arena = new([new Polygon(ArenaCenter, 19.5f * CosPI.Pi40th, 40)],
+    [new Rectangle(new(default, 335.1f), 20f, 2f), new Rectangle(new(default, 294.5f), 20f, 2f)]);
 }

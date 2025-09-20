@@ -71,12 +71,12 @@ sealed class MediumRearNeerDoneWell(BossModule module) : Components.SimpleAOEGro
     }
 }
 
-class HuffAndPuff1(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.HuffAndPuff1, 15, true, stopAtWall: true, kind: Kind.DirForward)
+class HuffAndPuff1(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.HuffAndPuff1, 15f, true, stopAtWall: true, kind: Kind.DirForward)
 {
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (Casters.Count != 0)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Casters.Ref(0).Origin, 5f));
+            hints.AddForbiddenZone(new SDInvertedCircle(Casters.Ref(0).Origin, 5f));
     }
 }
 
@@ -123,7 +123,7 @@ class HuffAndPuff2(BossModule module) : Components.GenericKnockback(module, stop
         if (KB.Length != 0)
         {
             ref readonly var kb = ref KB[0];
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(kb.Origin, 5f));
+            hints.AddForbiddenZone(new SDInvertedCircle(kb.Origin, 5f));
         }
     }
 }
@@ -172,7 +172,7 @@ class Barbeque(BossModule module) : Components.GenericAOEs(module)
     {
         if (_aoe.Length != 0)
         {
-            hints.AddForbiddenZone(ShapeDistance.InvertedRect(new(imminent ? 18.5f : actor.PosRot.X + 0.1f, default), new(19f, default), 20f));
+            hints.AddForbiddenZone(new SDInvertedRect(new(imminent ? 18.5f : actor.PosRot.X + 0.1f, default), new(19f, default), 20f));
         }
     }
 

@@ -122,7 +122,7 @@ sealed class BodySlamKB(BossModule module) : Components.SimpleKnockbacks(module,
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
@@ -130,7 +130,7 @@ sealed class BodySlamKB(BossModule module) : Components.SimpleKnockbacks(module,
         if (Casters.Count != 0 && _aoe.NumCasts >= 4)
         {
             ref readonly var c = ref Casters.Ref(0);
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(c.Origin, 10f), c.Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(c.Origin, 10f), c.Activation);
         }
     }
 }

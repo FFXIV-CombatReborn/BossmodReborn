@@ -89,10 +89,10 @@ class ArenaChanges(BossModule module) : BossComponent(module)
 
         if (Safespots) // force AI to move to a safespot before it becomes available
         {
-            var forbidden = new Func<WPos, float>[2];
+            var forbidden = new ShapeDistance[2];
             for (var i = 0; i < 2; ++i)
-                forbidden[i] = ShapeDistance.InvertedCircle(union[i].Center, 5f);
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), activation);
+                forbidden[i] = new SDInvertedCircle(union[i].Center, 5f);
+            hints.AddForbiddenZone(new SDIntersection(forbidden), activation);
         }
     }
 }

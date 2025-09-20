@@ -1,6 +1,7 @@
 ﻿namespace BossMod.Components;
 
 // generic 'rotating aoes' component - a sequence of aoes (typically cones) with same origin and increasing rotation
+[SkipLocalsInit]
 public class GenericRotatingAOE(BossModule module) : GenericAOEs(module)
 {
     public struct Sequence(AOEShape shape, WPos origin, Angle rotation, Angle increment, DateTime nextActivation, double secondsBetweenActivations, int numRemainingCasts, int maxShownAOEs = 2, ulong actorID = default)

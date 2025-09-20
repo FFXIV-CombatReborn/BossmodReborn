@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Dawntrail.Ultimate.FRU;
 
-sealed class P1CyclonicBreakSpreadStack(BossModule module) : Components.UniformStackSpread(module, 6, 6, 2, 2, true)
+sealed class P1CyclonicBreakSpreadStack(BossModule module) : Components.UniformStackSpread(module, 6f, 6f, 2, 2, true)
 {
     public DateTime Activation = DateTime.MaxValue;
     private bool _fullHints; // we only need to actually stack/spread after first protean bait
@@ -8,11 +8,17 @@ sealed class P1CyclonicBreakSpreadStack(BossModule module) : Components.UniformS
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         if (_fullHints)
+        {
             base.AddHints(slot, actor, hints);
+        }
         else if (Stacks.Count > 0)
+        {
             hints.Add("Prepare to stack", false);
+        }
         else if (Spreads.Count > 0)
+        {
             hints.Add("Prepare to spread", false);
+        }
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) { } // handled by dedicated component
@@ -24,12 +30,12 @@ sealed class P1CyclonicBreakSpreadStack(BossModule module) : Components.UniformS
             case (uint)AID.CyclonicBreakBossStack:
             case (uint)AID.CyclonicBreakImageStack:
                 // TODO: this can target either supports or dd
-                Activation = Module.CastFinishAt(spell, 2.7f);
+                Activation = Module.CastFinishAt(spell, 2.7d);
                 AddStacks(Raid.WithoutSlot(true, true, true).Where(p => p.Class.IsSupport()), Activation);
                 break;
             case (uint)AID.CyclonicBreakBossSpread:
             case (uint)AID.CyclonicBreakImageSpread:
-                Activation = Module.CastFinishAt(spell, 2.7f);
+                Activation = Module.CastFinishAt(spell, 2.7d);
                 AddSpreads(Raid.WithoutSlot(true, true, true), Activation);
                 break;
         }
@@ -100,7 +106,7 @@ sealed class P1CyclonicBreakAIBait(BossModule module) : BossComponent(module)
             return; // no assignment
         var assignedDirection = (180f - 45f * clockspot).Degrees();
         // TODO: think about melee vs ranged distance...
-        hints.AddForbiddenZone(ShapeDistance.InvertedRect(Module.PrimaryActor.Position, assignedDirection, 15f, -5f, 1f), _spreadStack.Activation);
+        hints.AddForbiddenZone(new SDInvertedRect(Module.PrimaryActor.Position, assignedDirection, 15f, -5f, 1f), _spreadStack.Activation);
     }
 }
 
@@ -118,16 +124,20 @@ sealed class P1CyclonicBreakAIDodgeSpreadStack(BossModule module) : BossComponen
             return;
 
         _forbiddenDirections.Forbidden.Clear();
-        foreach (var aoe in _cones.AOEs)
-            _forbiddenDirections.ForbidArcByLength(aoe.Rotation, P1CyclonicBreakCone.Shape.HalfAngle);
+        var aoes = CollectionsMarshal.AsSpan(_cones.AOEs);
+        var len = aoes.Length;
+        for (var i = 0; i < len; ++i)
+        {
+            _forbiddenDirections.ForbidArcByLength(aoes[i].Rotation, P1CyclonicBreakCone.Shape.HalfAngle);
+        }
 
         var isSupport = actor.Class.IsSupport();
         var dodgeCCW = _spreadStack.Stacks.Count > 0 ? _config.P1CyclonicBreakStackSupportsCCW == isSupport : isSupport ? _config.P1CyclonicBreakSpreadSupportsCCW : _config.P1CyclonicBreakSpreadDDCCW;
-        var assignedDirection = (180 - 45 * clockspot).Degrees();
+        var assignedDirection = (180f - 45f * clockspot).Degrees();
         var safeAngles = _forbiddenDirections.NextAllowed(assignedDirection, dodgeCCW);
         var (rangeMin, rangeMax) = _spreadStack.Stacks.Count > 0 ? (4, 10) : assignment is PartyRolesConfig.Assignment.MT or PartyRolesConfig.Assignment.OT or PartyRolesConfig.Assignment.M1 or PartyRolesConfig.Assignment.M2 ? (3, 6) : (7, 15);
-        var safeZone = ShapeDistance.DonutSector(_forbiddenDirections.Center, rangeMin, rangeMax, (safeAngles.min + safeAngles.max) * 0.5f, (safeAngles.max - safeAngles.min) * 0.5f);
-        hints.AddForbiddenZone(p => -safeZone(p), _spreadStack.Activation);
+
+        hints.AddForbiddenZone(new SDInvertedDonutSector(_forbiddenDirections.Center, rangeMin, rangeMax, (safeAngles.min + safeAngles.max) * 0.5f, (safeAngles.max - safeAngles.min) * 0.5f), _spreadStack.Activation);
 
         // micro adjusts if activation is imminent
         if (_spreadStack.Activation < WorldState.FutureTime(0.5f))
@@ -136,12 +146,12 @@ sealed class P1CyclonicBreakAIDodgeSpreadStack(BossModule module) : BossComponen
             {
                 var closestPartner = Module.Raid.WithoutSlot(false, true, true).Where(p => p.Class.IsSupport() != isSupport).Closest(actor.Position);
                 if (closestPartner != null)
-                    hints.AddForbiddenZone(ShapeDistance.InvertedCircle(closestPartner.Position, _spreadStack.StackRadius), _spreadStack.Activation);
+                    hints.AddForbiddenZone(new SDInvertedCircle(closestPartner.Position, _spreadStack.StackRadius), _spreadStack.Activation);
             }
             else
             {
                 foreach (var p in Raid.WithoutSlot(false, true, true).Exclude(actor))
-                    hints.AddForbiddenZone(ShapeDistance.Circle(p.Position, _spreadStack.SpreadRadius), _spreadStack.Activation);
+                    hints.AddForbiddenZone(new SDCircle(p.Position, _spreadStack.SpreadRadius), _spreadStack.Activation);
             }
         }
     }
@@ -154,7 +164,14 @@ sealed class P1CyclonicBreakAIDodgeRest(BossModule module) : BossComponent(modul
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (_cones != null)
-            foreach (var aoe in _cones.AOEs)
+        {
+            var aoes = CollectionsMarshal.AsSpan(_cones.AOEs);
+            var len = aoes.Length;
+            for (var i = 0; i < len; ++i)
+            {
+                ref var aoe = ref aoes[i];
                 hints.AddForbiddenZone(aoe.Shape.Distance(aoe.Origin, aoe.Rotation), aoe.Activation);
+            }
+        }
     }
 }

@@ -5,9 +5,6 @@ sealed class ChildsPlay : Components.GenericForcedMarch
     private readonly List<Actor> targets = new(8);
     private Angle direction;
     private readonly Explosion _aoe;
-    private RelSimplifiedComplexPolygon poly = new();
-    private bool polyInit;
-    private readonly List<Square> squares = new(8);
 
     public ChildsPlay(BossModule module) : base(module, stopAfterWall: true)
     {
@@ -27,30 +24,14 @@ sealed class ChildsPlay : Components.GenericForcedMarch
                 direction = 90f.Degrees();
                 InitIfReady();
                 break;
-            case (uint)AID.Explosion:
-                squares.Add(new(spell.LocXZ, 9f));
-                if (squares.Count == 8)
-                {
-                    AOEShapeCustom combine = new(squares);
-                    poly = combine.GetCombinedPolygon(Arena.Center);
-                    polyInit = true;
-                    squares.Clear();
-                }
-                break;
         }
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        switch (spell.Action.ID)
+        if (spell.Action.ID is (uint)AID.ChildsPlay1 or (uint)AID.ChildsPlay2)
         {
-            case (uint)AID.ChildsPlay1:
-            case (uint)AID.ChildsPlay2:
-                direction = default;
-                break;
-            case (uint)AID.Explosion:
-                polyInit = false;
-                break;
+            direction = default;
         }
     }
 
@@ -110,18 +91,18 @@ sealed class ChildsPlay : Components.GenericForcedMarch
         var len = aoes.Length;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var aoe = ref aoes[i];
+            ref var aoe = ref aoes[i];
             if (aoe.Check(pos))
             {
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (!polyInit)
+        if (direction == default)
         {
             return;
         }
@@ -130,16 +111,16 @@ sealed class ChildsPlay : Components.GenericForcedMarch
         {
             return;
         }
-        var center = Arena.Center;
-        var polygon = poly;
         var move0 = state.PendingMoves[0];
         var dir = 24f * move0.dir.ToDirection();
-        hints.AddForbiddenZone(p =>
+        var aoes = CollectionsMarshal.AsSpan(_aoe.Casters);
+        var len = aoes.Length;
+        var origins = new WPos[len];
+        for (var i = 0; i < len; ++i)
         {
-            var projected = p + dir;
-            if (projected.InSquare(center, 19f) && !polygon.Contains(projected - center)) // we can ignore the center square, no pattern results in a safe path through it
-                return 1f;
-            return default;
-        }, move0.activation);
+            ref var aoe = ref aoes[i];
+            origins[i] = aoe.Origin;
+        }
+        hints.AddForbiddenZone(new SDKnockbackInAABBSquareFixedDirectionPlusAOECircles(Arena.Center, dir, 19f, origins, 9f, len), move0.activation); // we can ignore the center square, no pattern results in a safe path through it
     }
 }

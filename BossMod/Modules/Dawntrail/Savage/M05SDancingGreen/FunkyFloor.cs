@@ -42,8 +42,8 @@ sealed class FunkyFloor(BossModule module) : Components.GenericAOEs(module)
 
         _activeSet = state switch
         {
-            0x00020001 => true,
-            0x00200010 => false,
+            0x00020001u => true,
+            0x00200010u => false,
             _ => _activeSet
         };
         void AddAOESet(WPos[] positions, DateTime activation)

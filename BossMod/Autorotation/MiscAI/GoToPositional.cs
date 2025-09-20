@@ -41,7 +41,7 @@ public sealed class GoToPositional(RotationModuleManager manager, Actor player) 
         //mainly from Basexan.UpdatePositionals
         var correct = positional switch
         {
-            Positional.Flank => MathF.Abs(primaryTarget.Rotation.ToDirection().Dot((Player.Position - primaryTarget.Position).Normalized())) < 0.7071067f,
+            Positional.Flank => Math.Abs(primaryTarget.Rotation.ToDirection().Dot((Player.Position - primaryTarget.Position).Normalized())) < 0.7071067f,
             Positional.Rear => primaryTarget.Rotation.ToDirection().Dot((Player.Position - primaryTarget.Position).Normalized()) < -0.7071068f,
             _ => true
         };

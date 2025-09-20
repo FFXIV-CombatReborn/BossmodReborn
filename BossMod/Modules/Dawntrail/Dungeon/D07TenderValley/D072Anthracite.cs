@@ -61,13 +61,18 @@ sealed class D072AnthraciteStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 834, NameID = 12853)]
-public sealed class D072Anthracite(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 834, NameID = 12853)]
+public sealed class D072Anthracite : BossModule
 {
-    private const float Radius = 3.8f;
-    private static readonly Square square1 = new(new(-118.001f, -56.999f), Radius);
-    private static readonly Square square2 = new(new(-142.001f, -44.999f), Radius);
-    private static readonly Polygon circle1 = new(new(-124.001f, -38.999f), Radius, 20);
-    private static readonly Polygon circle2 = new(new(-136.001f, -62.999f), Radius, 20);
-    private static readonly ArenaBoundsCustom arena = new([new Square(new(-130f, -51f), 17.5f)], [square1, square2, circle1, circle2]);
+    public D072Anthracite(WorldState ws, Actor primary) : this(ws, primary, BuildArena()) { }
+
+    private D072Anthracite(WorldState ws, Actor primary, (WPos center, ArenaBoundsCustom arena) a) : base(ws, primary, a.center, a.arena) { }
+
+    private static (WPos center, ArenaBoundsCustom arena) BuildArena()
+    {
+        const float Radius = 3.3f;
+        var arena = new ArenaBoundsCustom([new Square(new(-130f, -51f), 18f)], [new Square(new(-118.001f, -56.999f), Radius), new Square(new(-142.001f, -44.999f), Radius),
+        new Polygon(new(-124.001f, -38.999f), Radius, 20), new Polygon(new(-136.001f, -62.999f), Radius, 20)], AdjustForHitbox: true);
+        return (arena.Center, arena);
+    }
 }

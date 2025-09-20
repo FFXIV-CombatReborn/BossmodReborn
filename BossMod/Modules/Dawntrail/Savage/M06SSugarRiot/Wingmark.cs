@@ -30,7 +30,7 @@ sealed class Wingmark(BossModule module) : Components.GenericKnockback(module)
                 }
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override void OnStatusGain(Actor actor, ActorStatus status)

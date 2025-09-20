@@ -70,7 +70,7 @@ class ViperPoisonBait(BossModule module) : Components.BaitAwayCast(module, (uint
     {
         base.AddAIHints(slot, actor, assignment, hints);
         if (ActiveBaitsOn(actor).Count != 0)
-            hints.AddForbiddenZone(ShapeDistance.Rect(new(17f, -518f), new(17f, -558f), 13f));
+            hints.AddForbiddenZone(new SDRect(new(17f, -518f), new(17f, -558f), 13f));
     }
 }
 
@@ -84,15 +84,15 @@ class Inhale(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.
         {
             var aoes = _aoe.ActiveAOEs(slot, actor);
             var len = aoes.Length;
-            var forbidden = new Func<WPos, float>[len];
+            var forbidden = new ShapeDistance[len];
             for (var i = 0; i < len; ++i)
             {
                 ref readonly var aoe = ref aoes[0];
-                forbidden[i] = ShapeDistance.Rect(aoe.Origin, Module.PrimaryActor.Rotation, 40f, default, 6f);
+                forbidden[i] = new SDRect(aoe.Origin, Module.PrimaryActor.Rotation, 40f, default, 6f);
             }
             if (forbidden.Length != 0)
             {
-                hints.AddForbiddenZone(ShapeDistance.Union(forbidden), Casters.Ref(0).Activation);
+                hints.AddForbiddenZone(new SDUnion(forbidden), Casters.Ref(0).Activation);
             }
         }
     }
@@ -123,15 +123,15 @@ class HeavingBreath(BossModule module) : Components.SimpleKnockbacks(module, (ui
         {
             var aoes = _aoe.ActiveAOEs(slot, actor);
             var len = aoes.Length;
-            var forbidden = new Func<WPos, float>[len];
+            var forbidden = new ShapeDistance[len];
             for (var i = 0; i < len; ++i)
             {
                 ref readonly var aoe = ref aoes[0];
-                forbidden[i] = ShapeDistance.Rect(aoe.Origin, new WDir(default, 1f), 40f, 40f, 6f);
+                forbidden[i] = new SDRect(aoe.Origin, new WDir(default, 1f), 40f, 40f, 6f);
             }
             if (forbidden.Length != 0)
             {
-                hints.AddForbiddenZone(ShapeDistance.Union(forbidden), Casters.Ref(0).Activation);
+                hints.AddForbiddenZone(new SDUnion(forbidden), Casters.Ref(0).Activation);
             }
         }
     }

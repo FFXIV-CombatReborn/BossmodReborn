@@ -24,7 +24,7 @@ sealed class Sporesplosion : Components.SimpleAOEs
 
 sealed class NeoBombarianSpecialKB(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.NeoBombarianSpecial, 58f, true)
 {
-    private RelSimplifiedComplexPolygon poly = new();
+    private RelSimplifiedComplexPolygon poly;
     private bool polyInit;
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
@@ -36,16 +36,8 @@ sealed class NeoBombarianSpecialKB(BossModule module) : Components.SimpleKnockba
                 poly = KnockbackArena.Polygon.Offset(-1f); // shrink polygon by 1 yalm for less suspect kb
                 polyInit = true;
             }
-            var center = Arena.Center;
-            var loc = Module.PrimaryActor.Position;
-            hints.AddForbiddenZone(p =>
-            {
-                if (poly.Contains(p + 58f * (p - loc).Normalized() - center))
-                {
-                    return 1f;
-                }
-                return default;
-            }, Module.CastFinishAt(Module.PrimaryActor.CastInfo));
+            ref var c = ref Casters.Ref(0);
+            hints.AddForbiddenZone(new SDKnockbackInComplexPolygonAwayFromOrigin(Arena.Center, Module.PrimaryActor.Position, 58f, poly), c.Activation);
         }
     }
 }

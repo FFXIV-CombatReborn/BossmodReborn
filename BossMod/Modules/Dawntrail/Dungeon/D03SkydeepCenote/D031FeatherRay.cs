@@ -121,21 +121,21 @@ sealed class AiryBubble(BossModule module) : Components.GenericAOEs(module)
     {
         var count = _aoes.Count;
         if (active)
-            hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, Module.PrimaryActor.HitboxRadius));
+        {
+            hints.AddForbiddenZone(new SDCircle(Arena.Center, 5f));
+        }
         if (count == 0)
+        {
             return;
-        var forbiddenImminent = new Func<WPos, float>[count + 1];
-        var forbiddenFuture = new Func<WPos, float>[count];
+        }
+
+        var act = WorldState.FutureTime(1.5d);
         for (var i = 0; i < count; ++i)
         {
             var o = _aoes[i];
-            forbiddenFuture[i] = ShapeDistance.Capsule(o.Position, o.Rotation, Length, Radius);
-            forbiddenImminent[i] = ShapeDistance.Circle(o.Position, Radius);
+            hints.AddForbiddenZone(new SDCapsule(o.Position, o.Rotation, Length, Radius), act);
+            hints.TemporaryObstacles.Add(new SDCircle(o.Position, Radius));
         }
-        forbiddenImminent[count] = ShapeDistance.Circle(Arena.Center, Module.PrimaryActor.HitboxRadius);
-
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenFuture), WorldState.FutureTime(1.5d));
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenImminent));
     }
 }
 
@@ -252,7 +252,7 @@ sealed class D031FeatherRayStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 829, NameID = 12755)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 829, NameID = 12755)]
 public sealed class D031FeatherRay(WorldState ws, Actor primary) : BossModule(ws, primary, arenaCenter, NormalBounds)
 {
     private static readonly WPos arenaCenter = new(-105f, -160f);

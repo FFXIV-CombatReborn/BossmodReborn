@@ -57,7 +57,7 @@ sealed class Sucker(BossModule module) : Components.SimpleKnockbacks(module, (ui
         if (Casters.Count != 0)
         {
             ref readonly var source = ref Casters.Ref(0);
-            hints.AddForbiddenZone(ShapeDistance.Circle(source.Origin, 23f), source.Activation);
+            hints.AddForbiddenZone(new SDCircle(source.Origin, 23f), source.Activation);
         }
     }
 }
@@ -101,7 +101,7 @@ sealed class A20KrakenStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.Kraken, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1058u, NameID = 14071u, Category = BossModuleInfo.Category.Alliance, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 5)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.Kraken, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1058u, NameID = 14071u, Category = BossModuleInfo.Category.Alliance, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 5)]
 public sealed class A20Kraken(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly ArenaBoundsCustom arena = new([new PolygonCustom([new(-829.36f, -873.39f), new(-828.99f, -873.05f),

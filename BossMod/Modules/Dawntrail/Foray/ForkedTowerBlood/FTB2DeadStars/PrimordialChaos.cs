@@ -53,8 +53,8 @@ sealed class PrimordialChaos(BossModule module) : Components.GenericAOEs(module)
             var color = Colors.SafeFromAOE;
             var blue0 = circlesBlue[0];
             var red0 = circlesRed[0];
-            List<AOEInstance> isFire = [new(new AOEShapeCustom([blue0], [red0], InvertForbiddenZone: true), center, default, act, color)];
-            List<AOEInstance> isIce = [new(new AOEShapeCustom([red0], [blue0], InvertForbiddenZone: true), center, default, act, color)];
+            List<AOEInstance> isFire = [new(new AOEShapeCustom([blue0], [red0], invertForbiddenZone: true), center, default, act, color)];
+            List<AOEInstance> isIce = [new(new AOEShapeCustom([red0], [blue0], invertForbiddenZone: true), center, default, act, color)];
             List<AOEInstance> rest = [new(circle, blue0.Center, default, act), new(circle, red0.Center, default, act)];
             for (var i = 0; i < 8; ++i)
             {

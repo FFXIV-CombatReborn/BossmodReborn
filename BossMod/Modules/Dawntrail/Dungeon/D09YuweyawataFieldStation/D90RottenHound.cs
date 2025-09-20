@@ -27,7 +27,7 @@ sealed class D90RottenResearcherStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1008, NameID = 13575, SortOrder = 4)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1008, NameID = 13575, SortOrder = 4)]
 public sealed class D90RottenResearcher(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly WPos[] vertices = [new(54.67f, 59.58f), new(58.29f, 60.28f), new(58.94f, 60.14f), new(59.88f, 60.06f), new(60.69f, 60.1f),
@@ -78,18 +78,7 @@ public sealed class D90RottenResearcher(WorldState ws, Actor primary) : BossModu
     public static readonly uint[] Trash = [(uint)OID.Boss, (uint)OID.RottenResearcher1, (uint)OID.RottenResearcher2, (uint)OID.RottenResearcher3,
     (uint)OID.RottenHound1, (uint)OID.RottenHound2];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(Trash);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInCombat(Trash);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
@@ -100,6 +89,8 @@ public sealed class D90RottenResearcher(WorldState ws, Actor primary) : BossModu
     {
         var count = hints.PotentialTargets.Count;
         for (var i = 0; i < count; ++i)
+        {
             hints.PotentialTargets[i].Priority = 0;
+        }
     }
 }

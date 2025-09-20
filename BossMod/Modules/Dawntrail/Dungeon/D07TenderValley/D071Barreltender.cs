@@ -39,7 +39,7 @@ sealed class ArenaChange(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.HeavyweightNeedlesVisual && Arena.Bounds == D071Barreltender.StartingBounds)
+        if (spell.Action.ID == (uint)AID.HeavyweightNeedlesVisual && Arena.Bounds.Radius > 20f)
         {
             _aoe = [new(square, Arena.Center, default, Module.CastFinishAt(spell, 0.7d))];
         }
@@ -49,7 +49,7 @@ sealed class ArenaChange(BossModule module) : Components.GenericAOEs(module)
     {
         if (index == 0x03 && state == 0x00020001u)
         {
-            Arena.Bounds = D071Barreltender.DefaultBounds;
+            Arena.Bounds = new ArenaBoundsSquare(20f);
             _aoe = [];
         }
     }
@@ -61,19 +61,23 @@ sealed class HeavyweightNeedles(BossModule module) : Components.SimpleAOEs(modul
     {
         var count = Casters.Count;
         if (count == 0)
+        {
             return;
+        }
         base.AddAIHints(slot, actor, assignment, hints);
         if (NumCasts < 16)
+        {
             return;
+        }
         ref var aoe = ref Casters.Ref(0);
         // stay close to the middle to switch safespots
-        hints.AddForbiddenZone(ShapeDistance.InvertedCircle(aoe.Origin, 3f), aoe.Activation);
+        hints.AddForbiddenZone(new SDInvertedCircle(aoe.Origin, 3f), aoe.Activation);
     }
 }
 
 sealed class NeedleStormSuperstorm(BossModule module) : Components.GenericAOEs(module)
 {
-    private readonly List<AOEInstance> _aoes = new(16);
+    public readonly List<AOEInstance> AOEs = new(16);
     private static readonly AOEShapeCircle circleBig = new(11f), circleSmall = new(6f);
 
     private readonly BarrelBreaker _kb = module.FindComponent<BarrelBreaker>()!;
@@ -83,12 +87,16 @@ sealed class NeedleStormSuperstorm(BossModule module) : Components.GenericAOEs(m
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_aoe.Casters.Count != 0)
+        {
             return [];
-        var count = _aoes.Count;
+        }
+        var count = AOEs.Count;
         var max = cactiActive ? (count > 8 ? 8 : count) : 0; // next wave of cactus helpers spawns immediately after first wave starts casting, so we need to limit to 8
         if (max == 0)
+        {
             return [];
-        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        }
+        var aoes = CollectionsMarshal.AsSpan(AOEs);
 
         var kb = _kb;
         var isKnockback = kb.Casters.Count != 0;
@@ -112,7 +120,7 @@ sealed class NeedleStormSuperstorm(BossModule module) : Components.GenericAOEs(m
         };
         if (shape != null)
         {
-            _aoes.Add(new(shape, actor.Position.Quantized()));
+            AOEs.Add(new(shape, actor.Position.Quantized(), actorID: shape == circleBig ? 1ul : default));
         }
     }
 
@@ -121,9 +129,9 @@ sealed class NeedleStormSuperstorm(BossModule module) : Components.GenericAOEs(m
         if (spell.Action.ID == (uint)AID.TenderDrop)
         {
             cactiActive = true;
-            var count = _aoes.Count;
+            var count = AOEs.Count;
             var max = count > 8 ? 8 : count;
-            var aoes = CollectionsMarshal.AsSpan(_aoes)[..max];
+            var aoes = CollectionsMarshal.AsSpan(AOEs)[..max];
 
             for (var i = 0; i < max; ++i)
             {
@@ -135,9 +143,9 @@ sealed class NeedleStormSuperstorm(BossModule module) : Components.GenericAOEs(m
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        if (_aoes.Count != 0 && spell.Action.ID is (uint)AID.NeedleStorm or (uint)AID.NeedleSuperstorm)
+        if (AOEs.Count != 0 && spell.Action.ID is (uint)AID.NeedleStorm or (uint)AID.NeedleSuperstorm)
         {
-            _aoes.RemoveAt(0);
+            AOEs.RemoveAt(0);
             cactiActive = false;
         }
     }
@@ -147,67 +155,47 @@ sealed class Prickly(BossModule module) : Components.SimpleAOEGroups(module, [(u
 sealed class SucculentStomp(BossModule module) : Components.StackWithCastTargets(module, (uint)AID.SucculentStomp, 6f, 4, 4);
 sealed class BarrelBreaker(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.BarrelBreaker, 20f)
 {
-    private static readonly Angle a10 = 10f.Degrees(), a135 = 135f.Degrees(), a45 = 45f.Degrees();
-    private enum Pattern { None, NESW, NWSE }
-    private Pattern CurrentPattern;
     private NeedleStormSuperstorm? _aoe;
-
-    public override void OnActorEAnim(Actor actor, uint state)
-    {
-        if (state == 0x00010002u && actor.OID == (uint)OID.CactusSmall)
-        {
-            var pos = actor.Position;
-            var add = pos.X + pos.Z;
-            if (add == 400f) // new WPos(-55f, 455f)
-            {
-                CurrentPattern = Pattern.NESW;
-            }
-            else if (add == 430f) // new WPos(-55f, 485f)
-            {
-                CurrentPattern = Pattern.NWSE;
-            }
-        }
-    }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (Casters.Count != 0)
+        if (Casters.Count == 0)
         {
-            ref readonly var c = ref Casters.Ref(0);
-            var act = c.Activation;
-            if (!IsImmune(slot, act))
+            return;
+        }
+        ref readonly var c = ref Casters.Ref(0);
+        _aoe ??= Module.FindComponent<NeedleStormSuperstorm>();
+
+        var act = c.Activation;
+        if (!IsImmune(slot, act))
+        {
+            var aoes = CollectionsMarshal.AsSpan(_aoe!.AOEs);
+            var len = aoes.Length;
+            var max = len > 8 ? 8 : len;
+            var circles = new (WPos origin, float Radius)[max];
+            for (var i = 0; i < max; ++i)
             {
-                var forbidden = new Func<WPos, float>[2];
-                var pattern = CurrentPattern == Pattern.NESW;
-                forbidden[0] = ShapeDistance.InvertedCone(c.Origin, 4f, pattern ? a135 : -a135, a10);
-                forbidden[1] = ShapeDistance.InvertedCone(c.Origin, 4f, pattern ? -a45 : a45, a10);
-                hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), act);
+                ref var aoe = ref aoes[i];
+                circles[i] = (aoe.Origin, aoe.ActorID == default ? 7f : 12f);
             }
+            // square intentionally slightly smaller to prevent sus knockback
+            hints.AddForbiddenZone(new SDKnockbackInAABBSquareAwayFromOriginPlusAOECirclesMixedRadii(Arena.Center, c.Origin, 20f, 19f, circles, max), act);
         }
     }
 
     public override bool DestinationUnsafe(int slot, Actor actor, WPos pos)
     {
         _aoe ??= Module.FindComponent<NeedleStormSuperstorm>();
-        var aoes = _aoe!.ActiveAOEs(slot, actor);
+        var aoes = CollectionsMarshal.AsSpan(_aoe!.AOEs);
         var len = aoes.Length;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var aoe = ref aoes[i];
-            if (aoe.Check(pos))
+            if (aoes[i].Check(pos))
             {
                 return true;
             }
         }
-        return !Module.InBounds(pos);
-    }
-
-    public override void OnActorDestroyed(Actor actor)
-    {
-        if (actor.OID == (uint)OID.CactusSmall)
-        {
-            CurrentPattern = Pattern.None;
-        }
+        return !Arena.InBounds(pos);
     }
 }
 
@@ -230,10 +218,8 @@ sealed class D071BarreltenderStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 834, NameID = 12889)]
-public sealed class D071Barreltender(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, StartingBounds)
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 834, NameID = 12889)]
+public sealed class D071Barreltender(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, new ArenaBoundsSquare(24.5f))
 {
     public static readonly WPos ArenaCenter = new(-65f, 470f);
-    public static readonly ArenaBoundsSquare StartingBounds = new(24.5f);
-    public static readonly ArenaBoundsSquare DefaultBounds = new(20f);
 }

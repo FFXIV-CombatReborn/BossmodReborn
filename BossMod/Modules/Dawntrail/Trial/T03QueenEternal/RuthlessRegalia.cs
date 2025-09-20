@@ -2,7 +2,7 @@ namespace BossMod.Dawntrail.Trial.T03QueenEternal;
 
 sealed class RuthlessRegalia(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeRect rect = new(100f, 6f);
+    private static readonly AOEShapeRect rect = new(100f, 6f), rectWide = new(100f, 12f);
     private (Actor, DateTime)? _source;
     private readonly List<Actor> _tethered = new(2);
 
@@ -47,9 +47,12 @@ sealed class RuthlessRegalia(BossModule module) : Components.GenericAOEs(module)
         {
             var s = _source.Value.Item1;
             var t = _tethered.FirstOrDefault(x => x != actor);
-            hints.AddForbiddenZone(rect with { HalfWidth = 12f }, new(s.PosRot.X, t!.PosRot.Z), s.Rotation);
+            ref var sPosRot = ref s.PosRot;
+            hints.AddForbiddenZone(rectWide, new(sPosRot.X, t!.PosRot.Z), sPosRot.W.Degrees());
         }
         else
+        {
             base.AddAIHints(slot, actor, assignment, hints);
+        }
     }
 }

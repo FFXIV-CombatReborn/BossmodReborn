@@ -28,7 +28,7 @@ public enum AID : uint
     RedKegTurnBlue = 31260, // PowderKegRed->self, no cast, single-target
     BlueKegTurnRed = 29907, // PowderKegBlue->self, no cast, single-target
 
-    Intake = 29913, // Helper->self, no cast, range 40 width 10 rect, pull 25 towards origin
+    Intake = 29913, // Helper->self, no cast, range 40 width 10 rect, pull 25 towards origin, between centers
 
     RunawayRunoff = 29911, // Helper->self, 9.0s cast, range 60 circle, knockback 18, away from source
     GigantomillFirstCW = 29898, // Geryon->self, 8.0s cast, range 72 width 10 cross

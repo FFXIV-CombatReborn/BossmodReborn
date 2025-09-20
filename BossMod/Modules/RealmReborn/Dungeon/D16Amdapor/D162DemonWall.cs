@@ -23,10 +23,9 @@ class Repel(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.R
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         // custom hint: stay in narrow zone in center
-        if (Casters.Count > 0)
+        if (Casters.Count != 0)
         {
-            var safe = ShapeDistance.Rect(Module.PrimaryActor.Position, new WDir(default, 1f), 50f, -2f, 1f);
-            hints.AddForbiddenZone(p => -safe(p));
+            hints.AddForbiddenZone(new SDInvertedRect(Module.PrimaryActor.Position, new WDir(default, 1f), 50f, -2f, 1f));
         }
     }
 }

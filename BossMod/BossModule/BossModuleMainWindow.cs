@@ -3,6 +3,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace BossMod;
 
+[SkipLocalsInit]
 public sealed class BossModuleMainWindow : UIWindow
 {
     private readonly BossModuleManager _mgr;

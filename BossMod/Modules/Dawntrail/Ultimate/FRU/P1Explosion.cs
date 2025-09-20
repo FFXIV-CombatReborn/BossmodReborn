@@ -27,12 +27,12 @@ sealed class P1Explosion(BossModule module) : Components.GenericTowers(module)
             var horizOffset = !_lineDone
                 ? (_isWideLine && actor.Class == Class.WAR && actor.FindStatus((uint)WAR.SID.PrimalRend) != null ? 17 : default)
                 : (_config.P1ExplosionsTankbusterCheese ? 7 : default);
-            hints.AddForbiddenZone(ShapeDistance.HalfPlane(Arena.Center - horizOffset * TowerDir, -TowerDir), Activation);
+            hints.AddForbiddenZone(new SDHalfPlane(Arena.Center - horizOffset * TowerDir, -TowerDir), Activation);
 
             if (!_config.P1ExplosionsTankbusterCheese)
             {
                 var vertDir = new WDir(default, role == default ? -1 : +1);
-                hints.AddForbiddenZone(ShapeDistance.HalfPlane(Arena.Center + 5f * vertDir, vertDir), Activation);
+                hints.AddForbiddenZone(new SDHalfPlane(Arena.Center + 5f * vertDir, vertDir), Activation);
             }
         }
         else
@@ -46,7 +46,7 @@ sealed class P1Explosion(BossModule module) : Components.GenericTowers(module)
                 if (needSoak)
                     hints.AddForbiddenZone(t.Shape.InvertedDistance(t.Position, default), t.Activation);
                 else
-                    hints.AddForbiddenZone(ShapeDistance.InvertedRect(new WPos(Arena.Center.X, t.Position.Z), TowerDir, 20f, default, 4f), t.Activation);
+                    hints.AddForbiddenZone(new SDInvertedRect(new WPos(Arena.Center.X, t.Position.Z), TowerDir, 20f, default, 4f), t.Activation);
             }
         }
     }

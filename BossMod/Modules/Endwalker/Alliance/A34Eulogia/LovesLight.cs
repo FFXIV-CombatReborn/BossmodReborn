@@ -25,7 +25,10 @@ class LovesLight(BossModule module) : Components.GenericAOEs(module)
         if (spell.Action.ID is (uint)AID.FirstBlush1 or (uint)AID.FirstBlush2 or (uint)AID.FirstBlush3 or (uint)AID.FirstBlush4)
         {
             AOEs.Add(new(_shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell)));
-            AOEs.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+            if (AOEs.Count == 4)
+            {
+                AOEs.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+            }
         }
     }
 

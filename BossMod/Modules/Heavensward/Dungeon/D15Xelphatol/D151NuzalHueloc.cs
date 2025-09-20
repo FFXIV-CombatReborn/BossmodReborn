@@ -28,7 +28,7 @@ public enum SID : uint
     Invincibility = 775 // none->Boss/FloatingTurret, extra=0x0
 }
 
-class Airstone(BossModule module) : BossComponent(module)
+sealed class Airstone(BossModule module) : BossComponent(module)
 {
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
@@ -37,9 +37,9 @@ class Airstone(BossModule module) : BossComponent(module)
     }
 }
 
-class WindBlast(BossModule module) : Components.SimpleAOEs(module, (uint)AID.WindBlast, new AOEShapeRect(61.5f, 4f));
+sealed class WindBlast(BossModule module) : Components.SimpleAOEs(module, (uint)AID.WindBlast, new AOEShapeRect(61.5f, 4f));
 
-class HotBlast(BossModule module) : Components.GenericAOEs(module)
+sealed class HotBlast(BossModule module) : Components.GenericAOEs(module)
 {
     private static readonly AOEShapeCircle circle = new(4, true);
     private AOEInstance[] _aoe = [];
@@ -77,7 +77,7 @@ class HotBlast(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
-class D151NuzalHuelocStates : StateMachineBuilder
+sealed class D151NuzalHuelocStates : StateMachineBuilder
 {
     public D151NuzalHuelocStates(BossModule module) : base(module)
     {
@@ -89,15 +89,25 @@ class D151NuzalHuelocStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 182, NameID = 5265, SortOrder = 2)]
-public class D151NuzalHueloc(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
+
+public sealed class D151NuzalHueloc : BossModule
 {
-    private static readonly WPos[] vertices = [new(-73.36f, -91.53f), new(-67.17f, -90.22f), new(-66.55f, -89.97f), new(-64.94f, -89.05f), new(-64.45f, -88.60f),
-    new(-53.36f, -75.39f), new(-53.26f, -74.73f), new(-52.97f, -69.07f), new(-54.26f, -62.76f), new(-54.54f, -62.01f),
-    new(-57.75f, -56.44f), new(-62.76f, -51.91f), new(-68.83f, -49.18f), new(-75.29f, -48.72f), new(-75.94f, -48.76f),
-    new(-79.79f, -49.43f), new(-90.22f, -55.45f), new(-92.52f, -57.81f), new(-95.38f, -64.42f), new(-96.08f, -70.82f),
-    new(-96.01f, -71.49f), new(-94.72f, -77.66f), new(-91.42f, -83.42f), new(-86.42f, -88.01f), new(-80.32f, -90.77f),
-    new(-73.80f, -91.52f)];
-    private static readonly ArenaBoundsCustom arena = new([new PolygonCustom(vertices)]);
+    public D151NuzalHueloc(WorldState ws, Actor primary) : this(ws, primary, BuildArena()) { }
+
+    private D151NuzalHueloc(WorldState ws, Actor primary, (WPos center, ArenaBoundsCustom arena) a) : base(ws, primary, a.center, a.arena) { }
+
+    private static (WPos center, ArenaBoundsCustom arena) BuildArena()
+    {
+        WPos[] vertices = [new(-73.36f, -91.53f), new(-67.17f, -90.22f), new(-66.55f, -89.97f), new(-64.94f, -89.05f), new(-64.45f, -88.60f),
+        new(-53.36f, -75.39f), new(-53.26f, -74.73f), new(-52.97f, -69.07f), new(-54.26f, -62.76f), new(-54.54f, -62.01f),
+        new(-57.75f, -56.44f), new(-62.76f, -51.91f), new(-68.83f, -49.18f), new(-75.29f, -48.72f), new(-75.94f, -48.76f),
+        new(-79.79f, -49.43f), new(-90.22f, -55.45f), new(-92.52f, -57.81f), new(-95.38f, -64.42f), new(-96.08f, -70.82f),
+        new(-96.01f, -71.49f), new(-94.72f, -77.66f), new(-91.42f, -83.42f), new(-86.42f, -88.01f), new(-80.32f, -90.77f),
+        new(-73.80f, -91.52f)];
+        var arena = new ArenaBoundsCustom([new PolygonCustom(vertices)]);
+        return (arena.Center, arena);
+    }
+
     private static readonly uint[] opponents = [(uint)OID.Boss, (uint)OID.IxaliStitcher, (uint)OID.FloatingTurret, (uint)OID.Airstone];
 
     protected override void DrawEnemies(int pcSlot, Actor pc)

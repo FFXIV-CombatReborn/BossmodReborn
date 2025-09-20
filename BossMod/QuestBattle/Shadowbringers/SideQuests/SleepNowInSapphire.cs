@@ -1,12 +1,12 @@
 ﻿namespace BossMod.QuestBattle.Shadowbringers.SideQuests;
 
-class SapphireWeapon(WorldState ws) : UnmanagedRotation(ws, 40)
+class SapphireWeapon(WorldState ws) : UnmanagedRotation(ws, 40f)
 {
     protected override void Exec(Actor? primaryTarget)
     {
-        var havePyretic = Player.FindStatus(Roleplay.SID.PyreticBooster) != null;
-        var haveAegis = Player.FindStatus(Roleplay.SID.AetherialAegis) != null;
-        var pyreticLock = Player.FindStatus(Roleplay.SID.SafetyLockPyreticBooster) != null;
+        var havePyretic = Player.FindStatus((uint)Roleplay.SID.PyreticBooster) != null;
+        var haveAegis = Player.FindStatus((uint)Roleplay.SID.AetherialAegis) != null;
+        var pyreticLock = Player.FindStatus((uint)Roleplay.SID.SafetyLockPyreticBooster) != null;
 
         if (primaryTarget == null)
         {
@@ -18,10 +18,10 @@ class SapphireWeapon(WorldState ws) : UnmanagedRotation(ws, 40)
         }
 
         if (!havePyretic && !pyreticLock)
-            UseAction(Roleplay.AID.PyreticBooster, Player, -100);
+            UseAction(Roleplay.AID.PyreticBooster, Player, -100f);
 
-        var vuln = StatusDetails(primaryTarget, 444, Player.InstanceID);
-        if (vuln.Left < 5 && MP >= 800)
+        var vuln = StatusDetails(primaryTarget, 444u, Player.InstanceID);
+        if (vuln.Left < 5f && MP >= 800u)
             UseAction(Roleplay.AID.AetherMine, primaryTarget);
 
         if (MP >= 300)
@@ -29,34 +29,29 @@ class SapphireWeapon(WorldState ws) : UnmanagedRotation(ws, 40)
             switch (ComboAction)
             {
                 case Roleplay.AID.Aethersaber:
-                    Hints.GoalZones.Add(Hints.GoalSingleTarget(primaryTarget, 10));
+                    Hints.GoalZones.Add(Hints.GoalSingleTarget(primaryTarget, 10f));
                     UseAction(Roleplay.AID.Aethercut, primaryTarget);
                     break;
                 case Roleplay.AID.Aethercut:
-                    Hints.GoalZones.Add(Hints.GoalSingleTarget(primaryTarget, 10));
+                    Hints.GoalZones.Add(Hints.GoalSingleTarget(primaryTarget, 10f));
                     UseAction(Roleplay.AID.FinalFlourish, primaryTarget);
                     break;
             }
 
-            var gapCloseTo = Player.Position;
-            var gapCloseDistance = Player.DistanceToHitbox(primaryTarget);
-            if (gapCloseDistance > 0.05f)
-                gapCloseTo += Player.DirectionTo(primaryTarget) * gapCloseDistance;
-
-            var gapCloseDanger = Hints.ForbiddenZones.Any(s => s.shapeDistance(gapCloseTo) < 0);
-
-            if (!gapCloseDanger)
+            if (!ActionDefinitions.IsDashDangerous(Player.Position, primaryTarget.Position, Hints))
+            {
                 UseAction(Roleplay.AID.Aethersaber, primaryTarget);
+            }
         }
 
         UseAction(Roleplay.AID.AetherCannon, primaryTarget);
 
-        if (Player.HPMP.CurMP <= 7000)
-            UseAction(Roleplay.AID.AutoRestoration, Player, -100);
+        if (Player.HPMP.CurMP <= 7000u)
+            UseAction(Roleplay.AID.AutoRestoration, Player, -100f);
     }
 }
 
-[ZoneModuleInfo(BossModuleInfo.Maturity.Contributed, 740)]
+[ZoneModuleInfo(BossModuleInfo.Maturity.Contributed, 740u)]
 internal class SleepNowInSapphire(WorldState ws) : QuestBattle(ws)
 {
     private readonly SapphireWeapon _weapon = new(ws);

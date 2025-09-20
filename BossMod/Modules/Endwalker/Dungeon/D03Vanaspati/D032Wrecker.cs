@@ -97,11 +97,11 @@ sealed class QueerBubble(BossModule module) : Components.GenericAOEs(module)
             var count = AOEs.Count;
             if (count == 0)
                 return;
-            var forbidden = new Func<WPos, float>[count];
+            var forbidden = new ShapeDistance[count];
 
             for (var i = 0; i < count; ++i)
-                forbidden[i] = ShapeDistance.InvertedCircle(AOEs[i].Position, 2.5f);
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), Module.CastFinishAt(_aoe.Casters[0].CastInfo));
+                forbidden[i] = new SDInvertedCircle(AOEs[i].Position, 2.5f);
+            hints.AddForbiddenZone(new SDIntersection(forbidden), Module.CastFinishAt(_aoe.Casters[0].CastInfo));
         }
         else
             base.AddAIHints(slot, actor, assignment, hints);
@@ -130,7 +130,7 @@ sealed class AetherSprayWaterKB(BossModule module) : Components.SimpleKnockbacks
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
@@ -144,15 +144,15 @@ sealed class AetherSprayWaterKB(BossModule module) : Components.SimpleKnockbacks
             var pos = c.Origin;
             var bubbles = Module.Enemies((uint)OID.QueerBubble);
             var count = bubbles.Count;
-            var forbidden = new Func<WPos, float>[count + 1];
-            forbidden[count] = ShapeDistance.InvertedCircle(pos, 7f);
+            var forbidden = new ShapeDistance[count + 1];
+            forbidden[count] = new SDInvertedCircle(pos, 7f);
 
             for (var i = 0; i < count; ++i)
             {
                 var a = bubbles[i].Position;
-                forbidden[i] = ShapeDistance.Cone(pos, 100f, Angle.FromDirection(a - pos), Angle.Asin(2.5f / (a - pos).Length()));
+                forbidden[i] = new SDCone(pos, 100f, Angle.FromDirection(a - pos), Angle.Asin(2.5f / (a - pos).Length()));
             }
-            hints.AddForbiddenZone(ShapeDistance.Union(forbidden), act);
+            hints.AddForbiddenZone(new SDUnion(forbidden), act);
         }
     }
 }

@@ -70,7 +70,7 @@ sealed class Buffet(BossModule module) : Components.SimpleKnockbacks(module, (ui
     {
         base.AddAIHints(slot, actor, assignment, hints);
         if (target == actor && targeted)
-            hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 17.5f));
+            hints.AddForbiddenZone(new SDCircle(Arena.Center, 17.5f));
     }
 }
 

@@ -29,7 +29,7 @@ class Axioma(BossModule module) : Components.GenericAOEs(module)
     new(31.73f, -754.02f), new(33.74f, -753.66f), new(35.83f, -753.04f), new(37.51f, -752.18f), new(38.8f, -751.22f), new(39.97f, -749.94f),
     new(40.91f, -748.65f), new(41.76f, -747.09f), new(42.45f, -745.39f), new(42.99f, -743.66f), new(43.4f, -741.94f), new(43.61f, -740.1f),
     new(43.93f, -737.84f), new(44.1f, -735.59f), new(44.17f, -733.28f), new(44.18f, -730.96f), new(44.21f, -728.77f), new(44.2f, -726.58f),
-    new(44.17f, -725), new(48.16f, -725), new(48.2f, -726.57f), new(48.21f, -728.76f), new(48.22f, -730.96f), new(48.21f, -733.25f),
+    new(44.17f, -725f), new(48.16f, -725f), new(48.2f, -726.57f), new(48.21f, -728.76f), new(48.22f, -730.96f), new(48.21f, -733.25f),
     new(48.13f, -735.67f), new(48.08f, -736.37f), new(47.96f, -738.06f), new(47.69f, -740.49f), new(47.39f, -742.41f), new(46.94f, -744.47f),
     new(46.32f, -746.51f), new(45.47f, -748.65f), new(44.45f, -750.55f), new(43.2f, -752.35f), new(41.56f, -754.13f), new(39.5f, -755.65f),
     new(39.26f, -755.76f), new(37.19f, -756.77f), new(34.98f, -757.44f), new(34.73f, -757.51f), new(32, -757.99f), new(29.25f, -757.99f)]);
@@ -44,14 +44,17 @@ class Axioma(BossModule module) : Components.GenericAOEs(module)
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (active)
-            return new AOEInstance[1] { new(ShouldBeInZone ? voidzone with { InvertForbiddenZone = true } : voidzone, Arena.Center, default, WorldState.FutureTime(2.5d), ShouldBeInZone ? Colors.SafeFromAOE : Colors.AOE) };
+        {
+            voidzone.InvertForbiddenZone = ShouldBeInZone;
+            return new AOEInstance[1] { new(voidzone, Arena.Center, default, WorldState.FutureTime(2.5d), ShouldBeInZone ? Colors.SafeFromAOE : default) };
+        }
         else
             return [];
     }
 
     public override void OnEventEnvControl(byte index, uint state)
     {
-        if (index == 0x00 && state == 0x00020001)
+        if (index == 0x00 && state == 0x00020001u)
             active = true;
     }
 

@@ -72,7 +72,7 @@ sealed class P5DeathOfTheHeavensHeavensflame(BossModule module) : Components.Gen
             hints.Add("Cancel knockback immunity!");
 
         var actorAdjPos = _playerAdjustedPositions[slot];
-        if (!Module.InBounds(actorAdjPos))
+        if (!Arena.InBounds(actorAdjPos))
             hints.Add("About to be knocked into wall!");
 
         if (Raid.WithSlot(false, true, true).Exclude(actor).WhereSlot(s => _playerAdjustedPositions[s].InCircle(actorAdjPos, _aoeRadius)).Any())

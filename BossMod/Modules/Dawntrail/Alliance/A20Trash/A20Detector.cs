@@ -30,7 +30,7 @@ sealed class A20DetectorStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.Detector1, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1058u, NameID = 14072u, Category = BossModuleInfo.Category.Alliance, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 3)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.Detector1, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1058u, NameID = 14072u, Category = BossModuleInfo.Category.Alliance, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 3)]
 public sealed class A20Detector(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly WPos[] vertices1 = [new(638.32f, 409.79f), new(638.77f, 410.25f), new(639.13f, 410.76f), new(639.72f, 411.08f), new(640.4f, 411.15f),

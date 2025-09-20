@@ -1,5 +1,6 @@
 namespace BossMod;
 
+[SkipLocalsInit]
 public static class MathExtension
 {
     public static bool IsPrime(uint number)

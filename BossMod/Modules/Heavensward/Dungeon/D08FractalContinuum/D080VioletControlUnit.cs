@@ -89,18 +89,7 @@ public class D080VioletControlUnit(WorldState ws, Actor primary) : BossModule(ws
     new(-68.15f, -230.91f), new(-68.63f, -231.36f), new(-73.03f, -239.81f), new(-72.57f, -240.19f), new(-70.69f, -240.35f)];
     private static readonly ArenaBoundsCustom arena1 = new([new PolygonCustom(vertices)], [new Rectangle(new(-0.181f, -202.993f), 1.39f, 0.9f)]);
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies((uint)OID.ClockworkPredator);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsActorInCombat((uint)OID.ClockworkPredator);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

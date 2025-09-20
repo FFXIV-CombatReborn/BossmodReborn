@@ -96,7 +96,7 @@ sealed class Daggerflight(BossModule module) : Components.InterceptTether(module
         {
             var source = Module.PrimaryActor;
             var target = Module.Enemies((uint)OID.TentoawaTheWideEye)[0];
-            hints.AddForbiddenZone(ShapeDistance.InvertedRect(target.Position + (target.HitboxRadius + 0.1f) * target.DirectionTo(source), source.Position, 0.5f), _activation);
+            hints.AddForbiddenZone(new SDInvertedRect(target.Position + (target.HitboxRadius + 0.1f) * target.DirectionTo(source), source.Position, 0.5f), _activation);
         }
     }
 }
@@ -105,7 +105,7 @@ sealed class CradleOfTheSleepless(BossModule module) : Components.GenericAOEs(mo
 {
     private AOEInstance[] _aoe = [];
 
-    private static readonly AOEShapeCone cone = new(8f, 60f.Degrees(), InvertForbiddenZone: true);
+    private static readonly AOEShapeCone cone = new(8f, 60f.Degrees(), invertForbiddenZone: true);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
 

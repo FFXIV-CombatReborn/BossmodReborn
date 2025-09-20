@@ -167,7 +167,7 @@ class WaveOfNausea(BossModule module) : Components.GenericAOEs(module)
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         void AddAOE(Angle start, Angle end)
-                => AOEs.Add(new(new AOEShapeCustom([new ConeHA(spell.LocXZ, 6f, start, end)], differenceShapes, InvertForbiddenZone: true), Arena.Center, default, Module.CastFinishAt(spell), Colors.SafeFromAOE));
+                => AOEs.Add(new(new AOEShapeCustom([new ConeHA(spell.LocXZ, 6f, start, end)], differenceShapes, invertForbiddenZone: true), Arena.Center, default, Module.CastFinishAt(spell), Colors.SafeFromAOE));
         if (spell.Action.ID == (uint)AID.WaveOfNausea)
         {
             AOEs.Add(new(donut, spell.LocXZ, default, Module.CastFinishAt(spell)));

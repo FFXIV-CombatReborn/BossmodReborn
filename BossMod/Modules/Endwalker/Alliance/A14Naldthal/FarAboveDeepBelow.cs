@@ -92,16 +92,20 @@ class DeepestPit(BossModule module) : Components.GenericAOEs(module)
         if (spell.Action.ID is (uint)AID.DeepestPitFirst or (uint)AID.DeepestPitRest)
         {
             var count = _aoes.Count;
+            var aoes = CollectionsMarshal.AsSpan(_aoes);
+            var id = caster.InstanceID;
             for (var i = 0; i < count; ++i)
             {
-                if (_aoes[i].ActorID == caster.InstanceID)
+                if (aoes[i].ActorID == id)
                 {
                     _aoes.RemoveAt(i);
                     break;
                 }
             }
-            if (count == 0)
+            if (_aoes.Count == 0)
+            {
                 _targets.Clear();
+            }
         }
     }
 

@@ -29,7 +29,7 @@ class DoubleSever(BossModule module) : Components.SimpleAOEs(module, (uint)AID.D
         base.AddAIHints(slot, actor, assignment, hints);
         ref var aoe = ref Casters.Ref(0);
         // stay close to the origin
-        hints.AddForbiddenZone(ShapeDistance.InvertedCircle(aoe.Origin, 3f), aoe.Activation);
+        hints.AddForbiddenZone(new SDInvertedCircle(aoe.Origin, 3f), aoe.Activation);
     }
 }
 class AtmosphericCompression(BossModule module) : Components.SimpleAOEs(module, (uint)AID.AtmosphericCompression, 5f);

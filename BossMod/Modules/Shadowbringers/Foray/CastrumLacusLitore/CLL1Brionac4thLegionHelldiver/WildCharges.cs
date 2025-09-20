@@ -24,7 +24,7 @@ sealed class WildCharges(BossModule module) : Components.GenericAOEs(module)
         if (halfWidth != default)
         {
             var dir = spell.LocXZ - caster.Position;
-            _aoes.Add(new(new AOEShapeRect(dir.Length(), halfWidth, InvertForbiddenZone: true), caster.Position.Quantized(), Angle.FromDirection(dir), Module.CastFinishAt(spell), Colors.SafeFromAOE));
+            _aoes.Add(new(new AOEShapeRect(dir.Length(), halfWidth, invertForbiddenZone: true), caster.Position.Quantized(), Angle.FromDirection(dir), Module.CastFinishAt(spell), Colors.SafeFromAOE));
         }
     }
 
@@ -41,13 +41,13 @@ sealed class WildCharges(BossModule module) : Components.GenericAOEs(module)
         var count = _aoes.Count;
         if (count != 0)
         {
-            var forbidden = new Func<WPos, float>[count];
+            var forbidden = new ShapeDistance[count];
             for (var i = 0; i < count; ++i)
             {
                 ref var aoe = ref _aoes.Ref(i);
                 forbidden[i] = aoe.Shape.Distance(aoe.Origin, aoe.Rotation);
             }
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), _aoes.Ref(0).Activation);
+            hints.AddForbiddenZone(new SDIntersection(forbidden), _aoes.Ref(0).Activation);
         }
     }
 

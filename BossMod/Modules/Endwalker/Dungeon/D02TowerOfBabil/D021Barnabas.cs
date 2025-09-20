@@ -99,7 +99,7 @@ sealed class Magnetism(BossModule module) : Components.GenericKnockback(module)
             return true;
         if (_aoe2.Casters.Count != 0 && _aoe2.Casters.Ref(0).Check(pos))
             return true;
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
@@ -163,12 +163,12 @@ sealed class Magnetism(BossModule module) : Components.GenericKnockback(module)
         var isKnockback = bossCharge && isPositive || !bossCharge && isNegative;
         var pos = Arena.Center;
 
-        var forbidden = shape
-            ? isPull ? ShapeDistance.Rect(pos, new WDir(default, 1f), 15f, 15f, 12f)
-            : isKnockback ? ShapeDistance.InvertedCircle(pos, 6f)
+        ShapeDistance? forbidden = shape
+            ? isPull ? new SDRect(pos, new WDir(default, 1f), 15f, 15f, 12f)
+            : isKnockback ? new SDInvertedCircle(pos, 6f)
             : null
-            : isPull ? ShapeDistance.Circle(pos, 13f)
-            : isKnockback ? ShapeDistance.InvertedCircle(pos, 10f)
+            : isPull ? new SDCircle(pos, 13f)
+            : isKnockback ? new SDInvertedCircle(pos, 10f)
             : null;
 
         if (forbidden != null)

@@ -295,17 +295,7 @@ sealed class CE23FiresOfWarStates : StateMachineBuilder
             .ActivateOnEnter<ScaldingScolding>()
             .Raw.Update = () =>
             {
-                if (module.BossMater()?.IsDead ?? false)
-                    return true;
-                var enemies = module.Enemies(CE23FiresOfWar.Trash);
-                var count = enemies.Count;
-                for (var i = 0; i < count; ++i)
-                {
-                    var enemy = enemies[i];
-                    if (!enemy.IsDestroyed)
-                        return false;
-                }
-                return true;
+                return (module.BossMater()?.IsDead ?? false) || AllDeadOrDestroyed(CE23FiresOfWar.Trash);
             };
         ;
     }
@@ -329,6 +319,6 @@ public sealed class CE23FiresOfWar(WorldState ws, Actor primary) : BossModule(ws
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         Arena.Actor(_bossMater);
-        Arena.Actors(Enemies(Trash));
+        Arena.Actors(this, Trash);
     }
 }

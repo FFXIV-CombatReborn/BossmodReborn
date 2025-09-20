@@ -46,11 +46,11 @@ public enum AID : uint
 
 public enum IconID : uint
 {
-    Tankbuster = 341, // player
-    Stackmarker1 = 62, // player
-    Stackmarker2 = 542, // player
-    Stackmarker3 = 543, // player
-    Spreadmarker = 139 // player
+    ScreesOfFury = 341, // player
+    MightyBlorp1 = 62, // player
+    MightyBlorp2 = 542, // player
+    MightyBlorp3 = 543, // player
+    GreatTorrent = 139 // player
 }
 
 sealed class DubiousTulidisasterArenaChange(BossModule module) : Components.GenericAOEs(module)
@@ -72,18 +72,16 @@ sealed class DubiousTulidisasterArenaChange(BossModule module) : Components.Gene
     {
         if (index == 0x00 && state == 0x00020001u)
         {
-            Arena.Bounds = D074GreatestSerpentOfTural.DefaultBounds;
+            Arena.Bounds = new ArenaBoundsSquare(12f);
             _aoe = [];
         }
     }
 }
 
-sealed class ScreesOfFury(BossModule module) : Components.BaitAwayIcon(module, 3f, (uint)IconID.Tankbuster, (uint)AID.ScreesOfFury, 5.3f, tankbuster: true, damageType: AIHints.PredictedDamageType.Tankbuster);
+sealed class ScreesOfFury(BossModule module) : Components.BaitAwayIcon(module, 3f, (uint)IconID.ScreesOfFury, (uint)AID.ScreesOfFury, 5.3d, tankbuster: true, damageType: AIHints.PredictedDamageType.Tankbuster);
 
 sealed class GreatestFlood(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.GreatestFlood, 15f)
 {
-    private static readonly Angle a45 = 45f.Degrees();
-
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (Casters.Count != 0)
@@ -92,7 +90,7 @@ sealed class GreatestFlood(BossModule module) : Components.SimpleKnockbacks(modu
             var act = c.Activation;
             if (!IsImmune(slot, act))
             {
-                hints.AddForbiddenZone(ShapeDistance.InvertedCone(c.Origin, 4f, c.Direction, a45), act);
+                hints.AddForbiddenZone(new SDKnockbackInAABBSquareAwayFromOrigin(Arena.Center, c.Origin, 15f, 11f), act);
             }
         }
     }
@@ -121,7 +119,7 @@ sealed class GreatestLabyrinth(BossModule module) : Components.GenericAOEs(modul
         for (var i = 0; i < 4; ++i)
         {
             var tp = tilePairs[i];
-            shapes[i] = !invert ? new AOEShapeCustom(wholeArena, [middle, tp.correctTile, tp.goalTile]) : new AOEShapeCustom([tp.correctTile, tp.goalTile], InvertForbiddenZone: true);
+            shapes[i] = !invert ? new AOEShapeCustom(wholeArena, [middle, tp.correctTile, tp.goalTile]) : new AOEShapeCustom([tp.correctTile, tp.goalTile], invertForbiddenZone: true);
         }
         return shapes;
     }
@@ -169,9 +167,9 @@ sealed class GreatestLabyrinth(BossModule module) : Components.GenericAOEs(modul
 }
 
 abstract class MightyBlorp(BossModule module, uint iconID, uint aid, float radius) : Components.StackWithIcon(module, iconID, aid, radius, 4.6f, 4, 4);
-sealed class MightyBlorp1(BossModule module) : MightyBlorp(module, (uint)IconID.Stackmarker1, (uint)AID.MightyBlorp1, 6f);
-sealed class MightyBlorp2(BossModule module) : MightyBlorp(module, (uint)IconID.Stackmarker2, (uint)AID.MightyBlorp2, 5f);
-sealed class MightyBlorp3(BossModule module) : MightyBlorp(module, (uint)IconID.Stackmarker3, (uint)AID.MightyBlorp3, 4f);
+sealed class MightyBlorp1(BossModule module) : MightyBlorp(module, (uint)IconID.MightyBlorp1, (uint)AID.MightyBlorp1, 6f);
+sealed class MightyBlorp2(BossModule module) : MightyBlorp(module, (uint)IconID.MightyBlorp2, (uint)AID.MightyBlorp2, 5f);
+sealed class MightyBlorp3(BossModule module) : MightyBlorp(module, (uint)IconID.MightyBlorp3, (uint)AID.MightyBlorp3, 4f);
 
 abstract class SludgeVoidzone(BossModule module, float radius, uint oid) : Components.Voidzone(module, radius, m => GetVoidzones(m, oid))
 {
@@ -192,7 +190,7 @@ sealed class DubiousTulidisasterGreatestLabyrinthFlood(BossModule module) : Comp
 sealed class ExaltedWobble(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ExaltedWobble, 9f);
 sealed class MisplacedMystery(BossModule module) : Components.SimpleAOEs(module, (uint)AID.MisplacedMystery, new AOEShapeRect(52f, 2.5f));
 sealed class GreatTorrent(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GreatTorrentAOE, 6f, 10);
-sealed class GreatTorrentSpread(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.Spreadmarker, (uint)AID.GreatTorrentSpread, 6f, 5.1f);
+sealed class GreatTorrentSpread(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.GreatTorrent, (uint)AID.GreatTorrentSpread, 6f, 5.1d);
 
 sealed class D074GreatestSerpentOfTuralStates : StateMachineBuilder
 {
@@ -217,10 +215,8 @@ sealed class D074GreatestSerpentOfTuralStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 834, NameID = 12709)]
-public sealed class D074GreatestSerpentOfTural(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, StartingBounds)
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 834, NameID = 12709)]
+public sealed class D074GreatestSerpentOfTural(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, new ArenaBoundsSquare(14.5f))
 {
     public static readonly WPos ArenaCenter = new(-130f, -554f);
-    public static readonly ArenaBoundsSquare StartingBounds = new(14.5f);
-    public static readonly ArenaBoundsSquare DefaultBounds = new(12f);
 }

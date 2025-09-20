@@ -78,7 +78,7 @@ class DisorientingGroan(BossModule module) : Components.SimpleKnockbacks(module,
         if (Casters.Count != 0)
         {
             ref readonly var c = ref Casters.Ref(0);
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(c.Origin, 5f), c.Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(c.Origin, 5f), c.Activation);
         }
     }
 }

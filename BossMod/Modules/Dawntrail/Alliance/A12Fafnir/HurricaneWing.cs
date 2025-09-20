@@ -134,25 +134,25 @@ sealed class Whirlwinds(BossModule module) : Components.GenericAOEs(module)
         var total = countSmall + countBig;
         if (countSmall == 0 && countBig == 0)
             return;
-        var forbiddenImminent = new Func<WPos, float>[total];
-        var forbiddenFuture = new Func<WPos, float>[total];
+        var forbiddenImminent = new ShapeDistance[total];
+        var forbiddenFuture = new ShapeDistance[total];
 
         const float length = Length + 6f;
         for (var i = 0; i < countBig; ++i)
         {
             var w = _bigWhirldwinds[i];
-            forbiddenFuture[i] = ShapeDistance.Capsule(w.Position, !moving ? w.Rotation + a180 : w.Rotation, length, 10f);
-            forbiddenImminent[i] = ShapeDistance.Circle(w.Position, 10f);
+            forbiddenFuture[i] = new SDCapsule(w.Position, !moving ? w.Rotation + a180 : w.Rotation, length, 10f);
+            forbiddenImminent[i] = new SDCircle(w.Position, 10f);
         }
         for (var i = 0; i < countSmall; ++i)
         {
             var w = _smallWhirldwinds[i];
-            forbiddenImminent[i + countBig] = ShapeDistance.Circle(w.Position, 5f);
-            forbiddenFuture[i + countBig] = ShapeDistance.Capsule(w.Position, !moving ? w.Rotation + a180 : w.Rotation, length, 5f);
+            forbiddenImminent[i + countBig] = new SDCircle(w.Position, 5f);
+            forbiddenFuture[i + countBig] = new SDCapsule(w.Position, !moving ? w.Rotation + a180 : w.Rotation, length, 5f);
         }
 
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenFuture), WorldState.FutureTime(1.5d));
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenImminent));
+        hints.AddForbiddenZone(new SDUnion(forbiddenFuture), WorldState.FutureTime(1.5d));
+        hints.AddForbiddenZone(new SDUnion(forbiddenImminent));
     }
 }
 

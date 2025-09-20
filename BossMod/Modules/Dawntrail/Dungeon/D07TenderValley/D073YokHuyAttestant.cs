@@ -66,7 +66,9 @@ sealed class AncientWrath(BossModule module) : Components.GenericAOEs(module)
         {
             var aoe = aoeMap[i];
             if (position.AlmostEqual(aoe.Position, 1f))
+            {
                 return aoe.Shape;
+            }
         }
         return null;
     }
@@ -84,14 +86,22 @@ sealed class D073YokHuyAttestantStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 834, NameID = 12801)]
-public sealed class D073YokHuyAttestant(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 834, NameID = 12801)]
+public sealed class D073YokHuyAttestant : BossModule
 {
-    private static readonly WPos[] vertices1 = [new(-134.226f, -482.956f), new(-134.105f, -483.161f), new(-134.227f, -484.617f), new(-134.259f, -486.314f), new(-134.168f, -488.471f),
-    new(-134.361f, -489.473f), new(-135.919f, -489.514f), new(-135.919f, -483.988f), new(-136.099f, -483.434f), new(-135.750f, -482.812f)];
-    private static readonly WPos[] vertices2 = [new(-125.309f, -474.651f), new(-125.429f, -474.446f), new(-125.308f, -472.991f), new(-125.276f, -471.294f), new(-125.366f, -469.136f),
-    new(-125.173f, -468.134f), new(-123.615f, -468.094f), new(-123.615f, -473.619f), new(-123.436f, -474.173f), new(-123.784f, -474.795f)];
-    private static readonly ArenaBoundsCustom arena = new([new Rectangle(new(-130f, -475f), 17.4f, 22f)], [new PolygonCustomO(vertices1, 0.5f), new PolygonCustomO(vertices2, 0.5f)]);
+    public D073YokHuyAttestant(WorldState ws, Actor primary) : this(ws, primary, BuildArena()) { }
+
+    private D073YokHuyAttestant(WorldState ws, Actor primary, (WPos center, ArenaBoundsCustom arena) a) : base(ws, primary, a.center, a.arena) { }
+
+    private static (WPos center, ArenaBoundsCustom arena) BuildArena()
+    {
+        WPos[] vertices1 = [new(-134.226f, -482.956f), new(-134.105f, -483.161f), new(-134.227f, -484.617f), new(-134.259f, -486.314f), new(-134.168f, -488.471f),
+        new(-134.361f, -489.473f), new(-135.919f, -489.514f), new(-135.919f, -483.988f), new(-136.099f, -483.434f), new(-135.750f, -482.812f)];
+        WPos[] vertices2 = [new(-125.309f, -474.651f), new(-125.429f, -474.446f), new(-125.308f, -472.991f), new(-125.276f, -471.294f), new(-125.366f, -469.136f),
+        new(-125.173f, -468.134f), new(-123.615f, -468.094f), new(-123.615f, -473.619f), new(-123.436f, -474.173f), new(-123.784f, -474.795f)];
+        var arena = new ArenaBoundsCustom([new Rectangle(new(-130f, -475f), 17.9f, 22.5f)], [new PolygonCustom(vertices1), new PolygonCustom(vertices2)], AdjustForHitbox: true);
+        return (arena.Center, arena);
+    }
 
     private static readonly uint[] Trash = [(uint)OID.YokHuyAltar, (uint)OID.YokHuyAltar2, (uint)OID.YokHuyOrb];
     protected override void DrawEnemies(int pcSlot, Actor pc)

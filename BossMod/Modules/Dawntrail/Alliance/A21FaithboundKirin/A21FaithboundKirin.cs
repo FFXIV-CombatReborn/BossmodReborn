@@ -13,7 +13,7 @@ sealed class WallArenaChange(BossModule module) : Components.SimpleAOEs(module, 
 sealed class GloamingGleam(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GloamingGleam, new AOEShapeRect(50f, 6f));
 sealed class RazorFang(BossModule module) : Components.SimpleAOEs(module, (uint)AID.RazorFang, 20f);
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.FaithboundKirin, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1058u, NameID = 14053u, Category = BossModuleInfo.Category.Alliance, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 2)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.FaithboundKirin, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1058u, NameID = 14053u, Category = BossModuleInfo.Category.Alliance, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 2)]
 public sealed class A21FaithboundKirin(WorldState ws, Actor primary) : BossModule(ws, primary, DefaultCenter, DefaultArena)
 {
     public static readonly WPos DefaultCenter = new(-850f, 780f);

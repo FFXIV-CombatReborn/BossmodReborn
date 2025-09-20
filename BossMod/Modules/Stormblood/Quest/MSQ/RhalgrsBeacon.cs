@@ -78,56 +78,68 @@ class TerminusEst(BossModule module) : Components.GenericAOEs(module, (uint)AID.
     }
 }
 
-class Gunblade(BossModule module) : Components.GenericKnockback(module, (uint)AID.Gunblade, stopAtWall: true)
+class Gunblade(BossModule module) : Components.GenericKnockback(module, stopAtWall: true)
 {
-    private Actor? _caster;
+    private Knockback[] _kb = [];
+    private readonly List<Actor> voidzones = module.Enemies((uint)OID.ChoppingBlock);
     private readonly ChoppingBlock _aoe = module.FindComponent<ChoppingBlock>()!;
 
-    public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
+    public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor) => _kb;
+
+    public override bool DestinationUnsafe(int slot, Actor actor, WPos pos)
     {
-        if (_caster is Actor c)
-            return new Knockback[1] { new(c.Position, 10f, Module.CastFinishAt(c.CastInfo)) };
-        return [];
+        var aoes = _aoe.ActiveAOEs(slot, actor);
+        var len = aoes.Length;
+        for (var i = 0; i < len; ++i)
+        {
+            if (aoes[i].Check(pos))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (_caster is Actor source)
+        if (_kb.Length != 0)
         {
-            var aoes = _aoe.ActiveAOEs(slot, actor);
-            var len = aoes.Length;
-            if (len == 0)
-                return;
-            var voidzones = new Func<WPos, float>[len];
-            for (var i = 0; i < len; ++i)
+            ref var kb = ref _kb[0];
+            var act = kb.Activation;
+            if (!IsImmune(slot, act))
             {
-                voidzones[i] = new(ShapeDistance.Circle(aoes[i].Origin, 5f));
+                var origin = kb.Origin;
+                var count = voidzones.Count;
+                var forbidden = new ShapeDistance[count];
+
+                for (var i = 0; i < count; ++i)
+                {
+                    var a = voidzones[i].Position;
+                    forbidden[i] = new SDCone(origin, 100f, Angle.FromDirection(a - origin), Angle.Asin(5f / (a - origin).Length()));
+                }
+                hints.AddForbiddenZone(new SDUnion(forbidden), act);
             }
-            var combined = ShapeDistance.Union(voidzones);
-            float projectedDist(WPos pos)
-            {
-                var direction = (pos - source.Position).Normalized();
-                var projected = pos + 10f * direction;
-                return combined(projected);
-            }
-            hints.AddForbiddenZone(projectedDist, Module.CastFinishAt(source.CastInfo));
         }
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == WatchedAction)
-            _caster = caster;
+        if (spell.Action.ID == (uint)AID.Gunblade)
+        {
+            _kb = [new(caster.Position.Quantized(), 10f, Module.CastFinishAt(spell))];
+        }
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == WatchedAction)
-            _caster = null;
+        if (spell.Action.ID == (uint)AID.Gunblade)
+        {
+            _kb = [];
+        }
     }
 }
 
-class ChoppingBlock(BossModule module) : Components.VoidzoneAtCastTarget(module, 5f, (uint)AID.ChoppingBlock1, GetVoidzones, 0f)
+class ChoppingBlock(BossModule module) : Components.VoidzoneAtCastTarget(module, 5f, (uint)AID.ChoppingBlock1, GetVoidzones, 0.5d)
 {
     private static Actor[] GetVoidzones(BossModule module)
     {
@@ -161,4 +173,4 @@ class FordolaRemLupisStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, GroupType = BossModuleInfo.GroupType.Quest, GroupID = 68064, NameID = 5953)]
-public class FordolaRemLupis(WorldState ws, Actor primary) : BossModule(ws, primary, new(-195.25f, 147.5f), new ArenaBoundsCircle(20));
+public class FordolaRemLupis(WorldState ws, Actor primary) : BossModule(ws, primary, new(-195.25f, 147.5f), new ArenaBoundsCircle(20f));

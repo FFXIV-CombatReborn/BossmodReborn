@@ -72,9 +72,9 @@ class Hints(BossModule module) : BossComponent(module)
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (NumCasts < 4)
-            hints.AddForbiddenZone(ShapeDistance.Circle(FearCastSource, 11), WorldState.FutureTime(10d));
+            hints.AddForbiddenZone(new SDCircle(FearCastSource, 11), WorldState.FutureTime(10d));
         else
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(FearCastSource, 5), WorldState.FutureTime(10d));
+            hints.AddForbiddenZone(new SDInvertedCircle(FearCastSource, 5), WorldState.FutureTime(10d));
     }
 }
 

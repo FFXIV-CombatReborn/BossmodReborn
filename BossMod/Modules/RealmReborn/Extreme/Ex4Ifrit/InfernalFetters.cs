@@ -11,7 +11,7 @@ class InfernalFetters(BossModule module) : BossComponent(module)
         {
             var partner = Raid.WithSlot(false, true, true).Exclude(slot).IncludedInMask(Fetters).FirstOrDefault().Item2;
             if (partner != null)
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(partner.Position, 10)); // TODO: tweak range...
+                hints.AddForbiddenZone(new SDInvertedCircle(partner.Position, 10)); // TODO: tweak range...
         }
     }
 

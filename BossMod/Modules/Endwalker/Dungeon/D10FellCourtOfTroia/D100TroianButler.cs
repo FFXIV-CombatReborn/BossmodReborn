@@ -116,18 +116,7 @@ public sealed class D100TroianButler(WorldState ws, Actor primary) : BossModule(
     private static readonly ArenaBoundsCustom arena2 = new([new PolygonCustom(vertices2)]);
     public static readonly uint[] Trash = [(uint)OID.Boss, (uint)OID.TroianEquerry, (uint)OID.TroianTrapper, (uint)OID.TroianSteward];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(Trash);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInCombat(Trash);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
@@ -138,6 +127,8 @@ public sealed class D100TroianButler(WorldState ws, Actor primary) : BossModule(
     {
         var count = hints.PotentialTargets.Count;
         for (var i = 0; i < count; ++i)
+        {
             hints.PotentialTargets[i].Priority = 0;
+        }
     }
 }

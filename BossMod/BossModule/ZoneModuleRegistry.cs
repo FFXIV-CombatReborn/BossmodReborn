@@ -4,6 +4,7 @@ namespace BossMod;
 
 // attribute for defining zone module's metadata; it is required by each module to be loaded
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
+[SkipLocalsInit]
 public sealed class ZoneModuleInfoAttribute(BossModuleInfo.Maturity maturity, uint cfcId, uint territoryID = 0) : Attribute
 {
     public BossModuleInfo.Maturity Maturity => maturity;

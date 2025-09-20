@@ -13,7 +13,7 @@ sealed class ChemicalBombHyperPulse : Components.SimpleAOEGroups
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.UltimaTheFeared, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1058u, NameID = 14231u, Category = BossModuleInfo.Category.Alliance, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 4)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.UltimaTheFeared, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1058u, NameID = 14231u, Category = BossModuleInfo.Category.Alliance, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 4)]
 public sealed class A22UltimaOmega(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter1, new ArenaBoundsRect(20f, 23.5f))
 {
     public static readonly WPos ArenaCenter1 = new(800f, 800f);

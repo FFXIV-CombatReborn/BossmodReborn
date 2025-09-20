@@ -15,19 +15,19 @@ sealed class UndyingHatred(BossModule module) : Components.SimpleKnockbacks(modu
         if (count == 0)
         {
             var dir = c.Direction.ToDirection();
-            hints.AddForbiddenZone(ShapeDistance.Rect(center + 24f * dir, center - 16f * dir, 24f), act);
+            hints.AddForbiddenZone(new SDRect(center + 24f * dir, center - 16f * dir, 24f), act);
         }
         else
         {
-            var forbidden = new Func<WPos, float>[count];
+            var forbidden = new ShapeDistance[count];
             var direction = new WDir(default, 1f);
             for (var i = 0; i < count; ++i)
             {
                 var line = _aoe.Lines[i];
                 var dir = line.Advance * 6.66f;
-                forbidden[i] = ShapeDistance.InvertedRect(line.Next + dir, direction, 1f, 1f, 1f);
+                forbidden[i] = new SDInvertedRect(line.Next + dir, direction, 1f, 1f, 1f);
             }
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), act);
+            hints.AddForbiddenZone(new SDIntersection(forbidden), act);
         }
     }
 
@@ -41,6 +41,6 @@ sealed class UndyingHatred(BossModule module) : Components.SimpleKnockbacks(modu
             if (aoe.Color == Colors.Danger && aoe.Check(pos))
                 return true;
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }

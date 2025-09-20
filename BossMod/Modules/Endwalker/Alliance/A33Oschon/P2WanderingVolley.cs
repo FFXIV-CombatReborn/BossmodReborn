@@ -24,7 +24,7 @@ sealed class P2WanderingVolleyKnockback(BossModule module) : Components.GenericK
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

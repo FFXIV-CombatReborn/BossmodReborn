@@ -59,15 +59,15 @@ sealed class OrbCollecting(BossModule module) : BossComponent(module)
         var count = _orbs.Count;
         if (count == 0)
             return;
-        var orbs = new Func<WPos, float>[count];
+        var orbs = new ShapeDistance[count];
         var aoes = _aoe.Casters;
         var activation = aoes.Count != 0 ? aoes.Ref(0).Activation.AddSeconds(1.1d) : WorldState.FutureTime(2d);
         for (var i = 0; i < count; ++i)
         {
             var o = _orbs[i];
-            orbs[i] = ShapeDistance.InvertedRect(o.Position + 0.5f * o.Rotation.ToDirection(), new WDir(default, 1f), 0.5f, 0.5f, 0.5f);
+            orbs[i] = new SDInvertedRect(o.Position + 0.5f * o.Rotation.ToDirection(), new WDir(default, 1f), 0.5f, 0.5f, 0.5f);
         }
-        hints.AddForbiddenZone(ShapeDistance.Intersection(orbs), activation);
+        hints.AddForbiddenZone(new SDIntersection(orbs), activation);
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)

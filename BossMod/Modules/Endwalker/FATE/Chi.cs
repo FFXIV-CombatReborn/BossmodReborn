@@ -264,7 +264,7 @@ sealed class Combos(BossModule module) : Components.GenericAOEs(module)
         }
         // make ai stay close to boss to ensure successfully dodging the combo
         ref var aoe = ref _aoes.Ref(0);
-        hints.AddForbiddenZone(ShapeDistance.InvertedRect(Module.PrimaryActor.Position, aoe.Rotation, 2f, 2f, 40f), aoe.Activation);
+        hints.AddForbiddenZone(new SDInvertedRect(Module.PrimaryActor.Position, aoe.Rotation, 2f, 2f, 40f), aoe.Activation);
     }
 }
 

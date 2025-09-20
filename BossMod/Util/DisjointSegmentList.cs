@@ -1,6 +1,7 @@
 ﻿namespace BossMod;
 
 // list of disjoint segments (defined by min/max values)
+[SkipLocalsInit]
 public sealed class DisjointSegmentList
 {
     public readonly List<(float Min, float Max)> Segments = [];

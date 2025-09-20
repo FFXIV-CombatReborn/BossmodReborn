@@ -703,7 +703,7 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
         NextPositionalImminent = !tn && positional.imm;
         NextPositionalCorrect = tn || target == null || positional.pos switch
         {
-            Positional.Flank => MathF.Abs(target.Rotation.ToDirection().Dot((Player.Position - target.Position).Normalized())) < 0.7071067f,
+            Positional.Flank => Math.Abs(target.Rotation.ToDirection().Dot((Player.Position - target.Position).Normalized())) < 0.7071067f,
             Positional.Rear => target.Rotation.ToDirection().Dot((Player.Position - target.Position).Normalized()) < -0.7071068f,
             _ => true
         };

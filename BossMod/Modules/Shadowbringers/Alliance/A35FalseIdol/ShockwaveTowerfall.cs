@@ -92,7 +92,7 @@ sealed class ShockwaveKB(BossModule module) : Components.GenericKnockback(module
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
@@ -106,24 +106,16 @@ sealed class ShockwaveKB(BossModule module) : Components.GenericKnockback(module
                 var loc = kb.Origin;
                 var center = Arena.Center;
                 var dir = (-45f).Degrees().ToDirection();
-                var locAdj = (loc - center).Rotate(180f.Degrees()) + center;
+                var locAdj = (loc - center).Rotate(180f.Degrees()) + center - 20f * dir;
                 // square intentionally smaller for optimal knockbacks
-                hints.AddForbiddenZone(p =>
+                if (NumCasts == 0)
                 {
-                    var proj = p + 35f * (p - loc).Normalized();
-                    if (NumCasts == 0)
-                    {
-                        if (proj.InRect(locAdj, dir, 20f, 20f, 7f))
-                        {
-                            return default;
-                        }
-                    }
-                    if (proj.InSquare(center, 20f))
-                    {
-                        return 1f;
-                    }
-                    return default;
-                }, act);
+                    hints.AddForbiddenZone(new SDKnockbackInAABBSquareAwayFromOriginPlusRectAOE(center, loc, 35f, 20f, locAdj, dir, 40f, 7f), act);
+                }
+                else
+                {
+                    hints.AddForbiddenZone(new SDKnockbackInAABBSquareAwayFromOrigin(center, loc, 35f, 20f), act);
+                }
             }
         }
     }

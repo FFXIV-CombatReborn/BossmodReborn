@@ -23,7 +23,7 @@ sealed class P1ClimbingShot(BossModule module) : Components.GenericKnockback(mod
                 }
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

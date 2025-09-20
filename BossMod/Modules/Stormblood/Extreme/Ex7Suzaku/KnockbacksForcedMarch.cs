@@ -9,7 +9,7 @@ sealed class MesmerizingMelody(BossModule module) : Components.SimpleKnockbacks(
             ref readonly var c = ref Casters.Ref(0);
             var act = c.Activation;
             if (!IsImmune(slot, act))
-                hints.AddForbiddenZone(ShapeDistance.Circle(c.Origin, 14.5f), act);
+                hints.AddForbiddenZone(new SDCircle(c.Origin, 14.5f), act);
         }
     }
 }
@@ -23,7 +23,7 @@ sealed class RuthlessRefrain(BossModule module) : Components.SimpleKnockbacks(mo
             ref readonly var c = ref Casters.Ref(0);
             var act = c.Activation;
             if (!IsImmune(slot, act))
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(c.Origin, 9f), act);
+                hints.AddForbiddenZone(new SDInvertedCircle(c.Origin, 9f), act);
         }
     }
 }
@@ -79,10 +79,10 @@ abstract class PayThePiper : Components.GenericForcedMarch
         // adding 1 unit of safety margin to everything to make it look less suspect
         var move0 = state.PendingMoves[0];
         var dir = move0.dir.ToDirection();
-        var forbidden = new Func<WPos, float>[2];
-        forbidden[0] = ShapeDistance.InvertedCircle(Ex7Suzaku.ArenaCenter - _offset * dir, 19f);
-        forbidden[1] = ShapeDistance.Rect(Ex7Suzaku.ArenaCenter, -dir, 20f, default, 4.5f);
-        hints.AddForbiddenZone(ShapeDistance.Union(forbidden), move0.activation);
+        var forbidden = new ShapeDistance[2];
+        forbidden[0] = new SDInvertedCircle(Ex7Suzaku.ArenaCenter - _offset * dir, 19f);
+        forbidden[1] = new SDRect(Ex7Suzaku.ArenaCenter, -dir, 20f, default, 4.5f);
+        hints.AddForbiddenZone(new SDUnion(forbidden), move0.activation);
     }
 }
 

@@ -30,8 +30,8 @@ public enum AID : uint
 
 public enum IconID : uint
 {
-    Tankbuster = 344, // player
-    Stackmarker = 62 // player
+    Disinfection = 344, // player
+    Quarantine = 62 // player
 }
 
 sealed class ImmuneResponseArenaChange(BossModule module) : Components.GenericAOEs(module)
@@ -53,7 +53,7 @@ sealed class ImmuneResponseArenaChange(BossModule module) : Components.GenericAO
     {
         if (index == 0x03 && state == 0x00020001u)
         {
-            Arena.Bounds = D061AntivirusX.DefaultBounds;
+            Arena.Bounds = new ArenaBoundsRect(20f, 15f);
             _aoe = [];
         }
     }
@@ -141,46 +141,56 @@ sealed class PathoCircuitCrossPurge(BossModule module) : Components.GenericAOEs(
 
 sealed class Cytolysis(BossModule module) : Components.RaidwideCast(module, (uint)AID.Cytolysis);
 
-sealed class Quarantine(BossModule module) : Components.StackWithIcon(module, (uint)IconID.Stackmarker, (uint)AID.Quarantine, 6f, 5.1f, 3, 3)
-{
-    private readonly Disinfection _tb = module.FindComponent<Disinfection>()!;
+sealed class Quarantine(BossModule module) : Components.StackWithIcon(module, (uint)IconID.Quarantine, (uint)AID.Quarantine, 6f, 5.1d, 3, 3);
 
-    public override void Update()
-    {
-        if (Stacks.Count == 0)
-            return;
-        var forbidden = Raid.WithSlot(false, true, true).WhereActor(p => _tb.ActiveBaits.Any(x => x.Target == p)).Mask();
-        foreach (ref var t in Stacks.AsSpan())
-            t.ForbiddenPlayers = forbidden;
-    }
+sealed class Disinfection(BossModule module) : Components.BaitAwayIcon(module, 6f, (uint)IconID.Disinfection, (uint)AID.Disinfection, tankbuster: true, damageType: AIHints.PredictedDamageType.Tankbuster)
+{
+    private readonly Quarantine _stack = module.FindComponent<Quarantine>()!;
+    private BitMask mask;
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (Stacks.Count != 0 && !_tb.CurrentBaits.Any(x => x.Target == actor) && actor == Stacks.Ref(0).Target)
+        if (CurrentBaits.Count != 0)
         {
-            var party = Raid.WithoutSlot(false, true, true).Where(x => !x.IsDead);
-            List<Actor> exclude = [actor, _tb.CurrentBaits.Ref(0).Target];
-            var closestAlly = party.Exclude(exclude).Closest(actor.Position);
-            if (closestAlly != null)
+            ref var b = ref CurrentBaits.Ref(0);
+            if (b.Activation.AddSeconds(-2d) >= WorldState.CurrentTime)
             {
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(closestAlly.Position, 3f), Stacks.Ref(0).Activation);
+                if (b.Target == actor)
+                {
+                    hints.GoalZones.Add(hints.GoalSingleTarget(new WPos(852f, 808f), 3f, 1f));
+                }
+                else
+                { }
+            }
+            else
+            {
+                base.AddAIHints(slot, actor, assignment, hints);
             }
         }
-        else
-        {
-            base.AddAIHints(slot, actor, assignment, hints);
-        }
     }
-}
 
-sealed class Disinfection(BossModule module) : Components.BaitAwayIcon(module, 6f, (uint)IconID.Tankbuster, (uint)AID.Disinfection, tankbuster: true, damageType: AIHints.PredictedDamageType.Tankbuster)
-{
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
-        if (!CurrentBaits.Any(x => x.Target == actor) && Module.FindComponent<Quarantine>()!.Stacks.Any(x => x.Activation.AddSeconds(-2d) >= WorldState.CurrentTime))
-        { }
-        else
-            base.AddAIHints(slot, actor, assignment, hints);
+        if (iconID == IID && Raid.FindSlot(targetID) is var slot)
+        {
+            if (_stack.Stacks.Count != 0)
+            {
+                _stack.Stacks.Ref(0).ForbiddenPlayers.Set(slot);
+            }
+            else
+            {
+                mask.Set(slot);
+            }
+        }
+        else if (iconID == (uint)IconID.Quarantine && mask != default)
+        {
+            if (_stack.Stacks.Count != 0)
+            {
+                _stack.Stacks.Ref(0).ForbiddenPlayers = mask;
+                mask = default;
+            }
+        }
+        base.OnEventIcon(actor, iconID, targetID);
     }
 }
 
@@ -191,16 +201,14 @@ sealed class D061AntivirusXStates : StateMachineBuilder
         TrivialPhase()
             .ActivateOnEnter<ImmuneResponseArenaChange>()
             .ActivateOnEnter<PathoCircuitCrossPurge>()
-            .ActivateOnEnter<Disinfection>()
             .ActivateOnEnter<Quarantine>()
+            .ActivateOnEnter<Disinfection>()
             .ActivateOnEnter<Cytolysis>();
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS), erdelf", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 827, NameID = 12844)]
-public sealed class D061AntivirusX(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, StartingBounds)
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS), erdelf", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 827, NameID = 12844)]
+public sealed class D061AntivirusX(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, new ArenaBoundsRect(22.5f, 17.5f))
 {
     public static readonly WPos ArenaCenter = new(852f, 823f);
-    public static readonly ArenaBoundsRect StartingBounds = new(22.5f, 17.5f);
-    public static readonly ArenaBoundsRect DefaultBounds = new(20f, 15f);
 }

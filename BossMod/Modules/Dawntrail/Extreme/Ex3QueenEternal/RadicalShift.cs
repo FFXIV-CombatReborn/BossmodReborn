@@ -75,15 +75,15 @@ sealed class RadicalShift(BossModule module) : Components.GenericAOEs(module)
         var center = Arena.Center;
         if (platform == Ex3QueenEternal.WindBounds)
         {
-            aoe = new(defaultSquare, Trial.T03QueenEternal.T03QueenEternal.XArenaRects, Origin: center);
+            aoe = new(defaultSquare, Trial.T03QueenEternal.T03QueenEternal.XArenaRects, origin: center);
         }
         else if (platform == Ex3QueenEternal.EarthBounds)
         {
-            aoe = new(defaultSquare, Trial.T03QueenEternal.T03QueenEternal.SplitArenaRects, Origin: center);
+            aoe = new(defaultSquare, Trial.T03QueenEternal.T03QueenEternal.SplitArenaRects, origin: center);
         }
         else if (platform == Ex3QueenEternal.IceBounds)
         {
-            aoe = new(defaultSquare, Ex3QueenEternal.IceRectsAll, Origin: center);
+            aoe = new(defaultSquare, Ex3QueenEternal.IceRectsAll, origin: center);
         }
         if (aoe != null)
         {

@@ -3,6 +3,7 @@
 namespace BossMod.Components;
 
 // generic knockback/attract component; it's a cast counter for convenience
+[SkipLocalsInit]
 public abstract class GenericKnockback(BossModule module, uint aid = default, int maxCasts = int.MaxValue, bool stopAtWall = false, bool stopAfterWall = false) : CastCounter(module, aid)
 {
     public enum Kind
@@ -83,7 +84,7 @@ public abstract class GenericKnockback(BossModule module, uint aid = default, in
     public abstract ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor);
 
     // called to determine whether we need to show hint
-    public virtual bool DestinationUnsafe(int slot, Actor actor, WPos pos) => !StopAtWall && !Module.InBounds(pos);
+    public virtual bool DestinationUnsafe(int slot, Actor actor, WPos pos) => !StopAtWall && !Arena.InBounds(pos);
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
@@ -246,6 +247,7 @@ public abstract class GenericKnockback(BossModule module, uint aid = default, in
 
 // generic 'knockback from/attract to cast target' component
 // TODO: knockback is really applied when effectresult arrives rather than when actioneffect arrives, this is important for ai hints (they can reposition too early otherwise)
+[SkipLocalsInit]
 public class SimpleKnockbacks(BossModule module, uint aid, float distance, bool ignoreImmunes = false, int maxCasts = int.MaxValue, AOEShape? shape = null, Kind kind = Kind.AwayFromOrigin, float minDistance = default, bool minDistanceBetweenHitboxes = false, bool stopAtWall = false, bool stopAfterWall = false)
     : GenericKnockback(module, aid, maxCasts, stopAtWall, stopAfterWall)
 {
@@ -277,8 +279,7 @@ public class SimpleKnockbacks(BossModule module, uint aid, float distance, bool 
             var kbs = CollectionsMarshal.AsSpan(Casters);
             for (var i = 0; i < count; ++i)
             {
-                ref var kb = ref kbs[i];
-                if (kb.ActorID == id)
+                if (kbs[i].ActorID == id)
                 {
                     Casters.RemoveAt(i);
                     return;
@@ -288,6 +289,7 @@ public class SimpleKnockbacks(BossModule module, uint aid, float distance, bool 
     }
 }
 
+[SkipLocalsInit]
 public class SimpleKnockbackGroups(BossModule module, uint[] aids, float distance, bool ignoreImmunes = false, int maxCasts = int.MaxValue, AOEShape? shape = null, Kind kind = Kind.AwayFromOrigin, float minDistance = default, bool minDistanceBetweenHitboxes = false, bool stopAtWall = false, bool stopAfterWall = false) : SimpleKnockbacks(module, default, distance, ignoreImmunes, maxCasts, shape, kind, minDistance, minDistanceBetweenHitboxes, stopAtWall, stopAfterWall)
 {
     protected readonly uint[] AIDs = aids;
@@ -314,8 +316,7 @@ public class SimpleKnockbackGroups(BossModule module, uint[] aids, float distanc
         var kbs = CollectionsMarshal.AsSpan(Casters);
         for (var i = 0; i < count; ++i)
         {
-            ref var kb = ref kbs[i];
-            if (kb.ActorID == id)
+            if (kbs[i].ActorID == id)
             {
                 Casters.RemoveAt(i);
                 return;

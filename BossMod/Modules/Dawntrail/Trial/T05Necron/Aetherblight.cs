@@ -140,7 +140,7 @@ sealed class Aetherblight(BossModule module) : Components.GenericAOEs(module)
             if (aoe2.Shape == donut)
             {
                 // make ai stay close to donut to ensure successfully dodging the combo
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(aoe2.Origin, 21f), _aoes.Ref(0).Activation);
+                hints.AddForbiddenZone(new SDInvertedCircle(aoe2.Origin, 21f), _aoes.Ref(0).Activation);
             }
         }
     }

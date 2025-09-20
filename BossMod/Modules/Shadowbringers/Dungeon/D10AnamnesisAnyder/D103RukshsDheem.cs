@@ -231,16 +231,16 @@ class Drains(BossModule module) : Components.GenericAOEs(module)
             var drain = solvedDrains[i];
             if (IsBlockingDrain(actor, drain))
             {
-                hints.AddForbiddenZone(ShapeDistance.InvertedRect(drain, dir, SideLength, SideLength, SideLength), activation);
+                hints.AddForbiddenZone(new SDInvertedRect(drain, dir, SideLength, SideLength, SideLength), activation);
                 return; // can only block one drain at a time, no point to keep checking
             } // TODO: consider checking if more than one actor is on a drain and go somewhere else? might not help with multiboxing if every client tries to move to a different one... config might be better if needed
         }
         var countA = activeDrains.Count;
-        var forbidden = new Func<WPos, float>[countA];
+        var forbidden = new ShapeDistance[countA];
         for (var i = 0; i < countA; ++i)
-            forbidden[i] = ShapeDistance.InvertedRect(activeDrains[i], dir, SideLength, SideLength, SideLength);
+            forbidden[i] = new SDInvertedRect(activeDrains[i], dir, SideLength, SideLength, SideLength);
         if (forbidden.Length != 0)
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), activation);
+            hints.AddForbiddenZone(new SDIntersection(forbidden), activation);
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)

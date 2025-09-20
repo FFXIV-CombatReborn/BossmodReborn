@@ -225,26 +225,11 @@ public abstract class Trash1Arena(WorldState ws, Actor primary, bool savage) : B
     public static readonly uint[] TrashNormal = [(uint)OID.NYuki, (uint)OID.NFuko, (uint)OID.NFurutsubaki, (uint)OID.NRaiko, (uint)OID.NPenghou];
     public static readonly uint[] TrashSavage = [(uint)OID.SYuki, (uint)OID.SFuko, (uint)OID.SFurutsubaki, (uint)OID.SRaiko, (uint)OID.SPenghou];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(savage ? TrashSavage : TrashNormal);
-        var count = enemies.Count;
-        var inCombat = false;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-            {
-                inCombat = true;
-                break;
-            }
-        }
-        return inCombat && !Raid.Player()!.IsDead;
-    }
+    protected override bool CheckPull() => !Raid.Player()!.IsDead && IsAnyActorInCombat(savage ? TrashSavage : TrashNormal);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
-        Arena.Actors(Enemies(savage ? TrashSavage : TrashNormal));
+        Arena.Actors(this, savage ? TrashSavage : TrashNormal);
     }
 
     private Actor? _raiko;

@@ -21,7 +21,7 @@ class C031KetudukeStates : StateMachineBuilder
         FlukeGale(id + 0x60000, 5.7f);
         StrewnBubbles(id + 0x70000, 4.9f);
         TidalRoar(id + 0x80000, 5.5f);
-        Cast(id + 0x90000, (uint)AID.Enrage, 7, 10, "Enrage");
+        Cast(id + 0x90000, (uint)AID.EnrageVisual, 7, 10, "Enrage");
     }
 
     private void TidalRoar(uint id, float delay)

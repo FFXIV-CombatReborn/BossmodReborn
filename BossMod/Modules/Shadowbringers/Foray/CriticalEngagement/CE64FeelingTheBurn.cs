@@ -180,7 +180,7 @@ sealed class ChainCannonEscort(BossModule module) : Components.GenericAOEs(modul
                     var a = participants[j];
                     if (a == actor)
                         continue;
-                    hints.AddForbiddenZone(ShapeDistance.Cone(caster.Position, 60f, caster.AngleTo(a), Angle.Asin(Rect.HalfWidth / (a.Position - caster.Position).Length())), activation);
+                    hints.AddForbiddenZone(new SDCone(caster.Position, 60f, caster.AngleTo(a), Angle.Asin(Rect.HalfWidth / (a.Position - caster.Position).Length())), activation);
                 }
             }
         }

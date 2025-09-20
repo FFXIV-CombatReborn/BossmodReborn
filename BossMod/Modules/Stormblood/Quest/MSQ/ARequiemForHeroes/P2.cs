@@ -43,7 +43,7 @@ class Swell(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.A
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (Casters.Count != 0)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center, 8f));
+            hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center, 8f));
     }
 }
 

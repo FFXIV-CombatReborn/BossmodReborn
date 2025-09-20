@@ -15,7 +15,7 @@ class Shift(BossModule module) : BossComponent(module)
         {
             hints.Add("GTFO from sword!");
         }
-        else if (_cloakCaster != null && !Module.InBounds(Components.GenericKnockback.AwayFromSource(actor.Position, _cloakCaster, _knockbackRange)))
+        else if (_cloakCaster != null && !Arena.InBounds(Components.GenericKnockback.AwayFromSource(actor.Position, _cloakCaster, _knockbackRange)))
         {
             hints.Add("About to be knocked into wall!");
         }

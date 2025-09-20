@@ -69,7 +69,7 @@ class ZoomIn(BossModule module) : Components.LineStack(module, aidMarker: (uint)
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (ActiveBaits.Count != 0)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center, 3f), ActiveBaits[0].Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center, 3f), ActiveBaits[0].Activation);
     }
 }
 
@@ -81,7 +81,7 @@ class PassageOfArms(BossModule module) : BossComponent(module)
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (EnrageCast != null && Paladin != null)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCone(Paladin.Position, 8, Paladin.Rotation + 180.Degrees(), 60.Degrees()), Module.CastFinishAt(EnrageCast));
+            hints.AddForbiddenZone(new SDInvertedCone(Paladin.Position, 8f, Paladin.Rotation + 180f.Degrees(), 60f.Degrees()), Module.CastFinishAt(EnrageCast));
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
@@ -92,7 +92,7 @@ class PassageOfArms(BossModule module) : BossComponent(module)
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (EnrageCast != null && Paladin != null && !actor.Position.InCircleCone(Paladin.Position, 8f, Paladin.Rotation + 180.Degrees(), 60.Degrees()))
+        if (EnrageCast != null && Paladin != null && !actor.Position.InCircleCone(Paladin.Position, 8f, Paladin.Rotation + 180f.Degrees(), 60f.Degrees()))
             hints.Add("Hide behind tank!");
     }
 }

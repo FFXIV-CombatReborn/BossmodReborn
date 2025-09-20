@@ -39,7 +39,7 @@ sealed class EnhancedMobility(BossModule module) : Components.GenericKnockback(m
             if (!IsImmune(slot, act))
             {
                 var dir = (Module.PrimaryActor.Position - Arena.Center).Normalized();
-                hints.AddForbiddenZone(ShapeDistance.InvertedRect(tower + 12f * dir, dir, 4f, default, 1f), act);
+                hints.AddForbiddenZone(new SDInvertedRect(tower + 12f * dir, dir, 4f, default, 1f), act);
             }
         }
     }
@@ -56,7 +56,7 @@ sealed class EnhancedMobility(BossModule module) : Components.GenericKnockback(m
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }
 

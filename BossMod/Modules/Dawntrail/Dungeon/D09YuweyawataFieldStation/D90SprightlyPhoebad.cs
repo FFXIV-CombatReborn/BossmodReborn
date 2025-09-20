@@ -32,7 +32,7 @@ sealed class D90SprightlyPhoebadStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1008, NameID = 13580, SortOrder = 7)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1008, NameID = 13580, SortOrder = 7)]
 public sealed class D90SprightlyPhoebad(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly WPos[] vertices = [new(123.42f, -297.25f), new(123.17f, -290.97f), new(123.59f, -290.57f), new(125.1f, -289.46f), new(123.03f, -284.58f),
@@ -58,19 +58,7 @@ public sealed class D90SprightlyPhoebad(WorldState ws, Actor primary) : BossModu
     private static readonly ArenaBoundsCustom arena = new([new PolygonCustom(vertices)]);
     public static readonly uint[] Trash = [(uint)OID.Boss, (uint)OID.SprightlyMole, (uint)OID.SprightlyStone, (uint)OID.SprightlyLoamkeep];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(Trash);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return false;
-    }
-
+    protected override bool CheckPull() => IsAnyActorInCombat(Trash);
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         Arena.ActorsInBounds(this, Trash);
@@ -80,6 +68,8 @@ public sealed class D90SprightlyPhoebad(WorldState ws, Actor primary) : BossModu
     {
         var count = hints.PotentialTargets.Count;
         for (var i = 0; i < count; ++i)
+        {
             hints.PotentialTargets[i].Priority = 0;
+        }
     }
 }

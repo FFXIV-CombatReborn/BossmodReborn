@@ -127,11 +127,11 @@ class Shardstrike(BossModule module) : Components.SpreadFromCastTargets(module, 
             var count = crystals.Count;
             if (count == 0)
                 return;
-            var forbidden = new Func<WPos, float>[count];
+            var forbidden = new ShapeDistance[count];
             for (var i = 0; i < count; ++i)
-                forbidden[i] = ShapeDistance.Circle(crystals[i].Position, 6.6f);
+                forbidden[i] = new SDCircle(crystals[i].Position, 6.6f);
             if (forbidden.Length != 0)
-                hints.AddForbiddenZone(ShapeDistance.Union(forbidden), Spreads[0].Activation);
+                hints.AddForbiddenZone(new SDUnion(forbidden), Spreads[0].Activation);
         }
     }
 

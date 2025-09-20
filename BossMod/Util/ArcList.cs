@@ -1,6 +1,7 @@
 ﻿namespace BossMod;
 
 // a disjoint set of circle arcs; useful for e.g. selecting a bunch of safe spots at max melee or arena edge or whatever
+[SkipLocalsInit]
 public sealed class ArcList(WPos center, float radius)
 {
     public WPos Center = center;
@@ -41,7 +42,7 @@ public sealed class ArcList(WPos center, float radius)
     {
         var oo = origin - Center;
         var center = Angle.FromDirection(oo);
-        var cos = (oo.LengthSq() + Radius * Radius - radius * radius) / (2 * oo.Length() * Radius);
+        var cos = (oo.LengthSq() + Radius * Radius - radius * radius) / (2f * oo.Length() * Radius);
         if (cos is <= 1 and >= -1)
         {
             ForbidArcByLength(center, Angle.Acos(cos));

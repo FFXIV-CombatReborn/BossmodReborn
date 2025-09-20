@@ -60,6 +60,7 @@ dotnet_diagnostic.CA1724.severity = none # no way i'm forbidding any types from 
 # these rules have minor benefit, but are expensive to run, so are disabled
 dotnet_diagnostic.CA1508.severity = none # this rule is extremely expensive (adds like 50s to build time!), it performs data flow analysis to try and find dead code
 
+dotnet_diagnostic.CS8618.severity = suggestion # skill issue
 
 #### Code style rules (IDExxxx) ####
 

@@ -257,7 +257,7 @@ sealed class P3ApocalypseSpiritTaker(BossModule module) : SpiritTaker(module)
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         base.AddAIHints(slot, actor, assignment, hints);
-        hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 6), DateTime.MaxValue); // don't dodge into center...
+        hints.AddForbiddenZone(new SDCircle(Arena.Center, 6), DateTime.MaxValue); // don't dodge into center...
     }
 }
 
@@ -273,7 +273,7 @@ sealed class P3ApocalypseDarkEruption(BossModule module) : Components.SpreadFrom
         if (safeSpot != default)
         {
             hints.PathfindMapBounds = FRU.PathfindHugBorderBounds;
-            hints.AddForbiddenZone(ShapeDistance.PrecisePosition(Arena.Center + safeSpot, new(0, 1), Arena.Bounds.MapResolution, actor.Position, 0.1f), Spreads.Count != 0 ? Spreads[0].Activation : DateTime.MaxValue);
+            hints.AddForbiddenZone(new SDPrecisePosition(Arena.Center + safeSpot, new(0, 1), Arena.Bounds.MapResolution, actor.Position, 0.1f), Spreads.Count != 0 ? Spreads.Ref(0).Activation : DateTime.MaxValue);
         }
     }
 
@@ -287,13 +287,13 @@ sealed class P3ApocalypseDarkEruption(BossModule module) : Components.SpreadFrom
         {
             Arena.AddCircle(Arena.Center + safeSpot, 1f, Colors.Safe);
             if (refSafeSpot != safeSpot)
-                Arena.AddCircle(Arena.Center + refSafeSpot, 1f, Colors.Danger);
+                Arena.AddCircle(Arena.Center + refSafeSpot, 1f);
         }
         else if (refSafeSpot != default)
         {
             // we don't have assignments, at least draw two reference ones
-            Arena.AddCircle(Arena.Center + refSafeSpot, 1f, Colors.Danger);
-            Arena.AddCircle(Arena.Center - refSafeSpot, 1f, Colors.Danger);
+            Arena.AddCircle(Arena.Center + refSafeSpot, 1f);
+            Arena.AddCircle(Arena.Center - refSafeSpot, 1f);
         }
     }
 
@@ -415,7 +415,7 @@ sealed class P3ApocalypseAIWater1(BossModule module) : BossComponent(module)
         dir += _config.P3ApocalypseDarkWater1ReferenceDirection.Degrees();
         if (state.AssignedGroup == 2)
             dir += 180f.Degrees();
-        hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center + range * dir.ToDirection(), 1f), _water.Stacks.Count > 0 ? _water.Stacks[0].Activation : DateTime.MaxValue);
+        hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center + range * dir.ToDirection(), 1f), _water.Stacks.Count > 0 ? _water.Stacks.Ref(0).Activation : DateTime.MaxValue);
     }
 }
 
@@ -454,7 +454,7 @@ sealed class P3ApocalypseAIWater2(BossModule module) : BossComponent(module)
         }
 
         var destOff = distance * (midDir - _apoc.Rotation).ToDirection();
-        hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center + destOff, 1f), DateTime.MaxValue);
+        hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center + destOff, 1f), DateTime.MaxValue);
     }
 }
 
@@ -470,7 +470,7 @@ sealed class P3ApocalypseAIWater3(BossModule module) : BossComponent(module)
             return;
 
         var toCenter = Arena.Center - _knockback.Caster.Position;
-        if (toCenter.LengthSq() < 1)
+        if (toCenter.LengthSq() < 1f)
             return; // did not jump yet, wait...
 
         var angle = 20f.Degrees(); //(_knockback.NumCasts == 0 ? 30 : 45).Degrees();
@@ -484,12 +484,12 @@ sealed class P3ApocalypseAIWater3(BossModule module) : BossComponent(module)
         if (_knockback.NumCasts == 0)
         {
             // preposition for knockback
-            hints.AddForbiddenZone(ShapeDistance.PrecisePosition(_knockback.Caster.Position + 2f * dir.ToDirection(), new(0, 1), Arena.Bounds.MapResolution, actor.Position, 0.1f), _knockback.Activation);
+            hints.AddForbiddenZone(new SDPrecisePosition(_knockback.Caster.Position + 2f * dir.ToDirection(), new(0, 1), Arena.Bounds.MapResolution, actor.Position, 0.1f), _knockback.Activation);
         }
         else if (_water.Stacks.Count > 0)
         {
             // stack at maxmelee
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(_knockback.Caster.Position + 10f * dir.ToDirection(), 1f), _water.Stacks[0].Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(_knockback.Caster.Position + 10f * dir.ToDirection(), 1f), _water.Stacks.Ref(0).Activation);
         }
     }
 }

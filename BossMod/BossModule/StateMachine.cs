@@ -6,6 +6,7 @@ namespace BossMod;
 // by far the most common state has a single transition to a neighbouring state, and by far the most common transition is spell cast/finish by boss
 // some bosses have multiple "phases"; when phase condition is triggered, initial state of the next phase is activated
 // typical phase condition is boss reaching specific hp %
+[SkipLocalsInit]
 public sealed class StateMachine(List<StateMachine.Phase> phases)
 {
     [Flags]

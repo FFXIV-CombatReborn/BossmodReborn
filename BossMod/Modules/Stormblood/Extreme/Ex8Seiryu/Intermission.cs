@@ -49,17 +49,8 @@ sealed class RedRushKnockback(BossModule module) : Components.GenericKnockback(m
             var act = kb.Activation;
             if (!IsImmune(slot, act))
             {
-                var pos = kb.Origin;
-                var center = Arena.Center;
                 // circle intentionally slightly smaller to prevent sus knockback
-                hints.AddForbiddenZone(p =>
-                {
-                    if ((p + 18f * (p - pos).Normalized()).InCircle(center, 19f))
-                    {
-                        return 1f;
-                    }
-                    return default;
-                }, act);
+                hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOrigin(Arena.Center, kb.Origin, 18f, 19f), act);
             }
         }
     }
@@ -72,7 +63,7 @@ sealed class Kanabo(BossModule module) : Components.TankbusterTether(module, (ui
         base.AddAIHints(slot, actor, assignment, hints);
         if (_tetheredPlayers[slot])
         {
-            hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, Arena.Bounds.Radius >= 20f ? 19f : 18.5f), activation);
+            hints.AddForbiddenZone(new SDCircle(Arena.Center, Arena.Bounds.Radius >= 20f ? 19f : 18.5f), activation);
         }
     }
 }

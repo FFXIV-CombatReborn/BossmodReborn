@@ -87,7 +87,7 @@ sealed class Cacophony(BossModule module) : Components.GenericAOEs(module)
         if (slot == target && source is Actor s)
         {
             ref var aoe = ref _aoe[0];
-            hints.AddForbiddenZone(ShapeDistance.Circle(s.Position, 10f), aoe.Activation);
+            hints.AddForbiddenZone(new SDCircle(s.Position, 10f), aoe.Activation);
         }
     }
 

@@ -90,7 +90,7 @@ sealed class P5ParadiseRegainedBaits(BossModule module) : Components.GenericBait
         if (!ForbiddenPlayers[slot])
         {
             // just go to the next safespot
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center + SafeOffset(slot, actor), 1f));
+            hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center + SafeOffset(slot, actor), 1f));
         }
     }
 
@@ -100,7 +100,9 @@ sealed class P5ParadiseRegainedBaits(BossModule module) : Components.GenericBait
 
         var safeOffset = SafeOffset(pcSlot, pc);
         if (safeOffset != default)
-            Arena.AddCircle(Arena.Center + safeOffset, 1, Colors.Safe);
+        {
+            Arena.AddCircle(Arena.Center + safeOffset, 1f, Colors.Safe);
+        }
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
@@ -117,7 +119,7 @@ sealed class P5ParadiseRegainedBaits(BossModule module) : Components.GenericBait
             _source = caster;
             _firstTarget = WorldState.Actors.Find(caster.TargetID);
             _curCleave = shape;
-            _activation = Module.CastFinishAt(spell, 0.3f);
+            _activation = Module.CastFinishAt(spell, 0.3d);
             _tetherClosest = closest;
         }
     }

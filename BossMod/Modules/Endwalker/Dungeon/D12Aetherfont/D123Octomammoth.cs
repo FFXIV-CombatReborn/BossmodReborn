@@ -60,12 +60,12 @@ public sealed class D123Octomammoth(WorldState ws, Actor primary) : BossModule(w
     new(-390.071f, -359.686f), new(-390.630f, -363.486f)];
     private static readonly WPos[] bridge5 = [new(-346.767f, -353.669f), new(-346.187f, -358.136f), new(-343.583f, -361.638f), new(-349.946f, -363.513f),
     new(-349.929f, -359.686f), new(-352.302f, -356.647f)]; // coordinates seem to be slightly offset from calculated values, so hardcoding a 2nd bridge here
-    private static readonly ArenaBoundsCustom arena = new([new Polygon(new(-345f, -368f), 7.5f, 20), new Polygon(new(-352.322f, -350.322f), 7.5f, 20, 9f.Degrees()),
-    new Polygon(new(-370f, -343f), 7.5f, 20), new Polygon(new(-387.678f, -350.322f), 7.5f, 20, 9f.Degrees()), new Polygon(new(-395f, -368f), 7.5f, 20),
-    new PolygonCustomO(bridge1, -0.5f), new PolygonCustomO(WPos.GenerateRotatedVertices(arenaCenter, bridge1, -45f), -0.5f),
-    new PolygonCustomO(WPos.GenerateRotatedVertices(arenaCenter, bridge1, -90f), -0.5f), new PolygonCustomO(bridge5, -0.5f)]);
+    private static readonly ArenaBoundsCustom arena = new([new Polygon(new(-345f, -368f), 8f, 20), new Polygon(new(-352.322f, -350.322f), 8f, 20, 9f.Degrees()),
+    new Polygon(new(-370f, -343f), 8f, 20), new Polygon(new(-387.678f, -350.322f), 8f, 20, 9f.Degrees()), new Polygon(new(-395f, -368f), 8f, 20),
+    new PolygonCustom(bridge1), new PolygonCustom(WPos.GenerateRotatedVertices(arenaCenter, bridge1, -45f)),
+    new PolygonCustom(WPos.GenerateRotatedVertices(arenaCenter, bridge1, -90f)), new PolygonCustom(bridge5)], AdjustForHitbox: true);
 
-    protected override bool CheckPull() => InBounds(Raid.Player()!.Position);
+    protected override bool CheckPull() => Arena.InBounds(Raid.Player()!.Position);
 
     protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {

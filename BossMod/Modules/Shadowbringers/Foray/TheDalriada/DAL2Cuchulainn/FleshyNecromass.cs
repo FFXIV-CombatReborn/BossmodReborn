@@ -3,21 +3,27 @@ namespace BossMod.Shadowbringers.Foray.TheDalriada.DAL2Cuchulainn;
 sealed class FleshNecromass(BossModule module) : Components.GenericAOEs(module)
 {
     public static readonly WPos[] Positions = [new(637.27f, -174.667f), new(662.71f, -174.667f), new(662.71f, -200.133f), new(637.27f, -200.133f)];
-    public static readonly AOEShapeCustom Circles = VoidzoneShape();
+    public static readonly AOEShapeCustom Circles, CirclesInv;
     private AOEInstance[] _voidzone = [];
     private AOEInstance[] _invertedvoidzone = [];
     private BitMask gelatinous;
     private bool active;
 
-    private static AOEShapeCustom VoidzoneShape()
+    static FleshNecromass()
+    {
+        var shape = VoidzoneShape();
+        Circles = new(shape);
+        CirclesInv = new(shape, invertForbiddenZone: true);
+    }
+
+    private static Polygon[] VoidzoneShape()
     {
         var circles = new Polygon[4];
-        var circle = new Polygon(default, 5.676f, 40);
         for (var i = 0; i < 4; ++i)
         {
-            circles[i] = circle with { Center = Positions[i] };
+            circles[i] = new Polygon(Positions[i], 5.676f, 40);
         }
-        return new(circles);
+        return circles;
     }
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
@@ -58,7 +64,7 @@ sealed class FleshNecromass(BossModule module) : Components.GenericAOEs(module)
         else if (id == (uint)AID.FleshyNecromassVisual)
         {
             active = true;
-            _invertedvoidzone = [new(Circles with { InvertForbiddenZone = true }, Arena.Center, default, Module.CastFinishAt(spell), Colors.SafeFromAOE)];
+            _invertedvoidzone = [new(CirclesInv, Arena.Center, default, Module.CastFinishAt(spell), Colors.SafeFromAOE)];
         }
     }
 

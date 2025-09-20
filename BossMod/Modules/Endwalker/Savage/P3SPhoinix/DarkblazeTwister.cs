@@ -93,6 +93,6 @@ class DarkTwister(BossModule module) : Components.SimpleKnockbacks(module, (uint
                 }
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }

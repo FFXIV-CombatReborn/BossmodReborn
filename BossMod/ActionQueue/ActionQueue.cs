@@ -49,7 +49,7 @@ public sealed class ActionQueue
     public readonly List<Entry> Entries = [];
 
     public void Clear() => Entries.Clear();
-    public void Push(in ActionID action, Actor? target, float priority, float expire = float.MaxValue, float delay = 0, float castTime = 0, Vector3 targetPos = default, Angle? facingAngle = null, bool manual = false) => Entries.Add(new(action, target, priority, expire, delay, castTime, targetPos, facingAngle, manual));
+    public void Push(in ActionID action, Actor? target, float priority, float expire = float.MaxValue, float delay = default, float castTime = default, Vector3 targetPos = default, Angle? facingAngle = null, bool manual = false) => Entries.Add(new(action, target, priority, expire, delay, castTime, targetPos, facingAngle, manual));
 
     public Entry FindBest(WorldState ws, Actor player, ReadOnlySpan<Cooldown> cooldowns, float animationLock, AIHints hints, float instantAnimLockDelay, bool allowDismount)
     {
@@ -113,7 +113,7 @@ public sealed class ActionQueue
         {
             var to = entry.Target?.Position ?? new(entry.TargetPos.XZ());
             var distSq = (to - player.Position).LengthSq();
-            var effRange = def.Range + player.HitboxRadius + (entry.Target?.HitboxRadius ?? 0);
+            var effRange = def.Range + player.HitboxRadius + (entry.Target?.HitboxRadius ?? default);
             if (distSq > effRange * effRange)
                 return false;
         }

@@ -77,8 +77,8 @@ sealed class GhostlyGuise(BossModule module) : Components.GenericAOEs(module)
 
     private static readonly WPos[] positions = [new(137.5f, -443.5f), new(158.5f, -443.5f), new(137.5f, -422.5f), new(158.5f, -422.5f)];
     private static readonly Circle[] circles = GenerateCircles();
-    private static readonly AOEShapeCustom circlesInverted = new(circles, InvertForbiddenZone: true);
-    private static readonly AOEShapeCustom circlesAvoid = new(circles, []);
+    private static readonly AOEShapeCustom circlesInverted = new(circles, invertForbiddenZone: true);
+    private static readonly AOEShapeCustom circlesAvoid = new(circles);
     private bool activated;
     private (bool isActive, DateTime activation) fleshbuster;
 
@@ -192,7 +192,7 @@ sealed class D083TräumereiStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 981, NameID = 12763)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 981, NameID = 12763)]
 public sealed class D083Träumerei(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, new ArenaBoundsSquare(19.5f))
 {
     public static readonly WPos ArenaCenter = new(148f, -433f);

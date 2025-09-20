@@ -446,7 +446,7 @@ public abstract class AutoClear : ZoneModule
         {
             var wall = Walls[i];
             var w = wall.Wall;
-            hints.AddForbiddenZone(ShapeDistance.Rect(w.Position, (wall.Rotated ? 90f : default).Degrees(), w.Depth, w.Depth, 20f));
+            hints.AddForbiddenZone(new SDRect(w.Position, (wall.Rotated ? 90f : default).Degrees(), w.Depth, w.Depth, 20f));
         }
 
         if (canNavigate)
@@ -461,7 +461,7 @@ public abstract class AutoClear : ZoneModule
         Actor? coffer = null;
         Actor? hoardLight = null;
         Actor? passage = null;
-        List<Func<WPos, float>> revealedTraps = [];
+        List<ShapeDistance> revealedTraps = [];
 
         PomanderID? pomanderToUseHere = null;
 
@@ -500,7 +500,7 @@ public abstract class AutoClear : ZoneModule
                 passage = a;
 
             if (RevealedTrapOIDs.Contains(a.OID))
-                revealedTraps.Add(ShapeDistance.Circle(a.Position, 2f));
+                revealedTraps.Add(new SDCircle(a.Position, 2f));
         }
 
         var fullClear = false;
@@ -516,7 +516,7 @@ public abstract class AutoClear : ZoneModule
         if (Config.TrapHints && _trapsHidden)
         {
             var countTraps = _trapsCurrentZone.Length;
-            var traps = new List<Func<WPos, float>>(countTraps);
+            var traps = new List<ShapeDistance>(countTraps);
 
             for (var i = 0; i < countTraps; ++i)
             {
@@ -536,14 +536,14 @@ public abstract class AutoClear : ZoneModule
 
                     if (!shouldIgnore)
                     {
-                        var trapCircle = ShapeDistance.Circle(trap, 2f);
+                        ShapeDistance trapCircle = new SDCircle(trap, 2f);
                         traps.Add(trapCircle);
                     }
                 }
             }
 
             if (traps.Count != 0)
-                hints.AddForbiddenZone(ShapeDistance.Union(traps));
+                hints.AddForbiddenZone(new SDUnion([.. traps]));
         }
 
         if (coffer != null)
@@ -594,7 +594,7 @@ public abstract class AutoClear : ZoneModule
         }
 
         if (revealedTraps.Count > 0)
-            hints.AddForbiddenZone(ShapeDistance.Union(revealedTraps));
+            hints.AddForbiddenZone(new SDUnion([.. revealedTraps]));
 
         if (!IsPlayerTransformed(player) && canNavigate && Config.AutoMoveTreasure && hoardLight is Actor h && Palace.GetPomanderState(PomanderID.Intuition).Active)
             hints.GoalZones.Add(hints.GoalSingleTarget(h.Position, 2f, 10f));
@@ -627,7 +627,7 @@ public abstract class AutoClear : ZoneModule
                 pickBetterTarget(pp.Actor);
 
             // pomander of storms was used, enemy can't autoheal; any damage will kill
-            else if (pp.Actor.FindStatus((uint)SID.AutoHealPenalty) != null && pp.Actor.HPMP.CurHP < 10)
+            else if (pp.Actor.FindStatus((uint)SID.AutoHealPenalty) != null && pp.Actor.HPMP.CurHP < 10u)
                 pickBetterTarget(pp.Actor);
 
             // if player does not have a target, prioritize everything so that AI picks one - skip dangerous enemies
@@ -678,12 +678,12 @@ public abstract class AutoClear : ZoneModule
 
         IterAndExpire(Donuts, d => d.Source.CastInfo == null, d =>
         {
-            hints.AddForbiddenZone(ShapeDistance.Donut(d.Source.Position.Quantized(), d.Inner, d.Outer), CastFinishAt(d.Source));
+            hints.AddForbiddenZone(new SDDonut(d.Source.Position.Quantized(), d.Inner, d.Outer), CastFinishAt(d.Source));
         });
 
         IterAndExpire(Circles, d => d.Source.CastInfo == null, d =>
         {
-            hints.AddForbiddenZone(ShapeDistance.Circle(d.Source.Position.Quantized(), d.Radius), CastFinishAt(d.Source));
+            hints.AddForbiddenZone(new SDCircle(d.Source.Position.Quantized(), d.Radius), CastFinishAt(d.Source));
 
             // some enrages are way bigger than pathfinding map size (e.g. slime explosion is 60y)
             // in these cases, if the player is inside the aoe, add a goal zone telling it to GTFO as far as possible
@@ -722,11 +722,7 @@ public abstract class AutoClear : ZoneModule
             var origin = dangermap.Item1;
             var map = dangermap.Item2;
 
-            hints.AddForbiddenZone(p =>
-            {
-                var offset = (p - origin) / map.PixelSize;
-                return map[(int)offset.X, (int)offset.Z] ? -10 : 10;
-            }, CastFinishAt(caster));
+            hints.AddForbiddenZone(new SDDeepDungeonLOS(dangermap.Item2, dangermap.Item1));
         }, d => _losCache.Remove(d.InstanceID));
 
         IterAndExpire(Voidzones, d => d.Source.IsDeadOrDestroyed, d =>
@@ -740,7 +736,7 @@ public abstract class AutoClear : ZoneModule
             if (_playerImmunes[playerSlot].ImmuneAt(castFinish))
                 return;
 
-            hints.AddForbiddenZone(ShapeDistance.Circle(kb.Source.Position, kb.Radius), castFinish);
+            hints.AddForbiddenZone(new SDCircle(kb.Source.Position, kb.Radius), castFinish);
         });
 
         IterAndExpire(Spikes, t => t.Timeout <= World.CurrentTime, t =>

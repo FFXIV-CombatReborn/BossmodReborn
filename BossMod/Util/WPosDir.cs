@@ -1,6 +1,7 @@
 ﻿namespace BossMod;
 
 // 2d vector that represents world-space direction on XZ plane
+[SkipLocalsInit]
 public readonly struct WDir(float x, float z)
 {
     public readonly float X = x;
@@ -55,7 +56,7 @@ public readonly struct WDir(float x, float z)
     public readonly Angle ToAngle() => new(MathF.Atan2(X, Z));
 
     public override readonly string ToString() => $"({X:f3}, {Z:f3})";
-    public readonly bool Equals(WDir other) => X == other.X && Z == other.Z;
+    public readonly bool Equals(WDir other) => this == other;
     public override readonly bool Equals(object? obj) => obj is WDir other && Equals(other);
     public override readonly int GetHashCode() => (X, Z).GetHashCode(); // TODO: this is a hack, the default should be good enough, but for whatever reason (X, -Z).GetHashCode() == (-X, Z).GetHashCode()...
 
@@ -78,6 +79,7 @@ public readonly struct WDir(float x, float z)
 }
 
 // 2d vector that represents world-space position on XZ plane
+[SkipLocalsInit]
 public readonly struct WPos(float x, float z)
 {
     public readonly float X = x;
@@ -141,7 +143,7 @@ public readonly struct WPos(float x, float z)
     }
 
     public override readonly string ToString() => $"[{X:f3}, {Z:f3}]";
-    public readonly bool Equals(WPos other) => X == other.X && Z == other.Z;
+    public readonly bool Equals(WPos other) => this == other;
     public override readonly bool Equals(object? obj) => obj is WPos other && Equals(other);
     public override readonly int GetHashCode() => (X, Z).GetHashCode(); // TODO: this is a hack, the default should be good enough, but for whatever reason (X, -Z).GetHashCode() == (-X, Z).GetHashCode()...
 

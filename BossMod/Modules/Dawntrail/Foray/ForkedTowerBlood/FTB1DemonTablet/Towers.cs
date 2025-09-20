@@ -103,15 +103,15 @@ sealed class EraseGravity(BossModule module) : Components.GenericAOEs(module)
                     return; // there are unfilled ground towers
                 }
             }
-            var forbidden = new Func<WPos, float>[count];
+            var forbidden = new ShapeDistance[count];
             var aoes = CollectionsMarshal.AsSpan(_aoes);
             for (var i = 0; i < count; ++i)
             {
                 ref var aoe = ref aoes[i];
-                forbidden[i] = ShapeDistance.InvertedCircle(aoe.Origin, 4f);
+                forbidden[i] = new SDInvertedCircle(aoe.Origin, 4f);
             }
             ref var aoe0 = ref aoes[0];
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), aoe0.Activation);
+            hints.AddForbiddenZone(new SDIntersection(forbidden), aoe0.Activation);
         }
     }
 

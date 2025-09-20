@@ -45,18 +45,18 @@ sealed class SilkenPuff(BossModule module) : Components.GenericAOEs(module)
         {
             return;
         }
-        var forbiddenImminent = new Func<WPos, float>[count];
-        var forbiddenFuture = new Func<WPos, float>[count];
-        var forbiddenFarFuture = new Func<WPos, float>[count];
+        var forbiddenImminent = new ShapeDistance[count];
+        var forbiddenFuture = new ShapeDistance[count];
+        var forbiddenFarFuture = new ShapeDistance[count];
         for (var i = 0; i < count; ++i)
         {
             var h = puffs[i];
-            forbiddenFarFuture[i] = ShapeDistance.Capsule(h.Position, h.Rotation, 50f, Radius);
-            forbiddenFuture[i] = ShapeDistance.Capsule(h.Position, h.Rotation, Length, Radius);
-            forbiddenImminent[i] = ShapeDistance.Circle(h.Position, Radius);
+            forbiddenFarFuture[i] = new SDCapsule(h.Position, h.Rotation, 50f, Radius);
+            forbiddenFuture[i] = new SDCapsule(h.Position, h.Rotation, Length, Radius);
+            forbiddenImminent[i] = new SDCircle(h.Position, Radius);
         }
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenFarFuture), DateTime.MaxValue);
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenFuture), WorldState.FutureTime(1.1d));
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenImminent));
+        hints.AddForbiddenZone(new SDUnion(forbiddenFarFuture), DateTime.MaxValue);
+        hints.AddForbiddenZone(new SDUnion(forbiddenFuture), WorldState.FutureTime(1.1d));
+        hints.AddForbiddenZone(new SDUnion(forbiddenImminent));
     }
 }

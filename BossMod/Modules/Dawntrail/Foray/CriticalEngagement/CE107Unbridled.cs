@@ -148,9 +148,10 @@ sealed class HoppingMad(BossModule module) : Components.GenericAOEs(module)
         if (shape != default)
         {
             var count = _aoes.Count;
+            var aoes = CollectionsMarshal.AsSpan(_aoes);
             for (var i = 0; i < count; ++i)
             {
-                var aoe = _aoes[i];
+                ref var aoe = ref aoes[i];
                 if (aoe.Shape == shape.Item1)
                 {
                     _aoes.Insert(1, new(shape.Item2, aoe.Origin, default, aoe.Activation.AddSeconds(2.1d), risky: false));
@@ -168,11 +169,11 @@ sealed class HoppingMad(BossModule module) : Components.GenericAOEs(module)
         ref var aoe = ref _aoes.Ref(0);
         if (aoe.Shape is AOEShapeCircle circle)
         {
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(aoe.Origin, circle.Radius + 2f), aoe.Activation); // stay close to border of circle to move into donut fast
+            hints.AddForbiddenZone(new SDInvertedCircle(aoe.Origin, circle.Radius + 2f), aoe.Activation); // stay close to border of circle to move into donut fast
         }
         else if (aoe.Shape is AOEShapeDonut donut)
         {
-            hints.AddForbiddenZone(ShapeDistance.Circle(aoe.Origin, donut.InnerRadius - 2f), aoe.Activation); // stay close to border of donut to move to next circle fast
+            hints.AddForbiddenZone(new SDCircle(aoe.Origin, donut.InnerRadius - 2f), aoe.Activation); // stay close to border of donut to move to next circle fast
         }
     }
 }
@@ -191,7 +192,7 @@ sealed class CE107UnbridledStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 35)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 35)]
 public sealed class CE107Unbridled(WorldState ws, Actor primary) : BossModule(ws, primary, startingArena.Center, startingArena)
 {
     private static readonly ArenaBoundsCustom startingArena = new([new Polygon(new(620f, 800f), 29.5f, 32)]);

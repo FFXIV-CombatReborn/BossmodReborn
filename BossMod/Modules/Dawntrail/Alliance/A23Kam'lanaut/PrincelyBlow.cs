@@ -51,17 +51,8 @@ sealed class PrincelyBlowKB(BossModule module) : Components.GenericKnockback(mod
                     shieldBash.Polygon = A23Kamlanaut.P2ArenaWithBridges.Polygon.Offset(-1f); // pretend polygon is 1y smaller than real for less suspect knockbacks
                     shieldBash.PolygonInit = true;
                 }
-                var origin = kb.Origin;
-                var center = Arena.Center;
-                var poly = shieldBash.Polygon;
-                hints.AddForbiddenZone(p =>
-                {
-                    if (poly.Contains(p - center + 30f * (p - origin).Normalized()))
-                    {
-                        return 1f;
-                    }
-                    return default;
-                }, act);
+
+                hints.AddForbiddenZone(new SDKnockbackInComplexPolygonAwayFromOrigin(Arena.Center, kb.Origin, 30f, shieldBash.Polygon), act);
             }
         }
     }

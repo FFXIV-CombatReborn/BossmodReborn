@@ -10,6 +10,7 @@ namespace BossMod;
 // - supports only top-down bitmaps (with negative height)
 // - horizontal/vertical resolution is equal and is 'pixels per 1024 world units'
 // - per bitmap spec, rows are padded to 4 byte alignment
+[SkipLocalsInit]
 public sealed class Bitmap
 {
     public readonly struct Rect(int left, int top, int right, int bottom) // bottom/right exclusive

@@ -166,18 +166,7 @@ public class D090MalboroTerra(WorldState ws, Actor primary) : BossModule(ws, pri
     public static readonly ArenaBoundsCustom Arena2 = new([new PolygonCustom(vertices2), new PolygonCustom(vertices3)]);
     public static readonly uint[] Trash = [(uint)OID.Boss, (uint)OID.BloomingOchu, (uint)OID.SouthernSeasColibri, (uint)OID.Korpokkur];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(Trash);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInCombat(Trash);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

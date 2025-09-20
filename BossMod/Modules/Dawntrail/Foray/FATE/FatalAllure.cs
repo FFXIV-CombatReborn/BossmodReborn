@@ -25,7 +25,7 @@ public enum AID : uint
 
 public enum SID : uint
 {
-    Seduced = 991, // Boss->player, extra=0x19 (run speed is status extra * 0.1)
+    Seduced = 991 // Boss->player, extra=0x19 (run speed is status extra * 0.1)
 }
 
 class DarkMistVoidFireIII(BossModule module) : Components.GenericAOEs(module)
@@ -90,7 +90,7 @@ sealed class FatalAllureStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.ForayFATE, GroupID = 1018, NameID = 1971)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.ForayFATE, GroupID = 1018, NameID = 1971)]
 public sealed class FatalAllure(WorldState ws, Actor primary) : SimpleBossModule(ws, primary)
 {
     protected override void DrawEnemies(int pcSlot, Actor pc)

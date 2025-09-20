@@ -3,6 +3,8 @@
 // generic component dealing with 'forced march' mechanics
 // these mechanics typically feature 'march left/right/forward/backward' debuffs, which rotate player and apply 'forced march' on expiration
 // if there are several active march debuffs, we assume they are chained together
+
+[SkipLocalsInit]
 public class GenericForcedMarch(BossModule module, float activationLimit = float.MaxValue, bool stopAfterWall = false, bool stopAtWall = false) : BossComponent(module)
 {
     public sealed class PlayerState
@@ -24,7 +26,7 @@ public class GenericForcedMarch(BossModule module, float activationLimit = float
     private const float maxIntersectionError = 0.5f - approxHitBoxRadius; // calculated because due to floating point errors this does not result in 0.001
 
     // called to determine whether we need to show hint
-    public virtual bool DestinationUnsafe(int slot, Actor actor, WPos pos) => !Module.InBounds(pos);
+    public virtual bool DestinationUnsafe(int slot, Actor actor, WPos pos) => !Arena.InBounds(pos);
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
@@ -133,6 +135,7 @@ public class GenericForcedMarch(BossModule module, float activationLimit = float
 }
 
 // typical forced march is driven by statuses
+[SkipLocalsInit]
 public class StatusDrivenForcedMarch(BossModule module, float duration, uint statusForward, uint statusBackward, uint statusLeft, uint statusRight, uint statusForced = 1257u, uint statusForcedNPCs = 3629u, float activationLimit = float.MaxValue, bool stopAfterWall = false, bool stopAtWall = false) : GenericForcedMarch(module, activationLimit, stopAfterWall, stopAtWall)
 {
     public float Duration = duration;
@@ -176,6 +179,7 @@ public class StatusDrivenForcedMarch(BossModule module, float duration, uint sta
 }
 
 // action driven forced march
+[SkipLocalsInit]
 public class ActionDrivenForcedMarch(BossModule module, uint aid, float duration, Angle rotation, float actioneffectdelay, uint statusForced = 1257u, uint statusForcedNPCs = 3629u, float activationLimit = float.MaxValue) : GenericForcedMarch(module, activationLimit)
 {
     public readonly float Duration = duration;

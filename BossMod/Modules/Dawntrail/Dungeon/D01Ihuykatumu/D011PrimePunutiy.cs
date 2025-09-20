@@ -64,7 +64,7 @@ sealed class HydrowaveBait(BossModule module) : Components.BaitAwayTethers(modul
         base.AddAIHints(slot, actor, assignment, hints);
         if (ActiveBaitsOn(actor).Count != 0)
         {
-            hints.AddForbiddenZone(ShapeDistance.Rect(Arena.Center - new WDir(default, -18f), Arena.Center - new WDir(default, 18f), 18f), WorldState.FutureTime(ActivationDelay));
+            hints.AddForbiddenZone(new SDRect(Arena.Center - new WDir(default, -18f), Arena.Center - new WDir(default, 18f), 18f), WorldState.FutureTime(ActivationDelay));
         }
     }
 
@@ -130,8 +130,7 @@ sealed class BuryDecay(BossModule module) : Components.GenericAOEs(module)
             var color = Colors.Danger;
             for (var i = 0; i < 2; ++i)
             {
-                ref var aoe = ref aoes[i];
-                aoe.Color = color;
+                aoes[i].Color = color;
             }
         }
         return aoes;
@@ -160,22 +159,23 @@ sealed class BuryDecay(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        switch (spell.Action.ID)
+        if (_aoes.Count != 0)
         {
-            case (uint)AID.Bury1:
-            case (uint)AID.Bury2:
-            case (uint)AID.Bury3:
-            case (uint)AID.Bury4:
-            case (uint)AID.Bury5:
-            case (uint)AID.Bury6:
-            case (uint)AID.Bury7:
-            case (uint)AID.Bury8:
-            case (uint)AID.Decay:
-                if (_aoes.Count != 0)
-                {
+            switch (spell.Action.ID)
+            {
+                case (uint)AID.Bury1:
+                case (uint)AID.Bury2:
+                case (uint)AID.Bury3:
+                case (uint)AID.Bury4:
+                case (uint)AID.Bury5:
+                case (uint)AID.Bury6:
+                case (uint)AID.Bury7:
+                case (uint)AID.Bury8:
+                case (uint)AID.Decay:
+
                     _aoes.RemoveAt(0);
-                }
-                break;
+                    break;
+            }
         }
     }
 }
@@ -228,7 +228,7 @@ sealed class D011PrimePunutiyStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 826u, NameID = 12723u)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 826u, NameID = 12723u)]
 public sealed class D011PrimePunutiy(WorldState ws, Actor primary) : BossModule(ws, primary, new(35f, -95f), new ArenaBoundsSquare(19.5f))
 {
     private static readonly uint[] adds = [(uint)OID.Punutiy, (uint)OID.PetitPunutiy, (uint)OID.ProdigiousPunutiy];

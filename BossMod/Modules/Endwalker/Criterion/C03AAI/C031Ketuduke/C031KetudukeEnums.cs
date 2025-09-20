@@ -100,7 +100,8 @@ public enum AID : uint
     SBurst = 35554, // Helper->self, no cast, range 4 circle tower
     SBigBurst = 35555, // Helper->self, no cast, range 60 circle tower fail
 
-    Enrage = 35542, // *Boss->self, 10.0s cast, single-target, enrage
+    EnrageVisual = 35542, // *Boss->self, 10.0s cast, single-target, enrage
+    TidalRoarEnrageRepeat = 35544, // Helper->self, no cast, range 100 circle
 }
 
 public enum SID : uint

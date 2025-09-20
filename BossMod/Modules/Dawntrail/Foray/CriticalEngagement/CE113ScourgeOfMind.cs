@@ -91,11 +91,11 @@ sealed class FireIceTrap(BossModule module) : Components.GenericAOEs(module)
                 }
                 break;
             case (uint)SID.PlayingWithFire:
-                hasFireElement[Raid.FindSlot(actor.InstanceID)] = true;
+                hasFireElement.Set(Raid.FindSlot(actor.InstanceID));
                 activation = status.ExpireAt;
                 break;
             case (uint)SID.PlayingWithIce:
-                hasIceElement[Raid.FindSlot(actor.InstanceID)] = true;
+                hasIceElement.Set(Raid.FindSlot(actor.InstanceID));
                 activation = status.ExpireAt;
                 break;
         }
@@ -115,10 +115,10 @@ sealed class FireIceTrap(BossModule module) : Components.GenericAOEs(module)
         switch (status.ID)
         {
             case (uint)SID.PlayingWithFire:
-                hasFireElement[Raid.FindSlot(actor.InstanceID)] = false;
+                hasFireElement.Clear(Raid.FindSlot(actor.InstanceID));
                 break;
             case (uint)SID.PlayingWithIce:
-                hasIceElement[Raid.FindSlot(actor.InstanceID)] = false;
+                hasIceElement.Clear(Raid.FindSlot(actor.InstanceID));
                 break;
         }
     }
@@ -176,7 +176,7 @@ sealed class CE113ScourgeOfMindStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 33)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 33)]
 public sealed class CE113ScourgeOfMind(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly ArenaBoundsCustom arena = new([new Polygon(new(300f, 730f), 29.5f, 32)]);

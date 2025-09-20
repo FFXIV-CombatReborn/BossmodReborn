@@ -68,7 +68,7 @@ sealed class MesmerizingMarchStirringSamba(BossModule module) : Components.Gener
     {
         base.AddAIHints(slot, actor, assignment, hints);
         // stay close to the middle
-        hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Module.PrimaryActor.Position, 14f));
+        hints.AddForbiddenZone(new SDInvertedCircle(Module.PrimaryActor.Position, 14f));
     }
 }
 

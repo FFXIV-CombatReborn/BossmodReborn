@@ -40,15 +40,13 @@ public enum TetherID : uint
     HolyChain = 9 // player->player
 }
 
-class KnightsTour(BossModule module, uint aid) : Components.SimpleAOEs(module, aid, new AOEShapeRect(40f, 2f));
-class WhiteKnightsTour(BossModule module) : KnightsTour(module, (uint)AID.WhiteKnightsTour);
-class BlackKnightsTour(BossModule module) : KnightsTour(module, (uint)AID.BlackKnightsTour);
+sealed class KnightsTour(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.WhiteKnightsTour, (uint)AID.BlackKnightsTour], new AOEShapeRect(40f, 2f));
 
-class AltarPyre(BossModule module) : Components.RaidwideCast(module, (uint)AID.AltarPyre);
+sealed class AltarPyre(BossModule module) : Components.RaidwideCast(module, (uint)AID.AltarPyre);
 
-class HeavensflameAOE(BossModule module) : Components.SimpleAOEs(module, (uint)AID.HeavensflameAOE, 5f);
-class HolyChain(BossModule module) : Components.Chains(module, (uint)TetherID.HolyChain, (uint)AID.HolyChainPlayerTether);
-class TurretTour(BossModule module) : Components.Voidzone(module, 2f, GetVoidzones, 10f)
+sealed class HeavensflameAOE(BossModule module) : Components.SimpleAOEs(module, (uint)AID.HeavensflameAOE, 5f);
+sealed class HolyChain(BossModule module) : Components.Chains(module, (uint)TetherID.HolyChain, (uint)AID.HolyChainPlayerTether);
+sealed class TurretTour(BossModule module) : Components.Voidzone(module, 2f, GetVoidzones, 10f)
 {
     private static Actor[] GetVoidzones(BossModule module)
     {
@@ -68,7 +66,7 @@ class TurretTour(BossModule module) : Components.Voidzone(module, 2f, GetVoidzon
         return voidzones[..index];
     }
 }
-class TurretTourHint(BossModule module) : Components.Voidzone(module, 2f, GetVoidzones, 3f)
+sealed class TurretTourHint(BossModule module) : Components.Voidzone(module, 2f, GetVoidzones, 3f)
 {
     private static Actor[] GetVoidzones(BossModule module)
     {
@@ -89,13 +87,12 @@ class TurretTourHint(BossModule module) : Components.Voidzone(module, 2f, GetVoi
     }
 }
 
-class D043SerCharibertStates : StateMachineBuilder
+sealed class D043SerCharibertStates : StateMachineBuilder
 {
     public D043SerCharibertStates(BossModule module) : base(module)
     {
         TrivialPhase()
-            .ActivateOnEnter<WhiteKnightsTour>()
-            .ActivateOnEnter<BlackKnightsTour>()
+            .ActivateOnEnter<KnightsTour>()
             .ActivateOnEnter<AltarPyre>()
             .ActivateOnEnter<HeavensflameAOE>()
             .ActivateOnEnter<HolyChain>()
@@ -105,13 +102,19 @@ class D043SerCharibertStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS), Xyzzy", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 34, NameID = 3642)]
-public class D043SerCharibert(WorldState ws, Actor primary) : BossModule(ws, primary, new(0, 4.1f), new ArenaBoundsSquare(19.5f))
+public sealed class D043SerCharibert : BossModule
 {
+    public D043SerCharibert(WorldState ws, Actor primary) : base(ws, primary, new(default, 4.1f), new ArenaBoundsSquare(19.5f))
+    {
+        flames = Enemies((uint)OID.HolyFlame);
+    }
+
+    private readonly List<Actor> flames;
     public static readonly uint[] Knights = [(uint)OID.DawnKnight, (uint)OID.DuskKnight];
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         Arena.Actor(PrimaryActor);
-        Arena.Actors(Enemies((uint)OID.HolyFlame), Colors.Object);
+        Arena.Actors(flames, Colors.Object);
     }
 }

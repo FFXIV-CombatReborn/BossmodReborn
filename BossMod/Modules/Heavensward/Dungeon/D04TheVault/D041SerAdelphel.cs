@@ -41,16 +41,15 @@ public enum AID : uint
 
 public enum IconID : uint
 {
-    Stunmarker = 16, // player
     Spreadmarker = 32 // player
 }
 
-class Bloodstain(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Bloodstain, 5f);
-class HeavenlySlash(BossModule module) : Components.Cleave(module, (uint)AID.HeavenlySlash, new AOEShapeCone(10.2f, 45f.Degrees()));
-class HoliestOfHoly(BossModule module) : Components.RaidwideCast(module, (uint)AID.HoliestOfHoly);
-class HolyShieldBash(BossModule module) : Components.SingleTargetCast(module, (uint)AID.HolyShieldBash, "Stun + single target damage x2");
+sealed class Bloodstain(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Bloodstain, 5f);
+sealed class HeavenlySlash(BossModule module) : Components.Cleave(module, (uint)AID.HeavenlySlash, new AOEShapeCone(10.2f, 45f.Degrees()));
+sealed class HoliestOfHoly(BossModule module) : Components.RaidwideCast(module, (uint)AID.HoliestOfHoly);
+sealed class HolyShieldBash(BossModule module) : Components.SingleTargetCast(module, (uint)AID.HolyShieldBash, "Stun + single target damage x2");
 
-class BrightSphere(BossModule module) : Components.GenericAOEs(module)
+sealed class BrightSphere(BossModule module) : Components.GenericAOEs(module)
 {
     private static readonly AOEShapeCircle circle = new(6f);
     private readonly List<AOEInstance> _aoes = [];
@@ -85,9 +84,9 @@ class BrightSphere(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
-class Execution(BossModule module) : Components.BaitAwayIcon(module, 5f, (uint)IconID.Spreadmarker, (uint)AID.Execution, 4.8f);
+sealed class Execution(BossModule module) : Components.BaitAwayIcon(module, 5f, (uint)IconID.Spreadmarker, (uint)AID.Execution, 4.8f);
 
-class ShiningBlade(BossModule module) : Components.GenericAOEs(module)
+sealed class ShiningBlade(BossModule module) : Components.GenericAOEs(module)
 {
     private static readonly WPos west = new(-18.509f, -100.023f), south = new(-0.015f, -81.834f);
     private static readonly WPos north = new(-0.015f, -117.205f), east = new(18.387f, -100.053f);
@@ -159,7 +158,7 @@ class ShiningBlade(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
-class D041SerAdelphelStates : StateMachineBuilder
+sealed class D041SerAdelphelStates : StateMachineBuilder
 {
     public D041SerAdelphelStates(BossModule module) : base(module)
     {
@@ -175,28 +174,33 @@ class D041SerAdelphelStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS), Xyzzy", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 34, NameID = 3634)]
-public class D041SerAdelphel(WorldState ws, Actor primary) : BossModule(ws, primary, new(default, -100f), arena)
+public sealed class D041SerAdelphel : BossModule
 {
-    protected override bool CheckPull()
+    public D041SerAdelphel(WorldState ws, Actor primary) : base(ws, primary, new(default, -100f), arena)
     {
-        var enemies = Enemies((uint)OID.SerAdelphelBrightblade);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return base.CheckPull();
+        ostiaries = Enemies((uint)OID.VaultOstiary);
     }
 
-    public static readonly ArenaBounds arena = new ArenaBoundsCustom([new Circle(new(default, -100f), 19.5f)], [new Rectangle(new(default, -120), 20f, 1.75f), new Rectangle(new(-21f, -100f), 1.75f, 20f)]);
+    private readonly List<Actor> ostiaries;
+
+    private Actor? deacon;
+    private Actor? bossP1;
+
+    protected override void UpdateModule()
+    {
+        deacon ??= GetActor((uint)OID.VaultDeacon);
+        bossP1 ??= GetActor((uint)OID.SerAdelphelBrightblade);
+    }
+
+    protected override bool CheckPull() => IsActorInCombat((uint)OID.SerAdelphelBrightblade);
+
+    public static readonly ArenaBoundsCustom arena = new([new Circle(new(default, -100f), 19.5f)], [new Rectangle(new(default, -120f), 20f, 1.75f), new Rectangle(new(-21f, -100f), 1.75f, 20f)]);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         Arena.Actor(PrimaryActor);
-        Arena.Actors(Enemies((uint)OID.SerAdelphelBrightblade));
-        Arena.Actors(Enemies((uint)OID.VaultDeacon));
-        Arena.Actors(Enemies((uint)OID.VaultOstiary));
+        Arena.Actor(bossP1);
+        Arena.Actor(deacon);
+        Arena.Actors(ostiaries);
     }
 }

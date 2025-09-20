@@ -56,15 +56,14 @@ sealed class ChocoBeak(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.ChocoBeak)
+        if (_aoes.Count != 0 && spell.Action.ID == (uint)AID.ChocoBeak)
         {
             var count = _aoes.Count;
             var id = caster.InstanceID;
             var aoes = CollectionsMarshal.AsSpan(_aoes);
             for (var i = 0; i < count; ++i)
             {
-                ref var aoe = ref aoes[i];
-                if (aoe.ActorID == id)
+                if (aoes[i].ActorID == id)
                 {
                     _aoes.RemoveAt(i);
                     return;
@@ -109,7 +108,7 @@ sealed class CE101BlackRegimentStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 34)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 34)]
 public sealed class CE101BlackRegiment(WorldState ws, Actor primary) : BossModule(ws, primary, new(450f, 357f), new ArenaBoundsSquare(20f))
 {
     public static readonly uint[] Trash = [(uint)OID.Boss, (uint)OID.BlackChocobo2, (uint)OID.BlackChocobo4];

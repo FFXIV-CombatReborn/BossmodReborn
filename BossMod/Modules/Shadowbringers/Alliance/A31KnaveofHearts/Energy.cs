@@ -53,15 +53,15 @@ sealed class Energy(BossModule module) : Components.GenericAOEs(module)
         {
             return;
         }
-        var forbiddenImminent = new Func<WPos, float>[count];
-        var forbiddenFuture = new Func<WPos, float>[count];
+        var forbiddenImminent = new ShapeDistance[count];
+        var forbiddenFuture = new ShapeDistance[count];
         for (var i = 0; i < count; ++i)
         {
             var h = _energy[i];
-            forbiddenFuture[i] = ShapeDistance.Capsule(h.Position, h.Rotation, Length, 1.5f);
-            forbiddenImminent[i] = ShapeDistance.Circle(h.Position, Radius);
+            forbiddenFuture[i] = new SDCapsule(h.Position, h.Rotation, Length, 1.5f);
+            forbiddenImminent[i] = new SDCircle(h.Position, Radius);
         }
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenFuture), WorldState.FutureTime(1.1d));
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenImminent));
+        hints.AddForbiddenZone(new SDUnion(forbiddenFuture), WorldState.FutureTime(1.1d));
+        hints.AddForbiddenZone(new SDUnion(forbiddenImminent));
     }
 }

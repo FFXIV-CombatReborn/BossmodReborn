@@ -8,31 +8,46 @@ sealed class Besiegement(BossModule module) : Components.GenericAOEs(module)
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(AOEs);
 
-    private void States(uint state, bool check)
-    {
-        var aoeMap = new Dictionary<uint, (int, float)[]>()
-        {
-            [0x00200010] = check ? [(3, 114f), (1, 90f), (2, 101f), (0, 82f)] : [(1, 116f), (1, 94f), (2, 105f), (1, 84f)],
-            [0x02000100] = check ? [(2, 95f), (4, 111f), (1, 84f)] : [],
-            [0x08000400] = check ? [(1, 116f), (4, 101f), (2, 85f)] : [],
-            [0x00800040] = check ? [(1, 116f), (2, 105f), (1, 94f), (1, 84f)] : [(3, 114f), (2, 101f), (1, 90f), (0, 82f)]
-        };
-
-        if (aoeMap.TryGetValue(state, out var aoes))
-        {
-            foreach (var (index, x) in aoes)
-                AOEs.Add(new(rects[index], new WPos(x, 80f), Angle.AnglesCardinals[1], WorldState.FutureTime(6.6d)));
-            ++NumCasts;
-        }
-    }
-
     public override void OnEventEnvControl(byte index, uint state)
     {
         if (index != 0x03)
         {
             return;
         }
-        States(state, NumCasts != 1);
+
+        (int, float)[] aoes = [];
+        var check = NumCasts != 1;
+
+        switch (state)
+        {
+            case 0x00200010u:
+                aoes = check ? [(3, 114f), (1, 90f), (2, 101f), (0, 82f)] : [(1, 116f), (1, 94f), (2, 105f), (1, 84f)];
+                break;
+
+            case 0x02000100u:
+                aoes = check ? [(2, 95f), (4, 111f), (1, 84f)] : [];
+                break;
+
+            case 0x08000400u:
+                aoes = check ? [(1, 116f), (4, 101f), (2, 85f)] : [];
+                break;
+
+            case 0x00800040u:
+                aoes = check ? [(1, 116f), (2, 105f), (1, 94f), (1, 84f)] : [(3, 114f), (2, 101f), (1, 90f), (0, 82f)];
+                break;
+        }
+
+        var len = aoes.Length;
+        if (len > 0)
+        {
+            ++NumCasts;
+            var act = WorldState.FutureTime(6.6d);
+            for (var i = 0; i < len; ++i)
+            {
+                var aoe = aoes[i];
+                AOEs.Add(new(rects[aoe.Item1], new WPos(aoe.Item2, 80f).Quantized(), Angle.AnglesCardinals[1], act));
+            }
+        }
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)

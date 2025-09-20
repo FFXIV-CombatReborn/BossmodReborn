@@ -50,6 +50,6 @@ sealed class FirebreatheRotating(BossModule module) : Components.GenericRotating
         base.AddAIHints(slot, actor, assignment, hints);
         // stay close to the middle
         if (Sequences.Count != 0)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Module.PrimaryActor.Position, 5f));
+            hints.AddForbiddenZone(new SDInvertedCircle(Module.PrimaryActor.Position, 5f));
     }
 }

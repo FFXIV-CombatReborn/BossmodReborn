@@ -9,7 +9,7 @@ sealed class EnaeroEndeath(BossModule module) : Components.GenericKnockback(modu
     public override bool DestinationUnsafe(int slot, Actor actor, WPos pos)
     {
         ref var s = ref _source[0];
-        return s.Kind == Kind.TowardsOrigin ? (pos - s.Origin).LengthSq() <= 36f : !Module.InBounds(pos);
+        return s.Kind == Kind.TowardsOrigin ? (pos - s.Origin).LengthSq() <= 36f : !Arena.InBounds(pos);
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)

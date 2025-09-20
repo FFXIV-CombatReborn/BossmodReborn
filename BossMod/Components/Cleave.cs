@@ -2,6 +2,8 @@
 
 // generic component for cleaving autoattacks; shows shape outline and warns when anyone other than main target is inside
 // enemy OID == 0 means 'primary actor'
+
+[SkipLocalsInit]
 public class Cleave(BossModule module, uint aid, AOEShape shape, uint[]? enemyOID = null, bool activeForUntargetable = false, bool originAtTarget = false, bool activeWhileCasting = true) : CastCounter(module, aid)
 {
     public readonly AOEShape Shape = shape;
@@ -61,10 +63,10 @@ public class Cleave(BossModule module, uint aid, AOEShape shape, uint[]? enemyOI
                     hints.AddForbiddenZone(circle, a.Position.Quantized());
                     break;
                 case AOEShapeCone cone:
-                    hints.AddForbiddenZone(ShapeDistance.Cone(source.Position.Quantized(), 100f, source.AngleTo(a), cone.HalfAngle));
+                    hints.AddForbiddenZone(new SDCone(source.Position.Quantized(), 100f, source.AngleTo(a), cone.HalfAngle));
                     break;
                 case AOEShapeRect rect:
-                    hints.AddForbiddenZone(ShapeDistance.Cone(source.Position.Quantized(), 100f, source.AngleTo(a), Angle.Asin(rect.HalfWidth / (a.Position - source.Position).Length())));
+                    hints.AddForbiddenZone(new SDCone(source.Position.Quantized(), 100f, source.AngleTo(a), Angle.Asin(rect.HalfWidth / (a.Position - source.Position).Length())));
                     break;
             }
         }

@@ -41,7 +41,6 @@ class Orbs(BossModule module) : Components.GenericAOEs(module, default, "GTFO fr
 {
     private readonly List<Actor> _orbs = new(6);
     private const float Radius = 3f;
-    private static readonly AOEShapeCapsule capsule = new(Radius, default);
     private static readonly AOEShapeCircle circle = new(Radius);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
@@ -61,13 +60,15 @@ class Orbs(BossModule module) : Components.GenericAOEs(module, default, "GTFO fr
                 var ring = rings[j];
                 if (ring.Position.InRect(o.Position, 20f * o.Rotation.ToDirection(), Radius))
                 {
-                    aoes[i] = new(capsule with { Length = (ring.Position - o.Position).Length() }, o.Position, o.Rotation);
+                    aoes[i] = new(new AOEShapeCapsule(Radius, (ring.Position - o.Position).Length()), o.Position, o.Rotation);
                     found = true;
                     break;
                 }
             }
             if (!found)
+            {
                 aoes[i] = new(circle, o.Position);
+            }
         }
         return aoes;
     }
@@ -80,7 +81,7 @@ class Orbs(BossModule module) : Components.GenericAOEs(module, default, "GTFO fr
 
     public override void OnActorEAnim(Actor actor, uint state)
     {
-        if (state == 0x00040008)
+        if (state == 0x00040008u)
             _orbs.RemoveAll(t => t.Position.AlmostEqual(actor.Position, 4f));
     }
 }
@@ -100,17 +101,32 @@ class GoldChaser(BossModule module) : Components.GenericAOEs(module)
         if (count == 0)
             return [];
         var max = count > 4 ? 4 : count;
-        var act0 = _aoes[0].Activation;
-        var aoes = new AOEInstance[max];
-        for (var i = 0; i < max; ++i)
+        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        var act0 = aoes[0].Activation;
+        if (count <= 2)
         {
-            var aoe = _aoes[i];
-            if (aoe.Activation == act0)
-                aoes[i] = count > 2 ? aoe with { Color = Colors.Danger } : aoe;
-            else
-                aoes[i] = aoe with { Risky = false };
+            for (var i = 0; i < count; ++i)
+            {
+                ref var aoe = ref aoes[i];
+                if (aoe.Activation == act0)
+                {
+                    aoes[i].Risky = true;
+                }
+            }
         }
-        return aoes;
+        else
+        {
+            var color = Colors.Danger;
+            for (var i = 0; i < count; ++i)
+            {
+                ref var aoe = ref aoes[i];
+                if (aoe.Activation == act0)
+                {
+                    aoe.Color = color;
+                }
+            }
+        }
+        return aoes[..max];
     }
 
     public override void OnActorCreated(Actor actor)
@@ -138,7 +154,7 @@ class GoldChaser(BossModule module) : Components.GenericAOEs(module)
                     break;
             }
         }
-        void AddAOE(Actor caster, double delay) => _aoes.Add(new(rect, caster.Position.Quantized(), Angle.AnglesCardinals[2], _activation.AddSeconds(delay)));
+        void AddAOE(Actor caster, double delay) => _aoes.Add(new(rect, caster.Position.Quantized(), Angle.AnglesCardinals[2], _activation.AddSeconds(delay), risky: false));
         bool AreCastersInPositions(WPos[] positions)
         {
             var caster0 = _casters[0].Position;

@@ -40,7 +40,7 @@ sealed class OneMind(BossModule module) : BossComponent(module)
             if (isPrimaryTarget ^ actor.InstanceID == dawon.TargetID) // if actor got aggro from both bosses we can do nothing
             {
                 var pos = isPrimaryTarget ? dawon.Position : primary.Position;
-                hints.AddForbiddenZone(ShapeDistance.Circle(pos, (pos - actor.Position).Length() + 2f), DateTime.MaxValue);
+                hints.AddForbiddenZone(new SDCircle(pos, (pos - actor.Position).Length() + 2f), DateTime.MaxValue);
             }
         }
     }

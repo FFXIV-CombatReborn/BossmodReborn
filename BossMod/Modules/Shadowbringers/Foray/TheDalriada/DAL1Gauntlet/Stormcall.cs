@@ -13,9 +13,15 @@ sealed class Stormcall(BossModule module) : Components.GenericAOEs(module, (uint
         if (tether.ID == (uint)TetherID.Stormcall)
         {
             AOEs.Add(new(circle, (source.Position + 48f * source.Rotation.ToDirection()).Quantized(), default, WorldState.FutureTime(source.OID == (uint)OID.VorticalOrb ? 20.9d : 13.7d), actorID: source.InstanceID));
-            if (AOEs.Count == 2)
+            if (AOEs.Count > 1)
             {
-                AOEs.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                var aoes = CollectionsMarshal.AsSpan(AOEs);
+                ref var aoe1 = ref aoes[0];
+                ref var aoe2 = ref aoes[1];
+                if (aoe1.Activation > aoe2.Activation)
+                {
+                    (aoe1, aoe2) = (aoe2, aoe1);
+                }
             }
         }
     }

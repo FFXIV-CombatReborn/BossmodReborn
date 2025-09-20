@@ -38,9 +38,9 @@ public enum AID : uint
     BossPhase2Vanish = 4256 // SerGrinnauxTheBull->self, no cast, single-target
 }
 
-class HeavySwing(BossModule module) : Components.Cleave(module, (uint)AID.HeavySwing, new AOEShapeCone(6.5f, 45f.Degrees()), [(uint)OID.SerGrinnauxTheBull]);
-class Overpower(BossModule module) : Components.Cleave(module, (uint)AID.Overpower, new AOEShapeCone(10.2f, 45f.Degrees()));
-class DimensionalRip(BossModule module) : Components.VoidzoneAtCastTarget(module, 5f, (uint)AID.DimensionalRip, GetVoidzones, 1.1d)
+sealed class HeavySwing(BossModule module) : Components.Cleave(module, (uint)AID.HeavySwing, new AOEShapeCone(6.5f, 45f.Degrees()), [(uint)OID.SerGrinnauxTheBull]);
+sealed class Overpower(BossModule module) : Components.Cleave(module, (uint)AID.Overpower, new AOEShapeCone(10.2f, 45f.Degrees()));
+sealed class DimensionalRip(BossModule module) : Components.VoidzoneAtCastTarget(module, 5f, (uint)AID.DimensionalRip, GetVoidzones, 1.1d)
 {
     private static Actor[] GetVoidzones(BossModule module)
     {
@@ -61,7 +61,7 @@ class DimensionalRip(BossModule module) : Components.VoidzoneAtCastTarget(module
     }
 }
 
-class FaithUnmoving(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.FaithUnmoving, 20f, stopAtWall: true)
+sealed class FaithUnmoving(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.FaithUnmoving, 20f, stopAtWall: true)
 {
     private readonly AetherialTear _aoe1 = module.FindComponent<AetherialTear>()!;
     private readonly DimensionalRip _aoe2 = module.FindComponent<DimensionalRip>()!;
@@ -72,8 +72,7 @@ class FaithUnmoving(BossModule module) : Components.SimpleKnockbacks(module, (ui
         var len1 = aoes1.Length;
         for (var i = 0; i < len1; ++i)
         {
-            ref readonly var aoe = ref aoes1[i];
-            if (aoe.Check(pos))
+            if (aoes1[i].Check(pos))
             {
                 return true;
             }
@@ -82,8 +81,7 @@ class FaithUnmoving(BossModule module) : Components.SimpleKnockbacks(module, (ui
         var len2 = aoes2.Length;
         for (var i = 0; i < len2; ++i)
         {
-            ref readonly var aoe = ref aoes2[i];
-            if (aoe.Check(pos))
+            if (aoes2[i].Check(pos))
             {
                 return true;
             }
@@ -92,17 +90,17 @@ class FaithUnmoving(BossModule module) : Components.SimpleKnockbacks(module, (ui
     }
 }
 
-class Rive(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Rive, new AOEShapeRect(30.5f, 1f));
-class HyperdimensionalSlash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.HyperdimensionalSlash, new AOEShapeRect(47.2f, 4f));
-class DimensionalCollapse1(BossModule module) : Components.SimpleAOEs(module, (uint)AID.DimensionalCollapse1, new AOEShapeDonutSector(2.5f, 7.5f, 90f.Degrees()));
-class DimensionalCollapse2(BossModule module) : Components.SimpleAOEs(module, (uint)AID.DimensionalCollapse2, new AOEShapeDonutSector(7.5f, 12.5f, 90f.Degrees()));
-class DimensionalCollapse3(BossModule module) : Components.SimpleAOEs(module, (uint)AID.DimensionalCollapse3, new AOEShapeDonutSector(12.5f, 17.5f, 90f.Degrees()));
-class AetherialTear(BossModule module) : Components.Voidzone(module, 7f, GetTears)
+sealed class Rive(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Rive, new AOEShapeRect(30.5f, 1f));
+sealed class HyperdimensionalSlash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.HyperdimensionalSlash, new AOEShapeRect(47.2f, 4f));
+sealed class DimensionalCollapse1(BossModule module) : Components.SimpleAOEs(module, (uint)AID.DimensionalCollapse1, new AOEShapeDonutSector(2.5f, 7.5f, 90f.Degrees()));
+sealed class DimensionalCollapse2(BossModule module) : Components.SimpleAOEs(module, (uint)AID.DimensionalCollapse2, new AOEShapeDonutSector(7.5f, 12.5f, 90f.Degrees()));
+sealed class DimensionalCollapse3(BossModule module) : Components.SimpleAOEs(module, (uint)AID.DimensionalCollapse3, new AOEShapeDonutSector(12.5f, 17.5f, 90f.Degrees()));
+sealed class AetherialTear(BossModule module) : Components.Voidzone(module, 7f, GetTears)
 {
     private static List<Actor> GetTears(BossModule module) => module.Enemies((uint)OID.AetherialTear);
 }
 
-class D042SerGrinnauxStates : StateMachineBuilder
+sealed class D042SerGrinnauxStates : StateMachineBuilder
 {
     public D042SerGrinnauxStates(BossModule module) : base(module)
     {
@@ -121,16 +119,22 @@ class D042SerGrinnauxStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS), Xyzzy", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 34, NameID = 3639)]
-public class D042SerGrinnaux(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
+public sealed class D042SerGrinnaux(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
-    protected override bool CheckPull() => PrimaryActor.IsTargetable && PrimaryActor.InCombat || Enemies((uint)OID.SerGrinnauxTheBull).Any(e => e.InCombat);
+    private Actor? bossP1;
+    public static readonly ArenaBoundsCustom arena = new([new Circle(new(default, 72f), 19.7f)], [new Rectangle(new(19.5f, 72f), 1.75f, 7.75f),
+    new Rectangle(new(default, 51f), 7.75f, 2f), new Rectangle(new(-20.8f, 72f), 1.75f, 5f)]);
 
-    public static readonly ArenaBoundsCustom arena = new([new Circle(new(0, 72), 19.7f)], [new Rectangle(new(19.5f, 72), 1.75f, 7.75f),
-    new Rectangle(new(0, 51), 7.75f, 2), new Rectangle(new(-20.8f, 72), 1.75f, 5f)]);
+    protected override void UpdateModule()
+    {
+        bossP1 ??= GetActor((uint)OID.SerGrinnauxTheBull);
+    }
+
+    protected override bool CheckPull() => IsActorInCombat((uint)OID.SerGrinnauxTheBull);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         Arena.Actor(PrimaryActor);
-        Arena.Actors(Enemies((uint)OID.SerGrinnauxTheBull));
+        Arena.Actor(bossP1);
     }
 }

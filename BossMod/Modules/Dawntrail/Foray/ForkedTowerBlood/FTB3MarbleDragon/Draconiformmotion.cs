@@ -32,13 +32,13 @@ sealed class DraconiformMotionBait(BossModule module) : Components.GenericAOEs(m
         if (Activation != default)
         {
             var aoes = ActiveAOEs(slot, actor);
-            var forbidden = new Func<WPos, float>[2];
+            var forbidden = new ShapeDistance[2];
             for (var i = 0; i < 2; ++i)
             {
                 ref readonly var aoe = ref aoes[i];
                 forbidden[i] = aoe.Shape.InvertedDistance(aoe.Origin, aoe.Rotation);
             }
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), aoes[0].Activation);
+            hints.AddForbiddenZone(new SDIntersection(forbidden), aoes[0].Activation);
         }
     }
 

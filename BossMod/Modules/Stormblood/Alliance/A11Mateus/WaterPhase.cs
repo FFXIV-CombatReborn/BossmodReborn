@@ -47,15 +47,15 @@ class Froth(BossModule module) : Components.GenericAOEs(module)
             var status = actor.FindStatus((uint)SID.Breathless);
             if (status is ActorStatus breathless && breathless.Extra >= 0x5)
             {
-                var orbs = new Func<WPos, float>[count];
+                var orbs = new ShapeDistance[count];
                 hints.ActionsToExecute.Push(ActionID.MakeSpell(ClassShared.AID.Sprint), actor, ActionQueue.Priority.High);
                 for (var i = 0; i < count; ++i)
                 {
                     var o = _aoes[i];
-                    orbs[i] = ShapeDistance.InvertedCircle(o.Origin, 1.4f);
+                    orbs[i] = new SDInvertedCircle(o.Origin, 1.4f);
                 }
                 if (orbs.Length != 0)
-                    hints.AddForbiddenZone(ShapeDistance.Intersection(orbs), WorldState.FutureTime(10d - breathless.Extra));
+                    hints.AddForbiddenZone(new SDIntersection(orbs), WorldState.FutureTime(10d - breathless.Extra));
             }
         }
     }
@@ -86,13 +86,13 @@ class Snowpierce(BossModule module) : Components.BaitAwayChargeCast(module, (uin
             var count = froth.Count;
             if (count == 0)
                 return;
-            var forbidden = new Func<WPos, float>[count];
+            var forbidden = new ShapeDistance[count];
             for (var i = 0; i < count; ++i)
             {
                 var a = froth[i];
-                forbidden[i] = ShapeDistance.Cone(b.Source.Position, 100f, b.Source.AngleTo(a), Angle.Asin(2.9f / (a.Position - b.Source.Position).Length()));
+                forbidden[i] = new SDCone(b.Source.Position, 100f, b.Source.AngleTo(a), Angle.Asin(2.9f / (a.Position - b.Source.Position).Length()));
             }
-            hints.AddForbiddenZone(ShapeDistance.Union(forbidden), b.Activation);
+            hints.AddForbiddenZone(new SDUnion(forbidden), b.Activation);
         }
     }
 
@@ -106,7 +106,7 @@ class Snowpierce(BossModule module) : Components.BaitAwayChargeCast(module, (uin
         for (var i = 0; i < count; ++i)
         {
             var a = froth[i];
-            Arena.AddCircle(a.Position, a.HitboxRadius, Colors.Danger);
+            Arena.AddCircle(a.Position, a.HitboxRadius);
         }
     }
 

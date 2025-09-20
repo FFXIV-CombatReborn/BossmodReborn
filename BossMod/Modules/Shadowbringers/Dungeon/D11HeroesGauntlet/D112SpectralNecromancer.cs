@@ -86,17 +86,17 @@ class NecrobombBaitAway(BossModule module) : Components.BaitAwayIcon(module, 9.2
 class Necrobombs(BossModule module) : BossComponent(module)
 {
     private readonly NecrobombBaitAway _ba = module.FindComponent<NecrobombBaitAway>()!;
-    private static readonly AOEShapeCircle circle = new(8);
+    private static readonly AOEShapeCircle circle = new(8f);
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (_ba.ActiveBaits.Count != 0)
             return;
-        var forbidden = new List<Func<WPos, float>>();
+        var forbidden = new List<ShapeDistance>();
         foreach (var e in WorldState.Actors.Where(x => !x.IsAlly && x.Tether.ID == (uint)TetherID.CrawlingNecrobombs))
             forbidden.Add(circle.Distance(e.Position, default));
         if (forbidden.Count != 0)
-            hints.AddForbiddenZone(ShapeDistance.Union(forbidden));
+            hints.AddForbiddenZone(new SDUnion([.. forbidden]));
     }
 }
 
@@ -110,13 +110,16 @@ class Burst(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnActorModelStateChange(Actor actor, byte modelState, byte animState1, byte animState2)
     {
-        if (modelState == 54u)
+        if (modelState == 54)
+        {
             _aoes.Add(new(circle, actor.Position.Quantized(), default, WorldState.FutureTime(6d))); // activation time can be vastly different, even twice as high so we take a conservative delay
+        }
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
         if (_aoes.Count != 0)
+        {
             switch (spell.Action.ID)
             {
                 case (uint)AID.Burst1:
@@ -130,6 +133,7 @@ class Burst(BossModule module) : Components.GenericAOEs(module)
                     _aoes.Clear();
                     break;
             }
+        }
     }
 }
 

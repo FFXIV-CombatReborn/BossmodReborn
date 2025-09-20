@@ -21,7 +21,7 @@ sealed class DireStraits(BossModule module) : Components.GenericAOEs(module)
                 {
                     (aoe1, aoe2) = (aoe2, aoe1);
                 }
-                aoe2.Origin += aoe2.Rotation.ToDirection();
+                aoe2.Origin += 3f * aoe2.Rotation.ToDirection();
             }
         }
     }
@@ -37,9 +37,8 @@ sealed class DireStraits(BossModule module) : Components.GenericAOEs(module)
             }
             if (_aoes.Count == 1)
             {
-                var aoes = CollectionsMarshal.AsSpan(_aoes);
-                ref var aoe = ref aoes[0];
-                aoe.Origin -= aoe.Rotation.ToDirection();
+                ref var aoe = ref CollectionsMarshal.AsSpan(_aoes)[0];
+                aoe.Origin -= 1.5f * aoe.Rotation.ToDirection();
             }
         }
     }
@@ -72,7 +71,7 @@ sealed class NavigatorsTridentKnockback(BossModule module) : Components.GenericK
                 }
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
@@ -103,46 +102,21 @@ sealed class NavigatorsTridentKnockback(BossModule module) : Components.GenericK
             var act = kb.Activation;
             if (!IsImmune(slot, act))
             {
-                var center = Arena.Center;
-                var dir1 = new WDir(default, 20f);
-                var dir2 = new WDir(default, -20f);
-
-                if (_serpentsTide != null)
+                if (_serpentsTide != null && _serpentsTide.AOEs.Count != 0)
                 {
-                    var serpentaoes = _serpentsTide.AOEs;
-                    var count = serpentaoes.Count;
-                    hints.AddForbiddenZone(p =>
+                    var aoes = CollectionsMarshal.AsSpan(_serpentsTide.AOEs);
+                    var len = aoes.Length;
+                    var rects = new (WPos origin, WDir rotation)[len];
+                    for (var i = 0; i < len; ++i)
                     {
-                        var projected1 = p + dir1;
-                        var projected2 = p + dir2;
-                        var pZ = p.Z > -900f;
-                        var aoes = CollectionsMarshal.AsSpan(serpentaoes);
-                        for (var i = 0; i < count; ++i)
-                        {
-                            ref var aoe = ref aoes[i];
-                            if (pZ && aoe.Check(projected1) || !pZ && aoe.Check(projected2))
-                            {
-                                return default;
-                            }
-                        }
-                        if (pZ && projected1.InRect(center, 19f, 28f) || !pZ && projected2.InRect(center, 19f, 28f))
-                        {
-                            return 1f;
-                        }
-                        return default;
-                    }, act);
+                        ref var aoe = ref aoes[i];
+                        rects[i] = (aoe.Origin, aoe.Rotation.ToDirection());
+                    }
+                    hints.AddForbiddenZone(new SDKnockbackInAABBRectLeftRightAlongZAxisPlusAOERects(Arena.Center, 20f, 19f, 28f, rects, 80f, 10f, len), act);
                 }
                 else
                 {
-                    hints.AddForbiddenZone(p =>
-                    {
-                        var pZ = p.Z > -900f;
-                        if (pZ && (p + dir1).InRect(center, 19f, 28f) || !pZ && (p + dir2).InRect(center, 19f, 28f))
-                        {
-                            return 1f;
-                        }
-                        return default;
-                    }, act);
+                    hints.AddForbiddenZone(new SDKnockbackInAABBRectLeftRightAlongZAxis(Arena.Center, 20f, 19f, 28f), act);
                 }
             }
         }

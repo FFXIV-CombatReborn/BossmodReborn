@@ -121,22 +121,12 @@ sealed class PungentAerosol(BossModule module) : Components.SimpleKnockbacks(mod
         {
             return;
         }
-        ref var c = ref Casters.Ref(0);
+        ref readonly var c = ref Casters.Ref(0);
         var act = c.Activation;
         if (!IsImmune(slot, act))
         {
-            var pos = c.Origin;
-            var center = Arena.Center;
             // square intentionally slightly smaller to prevent sus knockback
-            hints.AddForbiddenZone(p =>
-            {
-                var projected = p + 24f * (p - pos).Normalized();
-                if (projected.InSquare(center, 19f))
-                {
-                    return 1f;
-                }
-                return default;
-            }, act);
+            hints.AddForbiddenZone(new SDKnockbackInAABBSquareAwayFromOrigin(Arena.Center, c.Origin, 24f, 18f), act);
         }
     }
 
@@ -146,13 +136,12 @@ sealed class PungentAerosol(BossModule module) : Components.SimpleKnockbacks(mod
         var len = aoes.Length;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var aoe = ref aoes[i];
-            if (aoe.Check(pos))
+            if (aoes[i].Check(pos))
             {
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }
 
@@ -171,7 +160,7 @@ sealed class D111ChirurgeonGeneralStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.ChirurgeonGeneral, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1028u, NameID = 13970u, Category = BossModuleInfo.Category.Dungeon, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 1)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.ChirurgeonGeneral, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1028u, NameID = 13970u, Category = BossModuleInfo.Category.Dungeon, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 1)]
 public sealed class D111ChirurgeonGeneral(WorldState ws, Actor primary) : BossModule(ws, primary, arenaCenter, new ArenaBoundsSquare(21.5f))
 {
     private static readonly WPos arenaCenter = new(270f, 12f);

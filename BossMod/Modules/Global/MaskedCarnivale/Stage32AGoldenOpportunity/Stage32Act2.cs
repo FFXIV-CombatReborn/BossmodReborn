@@ -77,13 +77,15 @@ sealed class GoldenBeam(BossModule module) : Components.GenericAOEs(module)
                         coneskip1.Add(cones[i]);
                     }
                     ConeV[] conesA = [.. coneskip1];
-                    AOEShapeCustom intersect = new([cones[0]], Shapes2: conesA, Operand: OperandType.Intersection);
-                    AOEShapeCustom xor = new([cones[0]], Shapes2: conesA, Operand: OperandType.Xor);
+                    ConeV[] cone0 = [cones[0]];
+                    var center = Arena.Center;
+                    AOEShapeCustom intersect = new(cone0, shapes2: conesA, operand: OperandType.Intersection);
+                    AOEShapeCustom xor = new(cone0, shapes2: conesA, operand: OperandType.Xor);
                     var clipper = new PolygonClipper();
-                    var combinedShapes = clipper.Union(new PolygonClipper.Operand(intersect.GetCombinedPolygon(Arena.Center)),
-                    new PolygonClipper.Operand(xor.GetCombinedPolygon(Arena.Center)));
+                    var combinedShapes = clipper.Union(new PolygonClipper.Operand(intersect.GetCombinedPolygon(center)),
+                    new PolygonClipper.Operand(xor.GetCombinedPolygon(center)));
                     intersect.Polygon = combinedShapes;
-                    _aoe = [new(intersect, Arena.Center, default, Module.CastFinishAt(spell))];
+                    _aoe = [new(intersect, center, default, Module.CastFinishAt(spell))];
                 }
             }
         }
@@ -154,7 +156,7 @@ sealed class GoldorAeroIII(BossModule module) : Components.SimpleKnockbacks(modu
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }
 

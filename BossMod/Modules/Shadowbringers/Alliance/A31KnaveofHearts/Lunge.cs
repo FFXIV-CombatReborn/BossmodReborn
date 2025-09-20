@@ -55,7 +55,7 @@ sealed class Lunge(BossModule module) : Components.GenericKnockback(module, (uin
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
@@ -112,49 +112,16 @@ sealed class Lunge(BossModule module) : Components.GenericKnockback(module, (uin
                 var count = _aoe.Casters.Count;
                 if (count != 0)
                 {
-                    var aoesC = _aoe.Casters;
-                    hints.AddForbiddenZone(p =>
-                    {
-                        var distanceToWall = float.MaxValue;
-                        for (var i = 0; i < len; ++i)
-                        {
-                            ref readonly var w = ref walls[i];
-                            var intersect = Intersect.RaySegment(p, dir, w.Vertex1, w.Vertex2);
-                            if (intersect < distanceToWall)
-                            {
-                                distanceToWall = intersect;
-                            }
-                        }
-                        if (distanceToWall < 60f)
-                        {
-                            var aoes = CollectionsMarshal.AsSpan(aoesC);
-                            for (var i = 0; i < count; ++i)
-                            {
-                                ref readonly var aoe = ref aoes[i];
-                                if (aoe.Check(p + distanceToWall * dir))
-                                {
-                                    return default;
-                                }
-                            }
-                            return 1f;
-                        }
-                        return default;
-                    }, act);
+                    var aoes = CollectionsMarshal.AsSpan(_aoe.Casters);
+                    ref var aoe = ref aoes[0];
+                    var origin = aoe.Origin;
+                    var rotation = aoe.Rotation.ToDirection();
+
+                    hints.AddForbiddenZone(new SDKnockbackFixedDirectionAgainstSafewallsPlusRectAOE(dir, walls, 60f, len, origin, rotation, 61f, 10f), act);
                 }
                 else
                 {
-                    hints.AddForbiddenZone(p =>
-                    {
-                        for (var i = 0; i < len; ++i)
-                        {
-                            ref readonly var w = ref walls[i];
-                            if (Intersect.RaySegment(p, dir, w.Vertex1, w.Vertex2) < 60f)
-                            {
-                                return 1f;
-                            }
-                        }
-                        return default;
-                    }, act);
+                    hints.AddForbiddenZone(new SDKnockbackFixedDirectionAgainstSafewalls(dir, walls, 60f, len), act);
                 }
             }
         }

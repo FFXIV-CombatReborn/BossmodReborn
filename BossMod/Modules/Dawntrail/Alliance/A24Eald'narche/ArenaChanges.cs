@@ -58,7 +58,7 @@ sealed class ArenaChanges(BossModule module) : Components.SimpleAOEs(module, (ui
             var tile = RemovedTiles[i];
             squares[i] = new Square(new WPos(784f + tile % 3 * 16f, -816f + tile / 3 * 16f), 8f);
         }
-        var arena = new ArenaBoundsCustom([new Square(A24Ealdnarche.ArenaCenter, 24f)], squares);
+        var arena = new ArenaBoundsCustom([new Square(A24Ealdnarche.ArenaCenter, 24f)], squares, Offset: -1f);
         Arena.Bounds = arena;
         Arena.Center = arena.Center;
     }

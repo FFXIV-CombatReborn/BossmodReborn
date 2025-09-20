@@ -98,13 +98,13 @@ class Turbine(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID
             ref readonly var c = ref Casters.Ref(0);
             var component = _aoe.ActiveAOEs(slot, actor);
             var len = component.Length;
-            var forbidden = new Func<WPos, float>[len + 1];
-            forbidden[len] = ShapeDistance.InvertedCircle(Arena.Center, 5f);
+            var forbidden = new ShapeDistance[len + 1];
+            forbidden[len] = new SDInvertedCircle(Arena.Center, 5f);
             for (var i = 0; i < len; ++i)
             {
-                forbidden[i] = ShapeDistance.Cone(Arena.Center, 20f, Angle.FromDirection(component[i].Origin - Arena.Center), a20);
+                forbidden[i] = new SDCone(Arena.Center, 20f, Angle.FromDirection(component[i].Origin - Arena.Center), a20);
             }
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), c.Activation);
+            hints.AddForbiddenZone(new SDIntersection(forbidden), c.Activation);
         }
     }
 
@@ -120,7 +120,7 @@ class Turbine(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }
 

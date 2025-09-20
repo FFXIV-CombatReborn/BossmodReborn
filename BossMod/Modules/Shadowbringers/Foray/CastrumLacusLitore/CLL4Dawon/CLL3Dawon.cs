@@ -30,7 +30,7 @@ sealed class WindsPeakKB(BossModule module) : Components.SimpleKnockbacks(module
         if (!_arena.IsDawonArena && Casters.Count != 0)
         {
             ref readonly var c = ref Casters.Ref(0);
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(c.Origin, 10f), c.Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(c.Origin, 10f), c.Activation);
         }
     }
 }

@@ -63,7 +63,7 @@ sealed class DecisiveBattleAOEs(BossModule module) : Components.GenericAOEs(modu
                 var clipper = new PolygonClipper();
                 exclusiveArea = clipper.Difference(new(exclusiveArea), new(donut.ToPolygon(center)));
 
-                AOEShapeCustom shape = new([.. circles], InvertForbiddenZone: true) { Polygon = exclusiveArea };
+                AOEShapeCustom shape = new([.. circles], invertForbiddenZone: true) { Polygon = exclusiveArea };
                 _aoe = [new(shape, center, default, Module.CastFinishAt(spell), Colors.SafeFromAOE)];
             }
         }

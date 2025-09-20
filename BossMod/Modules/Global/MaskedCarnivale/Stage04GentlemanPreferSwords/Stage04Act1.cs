@@ -50,18 +50,7 @@ public sealed class Stage04Act1 : BossModule
     }
     public static readonly uint[] Trash = [(uint)OID.Boss, (uint)OID.Bat];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(Trash);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInCombat(Trash);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

@@ -183,29 +183,29 @@ sealed class P2LightRampantBanish(BossModule module) : P2Banish(module)
             if (t.ForbiddenSoakers[slot])
             {
                 // we should not be soaking a tower
-                hints.AddForbiddenZone(ShapeDistance.Circle(t.Position, 4f), t.Activation);
-                hints.AddForbiddenZone(ShapeDistance.Circle(t.Position, 6f), WorldState.FutureTime(30d));
+                hints.AddForbiddenZone(new SDCircle(t.Position, 4f), t.Activation);
+                hints.AddForbiddenZone(new SDCircle(t.Position, 6f), WorldState.FutureTime(30d));
 
                 var prepos = PrepositionLocation(assignment);
                 if (prepos != null)
                 {
                     // we know the mechanic, so preposition immediately
                     // there might be puddles covering prepos spot, so add extra rougher hint
-                    hints.AddForbiddenZone(ShapeDistance.InvertedCircle(prepos.Value, 1f), DateTime.MaxValue);
-                    hints.AddForbiddenZone(ShapeDistance.InvertedCone(Arena.Center, 50f, Angle.FromDirection(prepos.Value - Arena.Center), 15f.Degrees()), WorldState.FutureTime(60d));
+                    hints.AddForbiddenZone(new SDInvertedCircle(prepos.Value, 1f), DateTime.MaxValue);
+                    hints.AddForbiddenZone(new SDInvertedCone(Arena.Center, 50f, Angle.FromDirection(prepos.Value - Arena.Center), 15f.Degrees()), WorldState.FutureTime(60d));
                 }
             }
             else
             {
                 // go soak the tower, somewhat offset to the assigned direction
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(t.Position, 4f), t.Activation);
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(t.Position, 2f), DateTime.MaxValue);
+                hints.AddForbiddenZone(new SDInvertedCircle(t.Position, 4f), t.Activation);
+                hints.AddForbiddenZone(new SDInvertedCircle(t.Position, 2f), DateTime.MaxValue);
 
                 var clockspot = _config.P2Banish2SpreadSpots[assignment];
                 if (clockspot >= 0)
                 {
                     var assignedDirection = (180f - 45f * clockspot).Degrees();
-                    hints.AddForbiddenZone(ShapeDistance.InvertedCone(t.Position, 50f, assignedDirection, 30f.Degrees()), DateTime.MaxValue);
+                    hints.AddForbiddenZone(new SDInvertedCone(t.Position, 50f, assignedDirection, 30f.Degrees()), DateTime.MaxValue);
                 }
             }
         }
@@ -214,7 +214,7 @@ sealed class P2LightRampantBanish(BossModule module) : P2Banish(module)
             // now that towers are done, resolve the spread/stack
             var prepos = PrepositionLocation(assignment);
             if (prepos != null)
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(prepos.Value, 1f), DateTime.MaxValue);
+                hints.AddForbiddenZone(new SDInvertedCircle(prepos.Value, 1f), DateTime.MaxValue);
             else
                 base.AddAIHints(slot, actor, assignment, hints);
         }
@@ -292,16 +292,15 @@ sealed class P2LightRampantAITowers(BossModule module) : BossComponent(module)
                 }
 
                 var preposSpot = Arena.Center + new WDir(default, north ? -BaitOffset : BaitOffset);
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(preposSpot, 1), bait.Activation);
+                hints.AddForbiddenZone(new SDInvertedCircle(preposSpot, 1), bait.Activation);
             }
             else
             {
                 // each next bait is just previous position rotated CW by 45 degrees
                 // note that this is only really relevant for second and third puddles - after that towers resolve and we use different component
                 //var nextSpot = Arena.Center + BaitOffset * _puddles.PrevBaitOffset[slot].Normalized().Rotate(-45.Degrees());
-                //hints.AddForbiddenZone(ShapeDistance.InvertedCircle(nextSpot, 3));
-                var shape = ShapeDistance.DonutSector(Arena.Center, BaitOffset - 1, BaitOffset + 2, Angle.FromDirection(_puddles.PrevBaitOffset[slot]) - 45.Degrees(), 30.Degrees());
-                hints.AddForbiddenZone(p => -shape(p), DateTime.MaxValue);
+                //hints.AddForbiddenZone(new SDInvertedCircle(nextSpot, 3));
+                hints.AddForbiddenZone(new SDInvertedDonutSector(Arena.Center, BaitOffset - 1f, BaitOffset + 2f, Angle.FromDirection(_puddles.PrevBaitOffset[slot]) - 45f.Degrees(), 30f.Degrees()), DateTime.MaxValue);
             }
         }
         else
@@ -311,7 +310,7 @@ sealed class P2LightRampantAITowers(BossModule module) : BossComponent(module)
             if (assignedTowerIndex >= 0 && _towers.Towers.FindIndex(assignedTowerIndex + 1, t => !t.ForbiddenSoakers[slot]) < 0)
             {
                 ref var t = ref _towers.Towers.Ref(assignedTowerIndex);
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center + (t.Position - Arena.Center) * 1.125f, 2f), t.Activation); // center is at R16, x1.125 == R18
+                hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center + (t.Position - Arena.Center) * 1.125f, 2f), t.Activation); // center is at R16, x1.125 == R18
             }
             // else: we either have no towers assigned (== doing puddles), or have multiple assigned (== assignments failed), so do nothing
         }
@@ -334,7 +333,7 @@ sealed class P2LightRampantAIStackPrepos(BossModule module) : BossComponent(modu
             if (dest.InCircle(actor.Position, maxDist))
                 return; // don't move _too_ fast as a baiter
         }
-        hints.AddForbiddenZone(ShapeDistance.InvertedCircle(dest, 1f), DateTime.MaxValue);
+        hints.AddForbiddenZone(new SDInvertedCircle(dest, 1f), DateTime.MaxValue);
     }
 }
 
@@ -381,7 +380,7 @@ sealed class P2LightRampantAIStackResolve(BossModule module) : BossComponent(mod
                 return distSq > 9f && toDest.Dot(toPartner) < 0f; // partner is far enough away, and moving towards destination will not bring us closer
             }
             if (!Raid.WithoutSlot(false, true, true).Any(needToWaitFor))
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(destPos, 1f), DateTime.MaxValue);
+                hints.AddForbiddenZone(new SDInvertedCircle(destPos, 1f), DateTime.MaxValue);
             // else: we still have someone we need to wait for, just stay where we are...
         }
         else if (_stack.Stacks.FirstOrDefault(s => IsNorthCamp(s.Target) == northCamp).Target is var stackTarget && stackTarget != null)
@@ -389,7 +388,7 @@ sealed class P2LightRampantAIStackResolve(BossModule module) : BossComponent(mod
             // we just want to stay close to the stack target, slightly offset to the destination
             var dirToDest = destPos - stackTarget.Position;
             var dest = dirToDest.LengthSq() <= 4f ? destPos : stackTarget.Position + 2f * dirToDest.Normalized();
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(dest, 1), DateTime.MaxValue);
+            hints.AddForbiddenZone(new SDInvertedCircle(dest, 1), DateTime.MaxValue);
         }
     }
 
@@ -408,31 +407,31 @@ sealed class P2LightRampantAIOrbs(BossModule module) : BossComponent(module)
 
         // actual orb aoes; use slightly bigger radius to make dodges less sus
         foreach (var c in _orbs.ActiveCasters)
-            hints.AddForbiddenZone(ShapeDistance.Circle(c.Origin, 12f), c.Activation);
+            hints.AddForbiddenZone(new SDCircle(c.Origin, 12f), c.Activation);
 
         if (_orbs.NumCasts == 0)
         {
             // dodge first orbs, while staying near edge
-            hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 16f));
+            hints.AddForbiddenZone(new SDCircle(Arena.Center, 16f));
             // ... and close to the aoes
             var len = _orbs.ActiveCasters.Length;
-            var orbs = new Func<WPos, float>[len];
+            var orbs = new ShapeDistance[len];
             for (var i = 0; i < len; ++i)
-                orbs[i] = ShapeDistance.Circle(_orbs.ActiveCasters[i].Origin, 13.5f);
-            hints.AddForbiddenZone(ShapeDistance.InvertedUnion(orbs), DateTime.MaxValue);
+                orbs[i] = new SDCircle(_orbs.ActiveCasters[i].Origin, 13.5f);
+            hints.AddForbiddenZone(new SDInvertedUnion(orbs), DateTime.MaxValue);
         }
         else if (_orbs.Casters.Any(c => _orbs.Shape.Check(actor.Position, c.Origin, default)))
         {
             // dodge second orbs while staying near edge (tethers are still up for a bit after first dodge)
-            hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 16f));
+            hints.AddForbiddenZone(new SDCircle(Arena.Center, 16f));
         }
         else
         {
             // now that we're safe, move closer to the center (this is a bit sus, but whatever...)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center, 16f), WorldState.FutureTime(30d));
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center, 13f), WorldState.FutureTime(40d));
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center, 10f), WorldState.FutureTime(50d));
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center, 7f), DateTime.MaxValue);
+            hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center, 16f), WorldState.FutureTime(30d));
+            hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center, 13f), WorldState.FutureTime(40d));
+            hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center, 10f), WorldState.FutureTime(50d));
+            hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center, 7f), DateTime.MaxValue);
         }
     }
 }

@@ -76,7 +76,7 @@ sealed class Crypsis(BossModule module) : BossComponent(module)
         if (IsConcealed)
         {
             hints.ActionsToExecute.Push(ActionID.MakeSpell(ClassShared.AID.Sprint), actor, ActionQueue.Priority.High);
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Module.PrimaryActor.Position, RevealDistance));
+            hints.AddForbiddenZone(new SDInvertedCircle(Module.PrimaryActor.Position, RevealDistance));
         }
     }
     public override void DrawArenaForeground(int pcSlot, Actor pc)

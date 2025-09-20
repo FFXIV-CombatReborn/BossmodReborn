@@ -209,7 +209,7 @@ public sealed class MNK(RotationModuleManager manager, Actor player) : Attackxan
 
     protected override float GetCastTime(AID aid) => 0;
 
-    public float EffectiveDowntimeIn => MathF.Max(0, DowntimeIn - GetApplicationDelay(AID.SixSidedStar));
+    public float EffectiveDowntimeIn => Math.Max(0, DowntimeIn - GetApplicationDelay(AID.SixSidedStar));
 
     private (AID action, bool isTargeted) GetCurrentBlitz()
     {
@@ -442,7 +442,7 @@ public sealed class MNK(RotationModuleManager manager, Actor player) : Attackxan
         if (PerfectBalanceLeft == 0)
             return;
 
-        var deadlineAll = MathF.Min(UptimeIn ?? float.MaxValue, PerfectBalanceLeft) - 0.5f;
+        var deadlineAll = Math.Min(UptimeIn ?? float.MaxValue, PerfectBalanceLeft) - 0.5f;
         var gcdsLeft = 3 - BeastCount;
         var deadlineNext = deadlineAll - gcdsLeft * AttackGCDLength;
         if (lunar)
@@ -657,7 +657,7 @@ public sealed class MNK(RotationModuleManager manager, Actor player) : Attackxan
                 prio = GCDPriority.MeditateForce;
                 break;
             case OffensiveStrategy.Automatic:
-                if (UptimeIn > MathF.Max(GCD + AttackGCDLength, FormShiftLeft) && UptimeIn < 25)
+                if (UptimeIn > Math.Max(GCD + AttackGCDLength, FormShiftLeft) && UptimeIn < 25)
                     prio = GCDPriority.Meditate;
                 break;
         }

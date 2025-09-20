@@ -59,7 +59,7 @@ class BodySlam(BossModule module) : Components.SimpleKnockbacks(module, (uint)AI
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (Casters.Count != 0)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center, 9f), Casters.Ref(0).Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center, 9f), Casters.Ref(0).Activation);
     }
 }
 

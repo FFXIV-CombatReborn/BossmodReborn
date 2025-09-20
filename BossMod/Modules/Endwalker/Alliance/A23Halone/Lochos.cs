@@ -1,9 +1,9 @@
 ﻿namespace BossMod.Endwalker.Alliance.A23Halone;
 
-class Lochos(BossModule module, float activationDelay) : Components.GenericAOEs(module)
+abstract class Lochos(BossModule module, double activationDelay) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = [];
-    private readonly float _activationDelay = activationDelay;
+    private readonly double _activationDelay = activationDelay;
 
     private static readonly AOEShapeRect _shape = new(60f, 15f);
 
@@ -36,5 +36,6 @@ class Lochos(BossModule module, float activationDelay) : Components.GenericAOEs(
         }
     }
 }
-class Lochos1(BossModule module) : Lochos(module, 10.9f);
-class Lochos2(BossModule module) : Lochos(module, 14.8f);
+
+sealed class Lochos1(BossModule module) : Lochos(module, 10.9d);
+sealed class Lochos2(BossModule module) : Lochos(module, 14.8d);

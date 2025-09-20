@@ -99,12 +99,31 @@ sealed class Bombardment(BossModule module) : Components.GenericAOEs(module)
             AOEs.Clear();
         }
     }
+
+    public void UpdateAOEs(bool risky)
+    {
+        var aoes = CollectionsMarshal.AsSpan(AOEs);
+        var len = aoes.Length;
+        for (var i = 0; i < len; ++i)
+        {
+            aoes[i].Risky = risky;
+        }
+    }
 }
 
-sealed class Impression(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Impression, 10f);
+sealed class Impression(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Impression, 10f)
+{
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        // handled by the knockback component
+    }
+}
+
 sealed class ImpressionKB(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.Impression, 11f)
 {
     private readonly Bombardment _aoe = module.FindComponent<Bombardment>()!;
+    private bool active;
+    private bool updated;
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
@@ -112,12 +131,11 @@ sealed class ImpressionKB(BossModule module) : Components.SimpleKnockbacks(modul
         {
             return;
         }
-        ref var c = ref Casters.Ref(0);
+        ref readonly var c = ref Casters.Ref(0);
         var act = c.Activation;
+        var innerCircle = new SDCircle(Arena.Center.Quantized(), 10f);
         if (!IsImmune(slot, act))
         {
-            var pos = c.Origin;
-            var center = Arena.Center;
             var aoes = CollectionsMarshal.AsSpan(_aoe.AOEs);
             var len = aoes.Length;
             var circles = new (WPos origin, float Radius)[len];
@@ -127,23 +145,11 @@ sealed class ImpressionKB(BossModule module) : Components.SimpleKnockbacks(modul
                 circles[i] = (aoe.Origin, aoe.ActorID == default ? 4f : 15f);
             }
             // square intentionally slightly smaller to prevent sus knockback
-            hints.AddForbiddenZone(p =>
+            hints.AddForbiddenZone(new SDKnockbackInAABBSquareAwayFromOriginPlusAOECirclesMixedRadiiPlusAvoidShape(Arena.Center, c.Origin, 11f, 18f, circles, len, innerCircle), act);
+        }
+        else
         {
-            var projected = p + 11f * (p - pos).Normalized();
-            for (var i = 0; i < len; ++i)
-            {
-                ref var aoe = ref circles[i];
-                if (projected.InCircle(aoe.origin, aoe.Radius))
-                {
-                    return default;
-                }
-            }
-            if (projected.InSquare(center, 19f))
-            {
-                return 1f;
-            }
-            return default;
-        }, act);
+            hints.AddForbiddenZone(innerCircle, act);
         }
     }
 
@@ -153,13 +159,39 @@ sealed class ImpressionKB(BossModule module) : Components.SimpleKnockbacks(modul
         var len = aoes.Length;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var aoe = ref aoes[i];
-            if (aoe.Check(pos))
+            if (aoes[i].Check(pos))
             {
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
+    }
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        base.OnCastStarted(caster, spell);
+        if (spell.Action.ID == WatchedAction)
+        {
+            active = true;
+        }
+    }
+
+    public override void Update()
+    {
+        if (active)
+        {
+            if (!updated && _aoe.AOEs.Count == 8)
+            {
+                _aoe.UpdateAOEs(false);
+                updated = true;
+            }
+            else if (updated && Casters.Count == 0)
+            {
+                _aoe.UpdateAOEs(true);
+                updated = false;
+                active = false;
+            }
+        }
     }
 }
 
@@ -223,13 +255,13 @@ sealed class D113ImmortalRemainsStates : StateMachineBuilder
             .ActivateOnEnter<Electray>()
             .ActivateOnEnter<MemoryOfTheStorm>()
             .ActivateOnEnter<Bombardment>()
-            .ActivateOnEnter<Impression>()
             .ActivateOnEnter<ImpressionKB>()
+            .ActivateOnEnter<Impression>()
             .ActivateOnEnter<MemoryOfThePyre>()
             .ActivateOnEnter<Turmoil>()
             .ActivateOnEnter<Keraunography>();
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.ImmortalRemains, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1028u, NameID = 13974u, Category = BossModuleInfo.Category.Dungeon, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 3)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.ImmortalRemains, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1028u, NameID = 13974u, Category = BossModuleInfo.Category.Dungeon, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 3)]
 public sealed class D113ImmortalRemains(WorldState ws, Actor primary) : BossModule(ws, primary, default, new ArenaBoundsSquare(20f));

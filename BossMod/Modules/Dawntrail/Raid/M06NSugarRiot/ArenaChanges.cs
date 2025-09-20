@@ -13,7 +13,9 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
     public override void OnEventEnvControl(byte index, uint state)
     {
         if (index != 0x04)
+        {
             return;
+        }
         switch (state)
         {
             case 0x00020001u:
@@ -38,16 +40,26 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (_aoe != null)
+        if (_aoe.Length != 0)
+        {
             return;
-        if (spell.Action.ID == (uint)AID.TasteOfFire)
-        {
-            _aoe = [new(RiverAOE with { InvertForbiddenZone = true }, Arena.Center, default, Module.CastFinishAt(spell), Colors.SafeFromAOE)];
-            _risky = false;
         }
-        else if (spell.Action.ID == (uint)AID.TasteOfThunder)
+        switch (spell.Action.ID)
         {
-            _aoe = [new(RiverAOE, Arena.Center, default, Module.CastFinishAt(spell))];
+            case (uint)AID.TasteOfFire:
+                AddAOE(RiverAOE, Colors.SafeFromAOE, true);
+                _risky = false;
+                break;
+            case (uint)AID.TasteOfThunder:
+                AddAOE(RiverAOE);
+                break;
+        }
+
+        void AddAOE(AOEShapeCustom shape, uint color = default, bool invert = false)
+        {
+            _aoe = [new(shape, Arena.Center, default, Module.CastFinishAt(spell, 4.2d), color)];
+            ref var aoe = ref _aoe[0];
+            aoe.Shape.InvertForbiddenZone = invert;
         }
     }
 
@@ -75,14 +87,18 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
             return;
         }
         if (isInside)
+        {
             hints.Add("GTFO from river!");
+        }
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         base.AddAIHints(slot, actor, assignment, hints);
         if (!active)
+        {
             return;
+        }
         var pos = actor.Position;
         if (actor.PrevPosition != pos)
         {

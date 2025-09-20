@@ -97,7 +97,7 @@ public class T05IfritH : BossModule
     private readonly List<Actor> _nails;
     public IEnumerable<Actor> ActiveNails => _nails.Where(n => n.IsTargetable && !n.IsDead);
 
-    public T05IfritH(WorldState ws, Actor primary) : base(ws, primary, default, new ArenaBoundsCircle(20))
+    public T05IfritH(WorldState ws, Actor primary) : base(ws, primary, default, T01IfritN.T01IfritN.IfritArena, true)
     {
         _nails = Enemies((uint)OID.InfernalNail);
     }

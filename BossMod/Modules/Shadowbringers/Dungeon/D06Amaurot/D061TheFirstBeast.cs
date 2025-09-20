@@ -72,8 +72,8 @@ sealed class Meteors(BossModule module) : Components.GenericBaitAway(module, cen
             var act = baits[0].Activation;
             var center = Arena.Center;
             var dir = new WDir(default, 1f);
-            hints.AddForbiddenZone(ShapeDistance.InvertedRect(center, dir, 16f, 16f, 16f), act);
-            hints.AddForbiddenZone(ShapeDistance.Rect(center, dir, 14f, 14f, 134f), act);
+            hints.AddForbiddenZone(new SDInvertedRect(center, dir, 16f, 16f, 16f), act);
+            hints.AddForbiddenZone(new SDRect(center, dir, 14f, 14f, 134f), act);
         }
     }
 }

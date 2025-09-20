@@ -81,17 +81,17 @@ class VoidBio(BossModule module) : Components.GenericAOEs(module)
         var count = voidzones.Length;
         if (count == 0)
             return;
-        var forbiddenImminent = new Func<WPos, float>[count];
-        var forbiddenFuture = new Func<WPos, float>[count];
+        var forbiddenImminent = new ShapeDistance[count];
+        var forbiddenFuture = new ShapeDistance[count];
         var angle = Angle.AnglesCardinals[1];
         for (var i = 0; i < count; ++i)
         {
             ref var h = ref voidzones[i];
-            forbiddenFuture[i] = ShapeDistance.Capsule(h.Position, angle, 3f, 2f);
-            forbiddenImminent[i] = ShapeDistance.Circle(h.Position, 2f);
+            forbiddenFuture[i] = new SDCapsule(h.Position, angle, 3f, 2f);
+            forbiddenImminent[i] = new SDCircle(h.Position, 2f);
         }
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenFuture), WorldState.FutureTime(1.5d));
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenImminent));
+        hints.AddForbiddenZone(new SDUnion(forbiddenFuture), WorldState.FutureTime(1.5d));
+        hints.AddForbiddenZone(new SDUnion(forbiddenImminent));
     }
 }
 

@@ -32,7 +32,7 @@ public sealed class A10VanguardPathfinderStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1015, NameID = 13599, SortOrder = 1)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1015, NameID = 13599, SortOrder = 1)]
 public sealed class A10VanguardPathfinder(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly WPos[] vertices = [new(802.28f, 621.41f), new(807.98f, 621.43f), new(808.32f, 621.98f), new(808.56f, 622.62f), new(808.64f, 623.2f),

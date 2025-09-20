@@ -18,7 +18,7 @@ class T01AI(BossModule module) : BossComponent(module)
         var cloneSpawned = _clone?.Clone != null;
         var cloneSpawningSoon = !cloneSpawned && Module.PrimaryActor.HPMP.CurHP < 0.73f * Module.PrimaryActor.HPMP.MaxHP;
         var clone = _clone?.CloneIfValid;
-        var hpDiff = clone != null ? (int)(clone.HPMP.CurHP - Module.PrimaryActor.HPMP.CurHP) * 100.0f / Module.PrimaryActor.HPMP.MaxHP : 0;
+        var hpDiff = clone != null ? (int)(clone.HPMP.CurHP - Module.PrimaryActor.HPMP.CurHP) * 100.0f / Module.PrimaryActor.HPMP.MaxHP : default;
 
         var activePlatforms = _platforms?.ActivePlatforms ?? new BitMask();
         if (Module.StateMachine.TimeSincePhaseEnter < 10)
@@ -28,9 +28,20 @@ class T01AI(BossModule module) : BossComponent(module)
         else if (activePlatforms.Any())
         {
             var actorIsSpawner = !cloneSpawned && assignment == (activePlatforms[0] ? PartyRolesConfig.Assignment.R2 : PartyRolesConfig.Assignment.R1);
-            Func<WPos, float> nonAllowedPlatforms = actorIsSpawner
-                ? p => -activePlatforms.SetBits().Min(platform => Platforms.PlatformShapes[platform](p)) - 1 // inverse union of active, slightly reduced to avoid standing on borders
-                : p => activePlatforms.SetBits().Min(platform => Platforms.PlatformShapes[platform](p)); // union of active
+
+            var active = activePlatforms.SetBits();
+            var len = active.Length;
+            var shapes = new ShapeDistance[len];
+
+            for (var i = 0; i < len; ++i)
+            {
+                shapes[i] = Platforms.PlatformShapes[active[i]];
+            }
+
+            ShapeDistance nonAllowedPlatforms = actorIsSpawner
+                ? new SDInvertedUnionOffset(shapes, -1f)  // inverse union of active, slightly reduced to avoid standing on borders
+                : new SDUnion(shapes); // union of active
+
             hints.AddForbiddenZone(nonAllowedPlatforms, _platforms!.ExplosionAt);
         }
         else
@@ -41,8 +52,8 @@ class T01AI(BossModule module) : BossComponent(module)
                 // kiting a slime: bring it near boss until low hp, then into boss
                 var dest = Module.PrimaryActor.Position;
                 if (kitedSlime.HPMP.CurHP > 0.2f * kitedSlime.HPMP.MaxHP)
-                    dest += (kitedSlime.Position - Module.PrimaryActor.Position).Normalized() * (Module.PrimaryActor.HitboxRadius + kitedSlime.HitboxRadius + 6); // 6 to avoid triggering whip back
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(dest, 2), DateTime.MaxValue);
+                    dest += (kitedSlime.Position - Module.PrimaryActor.Position).Normalized() * (Module.PrimaryActor.HitboxRadius + kitedSlime.HitboxRadius + 6f); // 6 to avoid triggering whip back
+                hints.AddForbiddenZone(new SDInvertedCircle(dest, 2f), DateTime.MaxValue);
             }
             else
             {
@@ -54,7 +65,7 @@ class T01AI(BossModule module) : BossComponent(module)
                     case PartyRolesConfig.Assignment.OT:
                         // when clone is about to spawn, have OT move closer to tank position
                         if (cloneSpawningSoon)
-                            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Platforms.hexaPlatformCenters[6], 20), DateTime.MaxValue);
+                            hints.AddForbiddenZone(new SDInvertedCircle(Platforms.hexaPlatformCenters[6], 20), DateTime.MaxValue);
                         //else if (clone != null)
                         //    SetPreferredPlatform(hints, 6);
                         break;
@@ -81,12 +92,12 @@ class T01AI(BossModule module) : BossComponent(module)
         // - after that - equal priorities unless hp diff is larger than 5%
         foreach (var e in hints.PotentialTargets)
         {
-            if ((OID)e.Actor.OID == OID.Boss)
+            if (e.Actor.OID == (uint)OID.Boss)
             {
                 if (e.Actor == Module.PrimaryActor)
                 {
                     e.Priority = 1; // this is a baseline; depending on whether we want to prioritize clone vs boss, clone's priority changes
-                    if (cloneSpawningSoon && e.Actor.FindStatus(SID.SteelScales) != null)
+                    if (cloneSpawningSoon && e.Actor.FindStatus((uint)SID.SteelScales) != null)
                         e.Priority = AIHints.Enemy.PriorityPointless; // stop dps until stack can be dropped
                 }
                 else
@@ -109,7 +120,7 @@ class T01AI(BossModule module) : BossComponent(module)
                 e.AttackStrength = _hoodSwing!.SecondsUntilNextCast() < 3 ? 0.5f : 0.2f;
                 e.StayAtLongRange = true;
             }
-            else if ((OID)e.Actor.OID == OID.DarkMatterSlime)
+            else if (e.Actor.OID == (uint)OID.DarkMatterSlime)
             {
                 // for now, let kiter damage it until 20%
                 var predictedHP = e.Actor.PendingHPRaw;
@@ -123,8 +134,6 @@ class T01AI(BossModule module) : BossComponent(module)
 
     private void SetPreferredPlatform(AIHints hints, int platform)
     {
-        //Func<WPos, float> nonAllowedPlatforms = p => -allowedPlatforms.SetBits().Min(platform => Platforms.PlatformShapes[platform](p)) - 1; // inverse union of allowed, slightly reduced to avoid standing on borders
-        float invAllowed(WPos p) => -Platforms.PlatformShapes[platform](p) - 1; // inverted and slightly reduced to avoid standing on borders
-        hints.AddForbiddenZone(invAllowed, DateTime.MaxValue);
+        hints.AddForbiddenZone(new SDInvertedUnionOffset([Platforms.PlatformShapes[platform]], -1f), DateTime.MaxValue);  // inverted and slightly reduced to avoid standing on borders
     }
 }

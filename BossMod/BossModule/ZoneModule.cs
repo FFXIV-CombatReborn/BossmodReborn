@@ -3,6 +3,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace BossMod;
 
+[SkipLocalsInit]
 public abstract class ZoneModule(WorldState ws) : IDisposable
 {
     public readonly WorldState World = ws;

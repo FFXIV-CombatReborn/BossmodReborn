@@ -9,7 +9,7 @@ sealed class P4Preposition(BossModule module) : BossComponent(module)
     {
         var count = _boss.Count;
         for (var i = 0; i < count; ++i)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(_boss[i].Position, 8f), DateTime.MaxValue);
+            hints.AddForbiddenZone(new SDInvertedCircle(_boss[i].Position, 8f), DateTime.MaxValue);
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)

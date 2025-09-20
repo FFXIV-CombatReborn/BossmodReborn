@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Endwalker.VariantCriterion.C03AAI.C033Statice;
 
-class Fireworks(BossModule module) : Components.UniformStackSpread(module, 3, 20, 2, 2, true)
+class Fireworks(BossModule module) : Components.UniformStackSpread(module, 3f, 20f, 2, 2, true)
 {
     public Actor?[] TetheredAdds = new Actor?[4];
 
@@ -324,7 +324,7 @@ class Fireworks2Hints(BossModule module) : BossComponent(module)
         }
     }
 
-    private IEnumerable<Angle> SafeSpots(int slot, Actor actor)
+    private Angle[] SafeSpots(int slot, Actor actor)
     {
         if (_fireworks?.Spreads.Count > 0 && _dartboard != null && _relNorth != null)
         {
@@ -332,21 +332,22 @@ class Fireworks2Hints(BossModule module) : BossComponent(module)
             {
                 // spreads always go slightly S of rel E/W
                 var west = ShouldGoWest(actor);
-                yield return _relNorth.Value + (west ? 95 : -95).Degrees();
+                return [_relNorth.Value + (west ? 95f : -95f).Degrees()];
             }
             else if (!_dartboard.Bullseye[slot])
             {
                 // non-dartboard non-spread should just go north
-                yield return _relNorth.Value;
+                return [_relNorth.Value];
             }
             else if (Raid[_dartboard.Bullseye.WithoutBit(slot).LowestSetBit()] is var partner && partner != null)
             {
                 var west = ShouldGoWest(actor);
                 if (_fireworks.IsSpreadTarget(partner) && ShouldGoWest(partner) == west)
                     west = !west; // adjust to opposite color
-                yield return _relNorth.Value + (west ? 5 : -5).Degrees();
+                return [_relNorth.Value + (west ? 5f : -5f).Degrees()];
             }
         }
+        return [];
     }
 
     private bool ShouldGoWest(Actor actor) => _config.Fireworks2Invert ? actor.Class.IsSupport() : actor.Class.IsDD();

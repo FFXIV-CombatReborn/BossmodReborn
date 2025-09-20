@@ -2,6 +2,7 @@
 
 // component for mechanics that either require players to move or stay still
 // priorities can be used to simplify implementation when e.g. status changes at different stages of the mechanic (eg if prep status is replaced with pyretic, we want to allow them to happen in any sequence)
+[SkipLocalsInit]
 public class StayMove(BossModule module, double maxTimeToShowHint = 1e3d) : BossComponent(module)
 {
     public enum Requirement { None, Stay, Stay2, Move }

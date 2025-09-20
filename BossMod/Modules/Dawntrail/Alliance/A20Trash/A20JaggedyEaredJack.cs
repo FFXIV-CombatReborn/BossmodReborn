@@ -35,7 +35,7 @@ sealed class A20JaggedyEaredJackStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.JaggedyEaredJack, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1058u, NameID = 14080u, Category = BossModuleInfo.Category.Alliance, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 1)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.JaggedyEaredJack, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1058u, NameID = 14080u, Category = BossModuleInfo.Category.Alliance, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 1)]
 public sealed class A20JaggedyEaredJack(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly ArenaBoundsCustom arena = new([new PolygonCustom([new(591.94f, 772.92f), new(597.99f, 774.09f),

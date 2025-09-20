@@ -188,7 +188,7 @@ public sealed class CLL1Brionac4thLegionHelldiver : BossModule
         for (var i = 0; i < count; ++i)
         {
             var skyarmor = skyarmors[i];
-            if (InBounds(skyarmor.Position))
+            if (Arena.InBounds(skyarmor.Position))
             {
                 Arena.Actor(skyarmor);
             }
@@ -217,7 +217,7 @@ public sealed class CLL1Brionac4thLegionHelldiver : BossModule
                     enemyPrio = 1;
                 else if (e == PrimaryActor && e.HPRatio - BossHellDiver?.HPRatio < -0.1f)
                     enemyPrio = AIHints.Enemy.PriorityForbidden;
-                else if (oid == (uint)OID.FourthLegionSkyArmor && InBounds(e.Position))
+                else if (oid == (uint)OID.FourthLegionSkyArmor && Arena.InBounds(e.Position))
                     enemyPrio = 0;
                 else if (oid != (uint)OID.Boss)
                     enemyPrio = AIHints.Enemy.PriorityInvincible;
@@ -228,7 +228,7 @@ public sealed class CLL1Brionac4thLegionHelldiver : BossModule
                     enemyPrio = 1;
                 else if (e == BossHellDiver && e.HPRatio - PrimaryActor.HPRatio < -0.1f)
                     enemyPrio = AIHints.Enemy.PriorityForbidden;
-                else if (oid == (uint)OID.FourthLegionSkyArmor && InBounds(e.Position))
+                else if (oid == (uint)OID.FourthLegionSkyArmor && Arena.InBounds(e.Position))
                     enemyPrio = 0;
                 else if (oid != (uint)OID.FourthLegionHelldiver1)
                     enemyPrio = AIHints.Enemy.PriorityInvincible;

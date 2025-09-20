@@ -54,7 +54,7 @@ sealed class DeadlyDealingKB(BossModule module) : Components.SimpleKnockbacks(mo
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }
 

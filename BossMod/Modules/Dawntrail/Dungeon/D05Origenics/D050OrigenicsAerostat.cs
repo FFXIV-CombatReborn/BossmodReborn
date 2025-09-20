@@ -34,7 +34,7 @@ sealed class D050OrigenicsAerostatStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 825, NameID = 12895, SortOrder = 2)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 825, NameID = 12895, SortOrder = 2)]
 public sealed class D050OrigenicsAerostat(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly Angle a30 = 30f.Degrees();
@@ -53,6 +53,8 @@ public sealed class D050OrigenicsAerostat(WorldState ws, Actor primary) : BossMo
     {
         var count = hints.PotentialTargets.Count;
         for (var i = 0; i < count; ++i)
+        {
             hints.PotentialTargets[i].Priority = 0;
+        }
     }
 }

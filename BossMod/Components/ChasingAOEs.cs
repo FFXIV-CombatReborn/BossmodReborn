@@ -1,11 +1,13 @@
 namespace BossMod.Components;
 
 // generic 'chasing AOE' component - these are AOEs that follow the target for a set amount of casts
+
+[SkipLocalsInit]
 public class GenericChasingAOEs(BossModule module, float moveDistance, uint aid = default, string warningText = "GTFO from chasing aoe!") : GenericAOEs(module, aid, warningText)
 {
     private readonly float MoveDistance = moveDistance;
 
-    public sealed class Chaser(AOEShape shape, Actor target, WPos prevPos, float moveDist, int numRemaining, DateTime nextActivation, float secondsBetweenActivations)
+    public sealed class Chaser(AOEShape shape, Actor target, WPos prevPos, float moveDist, int numRemaining, DateTime nextActivation, double secondsBetweenActivations)
     {
         public AOEShape Shape = shape;
         public Actor Target = target;
@@ -13,7 +15,7 @@ public class GenericChasingAOEs(BossModule module, float moveDistance, uint aid 
         public float MoveDist = moveDist;
         public int NumRemaining = numRemaining;
         public DateTime NextActivation = nextActivation;
-        public float SecondsBetweenActivations = secondsBetweenActivations;
+        public double SecondsBetweenActivations = secondsBetweenActivations;
 
         public WPos PredictedPosition()
         {
@@ -93,25 +95,26 @@ public class GenericChasingAOEs(BossModule module, float moveDistance, uint aid 
             var circle = (AOEShapeCircle)c.Shape;
             var radius = isTarget ? MoveDistance + circle.Radius : circle.Radius + 1;
             var position = isTarget ? c.PredictedPosition() - circle.Radius * actor.Rotation.ToDirection() : c.PredictedPosition();
-            hints.AddForbiddenZone(ShapeDistance.Circle(position, radius), c.NextActivation);
+            hints.AddForbiddenZone(new SDCircle(position, radius), c.NextActivation);
         }
     }
 }
 
 // standard chasing aoe; first cast is long - assume it is baited on the nearest allowed target; successive casts are instant
-public class StandardChasingAOEs(BossModule module, AOEShape shape, uint actionFirst, uint actionRest, float moveDistance, float secondsBetweenActivations, int maxCasts, bool resetExcludedTargets = false, uint icon = default, float activationDelay = 5.1f) : GenericChasingAOEs(module, moveDistance)
+[SkipLocalsInit]
+public class StandardChasingAOEs(BossModule module, AOEShape shape, uint actionFirst, uint actionRest, float moveDistance, double secondsBetweenActivations, int maxCasts, bool resetExcludedTargets = false, uint icon = default, double activationDelay = 5.1d) : GenericChasingAOEs(module, moveDistance)
 {
-    public StandardChasingAOEs(BossModule module, float radius, uint actionFirst, uint actionRest, float moveDistance, float secondsBetweenActivations, int maxCasts, bool resetExcludedTargets = false, uint icon = default, float activationDelay = 5.1f) : this(module, new AOEShapeCircle(radius), actionFirst, actionRest, moveDistance, secondsBetweenActivations, maxCasts, resetExcludedTargets, icon, activationDelay) { }
+    public StandardChasingAOEs(BossModule module, float radius, uint actionFirst, uint actionRest, float moveDistance, double secondsBetweenActivations, int maxCasts, bool resetExcludedTargets = false, uint icon = default, double activationDelay = 5.1d) : this(module, new AOEShapeCircle(radius), actionFirst, actionRest, moveDistance, secondsBetweenActivations, maxCasts, resetExcludedTargets, icon, activationDelay) { }
 
     public readonly AOEShape Shape = shape;
     public readonly uint ActionFirst = actionFirst;
     public readonly uint ActionRest = actionRest;
     public readonly float MoveDistance = moveDistance;
-    public readonly float SecondsBetweenActivations = secondsBetweenActivations;
+    public readonly double SecondsBetweenActivations = secondsBetweenActivations;
     public int MaxCasts = maxCasts;
     public BitMask ExcludedTargets; // any targets in this mask aren't considered to be possible targets
     public readonly uint Icon = icon;
-    public readonly float ActivationDelay = activationDelay;
+    public readonly double ActivationDelay = activationDelay;
     public readonly bool ResetExcludedTargets = resetExcludedTargets;
     public BitMask Targets; // to keep track of the icon before mechanic starts for handling custom forbidden zones
     public DateTime Activation;
@@ -183,6 +186,7 @@ public class StandardChasingAOEs(BossModule module, AOEShape shape, uint actionF
 }
 
 // since open world players don't count towards party, we need to make a new component
+[SkipLocalsInit]
 public abstract class OpenWorldChasingAOEs(BossModule module, AOEShape shape, uint actionFirst, uint actionRest, float moveDistance, float secondsBetweenActivations, int maxCasts, bool resetExcludedTargets = false, uint icon = default, float activationDelay = 5.1f) : StandardChasingAOEs(module, shape, actionFirst, actionRest, moveDistance, secondsBetweenActivations, maxCasts, resetExcludedTargets, icon, activationDelay)
 {
     public new HashSet<Actor> ExcludedTargets = []; // any targets in this hashset aren't considered to be possible targets

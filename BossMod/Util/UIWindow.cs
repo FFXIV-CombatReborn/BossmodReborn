@@ -13,6 +13,7 @@ namespace BossMod;
 // - created when some event (e.g. user interaction) happens and not owned by the creator (can even outlive it)
 // - initially opened, closing automatically disposes it
 // - if another window with same name already exists, it is opened and focused instead; this can be detected by IsOpen being false after base class constructor runs
+[SkipLocalsInit]
 public abstract class UIWindow : Window, IDisposable
 {
     public bool DisposeOnClose; // defaults to true for detached windows, false for normal windows

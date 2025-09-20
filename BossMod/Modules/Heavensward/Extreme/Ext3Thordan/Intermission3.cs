@@ -54,7 +54,9 @@ sealed class FaithUnmoving(BossModule module) : Components.GenericKnockback(modu
         var grinnauxs = module.Enemies((uint)OID.SerGrinnaux);
         var grinnaux = grinnauxs.Count != 0 ? grinnauxs[0] : null;
         if (grinnaux != default)
+        {
             return [new(grinnaux.Position, 16f, ignoreImmunes: true)];
+        }
         return [];
     }
 
@@ -62,13 +64,11 @@ sealed class FaithUnmoving(BossModule module) : Components.GenericKnockback(modu
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        var origin = _kb.Length != 0 ? _kb[0].Origin : default;
-        hints.AddForbiddenZone(p =>
+        if (_kb.Length != 0)
         {
-            if ((p + 16f * (p - origin).Normalized()).InCircle(default, 18f))
-                return 1f;
-            return default;
-        }, activation);
+            ref var kb = ref _kb[0];
+            hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOrigin(default, kb.Origin, 16f, 18f), activation);
+        }
     }
 }
 

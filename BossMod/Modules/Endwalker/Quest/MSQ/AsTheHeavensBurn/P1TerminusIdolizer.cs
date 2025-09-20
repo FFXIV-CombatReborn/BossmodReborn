@@ -56,7 +56,7 @@ class TentacleWhip : Components.SimpleAOEGroups
             return;
         // make ai stay close to boss to ensure successfully dodging the combo
         var aoe = Casters[0];
-        hints.AddForbiddenZone(ShapeDistance.InvertedRect(Module.PrimaryActor.Position, aoe.Rotation, 2f, 2f, 20f), aoe.Activation);
+        hints.AddForbiddenZone(new SDInvertedRect(Module.PrimaryActor.Position, aoe.Rotation, 2f, 2f, 20f), aoe.Activation);
     }
 }
 

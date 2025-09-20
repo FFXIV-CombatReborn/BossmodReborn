@@ -146,7 +146,7 @@ class ThermobaricChargeBait(BossModule module) : Components.GenericBaitAway(modu
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (CurrentBaits.Count != 0 && CurrentBaits.Ref(0).Target == actor)
-            hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 23f));
+            hints.AddForbiddenZone(new SDCircle(Arena.Center, 23f));
     }
 }
 

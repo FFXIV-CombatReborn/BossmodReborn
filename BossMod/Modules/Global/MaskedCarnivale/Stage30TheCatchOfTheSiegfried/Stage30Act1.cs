@@ -48,7 +48,7 @@ sealed class RubberBullet(BossModule module) : Components.GenericKnockback(modul
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor) => _kb;

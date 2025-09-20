@@ -35,7 +35,7 @@ sealed class PortentousCometeorBait(BossModule module) : Components.GenericBaitA
     {
         if (ActiveBaitsOn(actor).Count != 0 && meteor != null)
         {
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(meteor.Position, 1f), CurrentBaits.Ref(0).Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(meteor.Position, 1f), CurrentBaits.Ref(0).Activation);
         }
     }
 

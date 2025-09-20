@@ -52,7 +52,7 @@ sealed class ParticleConcentration(BossModule module) : Components.GenericTowers
 
     public void ShowOuterTowers()
     {
-        var activation = Towers.Count != 0 ? Towers[0].Activation : default;
+        var activation = Towers.Count != 0 ? Towers.Ref(0).Activation : default;
         var count = _outerTowers.Count;
         for (var i = 0; i < count; ++i)
         {
@@ -156,8 +156,7 @@ sealed class ParticleConcentration(BossModule module) : Components.GenericTowers
             var towers = CollectionsMarshal.AsSpan(Towers);
             for (var i = 0; i < count; ++i)
             {
-                ref var t = ref towers[i];
-                if (t.Position == pos)
+                if (towers[i].Position == pos)
                 {
                     Towers.RemoveAt(i);
                     return;

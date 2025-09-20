@@ -33,16 +33,16 @@ public enum IconID : uint
     Stackmarker = 62 // player
 }
 
-class AerialBlast(BossModule module) : Components.RaidwideCast(module, (uint)AID.AerialBlast);
-class IxaliAeroII(BossModule module) : Components.SimpleAOEs(module, (uint)AID.IxaliAeroII, new AOEShapeRect(43f, 3f));
-class IxaliAeroIII(BossModule module) : Components.RaidwideCast(module, (uint)AID.IxaliAeroIII);
-class Bill(BossModule module) : Components.SpreadFromCastTargets(module, (uint)AID.Bill, 5f);
-class Ingurgitate(BossModule module) : Components.StackWithIcon(module, (uint)IconID.Stackmarker, (uint)AID.Ingurgitate, 5f, 5.5f, 4, 4);
-class EyeOfTheStorm(BossModule module) : Components.SimpleAOEs(module, (uint)AID.EyeOfTheStorm, new AOEShapeDonut(10f, 20f));
-class WickedWheel(BossModule module) : Components.SimpleAOEs(module, (uint)AID.WickedWheel, 7f);
-class MistralSong(BossModule module) : Components.SimpleAOEs(module, (uint)AID.MistralSong, new AOEShapeCone(32.89f, 60f.Degrees()));
+sealed class AerialBlast(BossModule module) : Components.RaidwideCast(module, (uint)AID.AerialBlast);
+sealed class IxaliAeroII(BossModule module) : Components.SimpleAOEs(module, (uint)AID.IxaliAeroII, new AOEShapeRect(43f, 3f));
+sealed class IxaliAeroIII(BossModule module) : Components.RaidwideCast(module, (uint)AID.IxaliAeroIII);
+sealed class Bill(BossModule module) : Components.SpreadFromCastTargets(module, (uint)AID.Bill, 5f);
+sealed class Ingurgitate(BossModule module) : Components.StackWithIcon(module, (uint)IconID.Stackmarker, (uint)AID.Ingurgitate, 5f, 5.5f, 4, 4);
+sealed class EyeOfTheStorm(BossModule module) : Components.SimpleAOEs(module, (uint)AID.EyeOfTheStorm, new AOEShapeDonut(10f, 20f));
+sealed class WickedWheel(BossModule module) : Components.SimpleAOEs(module, (uint)AID.WickedWheel, 7f);
+sealed class MistralSong(BossModule module) : Components.SimpleAOEs(module, (uint)AID.MistralSong, new AOEShapeCone(32.89f, 60f.Degrees()));
 
-class D153TozolHuatotlStates : StateMachineBuilder
+sealed class D153TozolHuatotlStates : StateMachineBuilder
 {
     public D153TozolHuatotlStates(BossModule module) : base(module)
     {
@@ -59,7 +59,15 @@ class D153TozolHuatotlStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 182, NameID = 5272, SortOrder = 7)]
-public class D153TozolHuatotl(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
+public sealed class D153TozolHuatotl : BossModule
 {
-    private static readonly ArenaBoundsCustom arena = new([new Polygon(new(317.8f, -416.19f), 19.5f * CosPI.Pi48th, 48)], [new Rectangle(new(336.69f, -409.415f), 20f, 1f, 70f.Degrees())]);
+    public D153TozolHuatotl(WorldState ws, Actor primary) : this(ws, primary, BuildArena()) { }
+
+    private D153TozolHuatotl(WorldState ws, Actor primary, (WPos center, ArenaBoundsCustom arena) a) : base(ws, primary, a.center, a.arena) { }
+
+    private static (WPos center, ArenaBoundsCustom arena) BuildArena()
+    {
+        var arena = new ArenaBoundsCustom([new Polygon(new(317.8f, -416.19f), 19.5f * CosPI.Pi48th, 48)], [new Rectangle(new(336.69f, -409.415f), 20f, 1f, 70f.Degrees())]);
+        return (arena.Center, arena);
+    }
 }

@@ -93,7 +93,7 @@ sealed class Brainstorm(BossModule module) : Components.StatusDrivenForcedMarch(
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }
 

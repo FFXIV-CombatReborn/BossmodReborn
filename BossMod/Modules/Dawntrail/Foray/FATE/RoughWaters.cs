@@ -137,7 +137,7 @@ class TwinTentacle(BossModule module) : Components.GenericAOEs(module)
         // make ai stay close to boss to ensure successfully dodging the combo
         var aoes = CollectionsMarshal.AsSpan(_aoes);
         ref readonly var aoe = ref aoes[0];
-        hints.AddForbiddenZone(ShapeDistance.InvertedRect(Module.PrimaryActor.Position, aoe.Rotation, 2f, 2f, 40f), aoe.Activation);
+        hints.AddForbiddenZone(new SDInvertedRect(Module.PrimaryActor.Position, aoe.Rotation, 2f, 2f, 40f), aoe.Activation);
     }
 }
 
@@ -210,5 +210,5 @@ sealed class RoughWatersStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.ForayFATE, GroupID = 1018, NameID = 1962)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.ForayFATE, GroupID = 1018, NameID = 1962)]
 public sealed class RoughWaters(WorldState ws, Actor primary) : SimpleBossModule(ws, primary);

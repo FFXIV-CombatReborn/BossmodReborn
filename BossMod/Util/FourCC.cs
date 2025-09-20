@@ -1,6 +1,7 @@
 ﻿namespace BossMod;
 
 // four character code - used as tags for data serialization
+[SkipLocalsInit]
 public readonly record struct FourCC(uint Value)
 {
     public FourCC(ReadOnlySpan<byte> v) : this(Cast(v)) { }

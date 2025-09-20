@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 namespace BossMod;
 
 // utility for loading versioned json configuration files, executing conversion if needed
+[SkipLocalsInit]
 public sealed class VersionedJSONSchema
 {
     public delegate JsonNode ConvertDelegate(JsonNode input, int startingVersion, FileInfo path);

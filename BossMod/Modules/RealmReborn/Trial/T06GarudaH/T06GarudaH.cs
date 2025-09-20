@@ -46,7 +46,7 @@ class Friction(BossModule module) : BossComponent(module)
     {
         if (Module.PrimaryActor.CastInfo == null) // don't forbid standing near monoliths while boss is casting to allow avoiding aoes
             foreach (var m in ((T06GarudaH)Module).ActiveMonoliths)
-                hints.AddForbiddenZone(ShapeDistance.Circle(m.Position, 5f));
+                hints.AddForbiddenZone(new SDCircle(m.Position, 5f));
     }
 }
 

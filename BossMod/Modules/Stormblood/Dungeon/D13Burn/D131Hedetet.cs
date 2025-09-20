@@ -75,7 +75,7 @@ class Hailfire(BossModule module) : Components.GenericAOEs(module)
         {
             var primary = Module.PrimaryActor;
             return new AOEInstance[1] { _target == actor
-                ? new(new AOEShapeCustom(rects, InvertForbiddenZone: true), Arena.Center, color: Colors.SafeFromAOE)
+                ? new(new AOEShapeCustom(rects, invertForbiddenZone: true), Arena.Center, color: Colors.SafeFromAOE)
                 : new(new AOEShapeCustom([new RectangleSE(primary.Position, primary.Position + Length * primary.DirectionTo(_target), 2f)], rects), Arena.Center) };
         }
         return [];

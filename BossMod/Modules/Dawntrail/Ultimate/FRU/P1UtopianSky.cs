@@ -104,14 +104,14 @@ sealed class P1UtopianSkyAIInitial(BossModule module) : BossComponent(module)
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 18f)); // stay on edge
+        hints.AddForbiddenZone(new SDCircle(Arena.Center, 18f)); // stay on edge
 
         var clockspot = _config.P1UtopianSkyInitialSpots[assignment];
         if (clockspot >= 0)
         {
             // ... and in assigned cone
             var assignedDirection = (180 - 45 * clockspot).Degrees();
-            hints.AddForbiddenZone(ShapeDistance.InvertedCone(Arena.Center, 50f, assignedDirection, 5f.Degrees()), DateTime.MaxValue);
+            hints.AddForbiddenZone(new SDInvertedCone(Arena.Center, 50f, assignedDirection, 5f.Degrees()), DateTime.MaxValue);
         }
     }
 }
@@ -161,7 +161,7 @@ sealed class P1UtopianSkyAIResolve(BossModule module) : BossComponent(module)
             if (clockSpot >= 0 && (_aoes.DangerousSpots[clockSpot] || _seenDangerSpot[clockSpot & 3]))
             {
                 // our spot is dangerous, or our partner's is and he has moved - move to center
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center, 5f), _aoes.Activation);
+                hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center, 5f), _aoes.Activation);
             }
             // else: we don't have a reason to move, stay where we are...
         }
@@ -182,7 +182,7 @@ sealed class P1UtopianSkyAIResolve(BossModule module) : BossComponent(module)
             };
             var range = spreadSpot == 0 ? 13 : 19;
             hints.PathfindMapBounds = FRU.PathfindHugBorderBounds;
-            hints.AddForbiddenZone(ShapeDistance.PrecisePosition(Arena.Center + range * direction.ToDirection(), new(0, 1), Arena.Bounds.MapResolution, actor.Position, 0.1f), _aoes.Activation);
+            hints.AddForbiddenZone(new SDPrecisePosition(Arena.Center + range * direction.ToDirection(), new(0, 1), Arena.Bounds.MapResolution, actor.Position, 0.1f), _aoes.Activation);
         }
     }
 }

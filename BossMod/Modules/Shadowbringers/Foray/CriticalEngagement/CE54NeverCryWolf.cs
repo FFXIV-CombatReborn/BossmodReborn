@@ -63,7 +63,7 @@ sealed class BracingWind(BossModule module) : Components.SimpleKnockbacks(module
         for (var i = 0; i < count; ++i)
         {
             ref readonly var c = ref casters[i];
-            hints.AddForbiddenZone(ShapeDistance.Rect(c.Origin, c.Direction, length, Distance - length, 6), c.Activation);
+            hints.AddForbiddenZone(new SDRect(c.Origin, c.Direction, length, Distance - length, 6), c.Activation);
         }
     }
 }

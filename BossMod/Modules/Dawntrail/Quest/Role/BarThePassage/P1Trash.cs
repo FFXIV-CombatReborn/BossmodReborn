@@ -83,7 +83,7 @@ sealed class ToxicSpit(BossModule module) : Components.InterceptTether(module, (
             if (source == null)
                 return;
             var target = Module.Enemies((uint)OID.Boss)[0];
-            hints.AddForbiddenZone(ShapeDistance.InvertedRect(target.Position + (target.HitboxRadius + 0.1f) * target.DirectionTo(source), source.Position, 0.5f), _activation);
+            hints.AddForbiddenZone(new SDInvertedRect(target.Position + (target.HitboxRadius + 0.1f) * target.DirectionTo(source), source.Position, 0.5f), _activation);
         }
     }
 }

@@ -79,7 +79,7 @@ class Electrocution2(BossModule module) : Components.CastTowers(module, (uint)AI
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (Towers.Count > 0)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Towers[0].Position, 3f));
+            hints.AddForbiddenZone(new SDInvertedCircle(Towers[0].Position, 3f));
     }
 }
 

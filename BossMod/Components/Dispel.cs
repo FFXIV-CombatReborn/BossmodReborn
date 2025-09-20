@@ -1,5 +1,6 @@
 ﻿namespace BossMod.Components;
 
+[SkipLocalsInit]
 public class Dispel(BossModule module, uint statusID, uint action = default) : CastHint(module, action, "Prepare to dispel!")
 {
     private readonly List<Actor> Targets = [];

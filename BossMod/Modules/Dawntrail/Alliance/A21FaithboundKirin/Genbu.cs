@@ -37,7 +37,7 @@ sealed class MidwinterMarchNorthernCurrent(BossModule module) : Components.Conce
             ref var aoe = ref Sequences.Ref(0);
             if (aoe.NumCastsDone == 0)
             {
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(aoe.Origin, 15f), aoe.NextActivation);
+                hints.AddForbiddenZone(new SDInvertedCircle(aoe.Origin, 15f), aoe.NextActivation);
             }
         }
     }

@@ -10,7 +10,7 @@ abstract class WaterIV(BossModule module, uint aid) : Components.SimpleKnockback
         if (Casters.Count != 0)
         {
             ref readonly var c = ref Casters.Ref(0);
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(c.Origin, 13f), c.Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(c.Origin, 13f), c.Activation);
         }
     }
 }

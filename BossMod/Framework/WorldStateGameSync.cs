@@ -573,7 +573,7 @@ sealed class WorldStateGameSync : IDisposable
             if (instanceID != InvalidEntityId && _ws.Party.FindSlot(instanceID) < 0)
             {
                 var obj = GameObjectManager.Instance()->Objects.GetObjectByEntityId(instanceID);
-                AddPartyMember(new(0, instanceID, false, obj != null ? obj->NameString : ""));
+                AddPartyMember(new(default, instanceID, false, obj != null ? obj->NameString : ""));
             }
             // else: buddy is non-existent or already updated, skip
         }

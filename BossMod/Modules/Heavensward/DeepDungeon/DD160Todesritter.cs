@@ -18,7 +18,7 @@ public enum AID : uint
 }
 
 class CleaveAuto(BossModule module) : Components.Cleave(module, (uint)AID.AutoAttack, new AOEShapeCone(11.92f, 45f.Degrees()), activeWhileCasting: false);
-class HallOfSorrow(BossModule module) : Components.VoidzoneAtCastTarget(module, 9f, (uint)AID.HallOfSorrow, GetVoidzones, 1.3f)
+class HallOfSorrow(BossModule module) : Components.VoidzoneAtCastTarget(module, 9f, (uint)AID.HallOfSorrow, GetVoidzones, 1.3d)
 {
     private static Actor[] GetVoidzones(BossModule module)
     {
@@ -41,27 +41,29 @@ class HallOfSorrow(BossModule module) : Components.VoidzoneAtCastTarget(module, 
 
 class Infatuation(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Infatuation, 7f);
 class Valfodr(BossModule module) : Components.BaitAwayChargeCast(module, (uint)AID.Valfodr, 3f);
-class ValfodrKB(BossModule module) : Components.GenericKnockback(module, (uint)AID.Valfodr, stopAtWall: true) // note actual knockback is delayed by upto 1.2s in replay
+
+class ValfodrKB(BossModule module) : Components.GenericKnockback(module, (uint)AID.Valfodr, stopAtWall: true)
 {
     private readonly Infatuation _aoe1 = module.FindComponent<Infatuation>()!;
     private readonly HallOfSorrow _aoe2 = module.FindComponent<HallOfSorrow>()!;
 
     private int _target;
-    private Knockback? _source;
+    private Knockback[] _kb = [];
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
-        if (_target == slot && _source != null)
-            return new Knockback[1] { _source.Value };
-        else
-            return [];
+        if (_target == slot)
+        {
+            return _kb;
+        }
+        return [];
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == WatchedAction)
         {
-            _source = new(caster.Position, 25f, Module.CastFinishAt(spell));
+            _kb = [new(caster.Position, 25f, Module.CastFinishAt(spell))];
             _target = Raid.FindSlot(spell.TargetID);
         }
     }
@@ -71,7 +73,7 @@ class ValfodrKB(BossModule module) : Components.GenericKnockback(module, (uint)A
         if (spell.Action.ID == WatchedAction)
         {
             _target = -1;
-            _source = null;
+            _kb = [];
         }
     }
 
@@ -81,8 +83,7 @@ class ValfodrKB(BossModule module) : Components.GenericKnockback(module, (uint)A
         var count = aoes1.Length;
         for (var i = 0; i < count; ++i)
         {
-            ref readonly var aoe = ref aoes1[i];
-            if (aoe.Check(pos))
+            if (aoes1[i].Check(pos))
             {
                 return true;
             }
@@ -91,19 +92,18 @@ class ValfodrKB(BossModule module) : Components.GenericKnockback(module, (uint)A
         var len = aoes2.Length;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var aoe = ref aoes2[i];
-            if (aoe.Check(pos))
+            if (aoes2[i].Check(pos))
             {
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         base.AddAIHints(slot, actor, assignment, hints);
-        if (_target == slot && _source != null)
+        if (_target == slot && _kb.Length != 0)
         {
             var voidzones = Module.Enemies((uint)OID.Voidzone);
             var countV = voidzones.Count;
@@ -111,19 +111,20 @@ class ValfodrKB(BossModule module) : Components.GenericKnockback(module, (uint)A
             var total = countV + countI;
             if (total == 0)
                 return;
-            var forbidden = new Func<WPos, float>[total];
+            var forbidden = new ShapeDistance[total];
             var pos = Module.PrimaryActor.Position;
             for (var i = 0; i < countV; ++i)
             {
                 var a = voidzones[i];
-                forbidden[i] = ShapeDistance.Cone(pos, 100f, Module.PrimaryActor.AngleTo(a), Angle.Asin(9f / (a.Position - pos).Length()));
+                forbidden[i] = new SDCone(pos, 100f, Module.PrimaryActor.AngleTo(a), Angle.Asin(9f / (a.Position - pos).Length()));
             }
             for (var i = 0; i < countI; ++i)
             {
                 var a = _aoe1.Casters[i];
-                forbidden[i + countV] = ShapeDistance.Cone(pos, 100f, Module.PrimaryActor.AngleTo(a.Origin), Angle.Asin(7f / (a.Origin - pos).Length()));
+                forbidden[i + countV] = new SDCone(pos, 100f, Module.PrimaryActor.AngleTo(a.Origin), Angle.Asin(7f / (a.Origin - pos).Length()));
             }
-            hints.AddForbiddenZone(ShapeDistance.Union(forbidden), _source!.Value.Activation);
+            ref readonly var kb = ref _kb[0];
+            hints.AddForbiddenZone(new SDUnion(forbidden), kb.Activation);
         }
     }
 }

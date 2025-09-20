@@ -32,7 +32,7 @@ class SanctifiedFlare(BossModule module) : Components.StackWithCastTargets(modul
         base.AddAIHints(slot, actor, assignment, hints);
         if (ActiveStacks.Count != 0 && WorldState.Actors.First(x => x.OID == 0x29C3) is Actor cerigg)
         {
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(cerigg.Position, 6), ActiveStacks.First().Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(cerigg.Position, 6), ActiveStacks.First().Activation);
         }
     }
 }

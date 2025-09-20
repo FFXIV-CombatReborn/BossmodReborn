@@ -579,5 +579,5 @@ sealed class D103ValiaPiraStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1027, NameID = 13749, MultiboxSupport = true)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1027, NameID = 13749, MultiboxSupport = true)]
 public sealed class D103ValiaPira(WorldState ws, Actor primary) : BossModule(ws, primary, new(default, -331f), new ArenaBoundsSquare(17.5f));

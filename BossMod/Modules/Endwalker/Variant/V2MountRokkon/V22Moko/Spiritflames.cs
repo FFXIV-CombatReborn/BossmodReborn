@@ -43,15 +43,15 @@ sealed class Spiritflames(BossModule module) : Components.GenericAOEs(module)
         var count = _flames.Count;
         if (count == 0)
             return;
-        var forbiddenImminent = new Func<WPos, float>[count];
-        var forbiddenFuture = new Func<WPos, float>[count];
+        var forbiddenImminent = new ShapeDistance[count];
+        var forbiddenFuture = new ShapeDistance[count];
         for (var i = 0; i < count; ++i)
         {
             var f = _flames[i];
-            forbiddenFuture[i] = ShapeDistance.Capsule(f.Position, f.Rotation, Length, Radius);
-            forbiddenImminent[i] = ShapeDistance.Circle(f.Position, Radius);
+            forbiddenFuture[i] = new SDCapsule(f.Position, f.Rotation, Length, Radius);
+            forbiddenImminent[i] = new SDCircle(f.Position, Radius);
         }
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenFuture), WorldState.FutureTime(1.5d));
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenImminent));
+        hints.AddForbiddenZone(new SDUnion(forbiddenFuture), WorldState.FutureTime(1.5d));
+        hints.AddForbiddenZone(new SDUnion(forbiddenImminent));
     }
 }

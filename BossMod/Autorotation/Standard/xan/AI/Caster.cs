@@ -67,7 +67,7 @@ public sealed class Caster(RotationModuleManager manager, Actor player) : AIBase
 
         if (Player.Class == Class.RDM)
         {
-            var swift2 = MathF.Max(swiftcast, StatusDetails(Player, (uint)BossMod.RDM.SID.Dualcast, Player.InstanceID, 15).Left);
+            var swift2 = Math.Max(swiftcast, StatusDetails(Player, (uint)BossMod.RDM.SID.Dualcast, Player.InstanceID, 15).Left);
             // instant cast available now
             if (swift2 > GCD)
                 Hints.ActionsToExecute.Push(ActionID.MakeSpell(BossMod.RDM.AID.Verraise), target, ActionQueue.Priority.High + 500);

@@ -80,7 +80,7 @@ sealed class P5PolarizingStrikes(BossModule module) : Components.GenericAOEs(mod
                     left ^= true;
                 var distance = front ? 5 : 9;
                 var dir = _source.Rotation + (left ? 135 : -135).Degrees();
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(_source.Position + distance * dir.ToDirection(), 1));
+                hints.AddForbiddenZone(new SDInvertedCircle(_source.Position + distance * dir.ToDirection(), 1f));
             }
         }
     }
@@ -91,7 +91,7 @@ sealed class P5PolarizingStrikes(BossModule module) : Components.GenericAOEs(mod
             return;
         foreach (var (baiter, forbidden) in _baiters.Zip(_forbidden))
             if (baiter != null)
-                _shape.Outline(Arena, _source.Position, Angle.FromDirection(baiter.Position - _source.Position), forbidden[pcSlot] ? Colors.Danger : Colors.Safe);
+                _shape.Outline(Arena, _source.Position, Angle.FromDirection(baiter.Position - _source.Position), forbidden[pcSlot] ? default : Colors.Safe);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

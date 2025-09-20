@@ -103,7 +103,7 @@ public class D120HaamOtodus(WorldState ws, Actor primary) : BossModule(ws, prima
     private static readonly ArenaBoundsCustom arena = new([new PolygonCustom(vertices)]);
     public static readonly uint[] Trash = [(uint)OID.Boss, (uint)OID.HaamFrostbeast, (uint)OID.HaamOtodus2, (uint)OID.HaamOtodus3, (uint)OID.HaamAurelia];
 
-    protected override bool CheckPull() => Enemies(Trash).Any(x => x.InCombat && x.Position.AlmostEqual(Arena.Center, Bounds.Radius));
+    protected override bool CheckPull() => IsAnyActorInBoundsInCombat(Trash);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

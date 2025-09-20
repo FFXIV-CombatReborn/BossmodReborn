@@ -1,6 +1,7 @@
 ﻿namespace BossMod.Components;
 
-public class StackTogether(BossModule module, uint iconId, float activationDelay, float radius = 3) : BossComponent(module)
+[SkipLocalsInit]
+public class StackTogether(BossModule module, uint iconId, float activationDelay, float radius = 3f) : BossComponent(module)
 {
     public readonly List<Actor> Targets = [];
     public DateTime Activation;
@@ -77,26 +78,36 @@ public class StackTogether(BossModule module, uint iconId, float activationDelay
 
         var countPos = positions.Count;
         for (var i = 0; i < countPos; ++i)
+        {
             Arena.AddCircle(positions[i], Radius, Colors.Safe);
+        }
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         var count = Targets.Count;
         if (count == 0)
+        {
             return;
+        }
         var actorFound = false;
-        var forbidden = new List<Func<WPos, float>>(count);
+        var forbidden = new List<ShapeDistance>(count);
         for (var i = 0; i < count; ++i)
         {
             var target = Targets[i];
 
             if (target == actor)
+            {
                 actorFound = true;
+            }
             else
-                forbidden.Add(ShapeDistance.InvertedCircle(target.Position, Radius));
+            {
+                forbidden.Add(new SDInvertedCircle(target.Position, Radius));
+            }
         }
         if (actorFound)
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), Activation);
+        {
+            hints.AddForbiddenZone(new SDIntersection([.. forbidden]), Activation);
+        }
     }
 }

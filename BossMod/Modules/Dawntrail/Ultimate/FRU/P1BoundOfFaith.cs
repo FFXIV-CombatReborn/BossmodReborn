@@ -119,12 +119,12 @@ sealed class P1BoundOfFaithAIKnockback(BossModule module) : BossComponent(module
             return;
 
         var sideOffset = _horizDone ? 0f : 7f; // before horizonal aoes are done, we don't show knockback, so adjust the unsafe zone
-        hints.AddForbiddenZone(ShapeDistance.HalfPlane(Arena.Center + sideOffset * _comp.SafeSide, _comp.SafeSide), _comp.Activation);
+        hints.AddForbiddenZone(new SDHalfPlane(Arena.Center + sideOffset * _comp.SafeSide, _comp.SafeSide), _comp.Activation);
 
         var lane = _comp.AssignedLane(slot);
         if (_horizDone && lane.Z != 0f)
         {
-            hints.AddForbiddenZone(ShapeDistance.InvertedRect(Arena.Center + lane, new WDir(1f, default), 20f, 20f, 0.7f), _comp.Activation);
+            hints.AddForbiddenZone(new SDInvertedRect(Arena.Center + lane, new WDir(1f, default), 20f, 20f, 0.7f), _comp.Activation);
         }
     }
 
@@ -152,9 +152,9 @@ sealed class P1BoundOfFaithAIStack(BossModule module) : BossComponent(module)
             var stackWith = _comp.Stacks.MinBy(s => (s.Target.Position - actor.Position).LengthSq());
             foreach (var s in _comp.Stacks)
             {
-                var zone = s.Target == stackWith.Target
-                    ? ShapeDistance.InvertedCircle(s.Target.Position, 4f) // stay a bit closer to the target to avoid spooking people
-                    : ShapeDistance.Circle(s.Target.Position, 6f);
+                ShapeDistance zone = s.Target == stackWith.Target
+                    ? new SDInvertedCircle(s.Target.Position, 4f) // stay a bit closer to the target to avoid spooking people
+                    : new SDCircle(s.Target.Position, 6f);
                 hints.AddForbiddenZone(zone, _comp.Activation);
             }
 
@@ -164,7 +164,7 @@ sealed class P1BoundOfFaithAIStack(BossModule module) : BossComponent(module)
         else
         {
             // just go to center
-            hints.AddForbiddenZone(ShapeDistance.InvertedRect(Arena.Center, new WDir(1f, default), 1f, 1f, 20f), DateTime.MaxValue);
+            hints.AddForbiddenZone(new SDInvertedRect(Arena.Center, new WDir(1f, default), 1f, 1f, 20f), DateTime.MaxValue);
         }
     }
 

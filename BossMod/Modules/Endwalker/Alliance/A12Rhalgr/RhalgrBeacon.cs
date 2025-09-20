@@ -71,10 +71,10 @@ sealed class RhalgrBeaconKnockback(BossModule module) : Components.GenericKnockb
         var z = kb.Origin.Z;
         var forbidden = DetermineForbiddenZones(kb.Origin, shock, count, z);
 
-        hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), DateTime.MaxValue);
+        hints.AddForbiddenZone(new SDIntersection(forbidden), DateTime.MaxValue);
     }
 
-    private static Func<WPos, float>[] DetermineForbiddenZones(WPos sourcePos, List<Actor> shock, int count, float z)
+    private static ShapeDistance[] DetermineForbiddenZones(WPos sourcePos, List<Actor> shock, int count, float z)
     {
         var isZone268 = z == 268.5f;
         WPos zone1, zone2;
@@ -91,7 +91,9 @@ sealed class RhalgrBeaconKnockback(BossModule module) : Components.GenericKnockb
         }
 
         if (count == 0)
-            return [ShapeDistance.InvertedRect(sourcePos, zone1, 0.5f), ShapeDistance.InvertedRect(sourcePos, zone2, 0.5f)];
+        {
+            return [new SDInvertedRect(sourcePos, zone1, 0.5f), new SDInvertedRect(sourcePos, zone2, 0.5f)];
+        }
         var inFirstZone = false;
         for (var i = 0; i < count; ++i)
         {
@@ -101,6 +103,6 @@ sealed class RhalgrBeaconKnockback(BossModule module) : Components.GenericKnockb
                 break;
             }
         }
-        return [ShapeDistance.InvertedRect(sourcePos, inFirstZone ? zone2 : zone1, 0.5f)];
+        return [new SDInvertedRect(sourcePos, inFirstZone ? zone2 : zone1, 0.5f)];
     }
 }

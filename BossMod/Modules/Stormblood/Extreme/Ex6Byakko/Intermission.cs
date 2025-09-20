@@ -33,13 +33,13 @@ class VoiceOfThunder(BossModule module) : BossComponent(module)
         var count = orbs.Count;
         if (count != 0)
         {
-            var forbidden = new Func<WPos, float>[count];
+            var forbidden = new ShapeDistance[count];
             for (var i = 0; i < count; ++i)
             {
                 var o = orbs[i];
-                forbidden[i] = ShapeDistance.InvertedRect(o.Position + 0.5f * o.Rotation.ToDirection(), new WDir(default, 1f), 0.5f, 0.5f, 0.5f);
+                forbidden[i] = new SDInvertedRect(o.Position + 0.5f * o.Rotation.ToDirection(), new WDir(default, 1f), 0.5f, 0.5f, 0.5f);
             }
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), DateTime.MaxValue);
+            hints.AddForbiddenZone(new SDIntersection(forbidden), DateTime.MaxValue);
         }
     }
 

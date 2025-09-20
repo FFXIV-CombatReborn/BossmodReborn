@@ -40,10 +40,10 @@ sealed class GroundToGroundBallistic(BossModule module) : Components.SimpleKnock
     {
         if (Casters.Count != 0)
         {
-            var forbidden = new Func<WPos, float>[2];
-            forbidden[0] = ShapeDistance.InvertedCone(D132MagitekFortress.DefaultCenter, 20f, a180, a18);
-            forbidden[1] = ShapeDistance.InvertedCone(D132MagitekFortress.DefaultCenter, 20f, default, a18);
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), Casters.Ref(0).Activation);
+            var forbidden = new ShapeDistance[2];
+            forbidden[0] = new SDInvertedCone(D132MagitekFortress.DefaultCenter, 20f, a180, a18);
+            forbidden[1] = new SDInvertedCone(D132MagitekFortress.DefaultCenter, 20f, default, a18);
+            hints.AddForbiddenZone(new SDIntersection(forbidden), Casters.Ref(0).Activation);
         }
     }
 }
@@ -129,16 +129,16 @@ sealed class MagitekMissile(BossModule module) : Components.GenericAOEs(module)
         {
             return;
         }
-        var forbiddenImminent = new Func<WPos, float>[count];
-        var forbiddenFuture = new Func<WPos, float>[count];
+        var forbiddenImminent = new ShapeDistance[count];
+        var forbiddenFuture = new ShapeDistance[count];
         for (var i = 0; i < count; ++i)
         {
             var m = _missiles[i];
-            forbiddenFuture[i] = ShapeDistance.Capsule(m.Position, m.Rotation, Length, Radius);
-            forbiddenImminent[i] = ShapeDistance.Circle(m.Position, Radius);
+            forbiddenFuture[i] = new SDCapsule(m.Position, m.Rotation, Length, Radius);
+            forbiddenImminent[i] = new SDCircle(m.Position, Radius);
         }
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenFuture), WorldState.FutureTime(1.1d));
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenImminent));
+        hints.AddForbiddenZone(new SDUnion(forbiddenFuture), WorldState.FutureTime(1.1d));
+        hints.AddForbiddenZone(new SDUnion(forbiddenImminent));
     }
 }
 

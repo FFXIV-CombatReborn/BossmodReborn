@@ -71,7 +71,7 @@ sealed class LighterNoteBait(BossModule module) : BossComponent(module)
         {
             var c = casters[i];
             var cc = c.caster;
-            if (cc.LastFrameMovement == default) // remove hints only when the marker stopped moving
+            if (cc.LastFrameMovementVec4 == default) // remove hints only when the marker stopped moving
             {
                 casters.RemoveAt(i);
                 if (casters.Count == 0)
@@ -87,11 +87,11 @@ sealed class LighterNoteBait(BossModule module) : BossComponent(module)
         var count = casters.Count;
         for (var i = 0; i < count; ++i)
         {
-            hints.AddForbiddenZone(ShapeDistance.Circle(casters[i].caster.Position, 6f), activation);
+            hints.AddForbiddenZone(new SDCircle(casters[i].caster.Position, 6f), activation);
         }
         if (targets[slot])
         {
-            hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 24.5f), activation);
+            hints.AddForbiddenZone(new SDCircle(Arena.Center, 24.5f), activation);
         }
     }
 
@@ -125,22 +125,28 @@ sealed class LighterNoteExaflare(BossModule module) : Components.Exaflare(module
         {
             var c = casters[i];
             var cc = c.caster;
-            if (cc.LastFrameMovement == default) // add exaflare only when the marker stopped moving
+            if (cc.LastFrameMovementVec4 != default) // add exaflare only when all markers stopped moving
             {
-                var center = Arena.Center;
-                WDir[] dirs = c.isNorthSouth ? [new(default, 1f), new(default, -1f)] : [new(1f, default), new(-1f, default)];
-                for (var j = 0; j < 2; ++j)
-                {
-                    var intersect = (int)Intersect.RayAABB(cc.Position - center, dirs[j], 27f, 27f); // exaflare is allowed to go upto 27y away from center
-                    var maxexplosions = intersect / 6;
-                    if (j == 0)
-                    {
-                        maxexplosions += 1;
-                    }
-                    Lines.Add(new(cc.Position + (j == 0 ? default : 6f) * dirs[j], 6f * dirs[j], j != 0 ? activation : activation.AddSeconds(1.1d), 1.1d, maxexplosions, 9));
-                }
-                casters.RemoveAt(i);
+                return;
             }
+        }
+        for (var i = count; i >= 0; --i)
+        {
+            var c = casters[i];
+            var cc = c.caster;
+            var center = Arena.Center;
+            WDir[] dirs = c.isNorthSouth ? [new(default, 1f), new(default, -1f)] : [new(1f, default), new(-1f, default)];
+            for (var j = 0; j < 2; ++j)
+            {
+                var intersect = (int)Intersect.RayAABB(cc.Position - center, dirs[j], 27f, 27f); // exaflare is allowed to go upto 27y away from center
+                var maxexplosions = intersect / 6;
+                if (j == 0)
+                {
+                    maxexplosions += 1;
+                }
+                Lines.Add(new(cc.Position + (j == 0 ? default : 6f) * dirs[j], 6f * dirs[j], j != 0 ? activation : activation.AddSeconds(1.1d), 1.1d, maxexplosions, 9));
+            }
+            casters.RemoveAt(i);
         }
         base.Update();
     }
@@ -154,7 +160,7 @@ sealed class LighterNoteExaflare(BossModule module) : Components.Exaflare(module
             for (var i = 0; i < count; ++i)
             {
                 var line = Lines[i];
-                if (line.Next.AlmostEqual(pos, 0.1f))
+                if (line.Next.AlmostEqual(pos, 0.05f))
                 {
                     AdvanceLine(line, pos);
                     if (line.ExplosionsLeft == 0)

@@ -144,7 +144,7 @@ abstract class ArtOfTheSwell(BossModule module, uint aid) : Components.SimpleKno
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (Casters.Count != 0)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center, 5f), Casters.Ref(0).Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center, 5f), Casters.Ref(0).Activation);
     }
 }
 class ArtOfTheSwell1(BossModule module) : ArtOfTheSwell(module, (uint)AID.ArtOfTheSwell1);
@@ -184,7 +184,7 @@ class LightlessSparkBaitaway(BossModule module) : Components.BaitAwayTethers(mod
         if (baits.Count != 0)
         {
             ref var bait = ref baits.Ref(0).Source;
-            hints.AddForbiddenZone(ShapeDistance.InvertedCone(bait.Position, 10f, Angle.FromDirection(bait.Position - Arena.Center), 45f.Degrees()), WorldState.FutureTime(ActivationDelay));
+            hints.AddForbiddenZone(new SDInvertedCone(bait.Position, 10f, Angle.FromDirection(bait.Position - Arena.Center), 45f.Degrees()), WorldState.FutureTime(ActivationDelay));
         }
     }
 }

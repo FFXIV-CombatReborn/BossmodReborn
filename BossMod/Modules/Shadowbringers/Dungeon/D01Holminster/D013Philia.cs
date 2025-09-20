@@ -119,7 +119,7 @@ sealed class Fetters(BossModule module) : BossComponent(module)
         var chain = Module.Enemies((uint)OID.IronChain);
         var ironchain = chain.Count != 0 ? chain[0] : null;
         if (ironchain != null && !ironchain.IsDead)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(ironchain.Position, 3.6f));
+            hints.AddForbiddenZone(new SDInvertedCircle(ironchain.Position, 3.6f));
     }
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
@@ -185,7 +185,7 @@ sealed class PendulumFlare(BossModule module) : Components.BaitAwayIcon(module, 
     {
         base.AddAIHints(slot, actor, assignment, hints);
         if (ActiveBaitsOn(actor).Count != 0)
-            hints.AddForbiddenZone(ShapeDistance.Circle(D013Philia.ArenaCenter, 18.5f));
+            hints.AddForbiddenZone(new SDCircle(D013Philia.ArenaCenter, 18.5f));
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)

@@ -59,7 +59,7 @@ class AethericBoom(BossModule module) : Components.CastHint(module, (uint)AID.Ae
         {
             // current MT should not be doing this mechanic
             foreach (var orb in _activeOrbs)
-                hints.AddForbiddenZone(ShapeDistance.Circle(orb.Position, 3f));
+                hints.AddForbiddenZone(new SDCircle(orb.Position, 3f));
             return;
         }
 
@@ -68,7 +68,7 @@ class AethericBoom(BossModule module) : Components.CastHint(module, (uint)AID.Ae
             if (NumCasts < 2)
             {
                 // first or second cast in progress => stack S of boss to be knocked back roughly in same direction
-                hints.AddForbiddenZone(ShapeDistance.Cone(Module.PrimaryActor.Position, 50f, 180f.Degrees(), 170f.Degrees()));
+                hints.AddForbiddenZone(new SDCone(Module.PrimaryActor.Position, 50f, 180f.Degrees(), 170f.Degrees()));
             }
             else
             {
@@ -90,12 +90,12 @@ class AethericBoom(BossModule module) : Components.CastHint(module, (uint)AID.Ae
             if (actor.Role is Role.Melee or Role.Tank && Raid.WithoutSlot(false, true, true).InRadius(nextOrb.Position, _explosionRadius).Count() > 5)
             {
                 // pop the orb
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(nextOrb.Position, 1.5f));
+                hints.AddForbiddenZone(new SDInvertedCircle(nextOrb.Position, 1.5f));
             }
             else
             {
                 // run closer to the orb
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(nextOrb.Position + nextOrb.Rotation.ToDirection(), _explosionRadius - 2f));
+                hints.AddForbiddenZone(new SDInvertedCircle(nextOrb.Position + nextOrb.Rotation.ToDirection(), _explosionRadius - 2f));
             }
         }
     }
@@ -125,11 +125,11 @@ class AethericBoom(BossModule module) : Components.CastHint(module, (uint)AID.Ae
         if (orbsCount == 3 && assignment is PartyRolesConfig.Assignment.M1 or PartyRolesConfig.Assignment.M2)
         {
             // sacrifice melees on side orbs, this sucks but whatever
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(new(10f * x, -2f), 1.5f));
+            hints.AddForbiddenZone(new SDInvertedCircle(new(10f * x, -2f), 1.5f));
         }
         else
         {
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(new(2f * x, 10f), 1.5f));
+            hints.AddForbiddenZone(new SDInvertedCircle(new(2f * x, 10f), 1.5f));
         }
     }
 }

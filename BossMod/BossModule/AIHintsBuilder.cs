@@ -2,6 +2,7 @@ namespace BossMod;
 
 // utility that recalculates ai hints based on different data sources (eg active bossmodule, etc)
 // when there is no active bossmodule (eg in outdoor or on trash), we try to guess things based on world state (eg actor casts)
+[SkipLocalsInit]
 public sealed class AIHintsBuilder : IDisposable
 {
     private const float RaidwideSize = 30f;
@@ -166,7 +167,7 @@ public sealed class AIHintsBuilder : IDisposable
             originZ = Math.Max(originZ, e.ViewHeight);
             // TODO: consider quantizing even more, to reduce jittering when player moves?..
             hints.PathfindMapCenter = e.Origin + resolution * new WDir(originX, originZ);
-            hints.PathfindMapBounds = new ArenaBoundsRect(e.ViewWidth * resolution, e.ViewHeight * resolution, MapResolution: resolution); // note: we don't bother caching these bounds, they are very lightweight
+            hints.PathfindMapBounds = new ArenaBoundsRect(e.ViewWidth * resolution, e.ViewHeight * resolution, mapResolution: resolution); // note: we don't bother caching these bounds, they are very lightweight
             hints.PathfindMapObstacles = new(bitmap, new(originX - e.ViewWidth, originZ - e.ViewHeight, originX + e.ViewWidth, originZ + e.ViewHeight));
         }
         else
@@ -197,7 +198,7 @@ public sealed class AIHintsBuilder : IDisposable
             var rot = caster.Rotation;
             var finishAt = _ws.FutureTime(caster.NPCRemainingTime);
             if (aoe.IsCharge)
-                hints.AddForbiddenZone(ShapeDistance.Rect(aoe.Caster.Position.Quantized(), target, ((AOEShapeRect)aoe.Shape).HalfWidth), finishAt, aoe.Caster.InstanceID);
+                hints.AddForbiddenZone(new SDRect(aoe.Caster.Position.Quantized(), target, ((AOEShapeRect)aoe.Shape).HalfWidth), finishAt, aoe.Caster.InstanceID);
             else
                 hints.AddForbiddenZone(aoe.Shape, target, rot, finishAt);
         }
@@ -208,7 +209,7 @@ public sealed class AIHintsBuilder : IDisposable
             var rot = gaze.Caster.CastInfo!.Rotation;
             var finishAt = _ws.FutureTime(gaze.Caster.CastInfo.NPCRemainingTime);
             if (gaze.Shape.Check(player.Position, target, rot))
-                hints.ForbiddenDirections.Add((Angle.FromDirection(target - player.Position), 45.Degrees(), finishAt));
+                hints.ForbiddenDirections.Add((Angle.FromDirection(target - player.Position), 45f.Degrees(), finishAt));
         }
 
         var count = _invincible.Count;

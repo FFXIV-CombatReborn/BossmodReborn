@@ -10,13 +10,13 @@ sealed class YamaKagura(BossModule module) : Components.SimpleKnockbacks(module,
         if (count != 0)
         {
             var casters = CollectionsMarshal.AsSpan(Casters);
-            var forbidden = new Func<WPos, float>[count];
+            var forbidden = new ShapeDistance[count];
             for (var i = 0; i < count; ++i)
             {
                 ref readonly var c = ref casters[i];
-                forbidden[i] = ShapeDistance.Rect(c.Origin, c.Direction, 40f, Distance - 40f, 2.5f);
+                forbidden[i] = new SDRect(c.Origin, c.Direction, 40f, Distance - 40f, 2.5f);
             }
-            hints.AddForbiddenZone(ShapeDistance.Union(forbidden), Casters.Ref(0).Activation);
+            hints.AddForbiddenZone(new SDUnion(forbidden), Casters.Ref(0).Activation);
         }
     }
 
@@ -32,6 +32,6 @@ sealed class YamaKagura(BossModule module) : Components.SimpleKnockbacks(module,
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }

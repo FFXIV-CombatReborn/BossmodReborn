@@ -99,7 +99,7 @@ sealed class CoffinNails : Components.SimpleAOEs
         if (count > 2)
         {
             var aoe = Casters[0];
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(aoe.Origin, 4f), aoe.Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(aoe.Origin, 4f), aoe.Activation);
         }
     }
 }

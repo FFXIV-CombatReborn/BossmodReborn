@@ -55,7 +55,7 @@ sealed class RockSlideStoneSwell(BossModule module) : Components.GenericAOEs(mod
         var index = 0;
         while (index < count)
         {
-            ref readonly var aoe = ref aoes[index];
+            ref var aoe = ref aoes[index];
             if (aoe.Activation >= deadline1)
             {
                 break;
@@ -96,13 +96,14 @@ sealed class RockSlideStoneSwell(BossModule module) : Components.GenericAOEs(mod
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID is (uint)AID.StoneSwell1 or (uint)AID.StoneSwell2 or (uint)AID.Rockslide1 or (uint)AID.Rockslide2)
+        if (_aoes.Count != 0 && spell.Action.ID is (uint)AID.StoneSwell1 or (uint)AID.StoneSwell2 or (uint)AID.Rockslide1 or (uint)AID.Rockslide2)
         {
             var count = _aoes.Count;
             var id = caster.InstanceID;
+            var aoes = CollectionsMarshal.AsSpan(_aoes);
             for (var i = 0; i < count; ++i)
             {
-                if (_aoes[i].ActorID == id)
+                if (aoes[i].ActorID == id)
                 {
                     _aoes.RemoveAt(i);
                     return;
@@ -122,7 +123,7 @@ sealed class CE103WithExtremePrejudiceStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 43)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 43)]
 public sealed class CE103WithExtremePrejudice(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly ArenaBoundsCustom arena = new([new Polygon(new(-352f, -608f), 19.5f, 32)]);

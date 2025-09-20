@@ -26,7 +26,7 @@ sealed class P2HiemalStorm(BossModule module) : Components.SimpleAOEs(module, (u
         foreach (var c in Casters)
         {
             var activation = c.Activation;
-            hints.AddForbiddenZone(ShapeDistance.Circle(c.Origin, activation > deadline ? 4f : 7f), activation);
+            hints.AddForbiddenZone(new SDCircle(c.Origin, activation > deadline ? 4f : 7f), activation);
         }
     }
 
@@ -71,7 +71,7 @@ sealed class P2Intermission(BossModule module) : Components.GenericBaitAway(modu
     private readonly List<Actor> _iceVeil = module.Enemies((uint)OID.IceVeil);
     private bool _iceVeilInvincible = true;
 
-    public bool CrystalsActive => CrystalsOfLight.Any();
+    public bool CrystalsActive => CrystalsOfLight.Count != 0;
 
     public override void Update()
     {
@@ -106,7 +106,7 @@ sealed class P2Intermission(BossModule module) : Components.GenericBaitAway(modu
 
         // don't stand inside light crystals, to avoid bad puddle baits
         foreach (var c in CrystalsOfLight)
-            hints.AddForbiddenZone(ShapeDistance.Circle(c.Position, 4f), WorldState.FutureTime(30d));
+            hints.AddForbiddenZone(new SDCircle(c.Position, 4f), WorldState.FutureTime(30d));
 
         // mechanic resolution
         if (clockSpot < 0)
@@ -121,15 +121,15 @@ sealed class P2Intermission(BossModule module) : Components.GenericBaitAway(modu
             var assignedCrystal = CrystalsOfLight.FirstOrDefault(c => c.Position.AlmostEqual(assignedPosition, 2f));
             if (assignedCrystal != null)
             {
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(assignedPosition, 5f), WorldState.FutureTime(60d));
-                hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 17f), DateTime.MaxValue); // prefer to stay near border, unless everything else is covered with aoes
+                hints.AddForbiddenZone(new SDInvertedCircle(assignedPosition, 5f), WorldState.FutureTime(60d));
+                hints.AddForbiddenZone(new SDCircle(Arena.Center, 17f), DateTime.MaxValue); // prefer to stay near border, unless everything else is covered with aoes
             }
             else
             {
                 // go to the ice veil
                 // TODO: consider helping other melees with their crystals? a bit dangerous, can misbait
                 // TODO: consider helping nearby ranged to bait their cones?
-                hints.AddForbiddenZone(ShapeDistance.InvertedCone(Arena.Center, 7f, assignedDir, 10f.Degrees()), DateTime.MaxValue);
+                hints.AddForbiddenZone(new SDInvertedCone(Arena.Center, 7f, assignedDir, 10f.Degrees()), DateTime.MaxValue);
             }
         }
         else
@@ -140,7 +140,7 @@ sealed class P2Intermission(BossModule module) : Components.GenericBaitAway(modu
                 var assignedPosition = Arena.Center + 9f * (180f - 45f * clockSpot).Degrees().ToDirection(); // crystal is at R=8
                 var assignedCrystal = CrystalsOfDarkness.FirstOrDefault(c => c.Position.AlmostEqual(assignedPosition, 2f));
                 if (assignedCrystal != null)
-                    hints.AddForbiddenZone(ShapeDistance.PrecisePosition(assignedPosition, new WDir(default, 1f), Arena.Bounds.MapResolution, actor.Position, 0.1f));
+                    hints.AddForbiddenZone(new SDPrecisePosition(assignedPosition, new WDir(default, 1f), Arena.Bounds.MapResolution, actor.Position, 0.1f));
             }
             // else: just dodge cones etc...
         }
@@ -156,13 +156,14 @@ sealed class P2Intermission(BossModule module) : Components.GenericBaitAway(modu
     public override void OnStatusLose(Actor actor, ActorStatus status)
     {
         if (status.ID == (uint)SID.Invincibility)
+        {
             _iceVeilInvincible = false;
+        }
     }
 
-    private IEnumerable<Actor> ActiveActors(IReadOnlyList<Actor> raw) => raw.Where(a => a.IsTargetable && !a.IsDead);
-    private IEnumerable<Actor> CrystalsOfLight => ActiveActors(_crystalsOfLight);
-    private IEnumerable<Actor> CrystalsOfDarkness => ActiveActors(_crystalsOfDarkness);
-    private Actor? IceVeil => ActiveActors(_iceVeil).FirstOrDefault();
+    private List<Actor> CrystalsOfLight => BossModule.GetActiveActors(_crystalsOfLight);
+    private List<Actor> CrystalsOfDarkness => BossModule.GetActiveActors(_crystalsOfDarkness);
+    private Actor? IceVeil => BossModule.GetActiveActor(_iceVeil);
 
     private int CrystalPriority(Actor crystal, int clockSpot)
     {

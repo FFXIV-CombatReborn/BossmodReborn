@@ -27,7 +27,7 @@ public enum AID : uint
     DryCycleVisual = 30342, // Boss->self, 3.0s cast, single-target
     DryCycle = 30344, // Helper->self, 8.0s cast, range 5-40 donut
 
-    ParanormalWave = 42160, // CryOfHavoc->self, 3.0s cast, range 10 120-degree cone
+    ParanormalWave = 42160 // CryOfHavoc->self, 3.0s cast, range 10 120-degree cone
 }
 
 sealed class FluidSwing(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.FluidSwing1, (uint)AID.FluidSwing2], new AOEShapeCone(60f, 45f.Degrees()));
@@ -51,7 +51,7 @@ sealed class ADelicateBalanceStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.ForayFATE, GroupID = 1018, NameID = 1968)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.ForayFATE, GroupID = 1018, NameID = 1968)]
 public sealed class ADelicateBalance(WorldState ws, Actor primary) : SimpleBossModule(ws, primary)
 {
     protected override void DrawEnemies(int pcSlot, Actor pc)

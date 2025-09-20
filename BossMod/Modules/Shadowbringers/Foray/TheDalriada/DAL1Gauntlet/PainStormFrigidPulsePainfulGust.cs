@@ -2,13 +2,13 @@ namespace BossMod.Shadowbringers.Foray.TheDalriada.DAL1Gauntlet;
 
 sealed class PainStormFrigidPulsePainfulGust(BossModule module) : Components.GenericAOEs(module)
 {
-    private readonly List<AOEInstance> _aoes = new(4);
+    public readonly List<AOEInstance> AOEs = new(4);
     private static readonly AOEShapeCircle circle = new(20f);
     private static readonly AOEShapeDonut donut = new(8f, 25f);
     private static readonly AOEShapeCone cone = new(35f, 65f.Degrees());
     private readonly NorthSouthwind _kb = module.FindComponent<NorthSouthwind>()!;
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(AOEs);
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
@@ -21,19 +21,20 @@ sealed class PainStormFrigidPulsePainfulGust(BossModule module) : Components.Gen
         };
         if (shape != null)
         {
-            _aoes.Add(new(shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell), actorID: caster.InstanceID));
+            AOEs.Add(new(shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell), actorID: caster.InstanceID));
         }
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        var count = _aoes.Count;
+        var count = AOEs.Count;
         var id = caster.InstanceID;
+        var aoes = CollectionsMarshal.AsSpan(AOEs);
         for (var i = 0; i < count; ++i)
         {
-            if (_aoes[i].ActorID == id)
+            if (aoes[i].ActorID == id)
             {
-                _aoes.RemoveAt(i);
+                AOEs.RemoveAt(i);
                 return;
             }
         }

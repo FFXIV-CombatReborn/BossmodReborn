@@ -160,7 +160,7 @@ class D082JackInThePotStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 981, NameID = 12760)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 981, NameID = 12760)]
 public sealed class D082JackInThePot(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly ArenaBoundsCustom arena = new([new Circle(new(17f, -170f), 19.5f)], [new Rectangle(new(17f, -150.15f), 20, 1.25f), new Rectangle(new(17f, -189.5f), 20f, 1.25f)]);

@@ -54,7 +54,7 @@ sealed class SpiralFinish(BossModule module) : Components.SimpleKnockbacks(modul
         if (Casters.Count != 0)
         {
             ref readonly var c = ref Casters.Ref(0);
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(c.Origin, 9f), c.Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(c.Origin, 9f), c.Activation);
         }
     }
 }

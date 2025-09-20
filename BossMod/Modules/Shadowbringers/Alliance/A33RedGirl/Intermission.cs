@@ -4,13 +4,13 @@ sealed class IntermissionArena(BossModule module) : BossComponent(module)
 {
     private readonly List<Rectangle> walls = new(8);
     private readonly A33RedGirl bossmod = (A33RedGirl)module;
-    private PolygonCustomO[] baseArena = [];
+    private PolygonCustom[] baseArena = [];
 
     public override void OnActorCreated(Actor actor)
     {
         if (actor.OID is (uint)OID.WhiteWall or (uint)OID.BlackWall)
         {
-            walls.Add(new Rectangle(actor.Position, 2.125f, 1.5f));
+            walls.Add(new Rectangle(actor.Position, 2f, 1f));
             if (walls.Count == 8)
             {
                 baseArena = bossmod.RedSphere!.PosRot.Z switch
@@ -40,7 +40,7 @@ sealed class IntermissionArena(BossModule module) : BossComponent(module)
                     break;
                 }
             }
-            Arena.Bounds = new ArenaBoundsCustom(baseArena, [.. walls]);
+            Arena.Bounds = new ArenaBoundsCustom(baseArena, [.. walls], AdjustForHitbox: true);
         }
     }
 }

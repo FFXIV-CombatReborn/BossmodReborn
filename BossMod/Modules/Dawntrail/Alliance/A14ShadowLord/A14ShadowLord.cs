@@ -6,7 +6,7 @@ sealed class DoomArc(BossModule module) : Components.RaidwideCast(module, (uint)
 sealed class UnbridledRage(BossModule module) : Components.BaitAwayIcon(module, new AOEShapeRect(100f, 4f), (uint)IconID.UnbridledRage, (uint)AID.UnbridledRageAOE, 5.9d);
 sealed class DarkNova(BossModule module) : Components.SpreadFromCastTargets(module, (uint)AID.DarkNova, 6f);
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1015, NameID = 13653, SortOrder = 8, PlanLevel = 100)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1015, NameID = 13653, SortOrder = 8, PlanLevel = 100)]
 public sealed class A14ShadowLord(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, DefaultBounds)
 {
     private const int RadiusSmall = 8;

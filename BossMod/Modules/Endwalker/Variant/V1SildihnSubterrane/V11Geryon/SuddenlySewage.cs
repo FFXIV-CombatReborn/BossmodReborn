@@ -52,6 +52,6 @@ sealed class SuddenlySewage(BossModule module) : Components.GenericAOEs(module)
         }
         // make ai stay close to middle of the aoes to ensure successfully dodging the combo
         ref var aoe = ref _aoes.Ref(0);
-        hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center, 6f), aoe.Activation.AddSeconds(2d));
+        hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center, 6f), aoe.Activation.AddSeconds(2d));
     }
 }

@@ -1,5 +1,6 @@
 ﻿namespace BossMod;
 
+[SkipLocalsInit]
 public static class DateTimeExtensions
 {
     public static DateTime Floor(this DateTime dt, TimeSpan interval)

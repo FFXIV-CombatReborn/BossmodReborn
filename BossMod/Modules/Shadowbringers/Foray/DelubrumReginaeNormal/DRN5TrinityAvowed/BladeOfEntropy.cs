@@ -2,7 +2,8 @@
 
 sealed class BladeOfEntropy(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeCone cone = new(40f, 90f.Degrees());
+    private static readonly Angle a90 = 90f.Degrees();
+    private static readonly AOEShapeCone cone = new(40f, a90), coneInv = new(40f, a90, invertForbiddenZone: true);
     private readonly AOEInstance[][] _aoes = new AOEInstance[PartyState.MaxAllianceSize][];
     private readonly PlayerTemperatures _temps = module.FindComponent<PlayerTemperatures>()!;
 
@@ -29,7 +30,7 @@ sealed class BladeOfEntropy(BossModule module) : Components.GenericAOEs(module)
                 if (playertemp != default && playertemp == temp)
                 {
                     color = Colors.SafeFromAOE;
-                    shape = cone with { InvertForbiddenZone = true };
+                    shape = coneInv;
                 }
                 _aoes[i] = [new(shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell), color)];
             }

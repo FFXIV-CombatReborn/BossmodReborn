@@ -9,11 +9,10 @@ sealed class FlamingCyclone(BossModule module) : Components.SimpleAOEs(module, (
 sealed class SeventyFourDegrees(BossModule module) : Components.DonutStack(module, (uint)AID.SeventyFourDegrees, (uint)IconID.SeventyFourDegrees, 4f, 8f, 9f);
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.TheDalriada, GroupID = 778, NameID = 10212, SortOrder = 1)]
-public sealed class DAL1Gauntlet(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, StartingArena)
+public sealed class DAL1Gauntlet(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, new ArenaBoundsSquare(29.5f))
 {
     public static readonly WPos ArenaCenter = new(222f, -689f);
-    public static readonly ArenaBoundsSquare StartingArena = new(29.5f);
-    public static readonly ArenaBoundsSquare DefaultArena = new(23f);
+
     public Actor? BossAugur;
     public Actor? BossAlkonost;
     public Actor? BossCrow;

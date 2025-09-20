@@ -84,7 +84,7 @@ class Fetters(BossModule module) : BossComponent(module)
         var fetters = Module.Enemies((uint)OID.TheSablePrice);
         var fetter = fetters.Count != 0 ? fetters[0] : null;
         if (fetter != null && !fetter.IsDead)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(fetter.Position, fetter.HitboxRadius + 3));
+            hints.AddForbiddenZone(new SDInvertedCircle(fetter.Position, fetter.HitboxRadius + 3));
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

@@ -19,7 +19,7 @@ class CodexOfGravity(BossModule module) : Components.StackWithCastTargets(module
     {
         base.AddAIHints(slot, actor, assignment, hints);
         if (Stacks.Count != 0)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center, 1.5f), Stacks[0].Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center, 1.5f), Stacks[0].Activation);
     }
 }
 

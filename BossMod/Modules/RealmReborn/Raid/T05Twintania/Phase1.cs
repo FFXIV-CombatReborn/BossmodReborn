@@ -33,7 +33,7 @@ class P1AI(BossModule module) : BossComponent(module)
         // after adds are dead, everyone should stay near boss in preparation to P2; don't bother doing it with tanks, so that we don't interfere with positioning
         if (!stillHaveAdds && actor.Role != Role.Tank)
         {
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Module.PrimaryActor.Position, 8), DateTime.MaxValue);
+            hints.AddForbiddenZone(new SDInvertedCircle(Module.PrimaryActor.Position, 8), DateTime.MaxValue);
         }
     }
 }

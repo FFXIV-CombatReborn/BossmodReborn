@@ -61,8 +61,8 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module, (u
 sealed class CrystallineThornsHint(BossModule module) : Components.GenericAOEs(module)
 {
     private AOEInstance[] _aoe = [];
-    private static readonly AOEShapeCustom hintENVC00020001 = new(ArenaChanges.MiddleENVC00020001, InvertForbiddenZone: true);
-    private static readonly AOEShapeCustom hintENVC02000100 = new(ArenaChanges.MiddleENVC02000100, InvertForbiddenZone: true);
+    private static readonly AOEShapeCustom hintENVC00020001 = new(ArenaChanges.MiddleENVC00020001, invertForbiddenZone: true);
+    private static readonly AOEShapeCustom hintENVC02000100 = new(ArenaChanges.MiddleENVC02000100, invertForbiddenZone: true);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
 

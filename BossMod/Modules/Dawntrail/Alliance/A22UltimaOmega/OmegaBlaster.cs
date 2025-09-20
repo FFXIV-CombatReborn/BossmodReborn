@@ -20,7 +20,7 @@ sealed class OmegaBlaster(BossModule module) : Components.GenericAOEs(module)
                 {
                     (aoe1, aoe2) = (aoe2, aoe1);
                 }
-                aoe2.Origin += aoe2.Rotation.ToDirection();
+                aoe2.Origin += 5f * aoe2.Rotation.ToDirection();
             }
         }
     }
@@ -32,9 +32,8 @@ sealed class OmegaBlaster(BossModule module) : Components.GenericAOEs(module)
             _aoes.RemoveAt(0);
             if (_aoes.Count == 1)
             {
-                var aoes = CollectionsMarshal.AsSpan(_aoes);
-                ref var aoe = ref aoes[0];
-                aoe.Origin -= aoe.Rotation.ToDirection();
+                ref var aoe = ref CollectionsMarshal.AsSpan(_aoes)[0];
+                aoe.Origin -= 5f * aoe.Rotation.ToDirection();
             }
         }
     }

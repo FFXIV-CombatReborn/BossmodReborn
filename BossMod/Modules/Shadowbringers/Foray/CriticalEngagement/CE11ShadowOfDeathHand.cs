@@ -123,7 +123,7 @@ sealed class Wind(BossModule module) : Components.GenericKnockback(module)
             if (!IsImmune(slot, act))
             {
                 var dir = kb.Direction;
-                hints.AddForbiddenZone(ShapeDistance.Cone(Arena.Center - 10f * dir.ToDirection(), 30f, dir, 135f.Degrees()), act);
+                hints.AddForbiddenZone(new SDCone(Arena.Center - 10f * dir.ToDirection(), 30f, dir, 135f.Degrees()), act);
             }
         }
     }

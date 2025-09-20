@@ -33,7 +33,7 @@ sealed class InfraredHomingMissileBait(BossModule module) : Components.GenericBa
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (CurrentBaits.Count != 0)
-            hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 13.5f));
+            hints.AddForbiddenZone(new SDCircle(Arena.Center, 13.5f));
     }
 }
 

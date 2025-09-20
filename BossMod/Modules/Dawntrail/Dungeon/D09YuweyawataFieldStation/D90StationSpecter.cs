@@ -33,7 +33,7 @@ sealed class D90StationSpecterStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1008, NameID = 13577, SortOrder = 5)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1008, NameID = 13577, SortOrder = 5)]
 public sealed class D90StationSpecter(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly WPos[] vertices = [new(117.43f, -25.65f), new(119.51f, -25.64f), new(120.13f, -25.32f), new(120.8f, -25.13f), new(121.36f, -24.64f),
@@ -77,20 +77,7 @@ public sealed class D90StationSpecter(WorldState ws, Actor primary) : BossModule
     public static readonly uint[] Trash = [(uint)OID.Boss, (uint)OID.RottenResearcher1, (uint)OID.RottenResearcher2, (uint)OID.RottenResearcher3,
     (uint)OID.GiantCorse, (uint)OID.StationSpecter];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(Trash);
-        var count = enemies.Count;
-        var center = Arena.Center;
-        var radius = Bounds.Radius;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat && enemy.Position.AlmostEqual(center, radius))
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInBoundsInCombat(Trash);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

@@ -98,14 +98,14 @@ class MortalFlame(BossModule module) : BossComponent(module)
             return;
         var furniture = Furniture(Module);
         var count = furniture.Count;
-        var forbidden = new Func<WPos, float>[count];
+        var forbidden = new ShapeDistance[count];
         for (var i = 0; i < count; ++i)
         {
             var h = furniture[i];
-            forbidden[i] = ShapeDistance.InvertedCircle(h.Position, h.HitboxRadius - 0.1f);
+            forbidden[i] = new SDInvertedCircle(h.Position, h.HitboxRadius - 0.1f);
         }
         if (forbidden.Length != 0)
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), _activation);
+            hints.AddForbiddenZone(new SDIntersection(forbidden), _activation);
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
@@ -159,7 +159,7 @@ class BlackFlame(BossModule module) : Components.GenericBaitAway(module, centerA
 
         var furniture = MortalFlame.Furniture(Module);
         var count = furniture.Count;
-        var forbidden = new Func<WPos, float>[count * 2];
+        var forbidden = new ShapeDistance[count * 2];
         var index = 0;
 
         for (var i = 0; i < count; ++i)
@@ -167,12 +167,12 @@ class BlackFlame(BossModule module) : Components.GenericBaitAway(module, centerA
             var p = furniture[i];
             {
                 // AOE and hitboxes seem to be forbidden to intersect
-                forbidden[index++] = ShapeDistance.Cross(p.Position, Angle.AnglesCardinals[1], cross.Length + p.HitboxRadius, cross.HalfWidth + p.HitboxRadius);
-                forbidden[index++] = ShapeDistance.Circle(p.Position, circle.Radius + p.HitboxRadius);
+                forbidden[index++] = new SDCross(p.Position, Angle.AnglesCardinals[1], cross.Length + p.HitboxRadius, cross.HalfWidth + p.HitboxRadius);
+                forbidden[index++] = new SDCircle(p.Position, circle.Radius + p.HitboxRadius);
             }
         }
         if (forbidden.Length != 0)
-            hints.AddForbiddenZone(ShapeDistance.Union(forbidden), CurrentBaits.Ref(0).Activation);
+            hints.AddForbiddenZone(new SDUnion(forbidden), CurrentBaits.Ref(0).Activation);
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
@@ -213,7 +213,7 @@ class FiresDomainTether(BossModule module) : Components.StretchTetherDuo(module,
     {
         if (ActiveBaitsOn(actor).Count == 0)
             return;
-        hints.AddForbiddenZone(ShapeDistance.Rect(Arena.Center + offset, Arena.Center - offset, 23.5f));
+        hints.AddForbiddenZone(new SDRect(Arena.Center + offset, Arena.Center - offset, 23.5f));
     }
 }
 
@@ -242,7 +242,7 @@ class FiresDomain(BossModule module) : Components.GenericBaitAway(module)
         for (var i = 0; i < count; ++i)
         {
             ref var b = ref baits[i];
-            b.Shape = rect with { LengthFront = (b.Target.Position - b.Source.Position).Length() };
+            b.Shape = new AOEShapeRect((b.Target.Position - b.Source.Position).Length(), 2f);
         }
     }
 }
@@ -289,7 +289,7 @@ class FiresIreBait(BossModule module) : Components.GenericBaitAway(module)
             actors.AddRange(furniture);
             actors.AddRange(party);
             for (var i = 0; i < total; ++i)
-                hints.AddForbiddenZone(ShapeDistance.Circle(actors[i].Position, 10f), b);
+                hints.AddForbiddenZone(new SDCircle(actors[i].Position, 10f), b);
         }
     }
 
@@ -363,10 +363,10 @@ public class D093Lugus(WorldState ws, Actor primary) : BossModule(ws, primary, n
         {
             if (chandeliers[i].IsTargetable)
             {
-                Arena.Actors(Enemies(FurnitureB));
+                Arena.Actors(this, FurnitureB);
                 return;
             }
         }
-        Arena.Actors(Enemies(FurnitureA), Colors.Object, true);
+        Arena.Actors(this, FurnitureA, Colors.Object, true);
     }
 }

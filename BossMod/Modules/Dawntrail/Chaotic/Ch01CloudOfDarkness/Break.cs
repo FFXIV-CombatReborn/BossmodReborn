@@ -23,8 +23,7 @@ sealed class Break(BossModule module) : Components.GenericGaze(module)
             var eyes = CollectionsMarshal.AsSpan(Eyes);
             for (var i = 0; i < count; ++i)
             {
-                ref var eye = ref eyes[i];
-                if (eye.Position == pos)
+                if (eyes[i].Position == pos)
                 {
                     Eyes.RemoveAt(i);
                     return;

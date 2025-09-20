@@ -73,7 +73,7 @@ class VoidSparkBait(BossModule module) : Components.GenericBaitAway(module, cent
     {
         base.AddAIHints(slot, actor, assignment, hints);
         if (CurrentBaits.Count != 0 && CurrentBaits.Ref(0).Target == actor)
-            hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 22.5f));
+            hints.AddForbiddenZone(new SDCircle(Arena.Center, 22.5f));
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)

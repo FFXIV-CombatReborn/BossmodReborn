@@ -41,7 +41,7 @@ sealed class ArenaChange(BossModule module) : BossComponent(module)
 sealed class IceAegis(BossModule module) : Components.GenericAOEs(module)
 {
     private AOEInstance[] _aoe = [];
-    private static readonly AOEShapeCone cone = new(5f, 60f.Degrees(), InvertForbiddenZone: true);
+    private static readonly AOEShapeCone cone = new(5f, 60f.Degrees(), invertForbiddenZone: true);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
 

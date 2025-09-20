@@ -292,10 +292,10 @@ class ScrollingBounds(BossModule module) : BossComponent(module)
     {
         // force player to walk south to aggro vishap (status 1268 = In Event, not actionable)
         if (Phase == 1 && !actor.InCombat && actor.FindStatus(1268u) == null)
-            hints.AddForbiddenZone(ShapeDistance.Rect(Arena.Center, new WDir(default, 1f), 38f, 22f, 40f));
+            hints.AddForbiddenZone(new SDRect(Arena.Center, new WDir(default, 1f), 38f, 22f, 40f));
         // subsequent state transitions don't trigger until player moves into the area
         else if (Phase == 3 && actor.PosRot.Z > 25f || Phase == 5 && actor.PosRot.Z > -135f)
-            hints.AddForbiddenZone(ShapeDistance.Rect(Arena.Center, new WDir(default, 1f), 40f, 22f, 38f));
+            hints.AddForbiddenZone(new SDRect(Arena.Center, new WDir(default, 1f), 40f, 22f, 38f));
     }
 
     public override void Update()

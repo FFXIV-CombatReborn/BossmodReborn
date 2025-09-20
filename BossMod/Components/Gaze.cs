@@ -3,6 +3,7 @@
 namespace BossMod.Components;
 
 // generic gaze/weakpoint component, allows customized 'eye' position
+[SkipLocalsInit]
 public abstract class GenericGaze(BossModule module, uint aid = default) : CastCounter(module, aid)
 {
     public readonly struct Eye(
@@ -111,6 +112,7 @@ public abstract class GenericGaze(BossModule module, uint aid = default) : CastC
 }
 
 // gaze that happens on cast end
+[SkipLocalsInit]
 public class CastGaze(BossModule module, uint aid, bool inverted = false, float range = 10000f, int maxCasts = int.MaxValue) : GenericGaze(module, aid)
 {
     public readonly List<Eye> Eyes = [];
@@ -120,7 +122,9 @@ public class CastGaze(BossModule module, uint aid, bool inverted = false, float 
     {
         var count = Eyes.Count;
         if (count == 0)
+        {
             return [];
+        }
         var max = count > MaxCasts ? MaxCasts : count;
         return CollectionsMarshal.AsSpan(Eyes)[..max];
     }
@@ -142,8 +146,7 @@ public class CastGaze(BossModule module, uint aid, bool inverted = false, float 
             var eyes = CollectionsMarshal.AsSpan(Eyes);
             for (var i = 0; i < count; ++i)
             {
-                ref var e = ref eyes[i];
-                if (e.ActorID == id)
+                if (eyes[i].ActorID == id)
                 {
                     Eyes.RemoveAt(i);
                     return;
@@ -153,6 +156,7 @@ public class CastGaze(BossModule module, uint aid, bool inverted = false, float 
     }
 }
 
+[SkipLocalsInit]
 public class CastGazes(BossModule module, uint[] aids, bool inverted = false, float range = 10000f, int maxCasts = int.MaxValue, int expectedNumCasters = 99) : CastGaze(module, default, maxCasts: maxCasts)
 {
     protected readonly uint[] AIDs = aids;
@@ -183,8 +187,7 @@ public class CastGazes(BossModule module, uint[] aids, bool inverted = false, fl
         var eyes = CollectionsMarshal.AsSpan(Eyes);
         for (var i = 0; i < count; ++i)
         {
-            ref var e = ref eyes[i];
-            if (e.ActorID == id)
+            if (eyes[i].ActorID == id)
             {
                 Eyes.RemoveAt(i);
                 return;
@@ -207,6 +210,7 @@ public class CastGazes(BossModule module, uint[] aids, bool inverted = false, fl
 }
 
 // cast weakpoint component: a number of casts (with supposedly non-intersecting shapes), player should face specific side determined by active status to the caster for aoe he's in
+[SkipLocalsInit]
 public class CastWeakpoint(BossModule module, uint aid, AOEShape shape, uint statusForward, uint statusBackward, uint statusLeft, uint statusRight) : GenericGaze(module, aid)
 {
     public CastWeakpoint(BossModule module, uint aid, float radius, uint statusForward, uint statusBackward, uint statusLeft, uint statusRight) : this(module, aid, new AOEShapeCircle(radius), statusForward, statusBackward, statusLeft, statusRight) { }
@@ -274,8 +278,7 @@ public class CastWeakpoint(BossModule module, uint aid, AOEShape shape, uint sta
         var len = eyes.Length;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var eye = ref eyes[i];
-            if (!HitByEye(ref actor, eye))
+            if (!HitByEye(ref actor, eyes[i]))
             {
                 hints.Add("Face open weakpoint to eye!");
                 return;

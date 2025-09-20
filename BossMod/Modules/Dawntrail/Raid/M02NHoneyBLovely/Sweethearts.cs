@@ -43,18 +43,18 @@ abstract class Sweethearts(BossModule module, uint oid, uint aid) : Components.G
         var count = _hearts.Count;
         if (count == 0)
             return;
-        var forbiddenImminent = new Func<WPos, float>[count + 1];
-        var forbiddenFuture = new Func<WPos, float>[count];
+        var forbiddenImminent = new ShapeDistance[count + 1];
+        var forbiddenFuture = new ShapeDistance[count];
         for (var i = 0; i < count; ++i)
         {
             var h = _hearts[i];
-            forbiddenFuture[i] = ShapeDistance.Capsule(h.Position, h.Rotation, Length, Radius);
-            forbiddenImminent[i] = ShapeDistance.Circle(h.Position, Radius);
+            forbiddenFuture[i] = new SDCapsule(h.Position, h.Rotation, Length, Radius);
+            forbiddenImminent[i] = new SDCircle(h.Position, Radius);
         }
-        forbiddenImminent[count] = ShapeDistance.Circle(Arena.Center, Module.PrimaryActor.HitboxRadius);
+        forbiddenImminent[count] = new SDCircle(Arena.Center, Module.PrimaryActor.HitboxRadius);
 
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenFuture), WorldState.FutureTime(1.5d));
-        hints.AddForbiddenZone(ShapeDistance.Union(forbiddenImminent));
+        hints.AddForbiddenZone(new SDUnion(forbiddenFuture), WorldState.FutureTime(1.5d));
+        hints.AddForbiddenZone(new SDUnion(forbiddenImminent));
     }
 }
 

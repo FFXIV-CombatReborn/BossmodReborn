@@ -245,18 +245,7 @@ public abstract class Trash1Arena(WorldState ws, Actor primary, bool savage) : B
     public static readonly uint[] TrashNormal = [(uint)OID.NKaluk, (uint)OID.NOdqan, (uint)OID.NUdumbara, (uint)OID.NDryad, (uint)OID.NBelladonna, (uint)OID.NSapria];
     public static readonly uint[] TrashSavage = [(uint)OID.SKaluk, (uint)OID.SOdqan, (uint)OID.SUdumbara, (uint)OID.SDryad, (uint)OID.SBelladonna, (uint)OID.SSapria];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(savage ? TrashSavage : TrashNormal);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInCombat(savage ? TrashSavage : TrashNormal);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

@@ -65,18 +65,23 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        var id = spell.Action.ID;
-        if (id == (uint)AID.DoubleStyle3)
+        switch (spell.Action.ID)
         {
-            AddAOE(RiverAOE with { InvertForbiddenZone = true }, Colors.SafeFromAOE);
-            _risky = false;
+            case (uint)AID.DoubleStyle3:
+                AddAOE(RiverAOE, Colors.SafeFromAOE, true);
+                _risky = false;
+                break;
+            case (uint)AID.DoubleStyle5:
+                AddAOE(RiverAOE);
+                break;
         }
-        else if (id == (uint)AID.DoubleStyle5)
+
+        void AddAOE(AOEShapeCustom shape, uint color = default, bool invert = false)
         {
-            AddAOE(RiverAOE);
+            _aoe = [new(shape, Arena.Center, default, Module.CastFinishAt(spell, 4.2d), color)];
+            ref var aoe = ref _aoe[0];
+            aoe.Shape.InvertForbiddenZone = invert;
         }
-        void AddAOE(AOEShapeCustom shape, uint color = default)
-        => _aoe = [new(shape, Arena.Center, default, Module.CastFinishAt(spell, 4.2d), color)];
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)

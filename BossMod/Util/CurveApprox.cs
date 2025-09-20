@@ -2,16 +2,17 @@
 
 // a bunch of utilities for approximating curves with line segments
 // we need them, since clipping and rendering works with polygons
+[SkipLocalsInit]
 public static class CurveApprox
 {
     public const float ScreenError = 0.05f;
-    private static readonly Angle a0 = 0f.Degrees(), a90 = 90f.Degrees(), a270 = 270f.Degrees(), a360 = 360f.Degrees();
+    private static readonly Angle a90 = 90f.Degrees(), a270 = 270f.Degrees(), a360 = 360f.Degrees();
 
     public static int CalculateCircleSegments(float radius, Angle angularLength, float maxError)
     {
         // select max angle such that tesselation error is smaller than desired
         // error = R * (1 - cos(phi/2)) => cos(phi/2) = 1 - error/R
-        var tessAngle = 2 * MathF.Acos(1 - MathF.Min(maxError / radius, 1));
+        var tessAngle = 2 * MathF.Acos(1 - Math.Min(maxError / radius, 1));
         var tessNumSegments = (int)MathF.Ceiling(angularLength.Rad / tessAngle);
         tessNumSegments = (tessNumSegments + 1) & ~1;
         return Math.Clamp(tessNumSegments, 4, 512);
@@ -19,8 +20,9 @@ public static class CurveApprox
 
     // return polygon points approximating full circle; implicitly closed path - last point is not included
     // winding: points are in CCW order
-    public static WDir[] Circle(float radius, float maxError)
+    public static WDir[] Circle(float Radius, float maxError)
     {
+        var radius = Radius;
         var numSegments = CalculateCircleSegments(radius, a360, maxError);
         var angleIncrement = (Angle.DoublePI / numSegments).Radians();
         var points = new WDir[numSegments];
@@ -31,23 +33,10 @@ public static class CurveApprox
         return points;
     }
 
-    // return polygon points approximating circle arc; both start and end points are included
-    // winding: points are either in CCW order (if length is positive) or CW order (if length is negative)
-    public static WPos[] Circle(WPos center, float radius, float maxError)
-    {
-        var dirs = Circle(radius, maxError);
-        var points = new WPos[dirs.Length];
-        for (var i = 0; i < dirs.Length; ++i)
-        {
-            points[i] = center + dirs[i];
-        }
-        return points;
-    }
-
     public static WDir[] CircleArc(float Radius, Angle angleStart, Angle angleEnd, float maxError)
     {
         var length = angleEnd - angleStart;
-        var radius = Radius;  // code breaks without this in release mode, do not remove without verifying JIT compiler bug is fixed
+        var radius = Radius;
         var numSegments = CalculateCircleSegments(radius, length.Abs(), maxError);
         var angleIncrement = length / numSegments;
         var points = new WDir[numSegments + 1];
@@ -55,18 +44,6 @@ public static class CurveApprox
         {
             var angle = angleStart + i * angleIncrement;
             points[i] = PolarToCartesian(radius, angle);
-        }
-        return points;
-    }
-
-    public static WPos[] CircleArc(WPos center, float radius, Angle angleStart, Angle angleEnd, float maxError)
-    {
-        var dirs = CircleArc(radius, angleStart, angleEnd, maxError);
-        var length = dirs.Length;
-        var points = new WPos[length];
-        for (var i = 0; i < length; ++i)
-        {
-            points[i] = center + dirs[i];
         }
         return points;
     }
@@ -82,18 +59,6 @@ public static class CurveApprox
         return points;
     }
 
-    public static WPos[] CircleSector(WPos center, float radius, Angle angleStart, Angle angleEnd, float maxError)
-    {
-        var dirs = CircleSector(radius, angleStart, angleEnd, maxError);
-        var length = dirs.Length;
-        var points = new WPos[length];
-        for (var i = 0; i < length; ++i)
-        {
-            points[i] = center + dirs[i];
-        }
-        return points;
-    }
-
     // return polygon points approximating full donut; implicitly closed path - outer arc + inner arc
     public static WDir[] Donut(float innerRadius, float outerRadius, float maxError)
     {
@@ -101,35 +66,22 @@ public static class CurveApprox
         var innerCircle = Circle(innerRadius, maxError);
         var outerLength = outerCircle.Length;
         var innerLength = innerCircle.Length;
-        var totalPoints = outerLength + innerLength + 2;
-        var points = new WDir[totalPoints];
+        var points = new WDir[outerLength + innerLength + 2];
 
-        var index = 0;
         for (var i = 0; i < outerLength; ++i)
         {
-            points[index++] = outerCircle[i];
+            points[i] = outerCircle[i];
         }
 
-        points[index++] = PolarToCartesian(outerRadius, a0);
-        points[index++] = PolarToCartesian(innerRadius, a0);
-
-        for (var i = innerLength - 1; i >= 0; --i)
+        points[outerLength] = PolarToCartesian(outerRadius, default);
+        points[outerLength + 1] = PolarToCartesian(innerRadius, default);
+        var index = outerLength + 2;
+        var innerAdj = innerLength - 1;
+        for (var i = innerAdj; i >= 0; --i)
         {
             points[index++] = innerCircle[i];
         }
 
-        return points;
-    }
-
-    public static WPos[] Donut(WPos center, float innerRadius, float outerRadius, float maxError)
-    {
-        var dirs = Donut(innerRadius, outerRadius, maxError);
-        var length = dirs.Length;
-        var points = new WPos[length];
-        for (var i = 0; i < length; ++i)
-        {
-            points[i] = center + dirs[i];
-        }
         return points;
     }
 
@@ -143,29 +95,16 @@ public static class CurveApprox
         var totalPoints = outerLength + innerLength;
         var points = new WDir[totalPoints];
 
-        var index = 0;
         for (var i = 0; i < outerLength; ++i)
         {
-            points[index++] = outerArc[i];
+            points[i] = outerArc[i];
         }
 
         for (var i = 0; i < innerLength; ++i)
         {
-            points[index++] = innerArc[i];
+            points[outerLength + i] = innerArc[i];
         }
 
-        return points;
-    }
-
-    public static WPos[] DonutSector(WPos center, float innerRadius, float outerRadius, Angle angleStart, Angle angleEnd, float maxError)
-    {
-        var dirs = DonutSector(innerRadius, outerRadius, angleStart, angleEnd, maxError);
-        var length = dirs.Length;
-        var points = new WPos[length];
-        for (var i = 0; i < length; ++i)
-        {
-            points[i] = center + dirs[i];
-        }
         return points;
     }
 
@@ -188,47 +127,8 @@ public static class CurveApprox
         return Rect(dx, dz);
     }
 
-    public static WDir[] Rect(WDir center, WDir dx, WDir dz)
-    {
-        var rect = Rect(dx, dz);
-        for (var i = 0; i < rect.Length; ++i)
-        {
-            rect[i] = center + rect[i];
-        }
-        return rect;
-    }
-
-    public static WDir[] Rect(WDir center, WDir dirZ, float halfWidth, float halfHeight)
-    {
-        var dx = dirZ.OrthoL() * halfWidth;
-        var dz = dirZ * halfHeight;
-        return Rect(center, dx, dz);
-    }
-
-    public static WPos[] Rect(WPos center, WDir dx, WDir dz)
-    {
-        var dirs = Rect(dx, dz);
-        var length = dirs.Length;
-        var points = new WPos[length];
-        for (var i = 0; i < length; ++i)
-        {
-            points[i] = center + dirs[i];
-        }
-        return points;
-    }
-
-    public static WPos[] Rect(WPos center, WDir dirZ, float halfWidth, float halfHeight)
-    {
-        var dx = dirZ.OrthoL() * halfWidth;
-        var dz = dirZ * halfHeight;
-        return Rect(center, dx, dz);
-    }
-
     // for angles, we use standard FF convention: 0 is 'south'/down/(0, -r), and then increases clockwise
-    private static WDir PolarToCartesian(float r, Angle phi)
-    {
-        return r * phi.ToDirection();
-    }
+    private static WDir PolarToCartesian(float r, Angle phi) => r * phi.ToDirection();
 
     public static WDir[] Capsule(WDir dir, float length, float radius, float maxError)
     {
@@ -267,15 +167,5 @@ public static class CurveApprox
         }
 
         return points;
-    }
-
-    public static WDir[] Capsule(WDir origin, WDir dir, float length, float radius, float maxError)
-    {
-        var dirs = Capsule(dir, length, radius, maxError);
-        for (var i = 0; i < dirs.Length; ++i)
-        {
-            dirs[i] = origin + dirs[i];
-        }
-        return dirs;
     }
 }

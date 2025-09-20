@@ -117,7 +117,7 @@ class Bibliocide(BossModule module) : Components.BaitAwayTethers(module, 0f, (ui
         if (target == null)
             return;
 
-        hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Module.PrimaryActor.Position, Module.PrimaryActor.HitboxRadius), target.Value.Activation);
+        hints.AddForbiddenZone(new SDInvertedCircle(Module.PrimaryActor.Position, Module.PrimaryActor.HitboxRadius), target.Value.Activation);
     }
 }
 

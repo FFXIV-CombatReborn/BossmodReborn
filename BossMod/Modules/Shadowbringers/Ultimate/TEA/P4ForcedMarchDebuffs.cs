@@ -27,7 +27,7 @@ abstract class P4ForcedMarchDebuffs(BossModule module) : BossComponent(module)
             case Debuff.DarkFollow:
                 if (DarkBeacon != null)
                 {
-                    if (!Module.InBounds(Components.GenericKnockback.AwayFromSource(actor.Position, DarkBeacon.Position, _forcedMarchDistance)))
+                    if (!Arena.InBounds(Components.GenericKnockback.AwayFromSource(actor.Position, DarkBeacon.Position, _forcedMarchDistance)))
                         hints.Add("Aim away from wall!");
                     if ((actor.Position - DarkBeacon.Position).LengthSq() > _maxDarkDistance * _maxDarkDistance)
                         hints.Add("Move closer to dark beacon!");

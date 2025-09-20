@@ -3,15 +3,15 @@
 // we have 12 hexagonal platforms and 1 octagonal; sorted S to N, then E to W - so entrance platform has index 0, octagonal (NW) platform has index 12
 class Platforms(BossModule module) : BossComponent(module)
 {
-    private const float HexaPlatformSide = 9;
-    private const float OctaPlatformLong = 13;
-    private const float OctaPlatformShort = 7;
+    private const float HexaPlatformSide = 9f;
+    private const float OctaPlatformLong = 13f;
+    private const float OctaPlatformShort = 7f;
     private const float HexaCenterToSideCornerX = HexaPlatformSide * 0.8660254f; // sqrt(3) / 2
     private const float HexaCenterToSideCornerZ = HexaPlatformSide * 0.5f;
-    private const float HexaNeighbourDistX = HexaCenterToSideCornerX * 2;
+    private const float HexaNeighbourDistX = HexaCenterToSideCornerX * 2f;
     private const float HexaNeighbourDistZ = HexaPlatformSide * 1.5f;
 
-    private static readonly WPos closestPlatformCenter = new(0.6f, -374); // (0,0) on hexa grid
+    private static readonly WPos closestPlatformCenter = new(0.6f, -374f); // (0,0) on hexa grid
     private static readonly (int, int)[] hexaPlatforms = [(0, 0), (0, 1), (1, 1), (0, 2), (1, 2), (2, 2), (3, 2), (0, 3), (1, 3), (2, 3), (1, 4), (2, 4)];
     private static readonly (int, int) octaPlatform = (3, 4);
     public static readonly WPos[] hexaPlatformCenters = CreateHexaPlatformCenters();
@@ -44,26 +44,26 @@ class Platforms(BossModule module) : BossComponent(module)
         new(0, -HexaPlatformSide)
     ];
 
-    public static readonly Func<WPos, float>[] PlatformShapes = InitializePlatformShapes();
-    private static readonly Func<WPos, float>[] highEdgeShapes = InitializeHighEdgeShapes();
+    public static readonly ShapeDistance[] PlatformShapes = InitializePlatformShapes();
+    private static readonly ShapeDistance[] highEdgeShapes = InitializeHighEdgeShapes();
 
-    private static Func<WPos, float>[] InitializePlatformShapes()
+    private static ShapeDistance[] InitializePlatformShapes()
     {
-        var platformShapes = new Func<WPos, float>[12 + 1];
-        for (var i = 0; i < 12; ++i)
+        var platformShapes = new ShapeDistance[13];
+        for (var i = 0; i < 13; ++i)
         {
-            platformShapes[i] = ShapeDistance.ConvexPolygon(PlatformPoly(i), true);
+            platformShapes[i] = new SDConvexPolygon(PlatformPoly(i), true);
         }
         return platformShapes;
     }
 
-    private static Func<WPos, float>[] InitializeHighEdgeShapes()
+    private static ShapeDistance[] InitializeHighEdgeShapes()
     {
-        var highEdgeShapes = new Func<WPos, float>[5];
+        var highEdgeShapes = new ShapeDistance[5];
         for (var i = 0; i < 5; ++i)
         {
             var e = HexaEdge(highEdges[i].lower, highEdges[i].upper);
-            highEdgeShapes[i] = ShapeDistance.Rect(e.Item1, e.Item2, 0);
+            highEdgeShapes[i] = new SDRect(e.Item1, e.Item2, 0);
         }
         return highEdgeShapes;
     }
@@ -156,31 +156,12 @@ class Platforms(BossModule module) : BossComponent(module)
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        float blockedArea(WPos p)
-        {
-            var res = float.MaxValue;
-            for (var i = 0; i < 12; ++i)
-            {
-                res = Math.Min(res, PlatformShapes[i](p));
-            }
-            res = -res;
-
-            for (var i = 0; i < 5; ++i)
-            {
-                var e = highEdges[i];
-                var f = highEdgeShapes[i];
-
-                if (actor.PosRot.Y + 0.1f < PlatformHeights[e.upper])
-                {
-                    res = Math.Min(res, f(p));
-                }
-            }
-            return res;
-        }
-        hints.AddForbiddenZone(blockedArea);
+        hints.AddForbiddenZone(new SDBlockedAreaT01Caduceus(PlatformShapes, highEdges, highEdgeShapes, actor.PosRot.Y, PlatformHeights));
 
         if (actor.PrevPosition != actor.Position)
+        {
             hints.WantJump = IntersectJumpEdge(actor.Position, (actor.Position - actor.PrevPosition).Normalized(), 2.5f);
+        }
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)

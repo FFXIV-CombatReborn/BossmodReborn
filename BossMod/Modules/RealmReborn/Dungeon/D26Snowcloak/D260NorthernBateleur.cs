@@ -218,18 +218,7 @@ public sealed class D260NorthernBateleur(WorldState ws, Actor primary) : BossMod
     public static readonly ArenaBoundsCustom Arena2 = new([new PolygonCustom(vertices1), new PolygonCustom(vertices2)]);
     public static readonly uint[] Trash = [(uint)OID.IceSprite, (uint)OID.Boss, (uint)OID.Hrimthurs, (uint)OID.SnowcloakGoobbue];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(Trash);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInCombat(Trash);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

@@ -305,7 +305,7 @@ public sealed class ActionDefinitions : IDisposable
         var dir = player.DirectionTo(target).Normalized();
         var src = player.Position;
 
-        return IsDashDangerous(src, src + dir * MathF.Max(0, dist), hints);
+        return IsDashDangerous(src, src + dir * Math.Max(0, dist), hints);
     }
 
     public static bool DashToPositionCheck(WorldState _, Actor player, ActionQueue.Entry action, AIHints hints)
@@ -354,18 +354,41 @@ public sealed class ActionDefinitions : IDisposable
     {
         var center = hints.PathfindMapCenter;
         if (!hints.PathfindMapBounds.Contains(to - center))
+        {
             return true;
+        }
 
         // if arena is a weird shape, try to ensure player won't dash out of it
         if (from != to && hints.PathfindMapBounds is ArenaBoundsCustom)
         {
             var len = (to - from).Length();
             var distToNearestWall = hints.PathfindMapBounds.IntersectRay(from - center, to - from);
-            if (distToNearestWall >= 0 && distToNearestWall < len)
+            if (distToNearestWall >= 0f && distToNearestWall < len)
+            {
                 return true;
+            }
         }
 
-        return hints.ForbiddenZones.Any(d => d.shapeDistance(to) < 0f);
+        var forbiddenZones = CollectionsMarshal.AsSpan(hints.ForbiddenZones);
+        var countFZ = forbiddenZones.Length;
+        for (var i = 0; i < countFZ; ++i)
+        {
+            ref var fz = ref forbiddenZones[i];
+            if (fz.shapeDistance.Distance(to) <= 0f)
+            {
+                return true;
+            }
+        }
+        var voidZones = CollectionsMarshal.AsSpan(hints.TemporaryObstacles);
+        var countVZ = voidZones.Length;
+        for (var i = 0; i < countVZ; ++i)
+        {
+            if (voidZones[i].Distance(to) <= 0f)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public BitMask SpellAllowedClasses(Lumina.Excel.Sheets.Action data)

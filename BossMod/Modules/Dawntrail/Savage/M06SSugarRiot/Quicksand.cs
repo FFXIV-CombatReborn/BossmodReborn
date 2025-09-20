@@ -124,7 +124,7 @@ sealed class QuicksandDoubleStyleHeavenBomb(BossModule module) : Components.Gene
 
     public override bool DestinationUnsafe(int slot, Actor actor, WPos pos)
     {
-        if (!Module.InBounds(pos))
+        if (!Arena.InBounds(pos))
             return true;
         _qs ??= Module.FindComponent<Quicksand>();
         if (_qs != null)

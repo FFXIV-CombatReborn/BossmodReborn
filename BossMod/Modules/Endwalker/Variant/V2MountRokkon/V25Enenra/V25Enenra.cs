@@ -15,7 +15,7 @@ sealed class ClearingSmoke(BossModule module) : Components.SimpleKnockbacks(modu
     {
         if (Casters.Count != 0 && _aoe.Casters.Count != 0)
         {
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center, 4f), Casters.Ref(0).Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center, 4f), Casters.Ref(0).Activation);
         }
     }
 }

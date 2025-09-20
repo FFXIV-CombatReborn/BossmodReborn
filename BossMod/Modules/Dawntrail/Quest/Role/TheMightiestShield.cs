@@ -117,7 +117,7 @@ sealed class Fractures(BossModule module) : Components.DirectionalParry(module, 
             }
             var target = WorldState.Actors.Find(first.Key)!;
             var dir = first.Value == sideR ? target.Rotation - a90 : first.Value == sideL ? target.Rotation + a90 : target.Rotation + a180;
-            hints.AddForbiddenZone(ShapeDistance.InvertedDonutSector(target.Position, target.HitboxRadius, 20f, dir, a20));
+            hints.AddForbiddenZone(new SDInvertedDonutSector(target.Position, target.HitboxRadius, 20f, dir, a20));
         }
     }
 }
@@ -171,7 +171,15 @@ sealed class NeedleGunOilShower(BossModule module) : Components.GenericAOEs(modu
         {
             _aoes.Add(new(shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell), _aoes.Count == 0 ? Colors.Danger : default, false));
             if (_aoes.Count == 2)
-                _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+            {
+                var aoes = CollectionsMarshal.AsSpan(_aoes);
+                ref var aoe1 = ref aoes[0];
+                ref var aoe2 = ref aoes[1];
+                if (aoe1.Activation > aoe2.Activation)
+                {
+                    (aoe1, aoe2) = (aoe2, aoe1);
+                }
+            }
         }
         switch (spell.Action.ID)
         {

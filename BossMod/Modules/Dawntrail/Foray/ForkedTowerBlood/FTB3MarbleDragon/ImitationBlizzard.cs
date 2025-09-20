@@ -257,7 +257,7 @@ sealed class ImitationBlizzard(BossModule module) : Components.GenericAOEs(modul
         {
             var aoes = ActiveAOEs(slot, actor);
             var len = aoes.Length;
-            var forbidden = new List<Func<WPos, float>>(len);
+            var forbidden = new List<ShapeDistance>(len);
             for (var i = 0; i < len; ++i)
             {
                 ref readonly var aoe = ref aoes[i];
@@ -272,7 +272,7 @@ sealed class ImitationBlizzard(BossModule module) : Components.GenericAOEs(modul
             }
             if (forbidden.Count != 0)
             {
-                hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), aoes[0].Activation);
+                hints.AddForbiddenZone(new SDIntersection([.. forbidden]), aoes[0].Activation);
             }
         }
         else

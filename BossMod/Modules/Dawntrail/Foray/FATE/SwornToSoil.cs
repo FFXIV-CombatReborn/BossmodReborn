@@ -45,13 +45,14 @@ sealed class Rupture(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.Rupture)
+        if (_aoes.Count != 0 && spell.Action.ID == (uint)AID.Rupture)
         {
             var count = _aoes.Count;
             var id = caster.InstanceID;
+            var aoes = CollectionsMarshal.AsSpan(_aoes);
             for (var i = 0; i < count; ++i)
             {
-                if (_aoes[i].ActorID == id)
+                if (aoes[i].ActorID == id)
                 {
                     _aoes.RemoveAt(i);
                     return;
@@ -81,5 +82,5 @@ sealed class MadMudarchStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.ForayFATE, GroupID = 1018, NameID = 1969)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.ForayFATE, GroupID = 1018, NameID = 1969)]
 public sealed class MadMudarch(WorldState ws, Actor primary) : SimpleBossModule(ws, primary);

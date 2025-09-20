@@ -128,8 +128,8 @@ sealed class WrithingRiot(BossModule module) : Components.GenericAOEs(module)
         // stay close to the middle if there is next imminent aoe
         if (_aoes.Count > 1)
         {
-            var aoe = _aoes[0];
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(aoe.Origin, 3f), aoe.Activation);
+            ref var aoe = ref _aoes.Ref(0);
+            hints.AddForbiddenZone(new SDInvertedCircle(aoe.Origin, 3f), aoe.Activation);
         }
     }
 }
@@ -149,5 +149,5 @@ sealed class D051HerpekarisStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 825, NameID = 12741, SortOrder = 1)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 825, NameID = 12741, SortOrder = 1)]
 public sealed class D051Herpekaris(WorldState ws, Actor primary) : BossModule(ws, primary, new(-88f, -180f), new ArenaBoundsSquare(17.5f));

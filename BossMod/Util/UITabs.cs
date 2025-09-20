@@ -3,6 +3,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace BossMod;
 
+[SkipLocalsInit]
 public sealed class UITabs
 {
     private readonly List<(string Name, Action Tab)> _tabs = [];

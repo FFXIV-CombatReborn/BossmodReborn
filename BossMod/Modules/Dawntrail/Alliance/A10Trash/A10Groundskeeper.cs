@@ -30,7 +30,7 @@ public sealed class A10GroundskeeperStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1015, NameID = 13607, SortOrder = 5)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1015, NameID = 13607, SortOrder = 5)]
 public sealed class A10Groundskeeper(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly WPos[] vertices = [new(-544.28f, -642.15f), new(-532, -635.01f), new(-531.47f, -634.52f), new(-531.58f, -634), new(-547.79f, -595.87f),

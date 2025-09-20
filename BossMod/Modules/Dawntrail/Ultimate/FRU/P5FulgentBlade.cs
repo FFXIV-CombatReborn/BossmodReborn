@@ -16,12 +16,12 @@ sealed class P5FulgentBlade : Components.Exaflare
         base.AddAIHints(slot, actor, assignment, hints);
         // add an extra hint to move to safe spot (TODO: reconsider? this can fuck up positionals for melee etc)
         if (Lines.Count != 0 && NumCasts <= 6 && SafeSpot() is var safespot && safespot != default)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(safespot, 1f), DateTime.MaxValue);
+            hints.AddForbiddenZone(new SDInvertedCircle(safespot, 1f), DateTime.MaxValue);
         //if (Lines.Count > 0 && NumCasts <= 6 && _lines.Count == 6)
         //{
         //    var shape = NumCasts switch
         //    {
-        //        < 2 => ShapeDistance.InvertedCircle(SafeSpot(), 1),
+        //        < 2 => new SDInvertedCircle(SafeSpot(), 1)),
         //        < 4 => LineIntersection(0, 1),
         //        < 6 => LineIntersection(2, 3),
         //        _ => LineIntersection(4, 5),
@@ -144,8 +144,8 @@ sealed class P5FulgentBlade : Components.Exaflare
     //{
     //    var l1 = _lines[i1];
     //    var l2 = _lines[i2];
-    //    var r1 = ShapeDistance.Rect(l1.actor.Position - distance * l1.dir, -l1.dir, 5 - cushion, -cushion, 40);
-    //    var r2 = ShapeDistance.Rect(l2.actor.Position - distance * l2.dir, -l2.dir, 5 - cushion, -cushion, 40);
+    //    var r1 = new SDRect(l1.actor.Position - distance * l1.dir, -l1.dir, 5 - cushion, -cushion, 40);
+    //    var r2 = new SDRect(l2.actor.Position - distance * l2.dir, -l2.dir, 5 - cushion, -cushion, 40);
     //    return p => -Math.Max(r1(p), r2(p));
     //}
 }

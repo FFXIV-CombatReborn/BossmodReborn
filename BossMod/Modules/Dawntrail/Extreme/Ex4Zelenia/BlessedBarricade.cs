@@ -130,7 +130,7 @@ sealed class SpearpointPushBait(BossModule module) : Components.GenericBaitAway(
             ref var b = ref baits.Ref(0);
             var pos = b.Source.Position;
             var offsetDir = pos.X < 100f ? offset == -a90 ? 1f : -1f : offset == a90 ? 1f : -1f;
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(pos + offsetDir * dir, 1f));
+            hints.AddForbiddenZone(new SDInvertedCircle(pos + offsetDir * dir, 1f));
         }
     }
 

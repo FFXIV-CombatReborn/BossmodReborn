@@ -28,25 +28,29 @@ class Spotlights1(BossModule module) : Components.GenericTowers(module)
         var now = WorldState.CurrentTime;
         var spotlightTime = _config.SpotlightTimer;
 
-        Span<Tower> filtered = new Tower[towers.Length];
+        var filtered = new Tower[towers.Length];
         var count = 0;
         var len = towers.Length;
 
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var tower = ref towers[i];
+            ref var tower = ref towers[i];
             var isFromDifferentOrder = tower.ForbiddenSoakers[slot];
             if (Math.Max(0d, (tower.Activation - now).TotalSeconds) < spotlightTime && (isFromDifferentOrder && showDiff || !isFromDifferentOrder && showSame))
+            {
                 filtered[count++] = tower;
+            }
         }
 
-        return filtered[..count];
+        return filtered.AsSpan()[..count];
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         if (_orders[slot] > 0)
+        {
             hints.Add($"Spotlight order: {_orders[slot]}", false);
+        }
     }
 
     public override void OnActorPlayActionTimelineEvent(Actor actor, ushort id)
@@ -55,16 +59,22 @@ class Spotlights1(BossModule module) : Components.GenericTowers(module)
         {
             var position = actor.Position;
             if (position == new WPos(102.5f, 107.5f))
+            {
                 spotlightSet = true;
+            }
             else if (position == new WPos(102.5f, 92.5f))
+            {
                 spotlightSet = false;
+            }
         }
     }
 
     public override void OnEventEnvControl(byte index, uint state)
     {
         if (index != 0x03 || patternENVC200010 != null)
+        {
             return;
+        }
 
         patternENVC200010 ??= state switch
         {
@@ -74,7 +84,9 @@ class Spotlights1(BossModule module) : Components.GenericTowers(module)
         };
 
         if (patternENVC200010 is not bool pattern || spotlightSet is not bool set)
+        {
             return;
+        }
 
         var (spotlights, spotlights2) = GetSpotlightSets(pattern, set);
 
@@ -115,9 +127,13 @@ class Spotlights1(BossModule module) : Components.GenericTowers(module)
             for (var i = 0; i < 8; ++i)
             {
                 if (_orders[i] == 2)
+                {
                     forbiddenFirst[i] = true;
+                }
                 else
+                {
                     forbiddenSecond[i] = true;
+                }
             }
 
             return (forbiddenFirst, forbiddenSecond);
@@ -127,7 +143,9 @@ class Spotlights1(BossModule module) : Components.GenericTowers(module)
     public override void OnStatusGain(Actor actor, ActorStatus status)
     {
         if (status.ID == (uint)SID.BurnBabyBurn && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0)
+        {
             _orders[slot] = (status.ExpireAt - WorldState.CurrentTime).TotalSeconds < 30d ? 1 : 2;
+        }
     }
 
     public override void OnStatusLose(Actor actor, ActorStatus status)
@@ -138,9 +156,13 @@ class Spotlights1(BossModule module) : Components.GenericTowers(module)
             if (++FinishedCount >= 4)
             {
                 if (Towers.Count == 8)
+                {
                     Towers.RemoveRange(4, 4);
+                }
                 else
+                {
                     Towers.Clear();
+                }
             }
         }
     }
@@ -166,27 +188,41 @@ class Spotlights1(BossModule module) : Components.GenericTowers(module)
         var towers = CollectionsMarshal.AsSpan(Towers);
         var len = towers.Length;
         if (len == 0)
+        {
             return;
+        }
         var now = WorldState.CurrentTime;
-        var forbiddenInverted = new List<Func<WPos, float>>(len);
-        var forbidden = new List<Func<WPos, float>>(len);
+        var forbiddenInverted = new List<ShapeDistance>(len);
+        var forbidden = new List<ShapeDistance>(len);
         var inTower = false;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var t = ref towers[i];
+            ref var t = ref towers[i];
+            if (t.IsInside(actor) && t.NumInside(Module) == 1)
+            {
+                inTower = true;
+                break;
+            }
+        }
+        for (var i = 0; i < len; ++i)
+        {
+            ref var t = ref towers[i];
             if (t.ForbiddenSoakers[slot]) // nothing to do for forbidden players, players of different orders can share a spotlight
+            {
                 continue;
+            }
             if (Math.Max(0d, (t.Activation - now).TotalSeconds) < 10d)
             {
                 var isInside = t.IsInside(actor);
-                var correctAmount = t.CorrectAmountInside(Module);
-                if (isInside || correctAmount)
+                var numInside = t.NumInside(Module);
+                var max = t.MaxSoakers;
+                var correctAmount = numInside >= t.MinSoakers && numInside <= max;
+                var forbiddenSlot = t.ForbiddenSoakers[slot];
+                if (!forbiddenSlot && (numInside < max || isInside && correctAmount))
                 {
-                    inTower = true;
-                }
-                if (t.InsufficientAmountInside(Module) || isInside && correctAmount)
                     forbiddenInverted.Add(t.Shape.InvertedDistance(t.Position, t.Rotation));
-                else if (t.TooManyInside(Module) || !isInside && correctAmount)
+                }
+                else if (forbiddenSlot || numInside > max || !isInside && correctAmount)
                 {
                     forbidden.Add(t.Shape.Distance(t.Position, t.Rotation));
                 }
@@ -197,8 +233,7 @@ class Spotlights1(BossModule module) : Components.GenericTowers(module)
         {
             for (var i = 0; i < len; ++i)
             {
-                var t = towers[i];
-                if (t.InsufficientAmountInside(Module))
+                if (towers[i].NumInside(Module) == 0)
                 {
                     missingSoakers = true;
                     break;
@@ -206,13 +241,17 @@ class Spotlights1(BossModule module) : Components.GenericTowers(module)
             }
         }
         var fcount = forbidden.Count;
-        if (fcount == 0 || inTower || missingSoakers && forbiddenInverted.Count != 0)
+        if ((fcount == 0 || inTower || missingSoakers) && forbiddenInverted.Count != 0)
         {
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbiddenInverted), towers[0].Activation);
+            hints.AddForbiddenZone(new SDIntersection([.. forbiddenInverted]), towers[0].Activation);
         }
         else if (fcount != 0 && !inTower)
         {
-            hints.AddForbiddenZone(ShapeDistance.Union(forbidden), towers[0].Activation);
+            var act = Towers.Ref(0).Activation;
+            for (var i = 0; i < fcount; ++i)
+            {
+                hints.AddForbiddenZone(forbidden[i], act);
+            }
         }
     }
 
@@ -232,9 +271,13 @@ sealed class Spotlights2(BossModule module) : Spotlights1(module)
         if (spotlightSet == null && actor.OID == (uint)OID.Spotlight && id == 0x11DC)
         {
             if (actor.Position == new WPos(115f, 115f))
+            {
                 spotlightSet = true;
+            }
             else if (actor.Position == new WPos(115f, 100f))
+            {
                 spotlightSet = false;
+            }
             if (spotlightSet is bool set)
             {
                 var spotlights1 = set ? spotlightSet2 : spotlightSet1;
@@ -259,6 +302,8 @@ sealed class Spotlights2(BossModule module) : Spotlights1(module)
     public override void OnStatusGain(Actor actor, ActorStatus status)
     {
         if (status.ID == (uint)SID.BurnBabyBurn && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0)
+        {
             _orders[slot] = (status.ExpireAt - WorldState.CurrentTime).TotalSeconds < 15d ? 1 : 2;
+        }
     }
 }

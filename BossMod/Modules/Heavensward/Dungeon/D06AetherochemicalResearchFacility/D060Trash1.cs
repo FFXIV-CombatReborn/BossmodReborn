@@ -97,18 +97,7 @@ public abstract class D060Trash1(WorldState ws, Actor primary) : BossModule(ws, 
     public static readonly uint[] TrashP2 = [(uint)OID.ScrambledEngineer, (uint)OID.ScrambledIronClaw, (uint)OID.ScrambledIronGiant, (uint)OID.ScrambledPaladin];
     public static readonly uint[] Trash = [.. TrashP1, .. TrashP2];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(Trash);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInCombat(Trash);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

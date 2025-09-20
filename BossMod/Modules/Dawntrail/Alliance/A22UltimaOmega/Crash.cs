@@ -9,21 +9,13 @@ sealed class TractorBeam(BossModule module) : Components.SimpleKnockbacks(module
         if (Casters.Count != 0)
         {
             ref var c = ref Casters.Ref(0);
-            // rect intentionally slightly smaller to prevent sus knockback
+
             var act = c.Activation;
             if (!IsImmune(slot, act))
             {
                 var center = Arena.Center;
                 var dir = -25f * c.Direction.ToDirection();
-                hints.AddForbiddenZone(p =>
-                {
-                    var projected = p + dir;
-                    if (projected.InRect(center, 19f, 23.5f))
-                    {
-                        return 1f;
-                    }
-                    return default;
-                }, act);
+                hints.AddForbiddenZone(new SDKnockbackInAABBRectFixedDirection(center, dir, 19f, 23.5f), act); // rect intentionally slightly smaller to prevent sus knockback
             }
         }
     }

@@ -52,7 +52,7 @@ sealed class P1FallOfFaith(BossModule module) : Components.CastCounter(module, d
         var dest = TetherSpot(baitOrder);
         if (_playerOrder[slot] != baitOrder)
             dest += BaitOffset(_playerOrder[slot], _fireTethers[baitOrder - 1]);
-        hints.AddForbiddenZone(ShapeDistance.PrecisePosition(dest, new(0, 1), Arena.Bounds.MapResolution, actor.Position, 0.1f));
+        hints.AddForbiddenZone(new SDPrecisePosition(dest, new(0, 1), Arena.Bounds.MapResolution, actor.Position, 0.1f));
     }
 
     public override PlayerPriority CalcPriority(int pcSlot, Actor pc, int playerSlot, Actor player, ref uint customColor)

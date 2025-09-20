@@ -108,7 +108,7 @@ sealed class WindStoneLightSurge(BossModule module) : Components.GenericAOEs(mod
         var index = 0;
         while (index < count)
         {
-            ref readonly var aoe = ref aoes[index];
+            ref var aoe = ref aoes[index];
             if (aoe.Activation >= deadline)
             {
                 break;
@@ -167,13 +167,14 @@ sealed class WindStoneLightSurge(BossModule module) : Components.GenericAOEs(mod
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID is (uint)AID.WindSurge or (uint)AID.SandSurge or (uint)AID.LightSurge)
+        if (AOEs.Count != 0 && spell.Action.ID is (uint)AID.WindSurge or (uint)AID.SandSurge or (uint)AID.LightSurge)
         {
             var count = AOEs.Count;
             var id = caster.InstanceID;
+            var aoes = CollectionsMarshal.AsSpan(AOEs);
             for (var i = 0; i < count; ++i)
             {
-                if (AOEs[i].ActorID == id)
+                if (aoes[i].ActorID == id)
                 {
                     AOEs.RemoveAt(i);
                     return;
@@ -197,7 +198,7 @@ sealed class WindStoneLightSurge(BossModule module) : Components.GenericAOEs(mod
             }
             if (spheres.Count == 4 && _aoe.Casters.Count != 0)
             {
-                var act = _aoe.Casters[0].Activation.AddSeconds(2.6d);
+                var act = _aoe.Casters.Ref(0).Activation.AddSeconds(2.6d);
                 for (var i = 0; i < 4; ++i)
                 {
                     var sphere = spheres[i];
@@ -237,7 +238,7 @@ sealed class CE112EternalWatchStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 46)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 46)]
 public sealed class CE112EternalWatch(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly ArenaBoundsCustom arena = new([new Polygon(new(870.1f, 180f), 24.5f, 32)]);

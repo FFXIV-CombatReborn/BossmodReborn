@@ -90,7 +90,7 @@ sealed class Landslip(BossModule module) : Components.GenericKnockback(module)
         for (var i = 0; i < count; ++i)
         {
             var c = Knockbacks[i];
-            hints.AddForbiddenZone(ShapeDistance.Rect(c.Origin, c.Direction, length, 20f - length, 5f), c.Activation);
+            hints.AddForbiddenZone(new SDRect(c.Origin, c.Direction, length, 20f - length, 5f), c.Activation);
         }
     }
 
@@ -107,7 +107,7 @@ sealed class Landslip(BossModule module) : Components.GenericKnockback(module)
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }
 
@@ -212,14 +212,14 @@ sealed class Towerfall(BossModule module) : Components.GenericAOEs(module)
             ref var aoe0 = ref aoes[0];
             ref var aoe1 = ref aoes[1];
             var distance = MathF.Round(Math.Abs(aoe0.Origin.Z - aoe1.Origin.Z));
-            var forbidden = new Func<WPos, float>[2];
+            var forbidden = new ShapeDistance[2];
             var check = distance is 10f or 30f;
             for (var i = 0; i < 2; ++i)
             {
                 ref var aoe = ref aoes[i];
-                forbidden[i] = check ? ShapeDistance.InvertedRect(aoe.Origin, aoe.Rotation, 40f, default, 5f) : ShapeDistance.Rect(aoe.Origin, aoe.Rotation, 40f, default, 5f);
+                forbidden[i] = check ? new SDInvertedRect(aoe.Origin, aoe.Rotation, 40f, default, 5f) : new SDRect(aoe.Origin, aoe.Rotation, 40f, default, 5f);
             }
-            hints.AddForbiddenZone(check ? ShapeDistance.Intersection(forbidden) : ShapeDistance.Union(forbidden), activation);
+            hints.AddForbiddenZone(check ? new SDIntersection(forbidden) : new SDUnion(forbidden), activation);
         }
         else
             base.AddAIHints(slot, actor, assignment, hints);

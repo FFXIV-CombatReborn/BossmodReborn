@@ -2,7 +2,7 @@
 
 class DemolishStructureArenaChange(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeRect square = new(5, 5, 5, InvertForbiddenZone: true);
+    private static readonly AOEShapeRect square = new(5f, 5f, 5f, invertForbiddenZone: true);
     private AOEInstance[] _aoe = [];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
@@ -17,7 +17,7 @@ class DemolishStructureArenaChange(BossModule module) : Components.GenericAOEs(m
 
     public override void OnEventEnvControl(byte index, uint state)
     {
-        if (state == 0x00020001 && index == 0x0B)
+        if (index == 0x0B && state == 0x00020001u)
         {
             Arena.Center = A13MarxEngels.SecondArenaCenter;
             Arena.Bounds = A13MarxEngels.StartingBounds;

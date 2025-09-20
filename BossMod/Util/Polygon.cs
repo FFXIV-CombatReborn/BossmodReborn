@@ -7,6 +7,7 @@ using System.Threading;
 namespace BossMod;
 
 // a triangle; as basic as it gets
+[SkipLocalsInit]
 public readonly struct RelTriangle(WDir a, WDir b, WDir c)
 {
     public readonly WDir A = a;
@@ -16,10 +17,12 @@ public readonly struct RelTriangle(WDir a, WDir b, WDir c)
 
 // a complex polygon that is a single simple-polygon exterior minus 0 or more simple-polygon holes; all edges are assumed to be non intersecting
 // hole-starts list contains starting index of each hole
+[SkipLocalsInit]
 public sealed class RelPolygonWithHoles(List<WDir> vertices, List<int> HoleStarts)
 {
     // constructor for simple polygon
     public readonly List<WDir> Vertices = vertices;
+    public int VerticesCount => Vertices.Count;
     public RelPolygonWithHoles(List<WDir> simpleVertices) : this(simpleVertices, []) { }
     public ReadOnlySpan<WDir> AllVertices => CollectionsMarshal.AsSpan(Vertices);
     public ReadOnlySpan<WDir> Exterior => AllVertices[..ExteriorEnd];
@@ -236,6 +239,7 @@ public sealed class RelPolygonWithHoles(List<WDir> vertices, List<int> HoleStart
 }
 
 // generic 'simplified' complex polygon that consists of 0 or more non-intersecting polygons with holes (note however that some polygons could be fully inside other polygon's hole)
+[SkipLocalsInit]
 public sealed class RelSimplifiedComplexPolygon(List<RelPolygonWithHoles> parts)
 {
     public readonly List<RelPolygonWithHoles> Parts = parts;
@@ -268,12 +272,17 @@ public sealed class RelSimplifiedComplexPolygon(List<RelPolygonWithHoles> parts)
     }
 
     // point-in-polygon test; point is defined as offset from shape center
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains(WDir p)
     {
         var count = Parts.Count;
         for (var i = 0; i < count; ++i)
+        {
             if (Parts[i].Contains(p))
+            {
                 return true;
+            }
+        }
         return false;
     }
 
@@ -282,7 +291,7 @@ public sealed class RelSimplifiedComplexPolygon(List<RelPolygonWithHoles> parts)
     {
         var clipperOffset = new ClipperOffset
         {
-            ArcTolerance = 2000d
+            ArcTolerance = 10000d
         };
         var allPaths = new Paths64();
         var count = Parts.Count;
@@ -329,6 +338,7 @@ public sealed class RelSimplifiedComplexPolygon(List<RelPolygonWithHoles> parts)
 }
 
 // utility for simplifying and performing boolean operations on complex polygons
+[SkipLocalsInit]
 public sealed class PolygonClipper
 {
     public const float Scale = 1024f * 1024f; // note: we need at least 10 bits for integer part (-1024 to 1024 range); using 11 bits leaves 20 bits for fractional part; power-of-two scale should reduce rounding issues
@@ -445,6 +455,7 @@ public sealed class PolygonClipper
     private static WDir ConvertPoint(Point64 pt) => new(pt.X * InvScale, pt.Y * InvScale);
 }
 
+[SkipLocalsInit]
 public static class PolygonUtil
 {
     public static ReadOnlySpan<(WDir, WDir)> EnumerateEdges(ReadOnlySpan<WDir> contour)
@@ -466,6 +477,7 @@ public static class PolygonUtil
     }
 }
 
+[SkipLocalsInit]
 public readonly struct Edge(float ax, float ay, float dx, float dy)
 {
     private const float Epsilon = 1e-8f;
@@ -473,6 +485,7 @@ public readonly struct Edge(float ax, float ay, float dx, float dy)
     public readonly float Ax = ax, Ay = ay, Dx = dx, Dy = dy, InvLengthSq = 1f / (dx * dx + dy * dy + Epsilon);
 }
 
+[SkipLocalsInit]
 public sealed class SpatialIndex
 {
     private int[][] _grid = [];
@@ -567,128 +580,8 @@ public sealed class SpatialIndex
     }
 }
 
-public readonly struct PolygonWithHolesDistanceFunction
-{
-    private readonly RelSimplifiedComplexPolygon _polygon;
-    private readonly float _originX, _originZ;
-    private readonly Edge[] _edges;
-    private readonly SpatialIndex _spatialIndex;
-
-    public PolygonWithHolesDistanceFunction(WPos origin, RelSimplifiedComplexPolygon polygon)
-    {
-        _originX = origin.X;
-        _originZ = origin.Z;
-        _polygon = polygon;
-        var edgeCount = 0;
-        var countPolygonParts = polygon.Parts.Count;
-        for (var i = 0; i < countPolygonParts; ++i)
-        {
-            var part = polygon.Parts[i];
-            edgeCount += part.ExteriorEdges.Length;
-            var lenPolygonHoles = part.Holes.Length;
-            for (var j = 0; j < lenPolygonHoles; ++j)
-                edgeCount += part.InteriorEdges(j).Length;
-        }
-        _edges = new Edge[edgeCount];
-        var edgeIndex = 0;
-        for (var i = 0; i < countPolygonParts; ++i)
-        {
-            var part = polygon.Parts[i];
-            var exteriorEdges = GetEdges(part.Exterior, origin);
-            var exteriorCount = exteriorEdges.Length;
-            Array.Copy(exteriorEdges, 0, _edges, edgeIndex, exteriorCount);
-            edgeIndex += exteriorCount;
-            var lenPolygonHoles = part.Holes.Length;
-            for (var j = 0; j < lenPolygonHoles; ++j)
-            {
-                var holeEdges = GetEdges(part.Interior(j), origin);
-                var holeEdgesCount = holeEdges.Length;
-                Array.Copy(holeEdges, 0, _edges, edgeIndex, holeEdgesCount);
-                edgeIndex += holeEdgesCount;
-            }
-        }
-        _spatialIndex = new(_edges);
-
-        static Edge[] GetEdges(ReadOnlySpan<WDir> vertices, WPos origin)
-        {
-            var count = vertices.Length;
-
-            if (count == 0)
-                return [];
-
-            var edges = new Edge[count];
-
-            var prev = vertices[count - 1];
-            var originX = origin.X;
-            var originZ = origin.Z;
-
-            for (var i = 0; i < count; ++i)
-            {
-                var curr = vertices[i];
-                var prevX = prev.X;
-                var prevZ = prev.Z;
-                edges[i] = new(originX + prevX, originZ + prevZ, curr.X - prevX, curr.Z - prevZ);
-                prev = curr;
-            }
-
-            return edges;
-        }
-    }
-
-    public readonly float Distance(WPos p)
-    {
-        var pX = p.X;
-        var pZ = p.Z;
-        if (_polygon.Contains(new(pX - _originX, pZ - _originZ))) // NOTE: our usecase doesn't care about distance inside of the polygon, so we can short circuit here
-            return default;
-        var minDistanceSq = float.MaxValue;
-
-        var indices = _spatialIndex.Query(pX, pZ);
-        var len = indices.Length;
-        for (var i = 0; i < len; ++i)
-        {
-            ref readonly var edge = ref _edges[indices[i]];
-            var edgeAx = edge.Ax;
-            var edgeAy = edge.Ay;
-            var edgeDx = edge.Dx;
-            var edgeDy = edge.Dy;
-            var t = Math.Clamp(((pX - edgeAx) * edgeDx + (pZ - edgeAy) * edgeDy) * edge.InvLengthSq, default, 1f);
-            var distX = pX - (edgeAx + t * edgeDx);
-            var distY = pZ - (edgeAy + t * edgeDy);
-
-            minDistanceSq = Math.Min(minDistanceSq, distX * distX + distY * distY);
-        }
-        return MathF.Sqrt(minDistanceSq);
-    }
-
-    public readonly float InvertedDistance(WPos p)
-    {
-        var pX = p.X;
-        var pZ = p.Z;
-        if (!_polygon.Contains(new(pX - _originX, pZ - _originZ))) // NOTE: our usecase doesn't care about distance outside of the polygon, so we can short circuit here
-            return default;
-        var minDistanceSq = float.MaxValue;
-
-        var indices = _spatialIndex.Query(pX, pZ);
-        var len = indices.Length;
-        for (var i = 0; i < len; ++i)
-        {
-            ref readonly var edge = ref _edges[indices[i]];
-            var edgeAx = edge.Ax;
-            var edgeAy = edge.Ay;
-            var edgeDx = edge.Dx;
-            var edgeDy = edge.Dy;
-            var t = Math.Clamp(((pX - edgeAx) * edgeDx + (pZ - edgeAy) * edgeDy) * edge.InvLengthSq, default, 1f);
-            var distX = pX - (edgeAx + t * edgeDx);
-            var distY = pZ - (edgeAy + t * edgeDy);
-
-            minDistanceSq = Math.Min(minDistanceSq, distX * distX + distY * distY);
-        }
-        return MathF.Sqrt(minDistanceSq);
-    }
-}
-
 // used to create a visibility polygon of a point source and a RelSimplifiedComplexPolygon
+[SkipLocalsInit]
 public static class Visibility
 {
     public static WDir[] Compute(WDir origin, RelSimplifiedComplexPolygon polygon)

@@ -75,7 +75,7 @@ sealed class ArenaChanges(BossModule module) : BossComponent(module)
         }
 
         Square[] brokenTiles = [.. brokenTilesList];
-        var arena = new ArenaBoundsCustom(defaultSquare, brokenTiles);
+        var arena = new ArenaBoundsCustom(defaultSquare, brokenTiles, Offset: -1f);
         Arena.Bounds = arena;
         Arena.Center = arena.Center;
     }

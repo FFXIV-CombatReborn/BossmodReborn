@@ -122,7 +122,7 @@ sealed class FTB4MagitaurStates : StateMachineBuilder
 
     private void AuraBurstHoly(uint id, float delay)
     {
-        ComponentCondition<AuraBurstHolyRaidwide>(id, delay, comp => comp.Casters.Count != 0, "Conduit phase start")
+        ComponentCondition<AuraBurstHolyRaidwide>(id, delay, comp => comp.Activation != default, "Conduit phase start")
             .ActivateOnEnter<AuraBurstHoly>()
             .ActivateOnEnter<AuraBurstHolyRaidwide>()
             .ActivateOnEnter<ArcaneRecoil>()

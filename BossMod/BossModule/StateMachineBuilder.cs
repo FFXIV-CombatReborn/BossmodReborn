@@ -8,6 +8,7 @@
 // - first nibble (mask 0x0000000F) is used for smallest possible states (e.g. cast-start + cast-end)
 // - second and third nibble can be used by modules needing more hierarchy levels
 // this is all done to provide ids that are relatively stable across refactorings (these are used e.g. for cooldown planning)
+[SkipLocalsInit]
 public class StateMachineBuilder(BossModule module)
 {
     // wrapper that simplifies building phases

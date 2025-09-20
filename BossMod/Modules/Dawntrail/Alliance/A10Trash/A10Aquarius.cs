@@ -55,7 +55,7 @@ public sealed class A10AquariusStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1015, NameID = 13605, SortOrder = 3)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1015, NameID = 13605, SortOrder = 3)]
 public sealed class A10Aquarius(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly WPos[] vertices = [new(-500.62f, 686.9f), new(-488.18f, 686.93f), new(-487.84f, 687.31f), new(-486.66f, 692.24f), new(-486.41f, 692.91f),

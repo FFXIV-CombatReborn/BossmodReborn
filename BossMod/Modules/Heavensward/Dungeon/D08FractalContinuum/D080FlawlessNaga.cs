@@ -145,18 +145,7 @@ public class D080FlawlessNaga(WorldState ws, Actor primary) : BossModule(ws, pri
     private static readonly ArenaBoundsCustom arena1 = new([new PolygonCustom(vertices)]);
     public static readonly uint[] Trash = [(uint)OID.Boss, (uint)OID.Iksalion, (uint)OID.FlawlessEmpuse, (uint)OID.Shabti, (uint)OID.FlawlessChimera];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(Trash);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInCombat(Trash);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

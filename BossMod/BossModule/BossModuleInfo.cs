@@ -1,5 +1,6 @@
 ﻿namespace BossMod;
 
+[SkipLocalsInit]
 public static class BossModuleInfo
 {
     public enum Maturity
@@ -11,7 +12,10 @@ public static class BossModuleInfo
         Contributed,
 
         [PropertyDisplay("First-party module created by the plugin author, or a third-party contributed module that was thoroughly verified and effectively taken over by the plugin author")]
-        Verified
+        Verified,
+
+        [PropertyDisplay("Module that has been verified to work well with AI enabled.")]
+        AISupport
     }
 
     public enum Expansion
@@ -90,6 +94,7 @@ public static class BossModuleInfo
 
 // attribute that allows customizing boss module's metadata; it is optional, each field has some defaults that are fine in most cases
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
+[SkipLocalsInit]
 public sealed class ModuleInfoAttribute(BossModuleInfo.Maturity maturity) : Attribute
 {
     public Type? StatesType { get; set; } // default: ns.xxxStates

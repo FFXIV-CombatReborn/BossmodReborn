@@ -3,6 +3,7 @@ using System.Reflection;
 
 namespace BossMod;
 
+[SkipLocalsInit]
 public static class UICombo
 {
     public static string EnumString(Enum v)

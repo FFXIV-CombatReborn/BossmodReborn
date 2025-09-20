@@ -95,6 +95,6 @@ class TippedScales(BossModule module) : Components.GenericAOEs(module, (uint)AID
             return;
         ref readonly var aoe = ref aoes[0];
         // rect is offset by one so it doesn't switch sides every frame if there are multiple AI users...
-        hints.AddForbiddenZone(ShapeDistance.InvertedRect(Arena.Center + (aoe.Rotation == a90 ? dir : -dir), aoe.Rotation == a90 ? dir : -dir, 30f, default, 30f), aoe.Activation);
+        hints.AddForbiddenZone(new SDInvertedRect(Arena.Center + (aoe.Rotation == a90 ? dir : -dir), aoe.Rotation == a90 ? dir : -dir, 30f, default, 30f), aoe.Activation);
     }
 }

@@ -122,7 +122,7 @@ sealed class GeysersCloudPlatform(BossModule module) : Components.GenericAOEs(mo
                         ref var aoe = ref aoes[i];
                         if (aoe.ActorID == id)
                         {
-                            aoe.Shape = circle with { InvertForbiddenZone = true };
+                            aoe.Shape.InvertForbiddenZone = true;
                             aoe.Color = Colors.SafeFromAOE;
                         }
                     }

@@ -88,7 +88,7 @@ class FireballBait(BossModule module) : Components.GenericBaitAway(module, cente
     {
         base.AddAIHints(slot, actor, assignment, hints);
         if (CurrentBaits.Count != 0 && CurrentBaits[0].Target == actor)
-            hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 17.5f));
+            hints.AddForbiddenZone(new SDCircle(Arena.Center, 17.5f));
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)

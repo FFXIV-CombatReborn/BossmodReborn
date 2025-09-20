@@ -182,15 +182,15 @@ sealed class Chess(BossModule module) : Components.GenericAOEs(module)
         var len = aoes.Length;
         if (len == 0)
             return;
-        var forbidden = new List<Func<WPos, float>>(len);
+        var forbidden = new List<ShapeDistance>(len);
         for (var i = 0; i < len; ++i)
         {
             ref readonly var aoe = ref aoes[i];
             if (aoe.Risky)
             {
-                forbidden.Add(ShapeDistance.InvertedRect(aoe.Origin, new WDir(default, 1f), 5f, 5f, 5f));
+                forbidden.Add(new SDInvertedRect(aoe.Origin, new WDir(default, 1f), 5f, 5f, 5f));
             }
         }
-        hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), aoes[0].Activation);
+        hints.AddForbiddenZone(new SDIntersection([.. forbidden]), aoes[0].Activation);
     }
 }

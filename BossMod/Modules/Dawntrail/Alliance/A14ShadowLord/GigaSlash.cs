@@ -19,7 +19,7 @@ sealed class GigaSlash(BossModule module) : Components.GenericAOEs(module)
         var aoe = AOEs[0];
         // stay close to the middle if there is next imminent aoe from same origin
         if (Module.FindComponent<DarkNebula>()?.Casters.Count == 0 && count > 1 && aoe.Origin == AOEs[1].Origin)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(aoe.Origin, 3f), aoe.Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(aoe.Origin, 3f), aoe.Activation);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

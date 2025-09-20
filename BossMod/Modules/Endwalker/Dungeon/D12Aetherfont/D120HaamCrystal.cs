@@ -66,7 +66,7 @@ public class D120HaamCrystal(WorldState ws, Actor primary) : BossModule(ws, prim
     private static readonly ArenaBoundsCustom arena = new([new PolygonCustom(vertices)]);
     public static readonly uint[] Trash = [(uint)OID.Boss, (uint)OID.HaamGolem, (uint)OID.HaamAuk];
 
-    protected override bool CheckPull() => Enemies(Trash).Any(x => x.InCombat && x.Position.AlmostEqual(Arena.Center, Bounds.Radius));
+    protected override bool CheckPull() => IsAnyActorInBoundsInCombat(Trash);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

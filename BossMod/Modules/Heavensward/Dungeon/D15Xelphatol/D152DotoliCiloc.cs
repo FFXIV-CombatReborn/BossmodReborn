@@ -21,12 +21,11 @@ public enum AID : uint
 
 public enum IconID : uint
 {
-    Spreadmarker = 139 // player
+    DarkWings = 139 // player
 }
 
-class ArenaChange(BossModule module) : Components.GenericAOEs(module)
+sealed class ArenaChange(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeCustom donut = new(D152DotoliCiloc.StartingBoundsP, D152DotoliCiloc.DefaultBoundsP);
     private AOEInstance[] _aoe = [];
     private bool begin;
 
@@ -36,7 +35,9 @@ class ArenaChange(BossModule module) : Components.GenericAOEs(module)
     {
         if (state == 0x00010002u && actor.OID == (uint)OID.ArenaVoidzone)
         {
-            Arena.Bounds = D152DotoliCiloc.DefaultBounds;
+            var bounds = new ArenaBoundsCustom(D152DotoliCiloc.DefaultBoundsP, D152DotoliCiloc.Difference, AdjustForHitbox: true);
+            Arena.Bounds = bounds;
+            Arena.Center = bounds.Center;
             _aoe = [];
             begin = true;
         }
@@ -46,20 +47,20 @@ class ArenaChange(BossModule module) : Components.GenericAOEs(module)
     {
         if (!begin && _aoe.Length == 0)
         {
-            _aoe = [new(donut, Arena.Center, default, WorldState.FutureTime(4d))];
+            _aoe = [new(new AOEShapeCustom(D152DotoliCiloc.StartingBoundsP, D152DotoliCiloc.DefaultBoundsP), Arena.Center, default, WorldState.FutureTime(4d))];
         }
     }
 }
 
-class DarkWings(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.Spreadmarker, (uint)AID.DarkWings, 6f, 5.1f);
-class Whirlwind(BossModule module) : Components.Voidzone(module, 6f, GetWhirlwinds)
+sealed class DarkWings(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.DarkWings, (uint)AID.DarkWings, 6f, 5.1f);
+sealed class Whirlwind(BossModule module) : Components.Voidzone(module, 6f, GetWhirlwinds)
 {
     private static List<Actor> GetWhirlwinds(BossModule module) => module.Enemies((uint)OID.Whirlwind);
 }
-class Stormcoming(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Stormcoming, 6f);
-class OnLow(BossModule module) : Components.SimpleAOEs(module, (uint)AID.OnLow, new AOEShapeCone(10.98f, 60f.Degrees()));
+sealed class Stormcoming(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Stormcoming, 6f);
+sealed class OnLow(BossModule module) : Components.SimpleAOEs(module, (uint)AID.OnLow, new AOEShapeCone(10.98f, 60f.Degrees()));
 
-class OnLowHaste(BossModule module) : Components.Cleave(module, (uint)AID.Swiftfeather, new AOEShapeCone(10.98f, 60f.Degrees()))
+sealed class OnLowHaste(BossModule module) : Components.Cleave(module, (uint)AID.Swiftfeather, new AOEShapeCone(10.98f, 60f.Degrees()))
 {
     private bool active;
 
@@ -100,7 +101,7 @@ class OnLowHaste(BossModule module) : Components.Cleave(module, (uint)AID.Swiftf
     }
 }
 
-class OnHigh(BossModule module) : Components.GenericKnockback(module)
+sealed class OnHigh(BossModule module) : Components.GenericKnockback(module)
 {
     private Knockback[] _kb = [];
     private static readonly SafeWall[] safeWallsW = [new(new(227.487f, 16.825f), new(226.567f, 13.39f)), new(new(226.567f, 13.39f), new(227.392f, 10.301f))];
@@ -158,11 +159,10 @@ class OnHigh(BossModule module) : Components.GenericKnockback(module)
     }
 }
 
-class OnHighHint(BossModule module) : Components.GenericAOEs(module)
+sealed class OnHighHint(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<ConeHA> cones = new(4);
     private AOEInstance[] _aoe = [];
-    private static readonly Angle angle = 11.25f.Degrees();
     private DateTime activation;
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
@@ -184,9 +184,10 @@ class OnHighHint(BossModule module) : Components.GenericAOEs(module)
         {
             var deg = (i * 90f).Degrees();
             var enemyInCone = false;
+            var a11 = 11.25f.Degrees();
             for (var j = 0; j < count; ++j)
             {
-                if (whirlwinds[j].Position.InCone(D152DotoliCiloc.ArenaCenter, deg, angle))
+                if (whirlwinds[j].Position.InCone(D152DotoliCiloc.ArenaCenter, deg, a11))
                 {
                     enemyInCone = true;
                     break;
@@ -194,10 +195,10 @@ class OnHighHint(BossModule module) : Components.GenericAOEs(module)
             }
             if (!enemyInCone)
             {
-                cones.Add(new(D152DotoliCiloc.ArenaCenter, 20f, deg, angle));
+                cones.Add(new(D152DotoliCiloc.ArenaCenter, 20f, deg, a11));
             }
         }
-        _aoe = [new(new AOEShapeCustom([.. cones], InvertForbiddenZone: true), D152DotoliCiloc.ArenaCenter, default, activation, Colors.SafeFromAOE)];
+        _aoe = [new(new AOEShapeCustom([.. cones], invertForbiddenZone: true), D152DotoliCiloc.ArenaCenter, default, activation, Colors.SafeFromAOE)];
     }
 
     public override void OnActorCreated(Actor actor)
@@ -228,7 +229,7 @@ class OnHighHint(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
-class D152DotoliCilocStates : StateMachineBuilder
+sealed class D152DotoliCilocStates : StateMachineBuilder
 {
     public D152DotoliCilocStates(BossModule module) : base(module)
     {
@@ -245,18 +246,17 @@ class D152DotoliCilocStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 182, NameID = 5269, SortOrder = 6)]
-public class D152DotoliCiloc(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, StartingBounds)
+public sealed class D152DotoliCiloc(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, new ArenaBoundsCustom(StartingBoundsP, Difference, AdjustForHitbox: true))
 {
-    public static readonly WPos ArenaCenter = new(245.289f, 13.626f);
-    private const float offset = 0.42f;
-    public static readonly Polygon[] StartingBoundsP = [new Polygon(ArenaCenter, 29.45f * CosPI.Pi16th, 16, 11.25f.Degrees())];
-    public static readonly Polygon[] DefaultBoundsP = [new Polygon(ArenaCenter, 20f * CosPI.Pi16th, 16, 11.25f.Degrees())];
-    private static readonly WPos[] verticesW = [new(227.1f, 17.333f), new(226.122f, 13.411f), new(227f, 10.126f), new(225.087f, 9.583f), new(224.016f, 13.541f), new(225.124f, 17.756f)];
-    private static readonly WPos[] verticesN = WPos.GenerateRotatedVertices(ArenaCenter, verticesW, 90f);
-    private static readonly WPos[] verticesE = WPos.GenerateRotatedVertices(ArenaCenter, verticesW, 180f);
-    private static readonly WPos[] verticesS = WPos.GenerateRotatedVertices(ArenaCenter, verticesW, 270f);
-    private static readonly PolygonCustomO[] difference = [new PolygonCustomO(verticesW, offset), new PolygonCustomO(verticesN, offset),
-    new PolygonCustomO(verticesE, offset), new PolygonCustomO(verticesS, offset)];
-    public static readonly ArenaBoundsCustom StartingBounds = new(StartingBoundsP, difference);
-    public static readonly ArenaBoundsCustom DefaultBounds = new(DefaultBoundsP, difference);
+    public static readonly WPos ArenaCenter = new(new(245.28799f, 13.62114f));
+    public static readonly Polygon[] StartingBoundsP = [new Polygon(ArenaCenter, 30.414f, 16, 11.25f.Degrees())];
+    public static readonly Polygon[] DefaultBoundsP = [new Polygon(ArenaCenter, 20.3436f, 16, 11.25f.Degrees())];
+    public static readonly Rectangle[] Difference = [new Rectangle(new(243.52251f, -6.1198f), 2.17224f, 1f, 15f.Degrees()),
+    new Rectangle(new(247.06107f, -6.19115f), 2.05614f, 0.95054f, -15f.Degrees()),
+    new Rectangle(new(265.02832f, 11.84884f), 2.17224f, 1f, -74.98f.Degrees()),
+    new Rectangle(new(265.10089f, 15.38737f), 2.05614f, 0.95054f, -104.98f.Degrees()),
+    new Rectangle(new(247.05348f, 33.36208f), 2.17224f, 1f, -165f.Degrees()),
+    new Rectangle(new(243.51492f, 33.43343f), 2.05614f, 0.95054f, 165f.Degrees()),
+    new Rectangle(new(225.54645f, 15.37981f), 2.17224f, 1f, 104.98f.Degrees()),
+    new Rectangle(new(225.47632f, 11.84123f), 2.05614f, 0.95054f, 74.98f.Degrees())];
 }

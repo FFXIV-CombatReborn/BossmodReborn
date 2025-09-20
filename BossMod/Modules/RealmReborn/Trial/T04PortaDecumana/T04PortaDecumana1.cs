@@ -75,7 +75,7 @@ class VulcanBurst(BossModule module) : Components.SimpleKnockbacks(module, (uint
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (Casters.Count != 0)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center, 5f), Casters.Ref(0).Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center, 5f), Casters.Ref(0).Activation);
     }
 }
 

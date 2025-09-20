@@ -3,6 +3,7 @@
 // different encounter mechanics can be split into independent components
 // individual components should be activated and deactivated when needed (typically by state machine transitions)
 // components can also have sub-components; typically these are created immediately by constructor
+[SkipLocalsInit]
 public class BossComponent(BossModule module)
 {
     public readonly BossModule Module = module;
@@ -49,7 +50,7 @@ public class BossComponent(BossModule module)
     public virtual void OnActorDeath(Actor actor) { }
     public virtual void OnActorTargetable(Actor actor) { }
     public virtual void OnActorUntargetable(Actor actor) { }
-    public virtual void OnActorRenderflags(Actor actor, int renderflags) { }
+    public virtual void OnActorRenderflagsChanged(Actor actor, int renderflags) { }
     public virtual void OnStatusGain(Actor actor, ActorStatus status) { } // note: also called for status-change events; if component needs to distinguish between lose+gain and change, it can use the fact that 'lose' is not called for change
     public virtual void OnStatusLose(Actor actor, ActorStatus status) { }
     public virtual void OnTethered(Actor source, ActorTetherInfo tether) { }

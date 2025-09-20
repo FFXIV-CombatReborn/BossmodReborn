@@ -51,7 +51,7 @@ sealed class MagitekSlash(BossModule module) : Components.GenericRotatingAOE(mod
             var sequences = CollectionsMarshal.AsSpan(Sequences);
             ref readonly var sequence = ref sequences[0];
             base.AddAIHints(slot, actor, assignment, hints);
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(sequence.Origin, 5f), sequence.NextActivation);
+            hints.AddForbiddenZone(new SDInvertedCircle(sequence.Origin, 5f), sequence.NextActivation);
         }
     }
 }

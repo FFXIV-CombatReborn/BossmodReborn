@@ -32,7 +32,13 @@ sealed class RushOfMight(BossModule module) : Components.GenericAOEs(module)
             _aoes.Add(new(cone, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell), risky: false));
             if (_aoes.Count == 2)
             {
-                _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                var aoes = CollectionsMarshal.AsSpan(_aoes);
+                ref var aoe1 = ref aoes[0];
+                ref var aoe2 = ref aoes[1];
+                if (aoe1.Activation > aoe2.Activation)
+                {
+                    (aoe1, aoe2) = (aoe2, aoe1);
+                }
             }
         }
     }
@@ -56,7 +62,7 @@ sealed class RushOfMight(BossModule module) : Components.GenericAOEs(module)
         ref var aoe = ref _aoes.Ref(0);
         if (aoe.Risky)
         {
-            hints.AddForbiddenZone(ShapeDistance.InvertedRect(aoe.Origin, aoe.Rotation, 2f, 2f, 40f), aoe.Activation.AddSeconds(2d));
+            hints.AddForbiddenZone(new SDInvertedRect(aoe.Origin, aoe.Rotation, 2f, 2f, 40f), aoe.Activation.AddSeconds(2d));
         }
     }
 }

@@ -6,7 +6,7 @@ sealed class ShimmeringShot(BossModule module) : Components.GenericAOEs(module)
     private readonly PlayerTemperatures _temps = module.FindComponent<PlayerTemperatures>()!;
     private Pattern _pattern;
     private readonly AOEInstance[][] _safezone = new AOEInstance[PartyState.MaxAllianceSize][];
-    private static readonly AOEShapeRect square = new(5f, 5f, 5f, InvertForbiddenZone: true);
+    private static readonly AOEShapeRect square = new(5f, 5f, 5f, invertForbiddenZone: true);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => slot is < 0 or > 23 ? [] : _safezone[slot];
 

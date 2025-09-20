@@ -34,6 +34,6 @@ sealed class FreezingDust(BossModule module) : Components.StayMove(module, 3d)
             return;
         }
         base.AddAIHints(slot, actor, assignment, hints);
-        hints.AddForbiddenZone(ShapeDistance.InvertedRect(Arena.Center, new WDir(default, 1f), 10f, 10, 10f), ps.Activation);
+        hints.AddForbiddenZone(new SDInvertedRect(Arena.Center, new WDir(default, 1f), 10f, 10, 10f), ps.Activation);
     }
 }

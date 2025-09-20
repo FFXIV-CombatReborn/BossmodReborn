@@ -22,7 +22,7 @@ public sealed class A33RedGirl(WorldState ws, Actor primary) : BossModule(ws, pr
     public static readonly Square[] DefaultSquare = [new(ArenaCenter, 20f)];
     public static readonly AOEShapeCustom ArenaTransition = new(BigSquare, DefaultSquare, [InnerSquare]);
     public static readonly ArenaBoundsCustom DefaultArena = new(DefaultSquare, [InnerSquare]);
-    public static readonly PolygonCustomO[] VirusArena1 = [new([new(6f, 856f), new(-6f, 856f), new(-6f, 868f), new(-1.5f, 868f), new(-1.5f, 880f),
+    public static readonly PolygonCustom[] VirusArena1 = [new([new(6f, 856f), new(-6f, 856f), new(-6f, 868f), new(-1.5f, 868f), new(-1.5f, 880f),
     new(-8f, 880f), new(-8f, 882f), new(-12f, 882f), new(-12f, 884f), new(-14f, 884f),
     new(-14f, 886f), new(-16f, 886f), new(-16f, 888f), new(-18f, 888f), new(-18f, 892f),
     new(-20f, 892f), new(-20f, 908f), new(-18f, 908f), new(-18f, 912f), new(-16f, 912f),
@@ -33,10 +33,10 @@ public sealed class A33RedGirl(WorldState ws, Actor primary) : BossModule(ws, pr
     new(14f, 914f), new(16f, 914f), new(16f, 912f), new(18f, 912f), new(18f, 908f),
     new(20f, 908f), new(20f, 892f), new(18f, 892f), new(18f, 888f), new(16f, 888f),
     new(16f, 886f), new(14f, 886f), new(14f, 884f), new(12f, 884f), new(12f, 882f),
-    new(8f, 882f), new(8f, 880f), new(1.5f, 880f), new(1.5f, 868f), new(6f, 868f)], -0.5f)];
-    public static readonly PolygonCustomO[] VirusArena2 = GenerateVirusArena(new(default, -500f));
-    public static readonly PolygonCustomO[] VirusArena3 = GenerateVirusArena(new(default, -1000f));
-    private static PolygonCustomO[] GenerateVirusArena(WDir offset)
+    new(8f, 882f), new(8f, 880f), new(1.5f, 880f), new(1.5f, 868f), new(6f, 868f)])];
+    public static readonly PolygonCustom[] VirusArena2 = GenerateVirusArena(new(default, -500f));
+    public static readonly PolygonCustom[] VirusArena3 = GenerateVirusArena(new(default, -1000f));
+    private static PolygonCustom[] GenerateVirusArena(WDir offset)
     {
         var vertices = new WPos[60];
         var o = offset;
@@ -45,7 +45,7 @@ public sealed class A33RedGirl(WorldState ws, Actor primary) : BossModule(ws, pr
         {
             vertices[i] = vertices1[i] + o;
         }
-        return [new(vertices, -0.5f)];
+        return [new(vertices)];
     }
 
     public Actor? BossP2;

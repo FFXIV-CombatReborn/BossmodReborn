@@ -145,7 +145,7 @@ sealed class JaggedEdge(BossModule module) : Components.SpreadFromCastTargets(mo
     {
         if (_aoe.AOE.Length != 0 && Spreads.Count != 0 && !IsSpreadTarget(actor))
         {
-            hints.AddForbiddenZone(ShapeDistance.InvertedRect(Module.PrimaryActor.Position, Module.PrimaryActor.Rotation, default, 1f, 50f), Spreads.Ref(0).Activation);
+            hints.AddForbiddenZone(new SDInvertedRect(Module.PrimaryActor.Position, Module.PrimaryActor.Rotation, default, 1f, 50f), Spreads.Ref(0).Activation);
             return;
         }
         base.AddAIHints(slot, actor, assignment, hints);
@@ -334,7 +334,7 @@ sealed class D093LunipyatiStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1008, NameID = 13610, SortOrder = 9)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1008, NameID = 13610, SortOrder = 9)]
 public sealed class D093Lunipyati(WorldState ws, Actor primary) : BossModule(ws, primary, startingBounds.Center, startingBounds)
 {
     private const int Edges = 64;

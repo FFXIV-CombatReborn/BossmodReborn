@@ -96,7 +96,7 @@ class EclipsingExhaustKnockback(BossModule module) : Components.SimpleKnockbacks
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
@@ -106,16 +106,16 @@ class EclipsingExhaustKnockback(BossModule module) : Components.SimpleKnockbacks
             ref readonly var c = ref Casters.Ref(0);
             var component = _aoe.Casters;
             var count = component.Count;
-            var forbidden = new Func<WPos, float>[count + 1];
+            var forbidden = new ShapeDistance[count + 1];
             var center = Arena.Center;
             var aoes = CollectionsMarshal.AsSpan(component);
             for (var i = 0; i < count; ++i)
             {
                 ref readonly var aoe = ref aoes[i];
-                forbidden[i] = ShapeDistance.Cone(center, 16f, Angle.FromDirection(aoe.Origin - center), a36);
+                forbidden[i] = new SDCone(center, 16f, Angle.FromDirection(aoe.Origin - center), a36);
             }
-            forbidden[count] = ShapeDistance.InvertedCircle(center, 4f);
-            hints.AddForbiddenZone(ShapeDistance.Union(forbidden), c.Activation);
+            forbidden[count] = new SDInvertedCircle(center, 4f);
+            hints.AddForbiddenZone(new SDUnion(forbidden), c.Activation);
         }
     }
 }

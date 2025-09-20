@@ -86,7 +86,13 @@ sealed class EnhancedMobility(BossModule module) : Components.GenericAOEs(module
             _aoes.Add(new(shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell)));
             if (_aoes.Count == 2)
             {
-                _aoes.Sort((x, y) => x.Activation.CompareTo(y.Activation));
+                var aoes = CollectionsMarshal.AsSpan(_aoes);
+                ref var aoe1 = ref aoes[0];
+                ref var aoe2 = ref aoes[1];
+                if (aoe1.Activation > aoe2.Activation)
+                {
+                    (aoe1, aoe2) = (aoe2, aoe1);
+                }
             }
         }
     }
@@ -201,7 +207,7 @@ sealed class D041CommanderR8States : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 831u, NameID = 12750u, SortOrder = 3)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 831u, NameID = 12750u, SortOrder = 3)]
 public sealed class D041CommanderR8(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, StartingBounds)
 {
     public static readonly WPos ArenaCenter = new(-100f, 207f);

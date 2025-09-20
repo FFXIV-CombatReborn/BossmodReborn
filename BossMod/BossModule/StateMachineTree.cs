@@ -1,6 +1,7 @@
 ﻿namespace BossMod;
 
 // tree describing all phases, states and transitions
+[SkipLocalsInit]
 public sealed class StateMachineTree
 {
     public class Node

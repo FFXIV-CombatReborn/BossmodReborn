@@ -184,7 +184,7 @@ public sealed class TrackPartyHealth(WorldState World)
             state.PredictedHPMissing = (int)actor.HPMP.MaxHP - actor.PendingHPRaw;
             state.PredictedHPRatio = actor.PendingHPRatio;
             // include pending heals, but not pending damage - used for stuff like essential dignity, where the actor's actual HP ratio is important
-            state.CurrentHPRatio = MathF.Max(actor.HPRatio, actor.PendingHPRatio);
+            state.CurrentHPRatio = Math.Max(actor.HPRatio, actor.PendingHPRatio);
             state.AttackerStrength = 0;
             state.EsunableStatusRemaining = 0;
             state.DoomRemaining = 0;

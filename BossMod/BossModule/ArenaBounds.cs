@@ -2,8 +2,15 @@
 // radius is the largest horizontal/vertical dimension: radius for circle, max of width/height for rect
 // note: this class to represent *relative* arena bounds (relative to arena center) - the reason being that in some cases effective center moves every frame, and bounds caches a lot (clip poly & base map for pathfinding)
 // note: if arena bounds are changed, new instance is recreated; max approx error can change without recreating the instance
-public abstract record class ArenaBounds(float Radius, float MapResolution, float ScaleFactor = 1f, bool AllowObstacleMap = false)
+
+[SkipLocalsInit]
+public abstract class ArenaBounds(float radius, float mapResolution, float scaleFactor = 1f, bool allowObstacleMap = false)
 {
+    public readonly float Radius = radius;
+    public readonly float MapResolution = mapResolution;
+    public readonly float ScaleFactor = scaleFactor;
+    public readonly bool AllowObstacleMap = allowObstacleMap;
+
     // fields below are used for clipping & drawing borders
     public readonly PolygonClipper Clipper = new();
     public float MaxApproxError;
@@ -142,7 +149,8 @@ public abstract record class ArenaBounds(float Radius, float MapResolution, floa
     }
 }
 
-public sealed record class ArenaBoundsCircle(float Radius, float MapResolution = 0.5f, bool AllowObstacleMap = false) : ArenaBounds(Radius, MapResolution, AllowObstacleMap: AllowObstacleMap)
+[SkipLocalsInit]
+public sealed class ArenaBoundsCircle(float Radius, float MapResolution = 0.5f, bool AllowObstacleMap = false) : ArenaBounds(Radius, MapResolution, allowObstacleMap: AllowObstacleMap)
 {
     private Pathfinding.Map? _cachedMap;
 
@@ -159,23 +167,67 @@ public sealed record class ArenaBoundsCircle(float Radius, float MapResolution =
     {
         var radius = Radius;
         if (offset.LengthSq() > radius * radius)
+        {
             offset *= radius / offset.Length();
+        }
         return offset;
     }
 
     private Pathfinding.Map BuildMap()
     {
-        var map = new Pathfinding.Map(MapResolution, default, Radius, Radius);
-        map.BlockPixelsInside2(ShapeDistance.InvertedCircle(default, Radius), -1f);
+        var radius = Radius;
+        var map = new Pathfinding.Map(MapResolution, default, radius, radius);
+        var iCell = 0;
+
+        var width = map.Width;
+        var height = map.Height;
+        var resolution = map.Resolution;
+
+        var pixelMaxG = map.PixelMaxG;
+        var pixelPriority = map.PixelPriority;
+
+        var threshold = radius * radius / (resolution * resolution); // square of bounds radius, in grid coordinates
+        var dy = -height / 2 + 0.5f;
+        var dx = -width / 2 + 0.5f;
+
+        for (var y = 0; y < height; ++y, ++dy)
+        {
+            var cy = Math.Abs(dy) + 0.5f; // farthest corner
+            var cySq = cy * cy;
+            var dx2 = dx;
+            for (var x = 0; x < width; ++x, ++dx2)
+            {
+                var cx = Math.Abs(dx2) + 0.5f;
+                if (cx * cx + cySq > threshold)
+                {
+                    pixelMaxG[iCell] = -1000f;
+                    pixelPriority[iCell] = float.MinValue;
+                }
+                ++iCell;
+            }
+        }
         return map;
     }
+
+    public override string ToString() => $"{nameof(ArenaBoundsCircle)}, Radius {Radius}, MapResolution: {MapResolution}";
 }
 
 // if rotation is 0, half-width is along X and half-height is along Z
-public record class ArenaBoundsRect(float HalfWidth, float HalfHeight, Angle Rotation = default, float MapResolution = 0.5f, bool AllowObstacleMap = false) : ArenaBounds(Math.Max(HalfWidth, HalfHeight), MapResolution, Rotation != default ? CalculateScaleFactor(Rotation) : 1f, AllowObstacleMap)
+[SkipLocalsInit]
+public abstract class ABRect : ArenaBounds
 {
+    public ABRect(float halfWidth, float halfHeight, Angle rotation = default, float MapResolution = 0.5f, bool AllowObstacleMap = false) : base(Math.Max(halfWidth, halfHeight), MapResolution, rotation != default ? CalculateScaleFactor(rotation) : 1f, AllowObstacleMap)
+    {
+        HalfWidth = halfWidth;
+        HalfHeight = halfHeight;
+        Rotation = rotation;
+        Orientation = Rotation.ToDirection();
+    }
+    public readonly float HalfWidth;
+    public readonly float HalfHeight;
+    public readonly Angle Rotation;
     private Pathfinding.Map? _cachedMap;
-    public readonly WDir Orientation = Rotation.ToDirection();
+    public readonly WDir Orientation;
 
     private static float CalculateScaleFactor(Angle Rotation)
     {
@@ -185,13 +237,52 @@ public record class ArenaBoundsRect(float HalfWidth, float HalfHeight, Angle Rot
 
     protected override PolygonClipper.Operand BuildClipPoly() => new(CurveApprox.Rect(Orientation, HalfWidth, HalfHeight));
     public override void PathfindMap(Pathfinding.Map map, WPos center) => map.Init(_cachedMap ??= BuildMap(), center);
+
     private Pathfinding.Map BuildMap()
     {
         var halfWidth = HalfWidth;
         var halfHeight = HalfHeight;
-        var rotation = Rotation;
-        var map = new Pathfinding.Map(MapResolution, default, halfWidth + 0.5f, halfHeight + 0.5f, rotation);
-        map.BlockPixelsInside2(ShapeDistance.InvertedRect(default, rotation, halfHeight, halfHeight, halfWidth), -1f);
+        var map = new Pathfinding.Map(MapResolution, default, halfWidth + 0.5f, halfHeight + 0.5f, Rotation); // +0.5 offset because otherwise the AI will not run back into the rectangle for some reason
+        // pixels can be partially covered by the rectangle, so we need to rasterize it carefully
+        var width = map.Width;
+        var height = map.Height;
+        var resolution = map.Resolution;
+        var pixelMaxG = map.PixelMaxG;
+        var pixelPriority = map.PixelPriority;
+
+        var dir = Rotation.ToDirection();
+        var dirX = dir.X;
+        var dirZ = dir.Z;
+        var normal = dir.OrthoL();
+        var normalX = normal.X;
+        var normalZ = normal.Z;
+
+        var dx = normal * resolution;
+        var dy = dir * resolution;
+        var startPos = map.Center - ((width >> 1) - 0.5f) * dx - ((height >> 1) - 0.5f) * dy;
+        var halfPixel = 0.5f * resolution;
+
+        for (var y = 0; y < height; ++y)
+        {
+            var posY = startPos + y * dy;
+            var rowBase = y * width;
+            for (var x = 0; x < width; ++x)
+            {
+                var pos = posY + x * dx;
+                var pX = pos.X;
+                var pZ = pos.Z;
+
+                var distParr = pX * dirX + pZ * dirZ;
+                var distOrtho = pX * normalX + pZ * normalZ;
+
+                if (!((distParr - halfPixel) >= -halfHeight && (distParr + halfPixel) <= halfHeight) || !((distOrtho - halfPixel) >= -halfWidth && (distOrtho + halfPixel) <= halfWidth))
+                {
+                    pixelMaxG[rowBase + x] = -1000f;
+                    pixelPriority[rowBase + x] = float.MinValue;
+                }
+            }
+        }
+
         return map;
     }
 
@@ -206,14 +297,27 @@ public record class ArenaBoundsRect(float HalfWidth, float HalfHeight, Angle Rot
         var offsetX = offset.Dot(orientation.OrthoL());
         var offsetY = offset.Dot(orientation);
         if (Math.Abs(offsetX) > halfWidth)
+        {
             offsetX = Math.Sign(offsetX) * halfWidth;
+        }
         if (Math.Abs(offsetY) > halfHeight)
+        {
             offsetY = Math.Sign(offsetY) * halfHeight;
+        }
         return orientation.OrthoL() * offsetX + orientation * offsetY;
     }
 }
 
-public sealed record class ArenaBoundsSquare(float Radius, Angle Rotation = default, float MapResolution = 0.5f, bool AllowObstacleMap = false) : ArenaBoundsRect(Radius, Radius, Rotation, MapResolution, AllowObstacleMap) { }
+[SkipLocalsInit]
+public sealed class ArenaBoundsRect(float halfWidth, float halfHeight, Angle rotation = default, float mapResolution = 0.5f, bool allowObstacleMap = false) : ABRect(halfWidth, halfHeight, rotation, mapResolution, allowObstacleMap)
+{
+    public override string ToString() => $"{nameof(ArenaBoundsRect)}, Radius {Radius}, HalfWidth: {HalfWidth}, HalfHeight: {HalfHeight}, MapResolution: {MapResolution}, ScaleFactor: {ScaleFactor}";
+}
+[SkipLocalsInit]
+public sealed class ArenaBoundsSquare(float halfWidth, Angle rotation = default, float mapResolution = 0.5f, bool allowObstacleMap = false) : ABRect(halfWidth, halfWidth, rotation, mapResolution, allowObstacleMap)
+{
+    public override string ToString() => $"{nameof(ArenaBoundsSquare)}, Radius {Radius}, HalfWidth: {HalfWidth}, MapResolution: {MapResolution}, ScaleFactor: {ScaleFactor}";
+}
 
 // custom complex polygon bounds
 // for creating complex bounds by using arrays of shapes
@@ -221,7 +325,8 @@ public sealed record class ArenaBoundsSquare(float Radius, Angle Rotation = defa
 // for convenience third array will optionally perform additional unions at the end
 // offset shrinks the pathfinding map only, for example if the edges of the arena are deadly and floating point errors cause the AI to fall of the map or problems like that
 // AdjustForHitbox adjusts both the visible map and the pathfinding map
-public sealed record class ArenaBoundsCustom : ArenaBounds
+[SkipLocalsInit]
+public sealed class ArenaBoundsCustom : ArenaBounds
 {
     private Pathfinding.Map? _cachedMap;
     public readonly RelSimplifiedComplexPolygon Polygon;
@@ -240,20 +345,30 @@ public sealed record class ArenaBoundsCustom : ArenaBounds
         Polygon = poly;
         offset = Offset;
 
-        var edgeList = new List<(WDir, WDir)>();
         var parts = Polygon.Parts;
         var count = parts.Count;
+        var vertsCount = 0;
+        for (var i = 0; i < count; ++i)
+        {
+            vertsCount += parts[i].VerticesCount;
+        }
+        var edgeArray = new (WDir, WDir)[vertsCount];
+        var k = 0;
         for (var i = 0; i < count; ++i)
         {
             var part = parts[i];
-            edgeList.AddRange(part.ExteriorEdges);
+            var extSpan = part.ExteriorEdges;
+            extSpan.CopyTo(edgeArray.AsSpan(k, extSpan.Length));
+            k += extSpan.Length;
             var len = part.Holes.Length;
             for (var j = 0; j < len; ++j)
             {
-                edgeList.AddRange(part.InteriorEdges(j));
+                var intSpan = part.InteriorEdges(j);
+                intSpan.CopyTo(edgeArray.AsSpan(k, intSpan.Length));
+                k += intSpan.Length;
             }
         }
-        edges = [.. edgeList];
+        edges = edgeArray;
     }
 
     private static float BuildBounds(Shape[] unionShapes, Shape[]? differenceShapes, Shape[]? additionalShapes, float scalefactor, bool adjustForHitbox, out RelSimplifiedComplexPolygon poly, out WPos center, out float halfWidth, out float halfHeight)
@@ -287,13 +402,21 @@ public sealed record class ArenaBoundsCustom : ArenaBounds
                 var vX = vertex.X;
                 var vZ = vertex.Z;
                 if (vX < minX)
+                {
                     minX = vX;
+                }
                 if (vX > maxX)
+                {
                     maxX = vX;
+                }
                 if (vZ < minZ)
+                {
                     minZ = vZ;
+                }
                 if (vZ > maxZ)
+                {
                     maxZ = vZ;
+                }
             }
         }
 
@@ -384,14 +507,14 @@ public sealed record class ArenaBoundsCustom : ArenaBounds
     {
         var polygon = offset != default ? Polygon.Offset(offset) : Polygon;
         var map = new Pathfinding.Map(MapResolution, default, HalfWidth, HalfHeight);
-        var pixels = map.PixelMaxG;
 
+        var pixelMaxG = map.PixelMaxG;
+        var pixelPriority = map.PixelPriority;
         var width = map.Width;
         var height = map.Height;
         var resolution = map.Resolution;
-        var shapeDistance = new PolygonWithHolesDistanceFunction(default, Polygon);
-        ref readonly var distance = ref shapeDistance;
-        map.BlockPixelsInside(distance.InvertedDistance, -1f, 0.49999f * resolution); // check inner circle of the pixel
+
+        var shape = new SDInvertedPolygonWithHoles(new(default, Polygon));
         // now check the corners
         var halfSample = resolution * 0.49999f; // tiny offset to account for floating point inaccuracies
 
@@ -406,34 +529,40 @@ public sealed record class ArenaBoundsCustom : ArenaBounds
         var dx = new WDir(resolution, default);
         var dy = new WDir(default, resolution);
         var startPos = map.Center - ((width >> 1) - 0.5f) * dx - ((height >> 1) - 0.5f) * dy;
+        var partitioner = Partitioner.Create(0, height);
 
-        Parallel.For(0, height, y =>
+        Parallel.ForEach(partitioner, range =>
         {
-            var rowOffset = y * width;
-            var posY = startPos + y * dy;
-            for (var x = 0; x < width; ++x)
+            var ys = range.Item1;
+            var ye = range.Item2;
+            for (var y = ys; y < ye; ++y)
             {
-                var offset = rowOffset + x;
-
-                if (pixels[offset] == -1f)
+                var rowOffset = y * width;
+                var posY = startPos + y * dy;
+                for (var x = 0; x < width; ++x)
                 {
-                    continue;
-                }
-                var pos = posY + x * dx;
-
-                var relativeCenter = new WDir(pos.X, pos.Z);
-
-                for (var i = 0; i < 4; ++i)
-                {
-                    if (!polygon.Contains(relativeCenter + sampleOffsets[i]))
+                    var offset = rowOffset + x;
+                    var pos = posY + x * dx;
+                    if (shape.Distance(pos) <= halfSample) // inner circle of the pixel
                     {
-                        pixels[offset] = -1f;
-                        break;
+                        pixelMaxG[offset] = -1000f; // no reason to check more points of the cell
+                        pixelPriority[offset] = float.MinValue;
+                        continue;
+                    }
+                    var relativeCenter = new WDir(pos.X, pos.Z);
+
+                    for (var i = 0; i < 4; ++i)
+                    {
+                        if (!polygon.Contains(relativeCenter + sampleOffsets[i]))
+                        {
+                            pixelMaxG[offset] = -1000f;
+                            pixelPriority[offset] = float.MinValue;
+                            break;
+                        }
                     }
                 }
             }
         });
-
         return map;
     }
 
@@ -468,4 +597,6 @@ public sealed record class ArenaBoundsCustom : ArenaBounds
 
         return combinedShape;
     }
+
+    public override string ToString() => $"{nameof(ArenaBoundsCustom)}, Radius {Radius}, HalfWidth: {HalfWidth}, HalfHeight: {HalfHeight}, MapResolution: {MapResolution}, Pathfinding offset: {offset}, Vertices: {edges.Length}, ScaleFactor: {ScaleFactor}";
 }

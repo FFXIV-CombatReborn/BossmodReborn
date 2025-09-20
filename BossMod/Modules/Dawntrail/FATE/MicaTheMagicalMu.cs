@@ -86,7 +86,7 @@ sealed class Draw(BossModule module) : Components.GenericAOEs(module)
         module.Enemies((uint)OID.Card6),
     ];
     private AOEInstance[] _aoes = [];
-    private int cachedIndex = -1;
+    private readonly List<int> cachedCardIndices = new(2);
 
     private static readonly AOEShapeRect _shape = new(20f, 7f);
 
@@ -126,7 +126,7 @@ sealed class Draw(BossModule module) : Components.GenericAOEs(module)
                 {
                     for (var i = 0; i < 5; ++i)
                     {
-                        ref var aoe = ref _aoes[0];
+                        ref var aoe = ref _aoes[i];
                         aoe.Activation = activation;
                         aoe.Risky = true;
                     }
@@ -137,13 +137,9 @@ sealed class Draw(BossModule module) : Components.GenericAOEs(module)
 
     private void AddAOEs(int safeZoneIndex)
     {
-        if (safeZoneIndex < 0)
-        {
-            return;
-        }
         if (_aoes.Length != 0)
         {
-            cachedIndex = safeZoneIndex;
+            cachedCardIndices.Add(safeZoneIndex);
             return;
         }
         _aoes = new AOEInstance[5];
@@ -167,8 +163,11 @@ sealed class Draw(BossModule module) : Components.GenericAOEs(module)
         if (spell.Action.ID == (uint)AID.CardTrickAOEFake)
         {
             _aoes = [];
-            AddAOEs(cachedIndex);
-            cachedIndex = -1;
+            if (cachedCardIndices.Count != 0)
+            {
+                AddAOEs(cachedCardIndices[0]);
+                cachedCardIndices.RemoveAt(0);
+            }
         }
     }
 }

@@ -121,9 +121,9 @@ sealed class P4DarklitDragonsongBrightHunger(BossModule module) : Components.Gen
 
         // stay on the far side of assigned tower, on the correct E/W side
         var towerPos = Arena.Center + new WDir(0, _darklit.AssignS[slot] ? +TowerOffset : -TowerOffset);
-        hints.AddForbiddenZone(ShapeDistance.InvertedCircle(towerPos, 3f), Towers[0].Activation);
-        hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, TowerOffset), Towers[0].Activation);
-        hints.AddForbiddenZone(ShapeDistance.HalfPlane(Arena.Center, new(_darklit.AssignE[slot] ? +1 : -1, default)), Towers[0].Activation);
+        hints.AddForbiddenZone(new SDInvertedCircle(towerPos, 3f), Towers[0].Activation);
+        hints.AddForbiddenZone(new SDCircle(Arena.Center, TowerOffset), Towers[0].Activation);
+        hints.AddForbiddenZone(new SDHalfPlane(Arena.Center, new(_darklit.AssignE[slot] ? +1 : -1, default)), Towers[0].Activation);
     }
 
     public override void OnTethered(Actor source, ActorTetherInfo tether)
@@ -189,7 +189,7 @@ sealed class P4DarklitDragonsongPathOfLight(BossModule module) : Components.Gene
 
         // do not clip either tower (it's visible at half-angle = asin(4/8) = 30) or each other
         var dir = (_darklit.AssignE[slot] ? +1 : -1) * (_darklit.AssignS[slot] ? 60f : 120f).Degrees();
-        hints.AddForbiddenZone(ShapeDistance.PrecisePosition(Arena.Center + 4f * dir.ToDirection(), new(default, 1f), Arena.Bounds.MapResolution, actor.Position, 0.1f), _activation);
+        hints.AddForbiddenZone(new SDPrecisePosition(Arena.Center + 4f * dir.ToDirection(), new(default, 1f), Arena.Bounds.MapResolution, actor.Position, 0.1f), _activation);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
@@ -217,7 +217,7 @@ sealed class P4DarklitDragonsongSpiritTaker(BossModule module) : SpiritTaker(mod
         //if (_darklit != null && _darklit.AssignS.Any() && Spreads.Count > 0 && Spreads[0].Activation > WorldState.FutureTime(1))
         //{
         //    // preposition
-        //    hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center + PrepositionOffset(_darklit, slot, actor), 1), Spreads[0].Activation);
+        //    hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center + PrepositionOffset(_darklit, slot, actor), 1)), Spreads[0].Activation);
         //}
         //else
         {
@@ -278,23 +278,30 @@ sealed class P4DarklitDragonsongDarkWater(BossModule module) : Components.Unifor
         if (!_resolveImminent || _assignments == null || _assignments.AssignS.None())
             return;
 
-        var stack = Stacks.FindIndex(s => !s.ForbiddenPlayers[slot]);
-        if (stack < 0)
-            return;
-
-        if (Stacks[stack].Target == actor || Stacks[stack].Activation > WorldState.FutureTime(1.5d))
+        var stacks = CollectionsMarshal.AsSpan(Stacks);
+        var len = stacks.Length;
+        for (var i = 0; i < len; ++i)
         {
-            // preposition
-            var off = 9 * (_assignments.AssignS[slot] ? 20f : 130f).Degrees().ToDirection();
-            var p1 = ShapeDistance.Circle(Arena.Center + off, 1f);
-            var p2 = ShapeDistance.Circle(Arena.Center + new WDir(-off.X, off.Z), 1f);
-            hints.AddForbiddenZone(p => -MathF.Min(p1(p), p2(p)), Stacks[stack].Activation);
-        }
-        else
-        {
-            // otherwise just stack tightly with our target, and avoid other
-            foreach (var s in Stacks)
-                hints.AddForbiddenZone(s.ForbiddenPlayers[slot] ? ShapeDistance.Circle(s.Target.Position, s.Radius) : ShapeDistance.InvertedCircle(s.Target.Position, 2f), s.Activation);
+            ref var s = ref stacks[i];
+            if (!s.ForbiddenPlayers[slot])
+            {
+                if (s.Target == actor || s.Activation > WorldState.FutureTime(1.5d))
+                {
+                    // preposition
+                    var off = 9 * (_assignments.AssignS[slot] ? 20f : 130f).Degrees().ToDirection();
+                    var center = Arena.Center;
+                    hints.AddForbiddenZone(new SDInvertedUnion([new SDCircle(center + off, 1f), new SDCircle(center + new WDir(-off.X, off.Z), 1f)]), s.Activation);
+                }
+                else
+                {
+                    // otherwise just stack tightly with our target, and avoid other
+                    for (var j = 0; j < len; ++j)
+                    {
+                        ref var st = ref stacks[i];
+                        hints.AddForbiddenZone(st.ForbiddenPlayers[slot] ? new SDCircle(st.Target.Position, st.Radius) : new SDInvertedCircle(st.Target.Position, 2f), st.Activation);
+                    }
+                }
+            }
         }
     }
 
@@ -336,7 +343,7 @@ sealed class P4SomberDance(BossModule module) : Components.GenericBaitAway(modul
         {
             // go far east/west
             var pos = Arena.Center + new WDir(actor.PosRot.X > Arena.Center.X ? 19f : -19f, default);
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(pos, 1f), _activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(pos, 1f), _activation);
         }
         else
         {
@@ -350,7 +357,7 @@ sealed class P4SomberDance(BossModule module) : Components.GenericBaitAway(modul
         {
             ForbiddenPlayers = Raid.WithSlot(true, true, true).WhereActor(p => p.Role != Role.Tank).Mask();
             _source = caster;
-            _activation = Module.CastFinishAt(spell, 0.4f);
+            _activation = Module.CastFinishAt(spell, 0.4d);
         }
     }
 

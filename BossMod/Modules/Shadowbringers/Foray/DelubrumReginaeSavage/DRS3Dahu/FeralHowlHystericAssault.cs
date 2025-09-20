@@ -28,16 +28,16 @@ abstract class FeralHowlHystericAssault(BossModule module, uint aidCast, uint ai
         if (_kb.Length != 0)
         {
             var aoes = CollectionsMarshal.AsSpan(_aoe.Casters);
-            var forbidden = new Func<WPos, float>[count];
+            var forbidden = new ShapeDistance[count];
             var pos = Module.PrimaryActor.Position;
             ref var kb = ref _kb[0];
             for (var i = 0; i < count; ++i)
             {
                 ref var a = ref aoes[i];
                 var origin = a.Origin;
-                forbidden[i] = ShapeDistance.Cone(pos, 100f, Module.PrimaryActor.AngleTo(origin), Angle.Asin(8f / (origin - pos).Length()));
+                forbidden[i] = new SDCone(pos, 100f, Module.PrimaryActor.AngleTo(origin), Angle.Asin(8f / (origin - pos).Length()));
             }
-            hints.AddForbiddenZone(ShapeDistance.Union(forbidden), kb.Activation);
+            hints.AddForbiddenZone(new SDUnion(forbidden), kb.Activation);
         }
     }
 }

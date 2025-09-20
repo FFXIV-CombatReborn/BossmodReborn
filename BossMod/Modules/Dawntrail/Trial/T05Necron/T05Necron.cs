@@ -40,7 +40,7 @@ public abstract class Necron(WorldState ws, Actor primary) : BossModule(ws, prim
     public static readonly ArenaBoundsCustom SplitArena = new([new Rectangle(ArenaCenter, 18f, 15f)], [new Rectangle(ArenaCenter, 6f, 15f)]);
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.Necron, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1061u, NameID = 14093u, Category = BossModuleInfo.Category.Trial, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 1)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.Necron, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1061u, NameID = 14093u, Category = BossModuleInfo.Category.Trial, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 1)]
 public sealed class T05Necron(WorldState ws, Actor primary) : Necron(ws, primary)
 {
     private static readonly uint[] hands = [(uint)OID.IcyHands2, (uint)OID.IcyHands3, (uint)OID.IcyHands4, (uint)OID.IcyHands5, (uint)OID.IcyHands6];

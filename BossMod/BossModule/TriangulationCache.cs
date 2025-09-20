@@ -2,6 +2,7 @@
 
 // clipping shapes to bounds and triangulating them is a serious time sink, so we want to cache that
 // to avoid requiring tracking cache lifetime by users, we use a heuristic - we assume that if something isn't drawn for a frame, it's no longer relevant
+[SkipLocalsInit]
 public sealed class TriangulationCache
 {
     private class CacheEntry(List<RelTriangle>? triangulation)

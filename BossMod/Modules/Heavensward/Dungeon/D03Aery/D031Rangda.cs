@@ -37,8 +37,15 @@ class Electrocution(BossModule module) : Components.GenericBaitAway(module)
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.ElectrocutionVisual)
-            foreach (var p in Module.Raid.WithoutSlot(false, true, true))
-                CurrentBaits.Add(new(caster, p, rect, Module.CastFinishAt(spell, 0.9f)));
+        {
+            var party = Module.Raid.WithoutSlot(false, true, true);
+            var len = party.Length;
+            var act = Module.CastFinishAt(spell, 0.9d);
+            for (var i = 0; i < len; ++i)
+            {
+                CurrentBaits.Add(new(caster, party[i], rect, act));
+            }
+        }
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
@@ -57,6 +64,8 @@ class Electrocution(BossModule module) : Components.GenericBaitAway(module)
 
 class IonosphericCharge(BossModule module) : Components.BaitAwayTethers(module, 0f, (uint)TetherID.Lightning, activationDelay: 10.1f)
 {
+    private readonly List<Actor> statues = module.Enemies((uint)OID.BlackenedStatue);
+
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         if (ActiveBaitsOn(actor).Count == 0)
@@ -67,23 +76,38 @@ class IonosphericCharge(BossModule module) : Components.BaitAwayTethers(module, 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (ActiveBaitsOn(actor).Count == 0)
+        {
             return;
-        var forbidden = new List<Func<WPos, float>>();
-        foreach (var a in Module.Enemies((uint)OID.BlackenedStatue))
-            forbidden.Add(ShapeDistance.InvertedCircle(a.Position, 4));
-        if (forbidden.Count != 0)
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), ActiveBaits.FirstOrDefault().Activation);
+        }
+
+        var count = statues.Count;
+        if (count == 0)
+        {
+            return;
+        }
+        var forbidden = new ShapeDistance[count];
+        for (var i = 0; i < count; ++i)
+        {
+            forbidden[i] = new SDInvertedCircle(statues[i].Position, 4f);
+        }
+
+        hints.AddForbiddenZone(new SDIntersection(forbidden), ActiveBaits.FirstOrDefault().Activation);
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
         if (ActiveBaitsOn(pc).Count == 0)
+        {
             return;
+        }
         base.DrawArenaForeground(pcSlot, pc);
-        var statues = Module.Enemies((uint)OID.BlackenedStatue);
+
         Arena.Actors(statues, Colors.Object, true);
-        foreach (var a in statues)
-            Arena.AddCircle(a.Position, 4f, Colors.Safe);
+        var count = statues.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            Arena.AddCircle(statues[i].Position, 4f, Colors.Safe);
+        }
     }
 }
 

@@ -54,6 +54,6 @@ sealed class SlidingSwipe(BossModule module) : Components.GenericAOEs(module)
             return;
         }
         // make ai stay close to boss to ensure successfully dodging the combo
-        hints.AddForbiddenZone(ShapeDistance.InvertedRect(Arena.Center, new WDir(1f, default), 2f, 2f, 40f), _aoes.Ref(0).Activation);
+        hints.AddForbiddenZone(new SDInvertedRect(Arena.Center, new WDir(1f, default), 2f, 2f, 40f), _aoes.Ref(0).Activation);
     }
 }

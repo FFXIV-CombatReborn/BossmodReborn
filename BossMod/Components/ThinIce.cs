@@ -2,6 +2,7 @@ namespace BossMod.Components;
 
 // component for ThinIce mechanic
 // observation: for SID 911 the distance is 0.1 * status extra
+[SkipLocalsInit]
 public abstract class ThinIce(BossModule module, float distance, bool createforbiddenzones = false, uint statusID = 911u, bool stopAtWall = false, bool stopAfterWall = false) : GenericKnockback(module, stopAtWall: stopAtWall, stopAfterWall: stopAfterWall)
 {
     public readonly uint StatusID = statusID;
@@ -58,13 +59,13 @@ public abstract class ThinIce(BossModule module, float distance, bool createforb
         {
             var pos = actor.Position;
             var ddistance = 2f * Distance;
-            var forbidden = new Func<WPos, float>[3]
+            var forbidden = new ShapeDistance[3]
             {
-                ShapeDistance.InvertedDonut(pos, Distance, Distance + 1.2f),
-                ShapeDistance.InvertedDonut(pos, ddistance, ddistance + 1.2f),
-                ShapeDistance.InvertedRect(pos, offset, 0.5f, 0.5f, 0.5f)
+                new SDInvertedDonut(pos, Distance, Distance + 1.2f),
+                new SDInvertedDonut(pos, ddistance, ddistance + 1.2f),
+                new SDInvertedRect(pos, offset, 0.5f, 0.5f, 0.5f)
             };
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), DateTime.MaxValue);
+            hints.AddForbiddenZone(new SDIntersection(forbidden), DateTime.MaxValue);
         }
     }
 }

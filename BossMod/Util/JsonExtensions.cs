@@ -2,6 +2,7 @@
 
 namespace BossMod;
 
+[SkipLocalsInit]
 public static class JsonExtensions
 {
     public static bool TryRemoveNode(this JsonObject parent, string key, out JsonNode? node) => parent.TryGetPropertyValue(key, out node) && parent.Remove(key);

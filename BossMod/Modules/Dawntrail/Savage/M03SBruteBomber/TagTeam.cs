@@ -41,7 +41,7 @@ sealed class TagTeamLariatCombo(BossModule module) : Components.GenericAOEs(modu
                 }
 
                 ref var aoe0 = ref aoes[0];
-                _safespot[slot] = [new(new AOEShapeCustom(safeShapes, dangerShapes, cone, true, cone.Length != 0 ? OperandType.Intersection : OperandType.Union),
+                _safespot[slot] = [new(new AOEShapeCustom(safeShapes, dangerShapes, cone, cone.Length != 0 ? OperandType.Intersection : OperandType.Union, invertForbiddenZone: true),
                     Arena.Center, default, aoe0.Activation, Colors.SafeFromAOE)];
             }
             return safespot;
@@ -108,7 +108,7 @@ sealed class TagTeamLariatCombo(BossModule module) : Components.GenericAOEs(modu
                 for (var i = 0; i < len; ++i)
                 {
                     ref var aoe = ref aoes[i];
-                    if (aoe.Origin == pos)
+                    if (aoe.Origin.AlmostEqual(pos, 1f))
                     {
                         index = i;
                         break;

@@ -21,7 +21,7 @@ sealed class SurgingWaveCorridor(BossModule module) : BossComponent(module)
 sealed class SurgingWaveAOE(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SurgingWaveAOE, 6f);
 sealed class SurgingWaveShockwave(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.SurgingWaveShockwave, 68f, true)
 {
-    private RelSimplifiedComplexPolygon poly = new();
+    private RelSimplifiedComplexPolygon poly;
     private bool polyInit;
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
@@ -33,17 +33,9 @@ sealed class SurgingWaveShockwave(BossModule module) : Components.SimpleKnockbac
                 poly = arena.Polygon.Offset(-1f); // shrink polygon by 1 yalm for less suspect kb
                 polyInit = true;
             }
-            var center = Arena.Center;
-            ref var c = ref Casters.Ref(0);
-            var loc = c.Origin;
-            hints.AddForbiddenZone(p =>
-            {
-                if (poly.Contains(p + 68f * (p - loc).Normalized() - center))
-                {
-                    return 1f;
-                }
-                return default;
-            }, c.Activation);
+
+            ref readonly var c = ref Casters.Ref(0);
+            hints.AddForbiddenZone(new SDKnockbackInComplexPolygonAwayFromOrigin(Arena.Center, c.Origin, 68f, poly), c.Activation);
         }
     }
 

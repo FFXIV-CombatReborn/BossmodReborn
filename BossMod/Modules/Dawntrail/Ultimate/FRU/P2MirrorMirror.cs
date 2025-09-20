@@ -24,7 +24,7 @@ sealed class P2MirrorMirrorReflectedScytheKickBlue : Components.GenericAOEs
             // main tank should drag the boss away
             // note: before mirror appears, we want to stay near center (to minimize movement no matter where mirror appears), so this works fine if blue mirror is zero
             // TODO: verify distance calculation - we want boss to be at least 4m away from center
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center - 16f * _blueMirror, 1), DateTime.MaxValue);
+            hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center - 16f * _blueMirror, 1), DateTime.MaxValue);
         }
     }
 
@@ -129,7 +129,7 @@ sealed class P2MirrorMirrorHouseOfLight(BossModule module) : Components.GenericB
                 _ => default
             };
         }
-        hints.AddForbiddenZone(ShapeDistance.InvertedCone(origin.Actor.Position, 4f, dir, 15f.Degrees()), origin.Activation);
+        hints.AddForbiddenZone(new SDInvertedCone(origin.Actor.Position, 4f, dir, 15f.Degrees()), origin.Activation);
     }
 
     public override void OnEventEnvControl(byte index, uint state)
@@ -145,14 +145,14 @@ sealed class P2MirrorMirrorHouseOfLight(BossModule module) : Components.GenericB
         switch (spell.Action.ID)
         {
             case (uint)AID.ScytheKick:
-                var activation = Module.CastFinishAt(spell, 0.7f);
+                var activation = Module.CastFinishAt(spell, 0.7d);
                 FirstSources.Add(new(caster, activation));
-                var mirror = _blueMirror != null ? Module.Enemies((uint)OID.FrozenMirror).Closest(Arena.Center + 20 * _blueMirror.Value.ToDirection()) : null;
+                var mirror = _blueMirror != null ? Module.Enemies((uint)OID.FrozenMirror).Closest(Arena.Center + 20f * _blueMirror.Value.ToDirection()) : null;
                 if (mirror != null)
                     FirstSources.Add(new(mirror, activation));
                 break;
             case (uint)AID.ReflectedScytheKickRed:
-                SecondSources.Add(new(caster, Module.CastFinishAt(spell, 0.6f)));
+                SecondSources.Add(new(caster, Module.CastFinishAt(spell, 0.6d)));
                 if (SecondSources.Count == 2 && _blueMirror != null)
                 {
                     // order two red mirrors so that first one is closer to boss and second one closer to blue mirror; if both are same distance, select CW ones (arbitrary)
@@ -212,7 +212,7 @@ sealed class P2MirrorMirrorBanish : P2Banish
     {
         var prepos = PrepositionLocation(slot, assignment);
         if (prepos != null)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(prepos.Value, 1f), DateTime.MaxValue);
+            hints.AddForbiddenZone(new SDInvertedCircle(prepos.Value, 1f), DateTime.MaxValue);
         else
             base.AddAIHints(slot, actor, assignment, hints);
     }

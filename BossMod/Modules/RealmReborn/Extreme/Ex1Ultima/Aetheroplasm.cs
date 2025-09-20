@@ -22,10 +22,10 @@ class Aetheroplasm(BossModule module) : BossComponent(module)
         foreach (var orb in Module.Enemies((uint)OID.Aetheroplasm).Where(a => !_explodedOrbs.Contains(a.InstanceID)))
         {
             // TODO: + line to kiter
-            hints.AddForbiddenZone(ShapeDistance.Circle(orb.Position, _explosionRadius + 1));
+            hints.AddForbiddenZone(new SDCircle(orb.Position, _explosionRadius + 1));
             var kiter = MostLikelyKiter(orb);
             if (kiter != null && kiter != actor)
-                hints.AddForbiddenZone(ShapeDistance.Rect(orb.Position, kiter.Position, 2));
+                hints.AddForbiddenZone(new SDRect(orb.Position, kiter.Position, 2));
         }
     }
 

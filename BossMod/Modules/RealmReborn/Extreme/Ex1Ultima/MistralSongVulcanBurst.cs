@@ -34,7 +34,7 @@ class MistralSongVulcanBurst(BossModule module) : Components.GenericAOEs(module,
             var a2 = Angle.FromDirection(p2 - Module.PrimaryActor.Position);
             if (a2.Rad > a1.Rad)
                 a2 -= 360f.Degrees();
-            hints.AddForbiddenZone(ShapeDistance.Cone(Module.PrimaryActor.Position, 40f, (a1 + a2) / 2, (a1 - a2) / 2), _resolve);
+            hints.AddForbiddenZone(new SDCone(Module.PrimaryActor.Position, 40f, (a1 + a2) / 2, (a1 - a2) / 2), _resolve);
         }
         else
         {

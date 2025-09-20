@@ -72,7 +72,7 @@ sealed class KnockbackPull(BossModule module) : Components.GenericKnockback(modu
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

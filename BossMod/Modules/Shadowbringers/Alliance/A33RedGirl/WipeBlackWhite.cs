@@ -85,7 +85,7 @@ sealed class WipeBlackWhite(BossModule module) : Components.GenericAOEs(module)
             }
         }
 
-        var aoe = new AOEShapeCustom(shapes1, shapes2, null, true);
+        var aoe = new AOEShapeCustom(shapes1, shapes2, invertForbiddenZone: true);
         if (positions[1] != default && positions[0] != default) // if there are 2 meteors, we need to intersect the union of each meteor's rectangles
         {
             var clipper = new PolygonClipper();

@@ -89,7 +89,7 @@ sealed class DisruptionArenaChange(BossModule module) : Components.GenericAOEs(m
     {
         if (index == 0x28 && state == 0x00020001u)
         {
-            Arena.Bounds = D063Eliminator.DefaultBounds;
+            Arena.Bounds = new ArenaBoundsSquare(15f);
             _aoe = [];
         }
     }
@@ -115,7 +115,7 @@ sealed class Electray(BossModule module) : Components.SpreadFromCastTargets(modu
             base.AddAIHints(slot, actor, assignment, hints);
             if (Spreads.Count != 0)
             {
-                hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center - new WDir(default, 15f), 15f), Spreads.Ref(0).Activation);
+                hints.AddForbiddenZone(new SDCircle(Arena.Center - new WDir(default, 15f), 15f), Spreads.Ref(0).Activation);
             }
         }
     }
@@ -132,14 +132,12 @@ sealed class Explosion : Components.SimpleAOEs
 
 sealed class Impact(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.Impact, 15f)
 {
-    private static readonly Angle halfAngle = 45f.Degrees();
-
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (Casters.Count != 0)
         {
             ref readonly var c = ref Casters.Ref(0);
-            hints.AddForbiddenZone(ShapeDistance.InvertedDonutSector(c.Origin, 6f, 8f, c.Origin.Z == -640f ? 180f.Degrees() : default, halfAngle), c.Activation);
+            hints.AddForbiddenZone(new SDKnockbackInAABBSquareAwayFromOrigin(Arena.Center, c.Origin, 15f, 14f), c.Activation);
         }
     }
 }
@@ -152,7 +150,9 @@ sealed class LightOfDevotion(BossModule module) : Components.LineStack(module, a
     public override void OnEventEnvControl(byte index, uint state)
     {
         if (index == 0x2F && state == 0x00080004u) // as soon as limit break phase ends the line stack gets cancelled
+        {
             CurrentBaits.Clear();
+        }
     }
 }
 
@@ -216,12 +216,10 @@ sealed class D063EliminatorStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS), erdelf", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 827, NameID = 12729)]
-public sealed class D063Eliminator(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, StartingBounds)
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS), erdelf", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 827, NameID = 12729)]
+public sealed class D063Eliminator(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, new ArenaBoundsSquare(15.5f))
 {
     public static readonly WPos ArenaCenter = new(-759f, -648f);
-    public static readonly ArenaBoundsSquare StartingBounds = new(15.5f);
-    public static readonly ArenaBoundsSquare DefaultBounds = new(15f);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

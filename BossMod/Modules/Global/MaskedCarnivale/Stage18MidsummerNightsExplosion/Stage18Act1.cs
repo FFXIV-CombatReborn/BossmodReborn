@@ -126,18 +126,7 @@ public sealed class Stage18Act1 : BossModule
     }
     public static readonly uint[] Kegs = [(uint)OID.Boss, (uint)OID.Keg];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(Kegs);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInCombat(Kegs);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

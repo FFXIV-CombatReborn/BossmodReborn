@@ -34,16 +34,9 @@ sealed class MechanicalLacerationPhaseChange(BossModule module) : Components.Gen
         if (_kb.Length != 0)
         {
             ref readonly var kb = ref _kb[0];
-            var center = Arena.Center;
+
             // square intentionally slightly smaller to prevent sus knockback
-            hints.AddForbiddenZone(p =>
-            {
-                if ((p + 10f * (p - center).Normalized()).InSquare(center, 28f))
-                {
-                    return 1f;
-                }
-                return default;
-            }, kb.Activation);
+            hints.AddForbiddenZone(new SDKnockbackInAABBSquareAwayFromOrigin(Arena.Center, kb.Origin, 10f, 28f), kb.Activation);
         }
     }
 }

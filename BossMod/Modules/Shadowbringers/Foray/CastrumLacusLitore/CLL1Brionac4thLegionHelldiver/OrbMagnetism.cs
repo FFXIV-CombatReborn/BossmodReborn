@@ -271,7 +271,7 @@ sealed class Magnetism(BossModule module) : Components.GenericKnockback(module)
         {
             if (source.Kind == Kind.TowardsOrigin)
             {
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(source.Origin, 35f), source.Activation);
+                hints.AddForbiddenZone(new SDInvertedCircle(source.Origin, 35f), source.Activation);
             }
             else
             {
@@ -281,7 +281,7 @@ sealed class Magnetism(BossModule module) : Components.GenericKnockback(module)
                 var dir = angle.ToDirection();
                 if (opposite != default)
                 {
-                    hints.AddForbiddenZone(ShapeDistance.InvertedRect(opposite + 35f * dir, -dir, 5f, default, 0.5f), source.Activation);
+                    hints.AddForbiddenZone(new SDInvertedRect(opposite + 35f * dir, -dir, 5f, default, 0.5f), source.Activation);
                 }
             }
         }

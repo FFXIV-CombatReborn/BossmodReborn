@@ -5,6 +5,7 @@ namespace BossMod;
 
 // base for boss modules - provides all the common features, so that look is standardized
 // by default, module activates (transitions to phase 0) whenever "primary" actor becomes both targetable and in combat (this is how we detect 'pull') - though this can be overridden if needed
+[SkipLocalsInit]
 public abstract class BossModule : IDisposable
 {
     public readonly WorldState WorldState;
@@ -14,6 +15,7 @@ public abstract class BossModule : IDisposable
     public readonly BossModuleRegistry.Info? Info;
     public readonly StateMachine StateMachine;
     public readonly Pathfinding.ObstacleMapManager Obstacles;
+    public readonly bool OnlyLoadIfTargetable;
 
     private readonly EventSubscriptions _subscriptions;
 
@@ -22,7 +24,6 @@ public abstract class BossModule : IDisposable
     public PartyState Raid => WorldState.Party;
     public WPos Center => Arena.Center;
     public ArenaBounds Bounds => Arena.Bounds;
-    public bool InBounds(WPos position) => Arena.InBounds(position);
 
     // per-oid enemy lists; filled on first request
     public readonly Dictionary<uint, List<Actor>> RelevantEnemies = []; // key = actor OID
@@ -55,7 +56,9 @@ public abstract class BossModule : IDisposable
                 foreach (var actor in WorldState.Actors.Actors.Values)
                 {
                     if (actor.OID == enemy)
+                    {
                         entry.Add(actor);
+                    }
                 }
                 RelevantEnemies[enemy] = entry;
             }
@@ -113,7 +116,7 @@ public abstract class BossModule : IDisposable
                 {
                     comp.OnActorDeath(actor);
                 }
-                comp.OnActorRenderflags(actor, actor.Renderflags);
+                comp.OnActorRenderflagsChanged(actor, actor.Renderflags);
             }
             ref var tether = ref actor.Tether;
             if (tether.ID != default)
@@ -153,12 +156,13 @@ public abstract class BossModule : IDisposable
         Components.RemoveAll(condition);
     }
 
-    protected BossModule(WorldState ws, Actor primary, WPos center, ArenaBounds bounds)
+    protected BossModule(WorldState ws, Actor primary, WPos center, ArenaBounds bounds, bool onlyLoadIfTargetable = false)
     {
         Obstacles = new(ws);
         WorldState = ws;
         PrimaryActor = primary;
         Arena = new(center, bounds);
+        OnlyLoadIfTargetable = onlyLoadIfTargetable;
         Info = BossModuleRegistry.FindByOID(primary.OID);
         StateMachine = Info != null ? ((StateMachineBuilder)Activator.CreateInstance(Info.StatesType, this)!).Build() : new([]);
 
@@ -170,7 +174,7 @@ public abstract class BossModule : IDisposable
             WorldState.Actors.CastFinished.Subscribe(OnActorCastFinished),
             WorldState.Actors.IsTargetableChanged.Subscribe(OnIsTargetableChanged),
             WorldState.Actors.IsDeadChanged.Subscribe(OnActorIsDead),
-            WorldState.Actors.RenderflagsChanged.Subscribe(OnActorRenderflags),
+            WorldState.Actors.RenderflagsChanged.Subscribe(OnActorRenderflagsChanged),
             WorldState.Actors.Tethered.Subscribe(OnActorTethered),
             WorldState.Actors.Untethered.Subscribe(OnActorUntethered),
             WorldState.Actors.StatusGain.Subscribe(OnActorStatusGain),
@@ -379,6 +383,88 @@ public abstract class BossModule : IDisposable
         return b.Count != 0 ? b[0] : null;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected bool IsActorInCombat(uint enemy)
+    {
+        var b = Enemies(enemy);
+        return b.Count != 0 && b[0].InCombat;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected bool IsAnyActorInCombat(uint[] enemies)
+    {
+        var allenemies = enemies;
+        var len = allenemies.Length;
+        for (var i = 0; i < len; ++i)
+        {
+            var enemies_ = Enemies(allenemies[i]);
+            var count = enemies_.Count;
+            for (var j = 0; j < count; ++j)
+            {
+                var enemy = enemies_[j];
+                if (enemy.InCombat)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected bool IsAnyActorInBoundsInCombat(uint[] enemies)
+    {
+        var allenemies = enemies;
+        var len = allenemies.Length;
+        var center = Arena.Center;
+        var radius = Bounds.Radius;
+        for (var i = 0; i < len; ++i)
+        {
+            var enemies_ = Enemies(allenemies[i]);
+            var count = enemies_.Count;
+            for (var j = 0; j < count; ++j)
+            {
+                var enemy = enemies_[j];
+                if (enemy.InCombat && enemy.Position.AlmostEqual(center, radius))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Actor? GetActiveActor(List<Actor> enemy)
+    {
+        var count = enemy.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            var e = enemy[i];
+            if (e.IsTargetable && !e.IsDead)
+            {
+                return e;
+            }
+        }
+        return null;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static List<Actor> GetActiveActors(List<Actor> enemy)
+    {
+        var count = enemy.Count;
+        List<Actor> actors = new(count);
+        for (var i = 0; i < count; ++i)
+        {
+            var e = enemy[i];
+            if (e.IsTargetable && !e.IsDead)
+            {
+                actors.Add(e);
+            }
+        }
+        return actors;
+    }
+
     protected virtual void DrawArenaBackground(int pcSlot, Actor pc) { } // before modules background
     protected virtual void DrawArenaForeground(int pcSlot, Actor pc) { } // after border, before modules foreground
     protected virtual void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) { }
@@ -577,13 +663,13 @@ public abstract class BossModule : IDisposable
         }
     }
 
-    private void OnActorRenderflags(Actor actor, int renderflags)
+    private void OnActorRenderflagsChanged(Actor actor, int renderflags)
     {
         if (actor.Type is not ActorType.Player and not ActorType.Pet and not ActorType.Chocobo and not ActorType.Buddy)
         {
             var count = Components.Count;
             for (var i = 0; i < count; ++i)
-                Components[i].OnActorRenderflags(actor, renderflags);
+                Components[i].OnActorRenderflagsChanged(actor, renderflags);
         }
     }
 

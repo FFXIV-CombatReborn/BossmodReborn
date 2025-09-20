@@ -33,7 +33,7 @@ sealed class DownpourMagitekChakram(BossModule module) : Components.GenericAOEs(
 {
     private enum Mechanic { None, Downpour, Chakram }
     private Mechanic CurrentMechanic;
-    private static readonly AOEShapeRect square = new(4f, 4f, 4f);
+    private static readonly AOEShapeRect square = new(4f, 4f, 4f), squareInv = new(4f, 4f, 4f, invertForbiddenZone: true);
     private static readonly WPos toad = new(213f, 306f);
     private static readonly WPos mini = new(229f, 306f);
     private BitMask _status;
@@ -48,13 +48,13 @@ sealed class DownpourMagitekChakram(BossModule module) : Components.GenericAOEs(
         if (CurrentMechanic == Mechanic.Downpour)
         {
             var breathless = _status[slot];
-            aoes[0] = new(breathless ? square with { InvertForbiddenZone = true } : square, toad, color: breathless ? Colors.SafeFromAOE : default);
+            aoes[0] = new(breathless ? squareInv : square, toad, color: breathless ? Colors.SafeFromAOE : default);
             aoes[1] = new(square, mini);
         }
         else if (CurrentMechanic == Mechanic.Chakram)
         {
             var minimum = !avoidSquares && !_status[slot];
-            aoes[0] = new(minimum ? square with { InvertForbiddenZone = true } : square, mini, color: minimum ? Colors.SafeFromAOE : default);
+            aoes[0] = new(minimum ? squareInv : square, mini, color: minimum ? Colors.SafeFromAOE : default);
             aoes[1] = new(square, toad);
         }
         return aoes;

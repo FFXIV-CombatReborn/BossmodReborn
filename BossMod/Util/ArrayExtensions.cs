@@ -1,5 +1,6 @@
 namespace BossMod;
 
+[SkipLocalsInit]
 public static class ArrayExtensions
 {
     public static T[] ReverseArray<T>(this T[] source)

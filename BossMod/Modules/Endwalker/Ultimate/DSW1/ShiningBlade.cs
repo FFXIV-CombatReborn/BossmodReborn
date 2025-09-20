@@ -16,7 +16,7 @@ sealed class ShiningBladeKnockback(BossModule module) : Components.SimpleKnockba
         for (var i = 0; i < count; ++i)
         {
             var e = movements[i];
-            if (!Module.InBounds(e.to))
+            if (!Arena.InBounds(e.to))
                 hints.Add("About to be knocked into wall!");
             if (_tears.InRadius(e.to, _tearRadius).Any())
                 hints.Add("About to be knocked into tear!");

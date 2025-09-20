@@ -3,7 +3,7 @@ namespace BossMod.Dawntrail.Foray.ForkedTowerBlood.FTB4Magitaur;
 sealed class UnsealedAura(BossModule module) : Components.RaidwideCast(module, (uint)AID.UnsealedAura);
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.Magitaur, GroupType = BossModuleInfo.GroupType.TheForkedTowerBlood, GroupID = 1018u, NameID = 13947u, PlanLevel = 100, SortOrder = 5, Category = BossModuleInfo.Category.Foray, Expansion = BossModuleInfo.Expansion.Dawntrail)]
-public sealed class FTB4Magitaur(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
+public sealed class FTB4Magitaur(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena, true)
 {
     private static readonly WPos arenaCenter = new(700f, -674f);
     private static readonly Square[] baseArena = [new Square(arenaCenter, 31.5f)];

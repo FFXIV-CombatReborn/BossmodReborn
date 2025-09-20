@@ -54,7 +54,7 @@ sealed class Tornado(BossModule module) : Components.Voidzone(module, 3f, GetTor
 sealed class OrbitalLevin(BossModule module) : Components.StretchTetherSingle(module, (uint)TetherID.OrbitalLevin, 8f, needToKite: true);
 sealed class Paralysis(BossModule module) : Components.CleansableDebuff(module, (uint)SID.Paralysis, "Paralysis", "paralyzed");
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.Ealdnarche, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1058u, NameID = 14086u, Category = BossModuleInfo.Category.Alliance, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 7)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.Ealdnarche, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1058u, NameID = 14086u, Category = BossModuleInfo.Category.Alliance, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 7)]
 public sealed class A24Ealdnarche(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, new ArenaBoundsSquare(24f))
 {
     public static readonly WPos ArenaCenter = new(800f, -800f);

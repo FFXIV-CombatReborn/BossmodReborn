@@ -184,7 +184,7 @@ sealed class DynasticFlame(BossModule module) : Components.BaitAwayTethers(modul
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (CurrentBaits.Count != 0 && CurrentBaits[0].Target == actor)
-            hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 18f));
+            hints.AddForbiddenZone(new SDCircle(Arena.Center, 18f));
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)

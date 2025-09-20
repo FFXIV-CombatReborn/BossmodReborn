@@ -97,14 +97,14 @@ sealed class Spotlight(BossModule module) : Components.GenericAOEs(module)
             return;
         var aoes = CollectionsMarshal.AsSpan(_aoes);
         var countAdj = count == 6 ? 3 : count;
-        var forbidden = new Func<WPos, float>[countAdj];
+        var forbidden = new ShapeDistance[countAdj];
 
         for (var i = 0; i < countAdj; ++i)
         {
             ref readonly var aoe = ref aoes[i];
-            forbidden[i] = ShapeDistance.InvertedCircle(aoe.Origin, 2.5f);
+            forbidden[i] = new SDInvertedCircle(aoe.Origin, 2.5f);
         }
-        hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), aoes[0].Activation);
+        hints.AddForbiddenZone(new SDIntersection(forbidden), aoes[0].Activation);
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)

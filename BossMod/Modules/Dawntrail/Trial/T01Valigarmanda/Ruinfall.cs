@@ -15,7 +15,7 @@ sealed class RuinfallKB(BossModule module) : Components.SimpleKnockbacks(module,
         if (actor.Role != Role.Tank)
         {
             ref readonly var c = ref Casters.Ref(0);
-            hints.AddForbiddenZone(ShapeDistance.InvertedRect(Module.PrimaryActor.Position, new WDir(default, 1f), 1f, default, 20f), c.Activation);
+            hints.AddForbiddenZone(new SDInvertedRect(Module.PrimaryActor.Position, new WDir(default, 1f), 1f, default, 20f), c.Activation);
             return;
         }
         var towers = _tower.Towers;

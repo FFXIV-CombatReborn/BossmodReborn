@@ -44,7 +44,7 @@ sealed class ScraplineStorm(BossModule module) : Components.SimpleKnockbacks(mod
         if (Casters.Count != 0)
         {
             ref readonly var source = ref Casters.Ref(0);
-            hints.AddForbiddenZone(ShapeDistance.Circle(source.Origin, 20f), source.Activation);
+            hints.AddForbiddenZone(new SDCircle(source.Origin, 20f), source.Activation);
         }
     }
 }
@@ -91,7 +91,7 @@ public sealed class A10DespotStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1015, NameID = 13608, SortOrder = 6)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1015, NameID = 13608, SortOrder = 6)]
 public sealed class A10Despot(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly WPos[] vertices = [new(-585.1f, -640.25f), new(-584.42f, -640.14f), new(-556.15f, -628.13f), new(-556.17f, -627.43f), new(-556.81f, -626.37f),
@@ -132,17 +132,7 @@ public sealed class A10Despot(WorldState ws, Actor primary) : BossModule(ws, pri
     private static readonly ArenaBoundsCustom arena = new([new PolygonCustom(vertices)]);
     public static readonly uint[] Trash = [(uint)OID.Boss, (uint)OID.Flamingo1, (uint)OID.Flamingo2];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(Trash);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            if (enemies[i].InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInCombat(Trash);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

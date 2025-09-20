@@ -199,7 +199,6 @@ sealed class Kickdown(BossModule module) : Components.GenericKnockback(module)
 {
     private DateTime activation;
     private readonly MagickedStandard _aoe = module.FindComponent<MagickedStandard>()!;
-    private RelSimplifiedComplexPolygon poly = new();
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
@@ -212,17 +211,16 @@ sealed class Kickdown(BossModule module) : Components.GenericKnockback(module)
 
     public override bool DestinationUnsafe(int slot, Actor actor, WPos pos)
     {
-        var aoes = _aoe.ActiveAOEs(slot, actor);
+        var aoes = CollectionsMarshal.AsSpan(_aoe.AOEs);
         var len = aoes.Length;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var aoe = ref aoes[i];
-            if (aoe.Check(pos))
+            if (aoes[i].Check(pos))
             {
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
@@ -230,22 +228,6 @@ sealed class Kickdown(BossModule module) : Components.GenericKnockback(module)
         if (spell.Action.ID == (uint)AID.Kickdown)
         {
             activation = Module.CastFinishAt(spell);
-
-            var shapes = new List<Shape>(9);
-            var standardsGreen = Module.Enemies((uint)OID.MagickedStandardGreen);
-            var standardsOrange = Module.Enemies((uint)OID.MagickedStandardOrange);
-            var countG = standardsGreen.Count;
-            var countO = standardsOrange.Count;
-            for (var i = 0; i < countG; ++i)
-            {
-                shapes.Add(new DonutV(standardsGreen[i].Position.Quantized(), 3f, 10f, 20));
-            }
-            for (var i = 0; i < countO; ++i)
-            {
-                shapes.Add(new Square(standardsOrange[i].Position.Quantized(), 10f));
-            }
-            AOEShapeCustom combine = new(shapes);
-            poly = combine.GetCombinedPolygon(Arena.Center);
         }
     }
 
@@ -266,16 +248,7 @@ sealed class Kickdown(BossModule module) : Components.GenericKnockback(module)
 
         if (!IsImmune(slot, activation))
         {
-            var pos = Module.PrimaryActor.Position;
-            var center = Arena.Center;
-            var polygon = poly;
-            hints.AddForbiddenZone(p =>
-            {
-                var projected = p + 18f * (p - pos).Normalized();
-                if (projected.InCircle(center, 20f) && !polygon.Contains(projected - center))
-                    return 1f;
-                return default;
-            }, activation);
+            hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOriginMixedAOEs(Arena.Center, Module.PrimaryActor.Position, 18f, 20f, [.. _aoe.AOEs], _aoe.AOEs.Count), activation);
         }
     }
 }

@@ -30,7 +30,7 @@ sealed class D040VanguardLeptocyonStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 831, NameID = 12778, SortOrder = 1)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 831, NameID = 12778, SortOrder = 1)]
 public sealed class D040VanguardLeptocyon(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly WPos[] vertices = [new(0.34f, 358), new(2.53f, 358.04f), new(2.56f, 358.59f), new(2.29f, 359.02f), new(1.51f, 359.94f),
@@ -94,6 +94,8 @@ public sealed class D040VanguardLeptocyon(WorldState ws, Actor primary) : BossMo
     {
         var count = hints.PotentialTargets.Count;
         for (var i = 0; i < count; ++i)
+        {
             hints.PotentialTargets[i].Priority = 0;
+        }
     }
 }

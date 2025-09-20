@@ -264,18 +264,7 @@ public class D090VelveteenAnt(WorldState ws, Actor primary) : BossModule(ws, pri
     private static readonly uint[] combs = [(uint)OID.Honeycomb1, (uint)OID.Honeycomb2];
     public static readonly uint[] All = [.. trash, .. combs];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(All);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInCombat(All);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

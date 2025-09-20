@@ -53,7 +53,7 @@ sealed class SwiftsteelKB(BossModule module) : Components.SimpleKnockbacks(modul
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }
 

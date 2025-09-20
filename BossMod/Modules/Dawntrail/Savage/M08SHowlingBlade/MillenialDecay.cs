@@ -18,7 +18,7 @@ sealed class AeroIII(BossModule module) : Components.SimpleKnockbacks(module, (u
             var act = c.Activation;
             if (!IsImmune(slot, act))
             {
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(c.Origin, 4f), act);
+                hints.AddForbiddenZone(new SDInvertedCircle(c.Origin, 4f), act);
             }
         }
     }
@@ -140,7 +140,7 @@ sealed class WindsOfDecayBait(BossModule module) : Components.GenericBaitAway(mo
                     return;
                 }
                 var center = Arena.Center;
-                hints.AddForbiddenZone(ShapeDistance.InvertedCone(center, 4f, Angle.FromDirection(center - bait.Source.Position), 20f.Degrees()), bait.Activation);
+                hints.AddForbiddenZone(new SDInvertedCone(center, 4f, Angle.FromDirection(center - bait.Source.Position), 20f.Degrees()), bait.Activation);
             }
         }
         else

@@ -8,7 +8,7 @@ sealed class PointBlackWhite(BossModule module) : Components.GenericAOEs(module)
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
 
-    public override void OnActorRenderflags(Actor actor, int renderflags)
+    public override void OnActorRenderflagsChanged(Actor actor, int renderflags)
     {
         if (renderflags == 0)
         {

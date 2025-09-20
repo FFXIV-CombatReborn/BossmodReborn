@@ -143,7 +143,7 @@ sealed class AlexandrianBanishIIITargetHint(BossModule module) : Components.Gene
             {
                 shapes[lenInner + i] = new DonutSegmentV(Arena.Center, 8f, 16f, FloorTiles.TileAngles[longestOuter[i]], angle, 8);
             }
-            _aoe = [new(new AOEShapeCustom(shapes, InvertForbiddenZone: true), Arena.Center, default, WorldState.FutureTime(4.1d), Colors.SafeFromAOE)];
+            _aoe = [new(new AOEShapeCustom(shapes, invertForbiddenZone: true), Arena.Center, default, WorldState.FutureTime(4.1d), Colors.SafeFromAOE)];
         }
     }
 }

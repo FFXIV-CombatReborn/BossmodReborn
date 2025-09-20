@@ -69,7 +69,7 @@ class MorbidAdvance(BossModule module) : Components.ActionDrivenForcedMarch(modu
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }
 
@@ -89,7 +89,7 @@ class MorbidRetreat(BossModule module) : Components.ActionDrivenForcedMarch(modu
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }
 

@@ -136,7 +136,7 @@ sealed class Electromine(BossModule module) : Components.GenericAOEs(module)
         for (var i = 0; i < count; ++i)
         {
             ref var aoe = ref aoes[i];
-            hints.TemporaryObstacles.Add(ShapeDistance.Circle(aoe.Origin, 5f));
+            hints.TemporaryObstacles.Add(new SDCircle(aoe.Origin, 5f));
         }
     }
 }
@@ -153,8 +153,7 @@ sealed class Brainjack(BossModule module) : Components.StatusDrivenForcedMarch(m
 
         for (var i = 0; i < count; ++i)
         {
-            ref var aoe = ref aoes[i];
-            if (Intersect.RayCircle(actor.Position - aoe.Origin, dir, 5f, 18f))
+            if (Intersect.RayCircle(actor.Position - aoes[i].Origin, dir, 5f, 18f))
             {
                 return true;
             }
@@ -222,8 +221,7 @@ sealed class PoleShift(BossModule module) : Components.GenericKnockback(module, 
             var aoes = CollectionsMarshal.AsSpan(_aoe1.Casters);
             for (var i = 0; i < count; ++i)
             {
-                ref var aoe = ref aoes[i];
-                if (aoe.Check(pos))
+                if (aoes[i].Check(pos))
                 {
                     return true;
                 }
@@ -307,19 +305,11 @@ sealed class PoleShift(BossModule module) : Components.GenericKnockback(module, 
             var act = kb.Activation;
             if (kb.Kind == Kind.TowardsOrigin)
             {
-                hints.AddForbiddenZone(ShapeDistance.Circle(pos, 18f), act); // circle 10 + 7 pull + 1 safety margin
+                hints.AddForbiddenZone(new SDCircle(pos, 18f), act); // circle 10 + 7 pull + 1 safety margin
             }
             else
             {
-                var center = Arena.Center;
-                hints.AddForbiddenZone(p =>
-                {
-                    if ((p + 7f * (p - pos).Normalized()).InSquare(center, 13f)) // arena square 20 - 6 rect width - 1 safety margin
-                    {
-                        return 1f;
-                    }
-                    return default;
-                }, act);
+                hints.AddForbiddenZone(new SDKnockbackInAABBSquareAwayFromOrigin(Arena.Center, pos, 7f, 13f), act); // arena square 20 - 6 rect width - 1 safety margin
             }
         }
     }

@@ -6,7 +6,7 @@ class Eruption(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Erup
     private DateTime _baitDetectDeadline;
     public BitMask Baiters;
 
-    public const float Radius = 8;
+    public const float Radius = 8f;
 
     public override void Update()
     {
@@ -17,12 +17,12 @@ class Eruption(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Erup
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         base.OnCastStarted(caster, spell);
-        switch ((AID)spell.Action.ID)
+        switch (spell.Action.ID)
         {
-            case AID.Eruption:
-                _baitDetectDeadline = WorldState.FutureTime(1);
+            case (uint)AID.Eruption:
+                _baitDetectDeadline = WorldState.FutureTime(1d);
                 break;
-            case AID.EruptionAOE:
+            case (uint)AID.EruptionAOE:
                 if (WorldState.CurrentTime < _baitDetectDeadline)
                 {
                     var baiter = Raid.WithoutSlot(false, true, true).Closest(spell.LocXZ);

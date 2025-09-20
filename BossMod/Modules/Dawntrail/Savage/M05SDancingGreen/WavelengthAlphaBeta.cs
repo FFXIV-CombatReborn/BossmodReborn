@@ -10,16 +10,20 @@ sealed class WavelengthAlphaBeta(BossModule module) : BossComponent(module)
     {
         if (numCasts == 8)
         {
-            ref readonly var player = ref expirationBySlot[slot];
+            ref var player = ref expirationBySlot[slot];
 
             var inRisk = false;
             if (player != default)
+            {
                 hints.Add($"Order: {player.Order} -", false);
+            }
             for (var i = 0; i < 8; ++i)
             {
-                ref readonly var exp = ref expirationBySlot[i];
+                ref var exp = ref expirationBySlot[i];
                 if (exp == default || slot == i)
+                {
                     continue;
+                }
                 var remaining = Math.Max(0d, (exp.Expiration - WorldState.CurrentTime).TotalSeconds);
                 var check = remaining < 5d;
                 var partner = exp.Actor;
@@ -30,11 +34,15 @@ sealed class WavelengthAlphaBeta(BossModule module) : BossComponent(module)
                 else if (check)
                 {
                     if (actor.Position.InCircle(partner.Position, 2f))
+                    {
                         inRisk = true;
+                    }
                 }
             }
             if (inRisk)
+            {
                 hints.Add($"GTFO from incorrect stacks!");
+            }
         }
     }
 
@@ -42,8 +50,8 @@ sealed class WavelengthAlphaBeta(BossModule module) : BossComponent(module)
     {
         if (numCasts == 8)
         {
-            ref readonly var pcOrder = ref expirationBySlot[pcSlot];
-            ref readonly var playerOrder = ref expirationBySlot[playerSlot];
+            ref var pcOrder = ref expirationBySlot[pcSlot];
+            ref var playerOrder = ref expirationBySlot[playerSlot];
             if (pcOrder.Order != default && pcOrder.Order == playerOrder.Order)
             {
                 return PlayerPriority.Critical;
@@ -63,12 +71,16 @@ sealed class WavelengthAlphaBeta(BossModule module) : BossComponent(module)
             var player = expirationBySlot[pcSlot].Order;
             for (var i = 0; i < 8; ++i)
             {
-                ref readonly var exp = ref expirationBySlot[i];
+                ref var exp = ref expirationBySlot[i];
                 if (exp == default || pcSlot == i)
+                {
                     continue;
+                }
                 var remaining = Math.Max(0d, (exp.Expiration - WorldState.CurrentTime).TotalSeconds) < 5d;
                 if (!remaining)
+                {
                     continue;
+                }
                 Arena.AddCircle(exp.Actor.Position, 2f, exp.Order == player ? Colors.Safe : default);
             }
         }
@@ -80,7 +92,9 @@ sealed class WavelengthAlphaBeta(BossModule module) : BossComponent(module)
         {
             var slot = WorldState.Party.FindSlot(actor.InstanceID);
             if (firstActivation == default)
+            {
                 firstActivation = WorldState.FutureTime(27.5d);
+            }
             var order = (status.ExpireAt - firstActivation).TotalSeconds switch
             {
                 < 4d => 1,
@@ -103,6 +117,8 @@ sealed class WavelengthAlphaBeta(BossModule module) : BossComponent(module)
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         if (spell.Action.ID == (uint)AID.GetDownBait)
+        {
             ++numCasts;
+        }
     }
 }

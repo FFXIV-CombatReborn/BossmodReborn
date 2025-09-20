@@ -46,7 +46,7 @@ sealed class SharpSpike(BossModule module) : Components.BaitAwayIcon(module, 4f,
     public override bool KeepOnPhaseChange => true;
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1015, NameID = 13662, SortOrder = 4, PlanLevel = 100)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1015, NameID = 13662, SortOrder = 4, PlanLevel = 100)]
 public sealed class A12Fafnir(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, new ArenaBoundsCircle(34.5f))
 {
     public static readonly WPos ArenaCenter = new(-500f, 600f);

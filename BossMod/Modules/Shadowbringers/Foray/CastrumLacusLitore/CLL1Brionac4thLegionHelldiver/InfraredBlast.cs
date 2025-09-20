@@ -105,7 +105,7 @@ sealed class InfraredBlast(BossModule module) : Components.InterceptTether(modul
     {
         if (status.ID == (uint)SID.FireResistanceDownII)
         {
-            fire[Raid.FindSlot(actor.InstanceID)] = true;
+            fire.Set(Raid.FindSlot(actor.InstanceID));
         }
     }
 
@@ -113,7 +113,7 @@ sealed class InfraredBlast(BossModule module) : Components.InterceptTether(modul
     {
         if (status.ID == (uint)SID.FireResistanceDownII)
         {
-            fire[Raid.FindSlot(actor.InstanceID)] = false;
+            fire.Clear(Raid.FindSlot(actor.InstanceID));
         }
     }
 
@@ -122,7 +122,7 @@ sealed class InfraredBlast(BossModule module) : Components.InterceptTether(modul
         if (Active && !_arena.IsBrionacArena)
         {
             var count = _tethers.Count;
-            var forbidden = new List<Func<WPos, float>>(2);
+            var forbidden = new List<ShapeDistance>(2);
             var target = tunnelmachine;
             for (var i = 0; i < count; ++i)
             {
@@ -130,12 +130,12 @@ sealed class InfraredBlast(BossModule module) : Components.InterceptTether(modul
                 if (t.Player.OID != default || t.Player == actor)
                 {
                     var source = t.Enemy;
-                    forbidden.Add(ShapeDistance.InvertedRect(target.Position + (target.HitboxRadius + 0.1f) * target.DirectionTo(source), source.Position, 0.5f));
+                    forbidden.Add(new SDInvertedRect(target.Position + (target.HitboxRadius + 0.1f) * target.DirectionTo(source), source.Position, 0.5f));
                 }
             }
             if (forbidden.Count != 0)
             {
-                hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), _activation);
+                hints.AddForbiddenZone(new SDIntersection([.. forbidden]), _activation);
             }
         }
     }

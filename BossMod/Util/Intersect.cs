@@ -3,6 +3,7 @@
 // ray-shape intersection functions return parameter along ray dir of intersection point; if intersection does not happen, they return float.MaxValue
 // rayDir is assumed to be normalized
 // WDir rayOriginOffset overload for symmetrical shapes uses offset from shape center for ray origin
+[SkipLocalsInit]
 public static class Intersect
 {
     public static float RayCircle(WDir rayOriginOffset, WDir rayDir, float circleRadius)
@@ -10,38 +11,22 @@ public static class Intersect
         // (rayOriginOffset + t * rayDir) ^ 2 = R^2 => t^2 + 2 * t * rayOriginOffset dot rayDir + rayOriginOffset^2 - R^2 = 0
         var halfB = rayOriginOffset.Dot(rayDir);
         var halfDSq = halfB * halfB - rayOriginOffset.LengthSq() + circleRadius * circleRadius;
-        if (halfDSq < 0)
+        if (halfDSq < 0f)
             return float.MaxValue; // never intersects
         var t = -halfB + MathF.Sqrt(halfDSq);
-        return t >= 0 ? t : float.MaxValue;
+        return t >= 0f ? t : float.MaxValue;
     }
     public static float RayCircle(WPos rayOrigin, WDir rayDir, WPos circleCenter, float circleRadius) => RayCircle(rayOrigin - circleCenter, rayDir, circleRadius);
 
-    public static bool RayCircle(WDir rayOriginOffset, WDir rayDirNorm, float circleRadius, float maxDist)
+    public static bool RayCircle(WDir rayOriginOffset, WDir rayDir, float circleRadius, float maxDist)
     {
-        var b = rayOriginOffset.Dot(rayDirNorm);
-        var c = rayOriginOffset.LengthSq() - circleRadius * circleRadius;
-        var discriminant = b * b - c;
+        var t = (-rayOriginOffset).Dot(rayDir);
+        var tClamped = Math.Max(0f, Math.Min(maxDist, t));
 
-        if (discriminant < 0f)
-        {
-            return false;
-        }
-
-        var sqrtD = MathF.Sqrt(discriminant);
-        var t1 = -b - sqrtD;
-        var t2 = -b + sqrtD;
-
-        if (t1 >= 0 && t1 <= maxDist)
-        {
-            return true;
-        }
-        if (t2 >= 0 && t2 <= maxDist)
-        {
-            return true;
-        }
-        return false;
+        var closest = rayOriginOffset + rayDir * tClamped;
+        return closest.LengthSq() <= circleRadius * circleRadius;
     }
+
     // halfWidth is along X, halfHeight is along Z
     public static float RayAABB(WDir rayOriginOffset, WDir rayDir, float halfWidth, float halfHeight)
     {
@@ -74,7 +59,7 @@ public static class Intersect
         // tx1 = NaN => tx2 = +-inf => tmin = min(tmin, tmin -or- +inf) = tmin, tmax = max(tmax, tmax -or- -inf) = tmax
         // tx2 = NaN => tx1 = +-inf => tmin = min(tmin -or- +inf, tmin) = tmin, tmax = min(tmax -or- +inf, tmax) = tmax
         // so NaN's don't change 'clipped' ray segment
-        return tmin > tmax ? float.MaxValue : tmin >= 0 ? tmin : tmax >= 0 ? tmax : float.MaxValue;
+        return tmin > tmax ? float.MaxValue : tmin >= 0f ? tmin : tmax >= 0f ? tmax : float.MaxValue;
     }
     public static float RayAABB(WPos rayOrigin, WDir rayDir, WPos boxCenter, float halfWidth, float halfHeight) => RayAABB(rayOrigin - boxCenter, rayDir, halfWidth, halfHeight);
 
@@ -245,7 +230,7 @@ public static class Intersect
     {
         var distSq = circleOffset.LengthSq();
         var maxR = outerRadius + circleRadius;
-        var minR = MathF.Max(0, innerRadius - circleRadius);
+        var minR = Math.Max(0, innerRadius - circleRadius);
 
         if (distSq > maxR * maxR || distSq < minR * minR)
             return false;
@@ -267,7 +252,7 @@ public static class Intersect
 
         static float DistToRay(WDir dir, WDir pt)
             // vector rejection = cross product length / length of ray dir (==1)
-            => MathF.Abs(pt.Cross(dir));
+            => Math.Abs(pt.Cross(dir));
 
         // check if circle intersects side rays
         var dL = DistToRay(sideDirL, circleOffset);

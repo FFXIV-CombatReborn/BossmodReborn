@@ -33,7 +33,7 @@ sealed class Lanterns(BossModule module) : Components.GenericAOEs(module)
 
     private void InitAOE()
     {
-        _aoe = [new(new AOEShapeCustom([.. lanterns], InvertForbiddenZone: true), Arena.Center, default, WorldState.FutureTime(99d), Colors.SafeFromAOE)];
+        _aoe = [new(new AOEShapeCustom([.. lanterns], invertForbiddenZone: true), Arena.Center, default, WorldState.FutureTime(99d), Colors.SafeFromAOE)];
         aoeInit = true;
     }
 

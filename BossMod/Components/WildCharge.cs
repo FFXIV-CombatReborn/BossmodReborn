@@ -1,6 +1,7 @@
 ﻿namespace BossMod.Components;
 
 // generic 'wild charge': various mechanics that consist of charge aoe on some target that other players have to stay in; optionally some players can be marked as 'having to be closest to source' (usually tanks)
+[SkipLocalsInit]
 public class GenericWildCharge(BossModule module, float halfWidth, uint aid = default, float fixedLength = default) : CastCounter(module, aid)
 {
     public enum PlayerRole
@@ -66,8 +67,8 @@ public class GenericWildCharge(BossModule module, float halfWidth, uint aid = de
     {
         if (Source == null)
             return;
-        var forbiddenInverted = new List<Func<WPos, float>>();
-        var forbidden = new List<Func<WPos, float>>();
+        var forbiddenInverted = new List<ShapeDistance>();
+        var forbidden = new List<ShapeDistance>();
         switch (PlayerRoles[slot])
         {
             case PlayerRole.Ignore:
@@ -81,18 +82,18 @@ public class GenericWildCharge(BossModule module, float halfWidth, uint aid = de
                     if (closest != null)
                     {
                         var stack = GetAOEForTarget(Source.Position, closest.Position);
-                        forbiddenInverted.Add(ShapeDistance.InvertedRect(stack.origin, stack.dir, stack.length, 0, HalfWidth * 0.5f));
+                        forbiddenInverted.Add(new SDInvertedRect(stack.origin, stack.dir, stack.length, 0, HalfWidth * 0.5f));
                     }
                 }
                 break;
             case PlayerRole.Share: // TODO: some hint to be first in line...
             case PlayerRole.ShareNotFirst:
                 foreach (var aoe in EnumerateAOEs())
-                    forbiddenInverted.Add(ShapeDistance.InvertedRect(aoe.origin, aoe.dir, aoe.length, 0, HalfWidth));
+                    forbiddenInverted.Add(new SDInvertedRect(aoe.origin, aoe.dir, aoe.length, 0, HalfWidth));
                 break;
             case PlayerRole.Avoid:
                 foreach (var aoe in EnumerateAOEs())
-                    forbiddenInverted.Add(ShapeDistance.Rect(aoe.origin, aoe.dir, aoe.length, 0, HalfWidth));
+                    forbiddenInverted.Add(new SDRect(aoe.origin, aoe.dir, aoe.length, 0, HalfWidth));
                 break;
         }
 
@@ -102,11 +103,11 @@ public class GenericWildCharge(BossModule module, float halfWidth, uint aid = de
 
         if (forbiddenInverted.Count != 0)
         {
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbiddenInverted), Activation);
+            hints.AddForbiddenZone(new SDOutsideOfUnion([.. forbiddenInverted]), Activation);
         }
         if (forbidden.Count != 0)
         {
-            hints.AddForbiddenZone(ShapeDistance.Union(forbidden), Activation);
+            hints.AddForbiddenZone(new SDUnion([.. forbidden]), Activation);
         }
     }
 

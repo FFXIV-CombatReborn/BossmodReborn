@@ -77,7 +77,7 @@ sealed class KnuckleCrusher : Components.SimpleAOEs
         base.AddAIHints(slot, actor, assignment, hints);
         if (Casters.Count != 0 && NumCasts < 2)
         {
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(midpoint, 3f), Casters[^1].Activation); // stay in dodge spot
+            hints.AddForbiddenZone(new SDInvertedCircle(midpoint, 3f), Casters[^1].Activation); // stay in dodge spot
         }
     }
 
@@ -173,7 +173,7 @@ sealed class SpinningSiege(BossModule module) : Components.GenericRotatingAOE(mo
         base.AddAIHints(slot, actor, assignment, hints);
         if (Sequences.Count == 4 && NumCasts < 20)
         {
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(midpoint, 5f), Sequences.Ref(0).NextActivation); // stay in safe area
+            hints.AddForbiddenZone(new SDInvertedCircle(midpoint, 5f), Sequences.Ref(0).NextActivation); // stay in safe area
         }
     }
 
@@ -191,9 +191,6 @@ sealed class BlastKnuckles(BossModule module) : Components.GenericKnockback(modu
 {
     private Knockback[] _kb = [];
     private readonly LineOfFireSpiritSlingCageOfFire _aoe = module.FindComponent<LineOfFireSpiritSlingCageOfFire>()!;
-    private DateTime activation;
-    private RelSimplifiedComplexPolygon poly = new();
-    private bool polyInit;
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor) => _kb;
 
@@ -201,8 +198,7 @@ sealed class BlastKnuckles(BossModule module) : Components.GenericKnockback(modu
     {
         if (spell.Action.ID == (uint)AID.BlastKnucklesVisual)
         {
-            activation = Module.CastFinishAt(spell, 1d);
-            _kb = [new(spell.LocXZ, 15f, activation)];
+            _kb = [new(spell.LocXZ, 15f, Module.CastFinishAt(spell, 1d))];
         }
     }
 
@@ -218,33 +214,19 @@ sealed class BlastKnuckles(BossModule module) : Components.GenericKnockback(modu
     {
         if (_kb.Length != 0)
         {
-            if (!IsImmune(slot, activation))
+            ref readonly var kb = ref _kb[0];
+            var act = kb.Activation;
+            if (!IsImmune(slot, act))
             {
-                if (!polyInit)
+                var aoes = CollectionsMarshal.AsSpan(_aoe.Casters);
+                var len = aoes.Length;
+                var rects = new (WPos origin, WDir direction)[len];
+                for (var i = 0; i < len; ++i)
                 {
-                    var aoes = _aoe.ActiveAOEs(slot, actor);
-                    var len = aoes.Length;
-                    if (len < 4)
-                        return;
-                    var rectangle = new List<RectangleSE>();
-                    for (var i = 0; i < len; ++i)
-                    {
-                        ref readonly var aoe = ref aoes[i];
-                        rectangle.Add(new(aoe.Origin, aoe.Origin + 60f * aoe.Rotation.ToDirection(), 4f));
-                    }
-                    AOEShapeCustom combine = new(rectangle);
-                    poly = combine.GetCombinedPolygon(Arena.Center);
-                    polyInit = true;
+                    ref var aoe = ref aoes[i];
+                    rects[i] = (aoe.Origin, aoe.Rotation.ToDirection());
                 }
-                var center = Arena.Center;
-                var polygon = poly;
-                hints.AddForbiddenZone(p =>
-                {
-                    var projected = p + 15f * (p - center).Normalized();
-                    if (projected.InCircle(center, 20f) && !polygon.Contains(projected - center))
-                        return 1f;
-                    return default;
-                }, activation);
+                hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOriginPlusAOERects(Arena.Center, kb.Origin, 15f, 20f, rects, 60f, 4.5f, len), act);
             }
         }
     }
@@ -255,13 +237,12 @@ sealed class BlastKnuckles(BossModule module) : Components.GenericKnockback(modu
         var len = aoes.Length;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var aoe = ref aoes[i];
-            if (aoe.Check(pos))
+            if (aoes[i].Check(pos))
             {
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }
 
@@ -332,7 +313,7 @@ sealed class CE109CompanyOfStoneStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 40)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 40)]
 public sealed class CE109CompanyOfStone(WorldState ws, Actor primary) : BossModule(ws, primary, new WPos(680f, -280f).Quantized(), new ArenaBoundsCircle(20f))
 {
     public Actor? BossMegaloknight;

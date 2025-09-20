@@ -18,7 +18,7 @@ sealed class ArenaChanges(BossModule module) : BossComponent(module)
     {
         if (Arena.Bounds.Radius > 20f)
         {
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center, 19f), DateTime.MaxValue);
+            hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center, 19f), DateTime.MaxValue);
         }
     }
 }

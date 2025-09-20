@@ -415,7 +415,7 @@ public sealed class AkechiDRG(RotationModuleManager manager, Actor player) : Ake
         BLcd = CDRemaining(AID.BattleLitany);
         LCcd = CDRemaining(AID.LanceCharge);
         PowerLeft = StatusRemaining(Player, SID.PowerSurge, 30);
-        ChaosLeft = MathF.Max(StatusDetails(primaryTarget?.Actor, SID.ChaosThrust, Player.InstanceID).Left, StatusDetails(primaryTarget?.Actor, SID.ChaoticSpring, Player.InstanceID).Left);
+        ChaosLeft = Math.Max(StatusDetails(primaryTarget?.Actor, SID.ChaosThrust, Player.InstanceID).Left, StatusDetails(primaryTarget?.Actor, SID.ChaoticSpring, Player.InstanceID).Left);
         HasMD = HasEffect(SID.DiveReady);
         HasNastrond = HasEffect(SID.NastrondReady);
         HasLC = LCcd is >= 40 and <= 60;

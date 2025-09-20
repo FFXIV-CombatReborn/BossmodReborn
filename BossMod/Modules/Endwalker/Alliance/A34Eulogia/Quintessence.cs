@@ -8,7 +8,6 @@ class Quintessence(BossModule module) : Components.GenericAOEs(module)
     private byte _index;
     private WPos position;
     private uint cast;
-    private DateTime activation;
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
@@ -143,7 +142,8 @@ class Quintessence(BossModule module) : Components.GenericAOEs(module)
         }
         void AddAOE(Angle rotation, AOEShape? shape = null)
         {
-            _aoes.Add(new(shape ?? cone, position, rotation, activation.AddSeconds(19.5d - _aoes.Count * 3.7d)));
+            var count = _aoes.Count;
+            _aoes.Add(new(shape ?? cone, position, rotation, count == 0 ? WorldState.FutureTime(26.4d) : _aoes.Ref(0).Activation.AddSeconds(_aoes.Count * 3.5d)));
             _index = default;
             cast = default;
         }
@@ -156,7 +156,6 @@ class Quintessence(BossModule module) : Components.GenericAOEs(module)
         {
             cast = id;
             InitIfReady();
-            activation = Module.CastFinishAt(spell);
         }
     }
 

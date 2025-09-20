@@ -307,7 +307,7 @@ public sealed unsafe class DebugCollision() : IDisposable
                     var cast = (ColliderBox*)coll;
                     _tree.LeafNode2($"Translation: {Vec3Str(cast->Translation)}");
                     var rotation = cast->Rotation;
-                    _tree.LeafNode2($"Rotation: {Vec3Str(rotation)} (Yaw: {(rotation.Y * Angle.RadToDeg).Degrees().Normalized()}°)");
+                    _tree.LeafNode2($"Rotation: {Vec3Str(rotation)} (Yaw: {HeadingDegFromWorld(ref cast->World)}°)");
                     _tree.LeafNode2($"Scale: {Vec3Str(cast->Scale)}");
                     DrawMat4x3("World", ref cast->World);
                     DrawMat4x3("InvWorld", ref cast->InvWorld);
@@ -318,7 +318,7 @@ public sealed unsafe class DebugCollision() : IDisposable
                     var cast = (ColliderCylinder*)coll;
                     _tree.LeafNode2($"Translation: {Vec3Str(cast->Translation)}");
                     var rotation = cast->Rotation;
-                    _tree.LeafNode2($"Rotation: {Vec3Str(rotation)} (Yaw: {(rotation.Y * Angle.RadToDeg).Degrees().Normalized()}°)");
+                    _tree.LeafNode2($"Rotation: {Vec3Str(rotation)} (Yaw: {HeadingDegFromWorld(ref cast->World)}°)");
                     _tree.LeafNode2($"Scale: {Vec3Str(cast->Scale)}");
                     _tree.LeafNode2($"Radius: {cast->Radius:f3}");
                     DrawMat4x3("World", ref cast->World);
@@ -330,7 +330,7 @@ public sealed unsafe class DebugCollision() : IDisposable
                     var cast = (ColliderSphere*)coll;
                     _tree.LeafNode2($"Translation: {Vec3Str(cast->Translation)}");
                     var rotation = cast->Rotation;
-                    _tree.LeafNode2($"Rotation: {Vec3Str(rotation)} (Yaw: {(rotation.Y * Angle.RadToDeg).Degrees().Normalized()}°)");
+                    _tree.LeafNode2($"Rotation: {Vec3Str(rotation)} (Yaw: {HeadingDegFromWorld(ref cast->World)}°)");
                     _tree.LeafNode2($"Scale: {Vec3Str(cast->Scale)}");
                     DrawMat4x3("World", ref cast->World);
                     DrawMat4x3("InvWorld", ref cast->InvWorld);
@@ -343,7 +343,7 @@ public sealed unsafe class DebugCollision() : IDisposable
                     _tree.LeafNode2($"Normal: {cast->World.Row2 / cast->Scale.Z:f3}");
                     _tree.LeafNode2($"Translation: {Vec3Str(cast->Translation)}");
                     var rotation = cast->Rotation;
-                    _tree.LeafNode2($"Rotation: {Vec3Str(rotation)} (Yaw: {(rotation.Y * Angle.RadToDeg).Degrees().Normalized()}°)");
+                    _tree.LeafNode2($"Rotation: {Vec3Str(rotation)} (Yaw: {HeadingDegFromWorld(ref cast->World)}°)");
                     _tree.LeafNode2($"Scale: {Vec3Str(cast->Scale)}");
                     DrawMat4x3("World", ref cast->World);
                     DrawMat4x3("InvWorld", ref cast->InvWorld);
@@ -357,7 +357,7 @@ public sealed unsafe class DebugCollision() : IDisposable
         DrawResource(coll->Resource);
         _tree.LeafNode2($"Translation: {Vec3Str(coll->Translation)}");
         var rotation = coll->Rotation;
-        _tree.LeafNode2($"Rotation: {Vec3Str(rotation)} (Yaw: {(rotation.Y * Angle.RadToDeg).Degrees().Normalized()}°)");
+        _tree.LeafNode2($"Rotation: {Vec3Str(rotation)} (Yaw: {HeadingDegFromWorld(ref coll->World)}°)");
         _tree.LeafNode2($"Scale: {Vec3Str(coll->Scale)}");
         DrawMat4x3("World", ref coll->World);
         DrawMat4x3("InvWorld", ref coll->InvWorld);
@@ -668,5 +668,20 @@ public sealed unsafe class DebugCollision() : IDisposable
         var rotMatrix = Matrix4x4.CreateRotationX(rotX) * Matrix4x4.CreateRotationY(rotY) * Matrix4x4.CreateRotationZ(rotZ);
         var rotatedVertex = Vector3.Transform(vertex, rotMatrix);
         return rotatedVertex + translation;
+    }
+
+    private static Angle HeadingDegFromWorld(ref Matrix4x3 world)
+    {
+        var f = world.Row2;
+        var x = f.X;
+        var z = f.Z;
+        if (x == 0f && z == 0f)
+        {
+            return default; // degenerate/zero scale
+        }
+
+        var rad = MathF.Atan2(x, z);
+        var deg = rad * (180f / MathF.PI);
+        return new Angle(rad).Normalized();
     }
 }

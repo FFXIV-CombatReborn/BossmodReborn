@@ -18,7 +18,7 @@ sealed class BlackHole(BossModule module) : Components.GenericTowersOpenWorld(mo
                 for (var i = 0; i < count; ++i)
                 {
                     var buffer = buffers[i].Position;
-                    if (Module.InBounds(buffer) && (int)buffer.Z != 44) // filter out irrelevant actors, unfortunately OID is also used for other stuff on this map
+                    if (Arena.InBounds(buffer) && (int)buffer.Z != 44) // filter out irrelevant actors, unfortunately OID is also used for other stuff on this map
                     {
                         Towers.Add(new(buffer, 2f, 1, 99, soakers, activation: WorldState.FutureTime(9.1d)));
                     }

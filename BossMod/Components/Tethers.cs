@@ -1,6 +1,7 @@
 ﻿namespace BossMod.Components;
 
 // generic component for tankbuster at tethered targets; tanks are supposed to intercept tethers and gtfo from the raid
+[SkipLocalsInit]
 public class TankbusterTether(BossModule module, uint aid, uint tetherID, AOEShape shape, double activationDelay = default, bool centerAtTarget = false) : CastCounter(module, aid)
 {
     public TankbusterTether(BossModule module, uint aid, uint tetherID, float radius, double activationDelay = default) : this(module, aid, tetherID, new AOEShapeCircle(radius), activationDelay, true) { }
@@ -208,10 +209,10 @@ public class TankbusterTether(BossModule module, uint aid, uint tetherID, AOESha
                             hints.AddForbiddenZone(Shape, pos, default, activation);
                             break;
                         case AOEShapeCone cone:
-                            hints.AddForbiddenZone(ShapeDistance.Cone(enemyPos, 100f, Angle.FromDirection(pos - enemyPos), cone.HalfAngle), activation);
+                            hints.AddForbiddenZone(new SDCone(enemyPos, 100f, Angle.FromDirection(pos - enemyPos), cone.HalfAngle), activation);
                             break;
                         case AOEShapeRect rect:
-                            hints.AddForbiddenZone(ShapeDistance.Cone(enemyPos, 100f, Angle.FromDirection(pos - enemyPos), Angle.Asin(rect.HalfWidth / (pos - enemyPos).Length())), activation);
+                            hints.AddForbiddenZone(new SDCone(enemyPos, 100f, Angle.FromDirection(pos - enemyPos), Angle.Asin(rect.HalfWidth / (pos - enemyPos).Length())), activation);
                             break;
                     }
                 }
@@ -222,6 +223,7 @@ public class TankbusterTether(BossModule module, uint aid, uint tetherID, AOESha
 }
 
 // generic component for AOE at tethered targets; players are supposed to intercept tethers and gtfo from the raid
+[SkipLocalsInit]
 public class InterceptTetherAOE(BossModule module, uint aid, uint tetherID, float radius, uint[]? excludedAllies = null) : CastCounter(module, aid)
 {
     public readonly uint[]? ExcludedAllies = excludedAllies;
@@ -288,13 +290,13 @@ public class InterceptTetherAOE(BossModule module, uint aid, uint tetherID, floa
         {
             var tether = Tethers[i];
             if (tether.Player != actor)
-                hints.AddForbiddenZone(ShapeDistance.Circle(tether.Player.Position, Radius), Activation);
+                hints.AddForbiddenZone(new SDCircle(tether.Player.Position, Radius), Activation);
             else
                 for (var j = 0; j < raid.Length; ++j)
                 {
                     ref var member = ref raid[i];
                     if (member != actor)
-                        hints.AddForbiddenZone(ShapeDistance.Circle(member.Position, Radius), Activation);
+                        hints.AddForbiddenZone(new SDCircle(member.Position, Radius), Activation);
                 }
         }
     }
@@ -353,6 +355,7 @@ public class InterceptTetherAOE(BossModule module, uint aid, uint tetherID, floa
 }
 
 // generic component for tethers that need to be intercepted eg. to prevent a boss from gaining buffs
+[SkipLocalsInit]
 public class InterceptTether(BossModule module, uint aid, uint tetherIDBad = 84u, uint tetherIDGood = 17u, uint[]? excludedAllies = null) : CastCounter(module, aid)
 {
     public readonly uint TIDGood = tetherIDGood;
@@ -427,6 +430,7 @@ public class InterceptTether(BossModule module, uint aid, uint tetherIDBad = 84u
 
 // generic component for tethers that need to be stretched and switch between a "good" and "bad" tether
 // at the end of the mechanic various things are possible, eg. single target dmg, knockback/pull, AOE etc.
+[SkipLocalsInit]
 public class StretchTetherDuo(BossModule module, float minimumDistance, double activationDelay, uint tetherIDBad = 57u, uint tetherIDGood = 1u, AOEShape? shape = null, uint aid = default, uint enemyOID = default, bool knockbackImmunity = false) : GenericBaitAway(module, aid, damageType: AIHints.PredictedDamageType.Tankbuster)
 {
     public readonly AOEShape? Shape = shape;
@@ -624,11 +628,12 @@ public class StretchTetherDuo(BossModule module, float minimumDistance, double a
             base.AddAIHints(slot, actor, assignment, hints);
         if (ActiveBaits.Any(x => x.Target == actor) && !isImmune)
             foreach (var b in ActiveBaits.Where(x => x.Target == actor))
-                hints.AddForbiddenZone(ShapeDistance.Circle(b.Source.Position, MinimumDistance), b.Activation);
+                hints.AddForbiddenZone(new SDCircle(b.Source.Position, MinimumDistance), b.Activation);
     }
 }
 
 // generic component for tethers that need to be stretched
+[SkipLocalsInit]
 public class StretchTetherSingle(BossModule module, uint tetherID, float minimumDistance, AOEShape? shape = null, uint aid = default, uint enemyOID = default, double activationDelay = default, bool knockbackImmunity = false, bool needToKite = false) :
 StretchTetherDuo(module, minimumDistance, activationDelay, tetherID, tetherID, shape, aid, enemyOID, knockbackImmunity)
 {

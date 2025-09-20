@@ -85,18 +85,7 @@ public class D080CrimsonControlUnit(WorldState ws, Actor primary) : BossModule(w
 
     public override bool CheckReset() => !Raid.Player()!.Position.InSquare(Arena.Center, 70f);
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(trash);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInCombat(trash);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

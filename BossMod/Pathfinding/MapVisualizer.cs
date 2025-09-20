@@ -93,21 +93,21 @@ public sealed class MapVisualizer
         }
 
         // border
-        dl.AddLine(tl, tr, Colors.Border, 2);
-        dl.AddLine(tr, br, Colors.Border, 2);
-        dl.AddLine(br, bl, Colors.Border, 2);
-        dl.AddLine(bl, tl, Colors.Border, 2);
+        dl.AddLine(tl, tr, Colors.Border, 2f);
+        dl.AddLine(tr, br, Colors.Border, 2f);
+        dl.AddLine(br, bl, Colors.Border, 2f);
+        dl.AddLine(bl, tl, Colors.Border, 2f);
 
         // grid
         for (var x = 1; x < Map.Width; ++x)
         {
             var off = new Vector2(x * ScreenPixelSize, 0);
-            dl.AddLine(tl + off, bl + off, Colors.Border, 1);
+            dl.AddLine(tl + off, bl + off, Colors.Border, 1f);
         }
         for (var y = 1; y < Map.Height; ++y)
         {
             var off = new Vector2(0, y * ScreenPixelSize);
-            dl.AddLine(tl + off, tr + off, Colors.Border, 1);
+            dl.AddLine(tl + off, tr + off, Colors.Border, 1f);
         }
 
         DrawPath(dl, tl, hoverNode >= 0 ? hoverNode : _pathfind.BestIndex());
@@ -140,7 +140,7 @@ public sealed class MapVisualizer
             var pixPriority = Map.PixelPriority[hoverNode];
             if (pixMaxG < float.MaxValue)
             {
-                ImGui.TextUnformatted($"Pixel at {x}x{y} ({wpos}): blocked, g={pixMaxG:f3}");
+                ImGui.TextUnformatted($"Pixel at {x}x{y} ({wpos}): blocked, g={pixMaxG:f3}, prio={pixPriority}");
             }
             else if (pixPriority != 0)
             {
@@ -148,7 +148,7 @@ public sealed class MapVisualizer
             }
             else
             {
-                ImGui.TextUnformatted($"Pixel at {x}x{y} ({wpos}): normal");
+                ImGui.TextUnformatted($"Pixel at {x}x{y} ({wpos}): normal, prio={pixPriority}");
             }
 
             ref var pfNode = ref _pathfind.NodeByIndex(hoverNode);

@@ -22,8 +22,8 @@ class Ex4IfritAICommon(BossModule module) : BossComponent(module)
     {
         boss.AttackStrength = 0.35f;
         boss.DesiredRotation = Angle.FromDirection(Module.PrimaryActor.Position - Arena.Center); // point to the wall
-        if (!Module.PrimaryActor.Position.InCircle(Arena.Center, 13)) // 13 == radius (20) - tank distance (2) - hitbox (5)
-            boss.DesiredPosition = Arena.Center + 13 * boss.DesiredRotation.ToDirection();
+        if (!Module.PrimaryActor.Position.InCircle(Arena.Center, 13f)) // 13 == radius (20) - tank distance (2) - hitbox (5)
+            boss.DesiredPosition = Arena.Center + 13f * boss.DesiredRotation.ToDirection();
         if (player.Role == Role.Tank)
         {
             if (player.InstanceID == boss.Actor.TargetID)
@@ -41,17 +41,17 @@ class Ex4IfritAICommon(BossModule module) : BossComponent(module)
         }
     }
 
-    protected void AddPositionHint(AIHints hints, WPos target, bool asap = true, float radius = 2)
+    protected void AddPositionHint(AIHints hints, WPos target, bool asap = true, float radius = 2f)
     {
-        hints.AddForbiddenZone(ShapeDistance.InvertedCircle(target, radius), asap ? default : DateTime.MaxValue);
+        hints.AddForbiddenZone(new SDInvertedCircle(target, radius), asap ? default : DateTime.MaxValue);
     }
 
     protected void AddDefaultEruptionBaiterHints(AIHints hints)
     {
         // avoid non-baiters (TODO: should this be done by eruption component itself?)
         if (_eruption != null)
-            foreach (var (i, p) in Raid.WithSlot(false, true, true).ExcludedFromMask(_eruption.Baiters))
-                hints.AddForbiddenZone(ShapeDistance.Circle(p.Position, Eruption.Radius));
+            foreach (var (_, p) in Raid.WithSlot(false, true, true).ExcludedFromMask(_eruption.Baiters))
+                hints.AddForbiddenZone(new SDCircle(p.Position, Eruption.Radius));
     }
 
     // TODO: this shouldn't be here...
@@ -272,7 +272,7 @@ class Ex4IfritAINails : Ex4IfritAINormal
                 {
                     // in addition to usual hints, we want to avoid center (so that we don't bait eruption there)
                     if (!EruptionActive)
-                        hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, Eruption.Radius));
+                        hints.AddForbiddenZone(new SDCircle(Arena.Center, Eruption.Radius));
                 }
             }
 
@@ -350,7 +350,7 @@ class Ex4IfritAINails3(BossModule module) : Ex4IfritAINails(module, 7, 0x3C70)
 // extremely simple positioning - mt goes to next plume safespot, searing winds target goes opposite, everyone else stacks in center for easier healing
 class Ex4IfritAIHellfire : Ex4IfritAICommon
 {
-    private WDir _safespotOffset;
+    private readonly WDir _safespotOffset;
 
     public Ex4IfritAIHellfire(BossModule module, Angle safeSpotDir, PartyRolesConfig.Assignment tankRole) : base(module)
     {
@@ -389,6 +389,6 @@ class Ex4IfritAIHellfire : Ex4IfritAICommon
         Arena.AddCircle(Arena.Center + _safespotOffset, 2, Colors.Safe);
     }
 }
-class Ex4IfritAIHellfire1(BossModule module) : Ex4IfritAIHellfire(module, 150.Degrees(), PartyRolesConfig.Assignment.MT);
-class Ex4IfritAIHellfire2(BossModule module) : Ex4IfritAIHellfire(module, 110.Degrees(), PartyRolesConfig.Assignment.OT);
-class Ex4IfritAIHellfire3(BossModule module) : Ex4IfritAIHellfire(module, 70.Degrees(), PartyRolesConfig.Assignment.MT);
+class Ex4IfritAIHellfire1(BossModule module) : Ex4IfritAIHellfire(module, 150f.Degrees(), PartyRolesConfig.Assignment.MT);
+class Ex4IfritAIHellfire2(BossModule module) : Ex4IfritAIHellfire(module, 110f.Degrees(), PartyRolesConfig.Assignment.OT);
+class Ex4IfritAIHellfire3(BossModule module) : Ex4IfritAIHellfire(module, 70f.Degrees(), PartyRolesConfig.Assignment.MT);

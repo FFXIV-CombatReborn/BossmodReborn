@@ -62,7 +62,7 @@ sealed class HeadDownKB(BossModule module) : Components.SimpleKnockbacks(module,
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }
 

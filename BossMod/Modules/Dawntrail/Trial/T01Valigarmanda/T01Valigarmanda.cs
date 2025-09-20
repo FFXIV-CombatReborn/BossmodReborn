@@ -29,7 +29,7 @@ sealed class Tulidisaster3(BossModule module) : Tulidisaster(module, (uint)AID.T
 sealed class Eruption(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Eruption, 6f);
 sealed class IceTalon(BossModule module) : Components.BaitAwayIcon(module, 6f, (uint)IconID.Tankbuster, (uint)AID.IceTalon, 5d, tankbuster: true, damageType: AIHints.PredictedDamageType.Tankbuster);
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 832, NameID = 12854)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 832, NameID = 12854)]
 public sealed class T01Valigarmanda(WorldState ws, Actor primary) : BossModule(ws, primary, new(100f, 100f), new ArenaBoundsRect(20f, 15f))
 {
     private static readonly uint[] objects = [(uint)OID.IceBoulder, (uint)OID.FlameKissedBeacon, (uint)OID.GlacialBeacon, (uint)OID.ThunderousBeacon];

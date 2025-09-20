@@ -86,14 +86,17 @@ class Breakthrough(BossModule module) : Components.GenericAOEs(module)
         var count = _aoes.Count;
         if (count != 0)
         {
-            var forbidden = new Func<WPos, float>[count];
+            var forbidden = new ShapeDistance[count];
+            var aoes = CollectionsMarshal.AsSpan(_aoes);
             for (var i = 0; i < count; ++i)
             {
-                var aoe = _aoes[i];
+                ref var aoe = ref aoes[i];
                 if (aoe.Shape is AOEShapeRect shape)
-                    forbidden[i] = (shape with { InvertForbiddenZone = true }).Distance(aoe.Origin, aoe.Rotation);
+                {
+                    forbidden[i] = shape.InvertedDistance(aoe.Origin, aoe.Rotation);
+                }
             }
-            hints.AddForbiddenZone(ShapeDistance.Union(forbidden), _aoes[0].Activation);
+            hints.AddForbiddenZone(new SDUnion(forbidden), aoes[0].Activation);
         }
     }
 
@@ -187,11 +190,11 @@ class BombTether(BossModule module) : Components.InterceptTetherAOE(module, (uin
         {
             base.AddAIHints(slot, actor, assignment, hints);
             var tether = Tethers[0];
-            if (tether.Player != Module.Raid.Player())
+            if (tether.Player != Raid.Player())
             {
                 var source = tether.Enemy;
                 var target = Module.Enemies((uint)OID.Alphinaud)[0];
-                hints.AddForbiddenZone(ShapeDistance.InvertedRect(target.Position + (target.HitboxRadius + 0.1f) * target.DirectionTo(source), source.Position, 0.5f), Activation);
+                hints.AddForbiddenZone(new SDInvertedRect(target.Position + (target.HitboxRadius + 0.1f) * target.DirectionTo(source), source.Position, 0.5f), Activation);
             }
         }
     }

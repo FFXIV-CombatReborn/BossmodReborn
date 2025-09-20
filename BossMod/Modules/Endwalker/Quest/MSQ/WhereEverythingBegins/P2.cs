@@ -110,7 +110,7 @@ sealed class VacuumWave(BossModule module) : Components.SimpleKnockbacks(module,
         if (Casters.Count == 0)
             return;
         ref readonly var c = ref Casters.Ref(0);
-        hints.AddForbiddenZone(ShapeDistance.InvertedCircle(c.Origin, 13f), c.Activation);
+        hints.AddForbiddenZone(new SDInvertedCircle(c.Origin, 13f), c.Activation);
     }
 }
 sealed class VoidQuakeIII(BossModule module) : Components.SimpleAOEs(module, (uint)AID.VoidQuakeIII, new AOEShapeCross(40f, 5f));

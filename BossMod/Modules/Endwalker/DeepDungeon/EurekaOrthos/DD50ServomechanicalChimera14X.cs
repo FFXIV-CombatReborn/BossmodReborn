@@ -174,7 +174,7 @@ class Cacophony(BossModule module) : Components.GenericAOEs(module)
         for (var i = 0; i < count; ++i)
         {
             var w = _orbs[i];
-            hints.AddForbiddenZone(ShapeDistance.Capsule(w.Position, w.Rotation, 10f, 6f));
+            hints.AddForbiddenZone(new SDCapsule(w.Position, w.Rotation, 10f, 6f));
         }
     }
 }

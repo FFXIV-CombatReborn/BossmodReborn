@@ -89,16 +89,16 @@ class RisingSeasKB(BossModule module) : Components.SimpleKnockbacks(module, (uin
         if (Casters.Count != 0)
         {
             var count = _aoe.AOEs.Count;
-            var forbidden = new Func<WPos, float>[count];
+            var forbidden = new ShapeDistance[count];
             var center = Arena.Center;
             var aoes = CollectionsMarshal.AsSpan(_aoe.AOEs);
             for (var i = 0; i < count; ++i)
             {
                 ref readonly var aoe = ref aoes[i];
-                forbidden[i] = ShapeDistance.Cone(center, 20f, Angle.FromDirection(aoe.Origin - center), cone);
+                forbidden[i] = new SDCone(center, 20f, Angle.FromDirection(aoe.Origin - center), cone);
             }
             if (forbidden.Length != 0)
-                hints.AddForbiddenZone(ShapeDistance.Union(forbidden), Casters.Ref(0).Activation);
+                hints.AddForbiddenZone(new SDUnion(forbidden), Casters.Ref(0).Activation);
         }
     }
 }

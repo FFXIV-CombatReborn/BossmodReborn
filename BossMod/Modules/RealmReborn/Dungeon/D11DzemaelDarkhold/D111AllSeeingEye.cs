@@ -42,7 +42,7 @@ class Positioning(BossModule module) : BossComponent(module)
         {
             var closestCrystal = Module.Enemies((uint)OID.Crystal).Closest(Module.PrimaryActor.Position);
             if (closestCrystal != null)
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(closestCrystal.Position, 8)); // TODO: verify range
+                hints.AddForbiddenZone(new SDInvertedCircle(closestCrystal.Position, 8)); // TODO: verify range
         }
     }
 }

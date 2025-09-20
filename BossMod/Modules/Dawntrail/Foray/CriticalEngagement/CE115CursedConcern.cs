@@ -83,14 +83,8 @@ sealed class CostOfLiving(BossModule module) : Components.SimpleKnockbacks(modul
             var act = c.Activation;
             if (!IsImmune(slot, act))
             {
-                var center = Arena.Center;
-                var origin = c.Origin;
-                hints.AddForbiddenZone(p =>
-                {
-                    if ((p + 30f * (p - origin).Normalized()).InCircle(center, 23f))
-                        return 1f;
-                    return default;
-                }, act);
+                // circle intentionally slightly smaller to prevent sus knockback
+                hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOrigin(Arena.Center, c.Origin, 30f, 23f), act);
             }
         }
     }
@@ -129,7 +123,7 @@ sealed class BuyersRemorseForcedMarch(BossModule module) : Components.GenericKno
     {
         if (affectedPlayers[slot])
         {
-            hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 15f), activation);
+            hints.AddForbiddenZone(new SDCircle(Arena.Center, 15f), activation);
             var dir = actor.Position - Arena.Center;
             var len = dir.Length();
             hints.ForbiddenDirections.Add((Angle.FromDirection(dir), Angle.Acos(Math.Clamp(-((len * len + 600f) / (len * 70f)), -1f, 1f)), activation));
@@ -167,7 +161,7 @@ sealed class WhatreYouBuying(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly (WPos dropofflocation, int required, int current)[] playerData = new (WPos, int, int)[PartyState.MaxPartySize];
     private readonly List<AOEInstance>[] _aoesPerPlayer = new List<AOEInstance>[PartyState.MaxPartySize];
-    private static readonly AOEShapeCircle circle = new(7f);
+    private static readonly AOEShapeCircle circle = new(7f), circleInv = new(7f, true);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => playerData[slot] != default ? CollectionsMarshal.AsSpan(_aoesPerPlayer[slot]) : [];
 
@@ -249,7 +243,7 @@ sealed class WhatreYouBuying(BossModule module) : Components.GenericAOEs(module)
                     if (aoe.Origin.AlmostEqual(pSlot.dropofflocation, 1f))
                     {
                         aoe.Color = Colors.SafeFromAOE;
-                        aoe.Shape = circle with { InvertForbiddenZone = true };
+                        aoe.Shape = circleInv;
                         return;
                     }
                 }
@@ -379,7 +373,7 @@ sealed class CE115CursedConcernStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 45)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 45)]
 public sealed class CE115CursedConcern(WorldState ws, Actor primary) : BossModule(ws, primary, new WPos(72f, -545f).Quantized(), new ArenaBoundsCircle(25f))
 {
     protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 30f);

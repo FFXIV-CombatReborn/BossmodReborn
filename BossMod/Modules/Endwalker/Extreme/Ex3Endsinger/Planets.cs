@@ -25,7 +25,7 @@ class Planets(BossModule module) : BossComponent(module)
         if (_planetsAzure.Count > 0)
         {
             var offsetLocation = Components.GenericKnockback.AwayFromSource(actor.Position, _planetsAzure[0], _knockbackDistance);
-            if (!Module.InBounds(offsetLocation))
+            if (!Arena.InBounds(offsetLocation))
             {
                 hints.Add("About to be knocked into wall!");
             }

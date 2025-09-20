@@ -62,7 +62,7 @@ class RonkanAura(BossModule module) : BossComponent(module)
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (AuraCenter is Actor a)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(a.Position, 10f), activation: WorldState.FutureTime(5d));
+            hints.AddForbiddenZone(new SDInvertedCircle(a.Position, 10f), activation: WorldState.FutureTime(5d));
     }
 }
 

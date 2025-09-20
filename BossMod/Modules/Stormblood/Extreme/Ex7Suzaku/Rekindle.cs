@@ -14,7 +14,7 @@ sealed class RekindleP1(BossModule module) : Rekindle(module)
         var count = scarletLadies.Count;
         for (var i = 0; i < count; ++i)
         {
-            hints.AddForbiddenZone(ShapeDistance.Circle(scarletLadies[i].Position, 7.12f));
+            hints.AddForbiddenZone(new SDCircle(scarletLadies[i].Position, 7.12f));
         }
     }
 

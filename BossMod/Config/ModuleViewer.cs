@@ -281,6 +281,7 @@ public sealed class ModuleViewer : IDisposable
                             {
                                 BossModuleInfo.Maturity.WIP => Colors.TextColor3,
                                 BossModuleInfo.Maturity.Verified => Colors.TextColor4,
+                                BossModuleInfo.Maturity.AISupport => Colors.TextColor2,
                                 _ => Colors.TextColor1
                             };
                             using (ImRaii.PushColor(ImGuiCol.Text, textColor))

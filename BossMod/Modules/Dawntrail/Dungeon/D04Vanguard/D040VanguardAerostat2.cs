@@ -36,7 +36,7 @@ sealed class D040VanguardAerostat2States : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 831, NameID = 12780, SortOrder = 6)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 831, NameID = 12780, SortOrder = 6)]
 public sealed class D040VanguardAerostat2(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly WPos[] vertices = [new(92.36f, -331.66f), new(97.65f, -331.36f), new(98.25f, -331.02f), new(100.54f, -328.46f), new(100.83f, -312.14f),
@@ -82,6 +82,8 @@ public sealed class D040VanguardAerostat2(WorldState ws, Actor primary) : BossMo
     {
         var count = hints.PotentialTargets.Count;
         for (var i = 0; i < count; ++i)
+        {
             hints.PotentialTargets[i].Priority = 0;
+        }
     }
 }

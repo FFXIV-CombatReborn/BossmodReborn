@@ -2,6 +2,7 @@
 
 namespace BossMod;
 
+[SkipLocalsInit]
 public sealed class ZoneModuleWindow : UIWindow
 {
     private readonly ZoneModuleManager _zmm;

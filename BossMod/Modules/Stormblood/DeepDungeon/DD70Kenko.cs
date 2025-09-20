@@ -31,7 +31,7 @@ sealed class InnerspaceVoidzone(BossModule module) : Components.GenericAOEs(modu
 {
     private AOEInstance[] _aoe = [];
     private AOEInstance[] _aoeTarget = [];
-    private static readonly AOEShapeCircle circle = new(3f);
+    private static readonly AOEShapeCircle circleInv = new(3f, true), circle = new(3f);
     private int target = -1;
     private bool ululation;
 
@@ -73,7 +73,7 @@ sealed class InnerspaceVoidzone(BossModule module) : Components.GenericAOEs(modu
             if (_aoe.Length != 0)
             {
                 ref var aoe = ref _aoe[0];
-                _aoeTarget = [aoe with { Shape = circle with { InvertForbiddenZone = true }, Color = Colors.SafeFromAOE }];
+                _aoeTarget = [new(circleInv, aoe.Origin, color: Colors.SafeFromAOE)];
             }
         }
     }

@@ -105,14 +105,14 @@ sealed class LightningBolt(BossModule module) : Components.GenericBaitAway(modul
             return;
         }
         var count = freeRods.Count;
-        var forbidden = new Func<WPos, float>[count];
+        var forbidden = new ShapeDistance[count];
         for (var i = 0; i < count; ++i)
         {
-            forbidden[i] = ShapeDistance.InvertedCircle(freeRods[i].Position, 4f);
+            forbidden[i] = new SDInvertedCircle(freeRods[i].Position, 4f);
         }
         if (count != 0)
         {
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), activation);
+            hints.AddForbiddenZone(new SDIntersection(forbidden), activation);
         }
     }
 

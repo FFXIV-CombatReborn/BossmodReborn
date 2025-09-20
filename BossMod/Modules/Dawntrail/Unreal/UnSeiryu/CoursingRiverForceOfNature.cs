@@ -38,45 +38,23 @@ sealed class CoursingRiverForceOfNature(BossModule module) : Components.GenericK
         {
             ref readonly var c = ref _kbs.Ref(0);
             var center = Arena.Center;
+            var act = c.Activation;
             if (count == 2)
             {
                 ref readonly var c1 = ref _kbs.Ref(1);
-                var act = c.Activation;
                 var dir = 25f * c1.Direction.ToDirection();
                 if (!IsImmune(slot, act))
                 {
-                    hints.AddForbiddenZone(p =>
-                    {
-                        if (p.InCircle(center, 10f) && (p + dir).InCircle(center, 19f)) // circle intentionally slightly smaller to prevent sus knockback
-                        {
-                            return 1f;
-                        }
-                        return default;
-                    }, c.Activation);
+                    hints.AddForbiddenZone(new SDKnockbackInCircleFixedDirectionAndAwayFromOrigin(center, c.Origin, dir, 10f, 19f), act); // circle intentionally slightly smaller to prevent sus knockback
                 }
                 else
                 {
-                    hints.AddForbiddenZone(p =>
-                    {
-                        if ((p + dir).InCircle(center, 19f))
-                        {
-                            return 1f;
-                        }
-                        return default;
-                    }, c.Activation);
+                    hints.AddForbiddenZone(new SDKnockbackInCircleFixedDirection(center, dir, 19f), act);
                 }
             }
             else
             {
-                var dir = 25f * c.Direction.ToDirection();
-                hints.AddForbiddenZone(p =>
-                {
-                    if ((p + dir).InCircle(center, 19f))
-                    {
-                        return 1f;
-                    }
-                    return default;
-                }, c.Activation);
+                hints.AddForbiddenZone(new SDKnockbackInCircleFixedDirection(center, 25f * c.Direction.ToDirection(), 19f), act);
             }
         }
     }

@@ -38,9 +38,9 @@ class Hints(BossModule module) : BossComponent(module)
     }
 }
 
-class Incinerate(BossModule module) : Components.Cleave(module, (uint)AID.Incinerate, new AOEShapeCone(16, 60.Degrees())); // TODO: verify angle
-class Eruption(BossModule module) : Components.SimpleAOEs(module, (uint)AID.EruptionAOE, 8);
-class RadiantPlume(BossModule module) : Components.SimpleAOEs(module, (uint)AID.RadiantPlumeAOE, 8);
+class Incinerate(BossModule module) : Components.Cleave(module, (uint)AID.Incinerate, new AOEShapeCone(16f, 60f.Degrees())); // TODO: verify angle
+class Eruption(BossModule module) : Components.SimpleAOEs(module, (uint)AID.EruptionAOE, 8f);
+class RadiantPlume(BossModule module) : Components.SimpleAOEs(module, (uint)AID.RadiantPlumeAOE, 8f);
 class Nails(BossModule module) : Components.Adds(module, (uint)OID.InfernalNail, 2);
 
 class T01IfritNStates : StateMachineBuilder
@@ -57,4 +57,7 @@ class T01IfritNStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 56, NameID = 1185)]
-public class T01IfritN(WorldState ws, Actor primary) : BossModule(ws, primary, default, new ArenaBoundsCircle(20));
+public class T01IfritN(WorldState ws, Actor primary) : BossModule(ws, primary, default, IfritArena)
+{
+    public static readonly ArenaBoundsCustom IfritArena = new([new Polygon(default, 19.5f, 36)]);
+}

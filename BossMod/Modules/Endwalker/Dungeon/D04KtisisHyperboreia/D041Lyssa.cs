@@ -92,7 +92,7 @@ sealed class HeavySmash(BossModule module) : Components.StackWithCastTargets(mod
         {
             if (party[i].Type == ActorType.Buddy)
             {
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(new(-139f, 47f), 5f), Stacks[0].Activation);
+                hints.AddForbiddenZone(new SDInvertedCircle(new(-139f, 47f), 5f), Stacks.Ref(0).Activation);
                 return;
             }
         }

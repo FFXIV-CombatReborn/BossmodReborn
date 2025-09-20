@@ -16,7 +16,7 @@ sealed class T02ZoraalJaStates : StateMachineBuilder
             .ActivateOnEnter<PatricidalPique>()
             .ActivateOnEnter<Burst>()
             .ActivateOnEnter<VorpalTrail>()
-            .Raw.Update = () => Module.PrimaryActor.IsDeadOrDestroyed || !Module.PrimaryActor.IsTargetable;
+            .Raw.Update = () => module.PrimaryActor.IsDeadOrDestroyed || !module.PrimaryActor.IsTargetable;
     }
 }
 
@@ -28,5 +28,5 @@ public abstract class ZoraalJa(WorldState ws, Actor primary) : BossModule(ws, pr
     public static readonly ArenaBoundsSquare SmallBounds = new(10f, ArenaRotation);
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 995, NameID = 12881, SortOrder = 1)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 995, NameID = 12881, SortOrder = 1)]
 public sealed class T02ZoraalJa(WorldState ws, Actor primary) : ZoraalJa(ws, primary);

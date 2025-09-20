@@ -26,4 +26,26 @@ class Hydrostasis(BossModule module) : Components.GenericKnockback(module)
             }
         }
     }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        var count = _sources.Count;
+        if (count != 0)
+        {
+            ref readonly var c = ref _sources.Ref(0);
+            var act = c.Activation;
+            if (!IsImmune(slot, act))
+            {
+                if (count > 1)
+                {
+                    ref readonly var c2 = ref _sources.Ref(1);
+                    hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOriginIntoDirection(Arena.Center, c.Origin, 28f, 29f, (c2.Origin - c.Origin).Normalized(), 15f.Degrees()), act);
+                }
+                else
+                {
+                    hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOrigin(Arena.Center, c.Origin, 28f, 29f), act);
+                }
+            }
+        }
+    }
 }

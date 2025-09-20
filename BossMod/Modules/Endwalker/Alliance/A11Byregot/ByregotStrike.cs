@@ -4,8 +4,6 @@ class ByregotStrikeJump(BossModule module) : Components.SimpleAOEGroups(module, 
 
 class ByregotStrikeKnockback(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.ByregotStrikeKnockback, 18f)
 {
-    private static readonly Angle a45 = 45f.Degrees(), a180 = 180f.Degrees();
-
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (Casters.Count != 0)
@@ -13,7 +11,9 @@ class ByregotStrikeKnockback(BossModule module) : Components.SimpleKnockbacks(mo
             ref readonly var c = ref Casters.Ref(0);
             var act = c.Activation;
             if (!IsImmune(slot, act))
-                hints.AddForbiddenZone(ShapeDistance.InvertedCone(c.Origin, 14f, c.Direction + a180, a45), act);
+            {
+                hints.AddForbiddenZone(new SDKnockbackInAABBSquareAwayFromOrigin(Arena.Center, c.Origin, 18f, 23f), act);
+            }
         }
     }
 }

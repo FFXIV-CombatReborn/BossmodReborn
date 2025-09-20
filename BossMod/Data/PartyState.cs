@@ -63,7 +63,7 @@ public sealed class PartyState
     // select non-null and optionally alive raid members
     public Actor[] WithoutSlot(bool includeDead = false, bool excludeAlliance = false, bool excludeNPCs = false)
     {
-        var limit = excludeNPCs ? MaxAllianceSize : MaxAllies;
+        var limit = excludeNPCs && excludeAlliance ? MaxPartySize : excludeNPCs ? MaxAllianceSize : MaxAllies;
         var result = new Actor[limit];
         var count = 0;
 
@@ -71,30 +71,35 @@ public sealed class PartyState
         {
             for (var i = 0; i < MaxPartySize; ++i)
             {
-                ref readonly var player = ref _actors[i];
+                var player = _actors[i];
                 if (player == null || !includeDead && player.IsDead)
+                {
                     continue;
-
+                }
                 result[count++] = player;
             }
             if (!excludeNPCs)
+            {
                 for (var i = MaxAllianceSize; i < limit; ++i)
                 {
-                    ref readonly var player = ref _actors[i];
+                    var player = _actors[i];
                     if (player == null || !includeDead && player.IsDead)
+                    {
                         continue;
-
+                    }
                     result[count++] = player;
                 }
+            }
         }
         else
         {
             for (var i = 0; i < limit; ++i)
             {
-                ref readonly var player = ref _actors[i];
+                var player = _actors[i];
                 if (player == null || !includeDead && player.IsDead)
+                {
                     continue;
-
+                }
                 result[count++] = player;
             }
         }
@@ -103,7 +108,7 @@ public sealed class PartyState
 
     public (int, Actor)[] WithSlot(bool includeDead = false, bool excludeAlliance = false, bool excludeNPCs = false)
     {
-        var limit = excludeNPCs ? MaxAllianceSize : MaxAllies;
+        var limit = excludeNPCs && excludeAlliance ? MaxPartySize : excludeNPCs ? MaxAllianceSize : MaxAllies;
         var result = new (int, Actor)[limit];
         var count = 0;
 
@@ -111,29 +116,35 @@ public sealed class PartyState
         {
             for (var i = 0; i < MaxPartySize; ++i)
             {
-                ref readonly var player = ref _actors[i];
+                var player = _actors[i];
                 if (player == null || !includeDead && player.IsDead)
+                {
                     continue;
+                }
                 result[count++] = (i, player);
             }
             if (!excludeNPCs)
+            {
                 for (var i = MaxAllianceSize; i < limit; ++i)
                 {
-                    ref readonly var player = ref _actors[i];
+                    var player = _actors[i];
                     if (player == null || !includeDead && player.IsDead)
+                    {
                         continue;
-
+                    }
                     result[count++] = (i, player);
                 }
+            }
         }
         else
         {
             for (var i = 0; i < limit; ++i)
             {
-                ref readonly var player = ref _actors[i];
+                var player = _actors[i];
                 if (player == null || !includeDead && player.IsDead)
+                {
                     continue;
-
+                }
                 result[count++] = (i, player);
             }
         }
@@ -150,9 +161,11 @@ public sealed class PartyState
         var len = Members.Length;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var m = ref Members[i];
+            ref var m = ref Members[i];
             if (m.InstanceId == instanceID)
+            {
                 return i;
+            }
         }
         return -1;
     }
@@ -162,8 +175,13 @@ public sealed class PartyState
     {
         var length = Members.Length;
         for (var i = 0; i < length; ++i)
-            if (name.Equals(Members[i].Name, cmp))
+        {
+            ref var m = ref Members[i];
+            if (name.Equals(m.Name, cmp))
+            {
                 return i;
+            }
+        }
         return -1;
     }
 
@@ -172,10 +190,17 @@ public sealed class PartyState
         var length = Members.Length;
         List<WorldState.Operation> ops = new(length + 1);
         for (var i = 0; i < length; ++i)
-            if (Members[i].IsValid())
-                ops.Add(new OpModify(i, Members[i]));
+        {
+            ref var m = ref Members[i];
+            if (m.IsValid())
+            {
+                ops.Add(new OpModify(i, m));
+            }
+        }
         if (LimitBreakCur != 0 || LimitBreakMax != 10000)
+        {
             ops.Add(new OpLimitBreakChange(LimitBreakCur, LimitBreakMax));
+        }
         return ops;
     }
 

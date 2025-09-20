@@ -38,7 +38,7 @@ class HeavensfallBait(BossModule module) : Components.BaitAwayIcon(module, 5f, (
     {
         base.AddAIHints(slot, actor, assignment, hints);
         if (ActiveBaitsOn(actor).Count != 0)
-            hints.AddForbiddenZone(ShapeDistance.Circle(D023Tioman.ArenaCenter, 27f));
+            hints.AddForbiddenZone(new SDCircle(D023Tioman.ArenaCenter, 27f));
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
@@ -55,7 +55,7 @@ class Meteor(BossModule module) : Components.BaitAwayIcon(module, 20f, (uint)Ico
     {
         base.AddAIHints(slot, actor, assignment, hints);
         if (ActiveBaitsOn(actor).Count != 0)
-            hints.AddForbiddenZone(ShapeDistance.Circle(D023Tioman.ArenaCenter, 27f));
+            hints.AddForbiddenZone(new SDCircle(D023Tioman.ArenaCenter, 27f));
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)

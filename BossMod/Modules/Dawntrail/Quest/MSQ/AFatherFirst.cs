@@ -96,7 +96,13 @@ sealed class DualBlowsSteeledStrike(BossModule module) : Components.GenericAOEs(
                 AddAOE(cone);
                 if (_aoes.Count == 2)
                 {
-                    _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                    var aoes = CollectionsMarshal.AsSpan(_aoes);
+                    ref var aoe1 = ref aoes[0];
+                    ref var aoe2 = ref aoes[1];
+                    if (aoe1.Activation > aoe2.Activation)
+                    {
+                        (aoe1, aoe2) = (aoe2, aoe1);
+                    }
                 }
                 break;
             case (uint)AID.SteeledStrike1:

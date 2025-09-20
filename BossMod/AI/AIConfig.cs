@@ -28,16 +28,16 @@ sealed class AIConfig : ConfigNode
     public bool ForbidMovement = false;
 
     [PropertyDisplay("Follow during combat")]
-    public bool FollowDuringCombat = false;
+    public bool FollowDuringCombat = true;
 
     [PropertyDisplay("Follow during active boss module")]
-    public bool FollowDuringActiveBossModule = false;
+    public bool FollowDuringActiveBossModule = true;
 
     [PropertyDisplay("Follow out of combat")]
     public bool FollowOutOfCombat = false;
 
     [PropertyDisplay("Follow target")]
-    public bool FollowTarget = false;
+    public bool FollowTarget = true;
 
     [PropertyDisplay("Desired positional when following target")]
     [PropertyCombo(["Any", "Flank", "Rear", "Front"])]

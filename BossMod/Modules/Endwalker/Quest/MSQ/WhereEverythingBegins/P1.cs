@@ -50,17 +50,7 @@ public class ScarmiglioneP1(WorldState ws, Actor primary) : BossModule(ws, prima
     new Rectangle(new(0, -129.2f), 3.2f, 1), new Rectangle(new(0, -166.8f), 3.2f, 1)]);
     private static readonly uint[] trash = [(uint)OID.PlunderedButler, (uint)OID.PlunderedSteward, (uint)OID.PlunderedPawn];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(trash);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            if (enemies[i].InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInCombat(trash);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

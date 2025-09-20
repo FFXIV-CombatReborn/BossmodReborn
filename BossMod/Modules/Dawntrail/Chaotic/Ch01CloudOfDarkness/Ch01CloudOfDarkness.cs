@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Dawntrail.Chaotic.Ch01CloudOfDarkness;
 
-sealed class Flare(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.Flare, (uint)AID.FlareAOE, 25f, 8.1f);
+sealed class Flare(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.Flare, (uint)AID.FlareAOE, 25f, 8.1d);
 sealed class StygianShadow(BossModule module) : Components.Adds(module, (uint)OID.StygianShadow);
 sealed class Atomos(BossModule module) : Components.Adds(module, (uint)OID.Atomos);
 sealed class GhastlyGloomCross(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GhastlyGloomCrossAOE, new AOEShapeCross(40f, 15f));

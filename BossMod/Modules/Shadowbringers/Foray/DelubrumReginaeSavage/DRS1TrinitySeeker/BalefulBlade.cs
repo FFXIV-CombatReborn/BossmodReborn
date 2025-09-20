@@ -40,7 +40,7 @@ sealed class BalefulBlade(BossModule module) : Components.GenericAOEs(module)
                 }
                 _phantomEdge = true;
             }
-            _aoe = [new(new AOEShapeCustom(shapes, InvertForbiddenZone: true), centerPos, default, Module.CastFinishAt(spell, 0.1d), Colors.SafeFromAOE)];
+            _aoe = [new(new AOEShapeCustom(shapes, invertForbiddenZone: true), centerPos, default, Module.CastFinishAt(spell, 0.1d), Colors.SafeFromAOE)];
         }
     }
 

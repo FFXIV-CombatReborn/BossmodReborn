@@ -5,32 +5,16 @@ sealed class TwoThreeFourSnapTwistDropTheNeedle(BossModule module) : Components.
     public readonly List<AOEInstance> AOEs = new(2);
     private static readonly AOEShapeRect rect = new(20f, 20f);
 
-    public override void AddGlobalHints(GlobalHints hints)
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = AOEs.Count;
-        if (count > 0)
+        if (count == 0)
         {
-            var sb = new StringBuilder(12);
-            var aoes = CollectionsMarshal.AsSpan(AOEs);
-            for (var i = 0; i < count; ++i)
-            {
-                var roundedrot = MathF.Round(aoes[i].Rotation.Normalized().Deg);
-                var shapeHint = roundedrot switch
-                {
-                    -90 => "West",
-                    90 => "East",
-                    _ => ""
-                };
-                sb.Append(shapeHint);
-
-                if (i < count - 1)
-                    sb.Append(" -> ");
-            }
-            hints.Add(sb.ToString());
+            return [];
         }
+        var max = count > 2 ? 2 : count;
+        return CollectionsMarshal.AsSpan(AOEs)[..max];
     }
-
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => AOEs.Count != 0 ? CollectionsMarshal.AsSpan(AOEs)[..1] : [];
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
@@ -61,10 +45,15 @@ sealed class TwoThreeFourSnapTwistDropTheNeedle(BossModule module) : Components.
             case (uint)AID.FourSnapTwistDropTheNeedleFirst7:
             case (uint)AID.FourSnapTwistDropTheNeedleFirst8:
                 AddAOE();
-                AddAOE(180f.Degrees(), 3.5f);
+                AddAOE(180f.Degrees(), 3.5d);
                 break;
         }
-        void AddAOE(Angle offset = default, float delay = default) => AOEs.Add(new(rect, spell.LocXZ, spell.Rotation + offset, Module.CastFinishAt(spell, delay)));
+        void AddAOE(Angle offset = default, double delay = default)
+        {
+            var loc = spell.LocXZ;
+            var rot = spell.Rotation;
+            AOEs.Add(new(rect, delay != default ? loc - 5f * rot.ToDirection() : loc, spell.Rotation + offset, Module.CastFinishAt(spell, delay)));
+        }
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
@@ -103,9 +92,15 @@ sealed class TwoThreeFourSnapTwistDropTheNeedle(BossModule module) : Components.
             case (uint)AID.ThreeSnapTwistDropTheNeedle4:
             case (uint)AID.FourSnapTwistDropTheNeedle4:
             case (uint)AID.FourSnapTwistDropTheNeedle5:
-                if (AOEs.Count != 0)
+                var count = AOEs.Count;
+                if (count != 0)
                 {
                     AOEs.RemoveAt(0);
+                    if (count == 2)
+                    {
+                        ref var aoe2 = ref AOEs.Ref(0);
+                        aoe2.Origin -= 5f * aoe2.Rotation.ToDirection();
+                    }
                 }
                 ++NumCasts;
                 break;
@@ -120,7 +115,7 @@ sealed class TwoThreeFourSnapTwistDropTheNeedle(BossModule module) : Components.
             return;
         }
         // make ai stay close to boss to ensure successfully dodging the combo
-        hints.AddForbiddenZone(ShapeDistance.InvertedRect(Arena.Center, new WDir(1f, default), 2f, 2f, 40f), AOEs.Ref(0).Activation);
+        hints.AddForbiddenZone(new SDInvertedRect(Arena.Center, new WDir(1f, default), 2f, 2f, 40f), AOEs.Ref(0).Activation);
     }
 }
 

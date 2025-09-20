@@ -112,7 +112,7 @@ class DibridTetrabridBlaster(BossModule module) : Components.GenericAOEs(module)
         {
             var aoe = _aoes[0];
             // stay close to the middle if there is more than one aoe left
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(aoe.Origin, 5f), aoe.Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(aoe.Origin, 5f), aoe.Activation);
         }
     }
 }

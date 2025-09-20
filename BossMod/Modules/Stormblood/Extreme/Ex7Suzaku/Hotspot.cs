@@ -91,6 +91,6 @@ sealed class Hotspot(BossModule module) : Components.GenericAOEs(module)
         if (count == 0 || count == 16 && NumCasts >= 15 || count == 8 && NumCasts >= 7 || _kb != null && _kb.State.Count != 0)
             return;
         // force ai to stay close to the borders of the 4 panels since there is usually just 1.2s between hits
-        hints.AddForbiddenZone(ShapeDistance.InvertedCross(Ex7Suzaku.ArenaCenter, default, 20f, 1f), DateTime.MaxValue);
+        hints.AddForbiddenZone(new SDInvertedCross(Ex7Suzaku.ArenaCenter, default, 20f, 1f), DateTime.MaxValue);
     }
 }

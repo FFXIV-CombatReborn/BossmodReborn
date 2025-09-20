@@ -146,18 +146,7 @@ public class D130BlizzardDragon(WorldState ws, Actor primary) : BossModule(ws, p
 
     public static readonly uint[] Trash = [(uint)OID.HolyWyvern, (uint)OID.BlizzardDragon1];
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(Trash);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInCombat(Trash);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

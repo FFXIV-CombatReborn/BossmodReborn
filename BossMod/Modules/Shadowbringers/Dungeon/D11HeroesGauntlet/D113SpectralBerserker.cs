@@ -43,7 +43,7 @@ class BeastlyFuryArenaChange(BossModule module) : Components.GenericAOEs(module)
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.BeastlyFury && Arena.Bounds == D113SpectralBerserker.StartingBounds)
+        if (spell.Action.ID == (uint)AID.BeastlyFury && Arena.Bounds.Radius > 20f)
         {
             _aoe = [new(cross, Arena.Center, default, Module.CastFinishAt(spell, 1.1d))];
         }
@@ -185,21 +185,26 @@ class WildAnguish2(BossModule module) : Components.GenericTowers(module)
 
 class WildRageKnockback(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.WildRageKnockback, 15f)
 {
-    private static readonly Angle a10 = 10f.Degrees(), a45 = 45f.Degrees();
+    private RelSimplifiedComplexPolygon polygon;
+    private bool polygonInit;
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (Casters.Count != 0)
         {
             ref readonly var c = ref Casters.Ref(0);
-            var forbidden = new Func<WPos, float>[2];
-            var pos = c.Origin;
-            var dir = pos.X == 738f ? 1 : -1;
-            forbidden[0] = ShapeDistance.InvertedDonutSector(pos, 8f, 9f, a45 * dir, a10);
-            forbidden[1] = ShapeDistance.InvertedDonutSector(pos, 8f, 9f, 3f * a45 * dir, a10);
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), c.Activation);
+            var act = c.Activation;
+            if (!IsImmune(slot, act))
+            {
+                if (!polygonInit)
+                {
+                    polygon = D113SpectralBerserker.DefaultBounds.Polygon.Offset(-1f); // pretend polygon is 1y smaller than real for less suspect knockbacks
+                    polygonInit = true;
+                }
+                hints.AddForbiddenZone(new SDKnockbackInComplexPolygonAwayFromOriginPlusAOECircles(Arena.Center, c.Origin, 15f, polygon, [new(738f, 482f), new(762f, 482f)], 7.5f, 2), c.Activation);
+            }
         }
-    }
+    }//
 }
 
 class WildRageRaidwide(BossModule module) : Components.RaidwideCast(module, (uint)AID.WildRageKnockback);
@@ -219,7 +224,8 @@ class CratersWildRampage(BossModule module) : Components.GenericAOEs(module)
     {
         if (_aoe is AOEShapeCustom aoe)
         {
-            return new AOEInstance[1] { new(aoe with { InvertForbiddenZone = invert }, Arena.Center, default, activation, invert ? Colors.SafeFromAOE : default) };
+            aoe.InvertForbiddenZone = invert;
+            return new AOEInstance[1] { new(aoe, Arena.Center, default, activation, invert ? Colors.SafeFromAOE : default) };
         }
         return [];
     }
@@ -294,10 +300,9 @@ class D113SpectralBerserkerStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 737, NameID = 9511)]
-public class D113SpectralBerserker(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, StartingBounds)
+public class D113SpectralBerserker(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, new ArenaBoundsSquare(22.5f))
 {
     public static readonly WPos ArenaCenter = new(750f, 482f);
-    public static readonly ArenaBoundsSquare StartingBounds = new(22.5f);
     public static readonly Cross[] Cross = [new Cross(ArenaCenter, 20f, 10f)];
-    public static readonly ArenaBounds DefaultBounds = new ArenaBoundsCustom(Cross);
+    public static readonly ArenaBoundsCustom DefaultBounds = new(Cross);
 }

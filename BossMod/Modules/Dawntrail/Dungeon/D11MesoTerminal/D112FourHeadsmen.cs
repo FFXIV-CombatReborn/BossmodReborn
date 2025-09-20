@@ -120,7 +120,7 @@ sealed class CellBlock(BossModule module) : Components.GenericAOEs(module)
     public readonly Actor?[] AssignedBoss = new Actor?[4];
     private readonly D112FourHeadsmen bossmod = (D112FourHeadsmen)module;
     public readonly List<AOEInstance> _aoes = new(2);
-    private static readonly AOEShapeRect square = new(8f, 8f, 8f);
+    private readonly AOEShapeRect square = new(8f, 8f, 8f);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => AssignedBoss[slot] == null ? CollectionsMarshal.AsSpan(_aoes) : [];
 
@@ -138,14 +138,13 @@ sealed class CellBlock(BossModule module) : Components.GenericAOEs(module)
             {
                 _aoes.Add(new(square, pos));
             }
-            if (state == 0x00200004u)
+            else if (state == 0x00200004u)
             {
                 var aoes = CollectionsMarshal.AsSpan(_aoes);
                 var len = aoes.Length;
                 for (var i = 0; i < len; ++i)
                 {
-                    ref var aoe = ref aoes[i];
-                    if (aoe.Origin == pos)
+                    if (aoes[i].Origin == pos)
                     {
                         _aoes.RemoveAt(i);
                         return;
@@ -198,34 +197,93 @@ sealed class CellBlock(BossModule module) : Components.GenericAOEs(module)
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (AssignedBoss[slot] is var assignedSlot && assignedSlot != null)
+        var count = hints.PotentialTargets.Count;
+        var assigned = AssignedBoss[slot];
+        for (var i = 0; i < count; ++i)
         {
-            var count = hints.PotentialTargets.Count;
-            for (var i = 0; i < count; ++i)
+            var enemy = hints.PotentialTargets[i];
+            var a = enemy.Actor;
+            if (a.OID == (uint)OID.Hellmaker && (a.Position - actor.Position).LengthSq() < 324f) // can attack them from any prison, but it doesn't seem needed
             {
-                var enemy = hints.PotentialTargets[i];
-                var a = enemy.Actor;
-                if (a != assignedSlot)
+                enemy.Priority = 1;
+                if (actor.Role == Role.Melee)
                 {
-                    if (a.OID == (uint)OID.Hellmaker && (a.Position - actor.Position).LengthSq() < 324f) // can attack them from any prison, but it doesn't seem needed
-                    {
-                        enemy.Priority = 1;
-                    }
-                    else
-                    {
-                        enemy.Priority = AIHints.Enemy.PriorityInvincible;
-                    }
+                    hints.GoalZones.Add(hints.GoalSingleTarget(a, 3f, 99f)); // needed for RSR since it won't attack targets outside melee range on melees
                 }
+            }
+            else if (a != null && a != assigned)
+            {
+                enemy.Priority = AIHints.Enemy.PriorityInvincible;
+            }
+        }
+        base.AddAIHints(slot, actor, assignment, hints);
+    }
+}
+
+sealed class DismembermentExecutionWheelFlayingFlailChoppingBlock(BossModule module) : Components.GenericAOEs(module)
+{
+    private readonly AOEShapeDonut donut = new(4f, 9f);
+    private readonly AOEShapeCircle circleSmall = new(5f), circleBig = new(6f);
+    private readonly AOEShapeRect rect = new(16f, 2f);
+
+    private readonly List<AOEInstance> _aoes = new(7);
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        var count = _aoes.Count;
+        if (count == 0)
+        {
+            return [];
+        }
+        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        var deadline = aoes[0].Activation.AddSeconds(2d);
+
+        var index = 0;
+        while (index < count)
+        {
+            ref var aoe = ref aoes[index];
+            if (aoe.Activation >= deadline)
+            {
+                break;
+            }
+            ++index;
+        }
+        return aoes[..index];
+    }
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        AOEShape? shape = spell.Action.ID switch
+        {
+            (uint)AID.Dismemberment => rect,
+            (uint)AID.ExecutionWheel => donut,
+            (uint)AID.FlayingFlail => circleSmall,
+            (uint)AID.ChoppingBlock => circleBig,
+            _ => null
+        };
+        if (shape != null)
+        {
+            _aoes.Add(new(shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell), actorID: caster.InstanceID));
+        }
+    }
+
+    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    {
+        var count = _aoes.Count;
+        var id = caster.InstanceID;
+        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        for (var i = 0; i < count; ++i)
+        {
+            if (aoes[i].ActorID == id)
+            {
+                _aoes.RemoveAt(i);
+                return;
             }
         }
     }
 }
 
 sealed class HeadSplittingRoar(BossModule module) : Components.RaidwideCast(module, (uint)AID.HeadSplittingRoar);
-sealed class Dismemberment(BossModule module) : Components.SimpleAOEGroupsByTimewindow(module, [(uint)AID.Dismemberment], new AOEShapeRect(16f, 2f));
-sealed class ExecutionWheel(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ExecutionWheel, new AOEShapeDonut(4f, 9f));
-sealed class FlayingFlail(BossModule module) : Components.SimpleAOEs(module, (uint)AID.FlayingFlail, 5f);
-sealed class ChoppingBlock(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ChoppingBlock, 6f);
 sealed class DeathPenalty(BossModule module) : Components.SingleTargetCast(module, (uint)AID.DeathPenalty, "Healerbuster");
 sealed class Doom(BossModule module) : Components.CleansableDebuff(module, (uint)SID.Doom);
 sealed class WillBreaker(BossModule module) : Components.CastInterruptHint(module, (uint)AID.WillBreaker, showNameInHint: true);
@@ -247,7 +305,7 @@ sealed class RelentlessTorment(BossModule module) : Components.SingleTargetCastD
     {
         if (Targets.Count != 0)
         {
-            ref readonly var t = ref Targets.Ref(0);
+            ref var t = ref Targets.Ref(0);
             if (t.target.IsDead || t.caster.IsDead)
             {
                 Targets.Clear();
@@ -259,6 +317,7 @@ sealed class RelentlessTorment(BossModule module) : Components.SingleTargetCastD
 sealed class PealOfJudgment(BossModule module) : Components.Exaflare(module, new AOEShapeRect(2f, 2f))
 {
     private readonly D112FourHeadsmen bossmod = (D112FourHeadsmen)module;
+    private readonly List<Actor> swords = module.Enemies((uint)OID.SwordOfJustice);
 
     public override void OnActorCreated(Actor actor)
     {
@@ -329,6 +388,20 @@ sealed class PealOfJudgment(BossModule module) : Components.Exaflare(module, new
             }
         }
     }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        base.AddAIHints(slot, actor, assignment, hints);
+        var count = swords.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            var s = swords[i];
+            if (!s.IsDead)
+            {
+                hints.TemporaryObstacles.Add(new SDRect(s.Position, s.Rotation, 4f, default, 2f));
+            }
+        }
+    }
 }
 
 sealed class D112FourHeadsmenStates : StateMachineBuilder
@@ -339,10 +412,7 @@ sealed class D112FourHeadsmenStates : StateMachineBuilder
             .ActivateOnEnter<CellBlock>()
             .ActivateOnEnter<Prisons>()
             .ActivateOnEnter<HeadSplittingRoar>()
-            .ActivateOnEnter<Dismemberment>()
-            .ActivateOnEnter<ExecutionWheel>()
-            .ActivateOnEnter<FlayingFlail>()
-            .ActivateOnEnter<ChoppingBlock>()
+            .ActivateOnEnter<DismembermentExecutionWheelFlayingFlailChoppingBlock>()
             .ActivateOnEnter<DeathPenalty>()
             .ActivateOnEnter<Doom>()
             .ActivateOnEnter<WillBreaker>()
@@ -353,7 +423,7 @@ sealed class D112FourHeadsmenStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.PaleHeadsman, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1028u, NameID = 14049u, Category = BossModuleInfo.Category.Dungeon, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 2)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", PrimaryActorOID = (uint)OID.PaleHeadsman, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1028u, NameID = 14049u, Category = BossModuleInfo.Category.Dungeon, Expansion = BossModuleInfo.Expansion.Dawntrail, SortOrder = 2)]
 public sealed class D112FourHeadsmen(WorldState ws, Actor primary) : BossModule(ws, primary, DefaultBounds.Center, DefaultBounds)
 {
     public Actor? RavenousHeadsman;

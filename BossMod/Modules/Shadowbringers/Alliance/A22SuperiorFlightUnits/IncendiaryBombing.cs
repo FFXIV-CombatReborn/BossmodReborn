@@ -53,7 +53,7 @@ sealed class IncendiaryBarrage(BossModule module) : Components.VoidzoneAtCastTar
 sealed class IncendiaryBombingBait : Components.GenericBaitAway
 {
     private static readonly AOEShapeCircle circle = new(8f);
-    private RelSimplifiedComplexPolygon polygon = new();
+    private RelSimplifiedComplexPolygon polygon;
     private bool polygonInit;
 
     public IncendiaryBombingBait(BossModule module) : base(module, centerAtTarget: true)
@@ -87,16 +87,7 @@ sealed class IncendiaryBombingBait : Components.GenericBaitAway
                 polygonInit = true;
             }
 
-            var center = Arena.Center;
-            var poly = polygon;
-            hints.AddForbiddenZone(p =>
-            {
-                if (poly.Contains(p - center))
-                {
-                    return default;
-                }
-                return 1f;
-            }, CurrentBaits.Ref(0).Activation);
+            hints.AddForbiddenZone(new SDComplexPolygonInvertedContains(polygon, Arena.Center), CurrentBaits.Ref(0).Activation);
         }
     }
 }

@@ -1,5 +1,6 @@
 namespace BossMod.Components;
 
+[SkipLocalsInit]
 public abstract class CleansableDebuff(BossModule module, uint statusID, string noun = "Doom", string adjective = "doomed") : BossComponent(module)
 {
     private readonly List<Actor> _affected = [];

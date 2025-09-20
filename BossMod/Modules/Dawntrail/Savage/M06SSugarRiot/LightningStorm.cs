@@ -28,7 +28,7 @@ sealed class LightningStormHint(BossModule module) : Components.GenericAOEs(modu
     {
         if (iconID == (uint)IconID.LightningStorm)
         {
-            targets[Raid.FindSlot(actor.InstanceID)] = true;
+            targets.Set(Raid.FindSlot(actor.InstanceID));
             if (_aoeRisk.Length == 0)
             {
                 UpdateAOE();
@@ -46,19 +46,24 @@ sealed class LightningStormHint(BossModule module) : Components.GenericAOEs(modu
         AOEShapeCustom shape = new([bridgeEast, bridgeNorth, bridgeWest], [new Polygon(aoe.Origin, 21f, 10)]);
         var act = WorldState.FutureTime(9.8d);
         _aoeRisk = [new(shape, Arena.Center, default, act)];
-        _aoeSave = [new(shape with { InvertForbiddenZone = true }, Arena.Center, default, act, Colors.SafeFromAOE)];
+        var shapeInv = shape.Clone();
+        shapeInv.InvertForbiddenZone = true;
+        _aoeSave = [new(shapeInv, Arena.Center, default, act, Colors.SafeFromAOE)];
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID is (uint)AID.LevinDrop or (uint)AID.LevinMerengue)
+        var id = spell.Action.ID;
+        if (id is (uint)AID.LevinDrop or (uint)AID.LevinMerengue)
         {
             _aoeRisk = [];
             _aoeSave = [];
             targets = default;
             ++NumCasts;
-            if (spell.Action.ID == (uint)AID.LevinMerengue) // if merengue happens it only casts once instead of twice
+            if (id == (uint)AID.LevinMerengue) // if merengue happens it only casts once instead of twice
+            {
                 ++NumCasts;
+            }
         }
     }
 

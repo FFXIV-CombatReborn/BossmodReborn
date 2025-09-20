@@ -64,7 +64,7 @@ sealed class LightningCrossingMammothBoltEpicenterShock(BossModule module) : Com
         var index = 0;
         while (index < count)
         {
-            ref readonly var aoe = ref aoes[index];
+            ref var aoe = ref aoes[index];
             if (aoe.Activation >= deadline)
             {
                 break;
@@ -96,13 +96,14 @@ sealed class LightningCrossingMammothBoltEpicenterShock(BossModule module) : Com
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID is (uint)AID.MammothBolt or (uint)AID.LightningCrossing or (uint)AID.EpicenterShock)
+        if (_aoes.Count != 0 && spell.Action.ID is (uint)AID.MammothBolt or (uint)AID.LightningCrossing or (uint)AID.EpicenterShock)
         {
             var count = _aoes.Count;
             var id = caster.InstanceID;
+            var aoes = CollectionsMarshal.AsSpan(_aoes);
             for (var i = 0; i < count; ++i)
             {
-                if (_aoes[i].ActorID == id)
+                if (aoes[i].ActorID == id)
                 {
                     _aoes.RemoveAt(i);
                     return;
@@ -263,7 +264,7 @@ sealed class CE104NoiseComplaintStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 44)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 44)]
 public sealed class CE104NoiseComplaint(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter.Quantized(), new ArenaBoundsCircle(23f))
 {
     public static readonly WPos ArenaCenter = new(461f, -363f);

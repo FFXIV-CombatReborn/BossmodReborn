@@ -20,15 +20,11 @@ class Foxshot(BossModule module) : Components.BaitAwayChargeCast(module, (uint)A
 
 class FoxshotKB(BossModule module) : Components.GenericKnockback(module, stopAtWall: true)
 {
-    private Actor? _caster;
+    private Knockback[] _kb = [];
+    private readonly List<Actor> waterVZs = module.Enemies((uint)OID.Whirlwind);
     private readonly Whirlwind _aoe = module.FindComponent<Whirlwind>()!;
 
-    public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
-    {
-        if (_caster is Actor c)
-            return new Knockback[1] { new(c.Position, 25f, Module.CastFinishAt(c.CastInfo)) };
-        return [];
-    }
+    public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor) => _kb;
 
     public override bool DestinationUnsafe(int slot, Actor actor, WPos pos)
     {
@@ -36,8 +32,7 @@ class FoxshotKB(BossModule module) : Components.GenericKnockback(module, stopAtW
         var len = aoes.Length;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var aoe = ref aoes[i];
-            if (aoe.Check(pos))
+            if (aoes[i].Check(pos))
             {
                 return true;
             }
@@ -47,35 +42,40 @@ class FoxshotKB(BossModule module) : Components.GenericKnockback(module, stopAtW
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (_caster is Actor source)
+        if (_kb.Length != 0)
         {
-            var aoes = _aoe.ActiveAOEs(slot, actor).ToArray();
-            var len = aoes.Length;
-            if (len == 0)
-                return;
-
-            hints.AddForbiddenZone(p =>
+            ref var kb = ref _kb[0];
+            var act = kb.Activation;
+            if (!IsImmune(slot, act))
             {
-                ref readonly var a = ref aoes;
-                for (var i = 0; i < len; ++i)
-                    if (Intersect.RayCircle(source.Position, source.DirectionTo(p), a[i].Origin, 6f) < 1000f)
-                        return -1f;
+                var origin = kb.Origin;
+                var count = waterVZs.Count;
+                var forbidden = new ShapeDistance[count];
 
-                return 1f;
-            }, Module.CastFinishAt(source.CastInfo));
+                for (var i = 0; i < count; ++i)
+                {
+                    var a = waterVZs[i].Position;
+                    forbidden[i] = new SDCone(origin, 100f, Angle.FromDirection(a - origin), Angle.Asin(6f / (a - origin).Length()));
+                }
+                hints.AddForbiddenZone(new SDUnion(forbidden), act);
+            }
         }
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.Foxshot)
-            _caster = caster;
+        {
+            _kb = [new(caster.Position.Quantized(), 25f, Module.CastFinishAt(spell))];
+        }
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.Foxshot)
-            _caster = null;
+        {
+            _kb = [];
+        }
     }
 }
 

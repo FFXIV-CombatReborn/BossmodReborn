@@ -57,7 +57,7 @@ sealed class SearchMarkOfDeath(BossModule module) : Components.GenericAOEs(modul
         for (var i = 0; i < len; ++i)
         {
             ref readonly var aoe = ref aoes[i];
-            hints.AddForbiddenZone(ShapeDistance.Cone(aoe.Origin, 6f, aoe.Rotation, 45f.Degrees()));
+            hints.AddForbiddenZone(new SDCone(aoe.Origin, 6f, aoe.Rotation, 45f.Degrees()));
         }
     }
 }
@@ -78,6 +78,6 @@ sealed class APryingEyeStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.ForayFATE, GroupID = 1018, NameID = 1970)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.ForayFATE, GroupID = 1018, NameID = 1970)]
 public sealed class APryingEye(WorldState ws, Actor primary) : SimpleBossModule(ws, primary);
 

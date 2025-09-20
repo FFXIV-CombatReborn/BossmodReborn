@@ -12,14 +12,14 @@ sealed class FeralHowl(BossModule module) : Components.SimpleKnockbacks(module, 
         if (Casters.Count != 0)
         {
             var aoes = CollectionsMarshal.AsSpan(_aoe.Casters);
-            var forbidden = new Func<WPos, float>[count];
+            var forbidden = new ShapeDistance[count];
             var pos = Module.PrimaryActor.Position;
             for (var i = 0; i < count; ++i)
             {
                 var a = aoes[i].Origin;
-                forbidden[i] = ShapeDistance.Cone(pos, 100f, Module.PrimaryActor.AngleTo(a), Angle.Asin(8f / (a - pos).Length()));
+                forbidden[i] = new SDCone(pos, 100f, Module.PrimaryActor.AngleTo(a), Angle.Asin(8f / (a - pos).Length()));
             }
-            hints.AddForbiddenZone(ShapeDistance.Union(forbidden), Casters.Ref(0).Activation);
+            hints.AddForbiddenZone(new SDUnion(forbidden), Casters.Ref(0).Activation);
         }
     }
 

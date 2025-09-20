@@ -4,6 +4,7 @@ using InteropGenerator.Runtime;
 namespace BossMod;
 
 // very simple wrappers for hooks, that provide some quality of life (no need to repeat delegate types multiple times, etc)
+[SkipLocalsInit]
 public sealed class HookAddress<T> : IDisposable where T : Delegate
 {
     private readonly Hook<T> _hook;

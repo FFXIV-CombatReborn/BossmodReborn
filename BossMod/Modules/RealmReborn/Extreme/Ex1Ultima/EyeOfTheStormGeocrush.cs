@@ -7,8 +7,8 @@ class EyeOfTheStormGeocrush(BossModule module) : BossComponent(module)
     private Actor? _geocrushCaster;
     public bool Active => _eotsCaster != null || _geocrushCaster != null;
 
-    private static readonly AOEShapeDonut _aoeEOTS = new(12, 25);
-    private static readonly AOEShapeCircle _aoeGeocrush = new(18); // TODO: check falloff
+    private static readonly AOEShapeDonut _aoeEOTS = new(12f, 25f);
+    private static readonly AOEShapeCircle _aoeGeocrush = new(18f); // TODO: check falloff
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
@@ -23,13 +23,11 @@ class EyeOfTheStormGeocrush(BossModule module) : BossComponent(module)
         if (_eotsCaster != null)
         {
             // we want to stand in a small ring near inner edge of aoe
-            var inner = ShapeDistance.Circle(_eotsCaster.Position, _aoeEOTS.InnerRadius - 2f);
-            var outer = ShapeDistance.InvertedCircle(_eotsCaster.Position, _aoeEOTS.InnerRadius);
-            hints.AddForbiddenZone(p => Math.Min(inner(p), outer(p)), Module.CastFinishAt(_eotsCaster.CastInfo!));
+            hints.AddForbiddenZone(new SDUnion([new SDCircle(_eotsCaster.Position, _aoeEOTS.InnerRadius - 2f), new SDInvertedCircle(_eotsCaster.Position, _aoeEOTS.InnerRadius)]), Module.CastFinishAt(_eotsCaster.CastInfo));
         }
         else if (_geocrushCaster != null)
         {
-            hints.AddForbiddenZone(_aoeGeocrush, _geocrushCaster.Position, default, Module.CastFinishAt(_geocrushCaster.CastInfo!));
+            hints.AddForbiddenZone(_aoeGeocrush, _geocrushCaster.Position, default, Module.CastFinishAt(_geocrushCaster.CastInfo));
         }
     }
 

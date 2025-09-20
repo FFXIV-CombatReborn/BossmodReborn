@@ -104,6 +104,6 @@ sealed class RideTheWaves(BossModule module) : Components.GenericAOEs(module)
         if (safespot is not int index)
             return;
         var actindex = exaflaresStarted <= 1 ? 0 : 7;
-        hints.AddForbiddenZone(ShapeDistance.InvertedRect(new WPos(82.5f + index * 5f, 80f), dir, 5f, default, 2.5f), _aoes[actindex].Activation.AddSeconds(1d)); // add 1s so it doesn't get merged with other aoes
+        hints.AddForbiddenZone(new SDInvertedRect(new WPos(82.5f + index * 5f, 80f), dir, 5f, default, 2.5f), _aoes.Ref(actindex).Activation.AddSeconds(1d)); // add 1s so it doesn't get merged with other aoes
     }
 }

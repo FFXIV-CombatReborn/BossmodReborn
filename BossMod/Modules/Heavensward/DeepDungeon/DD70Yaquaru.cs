@@ -21,7 +21,7 @@ public enum SID : uint
     Heavy = 14
 }
 
-class Douse(BossModule module) : Components.VoidzoneAtCastTarget(module, 8f, (uint)AID.Douse, GetVoidzones, 0.8f)
+class Douse(BossModule module) : Components.VoidzoneAtCastTarget(module, 8f, (uint)AID.Douse, GetVoidzones, 0.8d)
 {
     public static Actor[] GetVoidzones(BossModule module)
     {
@@ -77,17 +77,21 @@ class DousePuddle(BossModule module) : BossComponent(module)
     {
         if (Module.PrimaryActor.TargetID == actor.InstanceID && BossInPuddle)
         {
-            var effPuddleSize = 8 + Module.PrimaryActor.HitboxRadius;
-            var tankDist = hints.FindEnemy(Module.PrimaryActor)?.TankDistance ?? 2;
+            var primary = Module.PrimaryActor;
+            var hitbox = primary.HitboxRadius;
+            var effPuddleSize = 8f + hitbox;
+            var tankDist = hints.FindEnemy(primary)?.TankDistance ?? 2f;
             // yaquaru tank distance seems to be around 2-2.5y, but from testing, 3y minimum is needed to move it out of the puddle, either because of rasterization shenanigans or netcode
-            var effTankDist = Module.PrimaryActor.HitboxRadius + tankDist + 1;
+            var effTankDist = hitbox + tankDist + 1f;
 
             var len = puddles.Length;
-            var puddlez = new Func<WPos, float>[len];
+            var puddlez = new ShapeDistance[len];
             for (var i = 0; i < len; ++i)
-                puddlez[i] = ShapeDistance.Circle(puddles[i].Position, effPuddleSize + effTankDist);
-            var closest = ShapeDistance.Union(puddlez);
-            hints.GoalZones.Add(p => closest(p) > 0f ? 1000f : 0f);
+            {
+                puddlez[i] = new SDCircle(puddles[i].Position, effPuddleSize + effTankDist);
+            }
+            var closest = new SDUnion(puddlez);
+            hints.GoalZones.Add(p => closest.Distance(p) > 0f ? 1000f : 0f);
         }
     }
 }

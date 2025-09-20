@@ -6,7 +6,7 @@ sealed class AlexandrianThunderII(BossModule module) : Components.GenericRotatin
     private DateTime _activation;
     private readonly List<Angle> _rotation = new(3);
     private bool? clockwise;
-    private static readonly AOEShapeDonutSector sector = new(2f, 8f, 15f.Degrees(), InvertForbiddenZone: true);
+    private static readonly AOEShapeDonutSector sector = new(2f, 8f, 15f.Degrees(), invertForbiddenZone: true);
     private static readonly Angle a75 = 7.5f.Degrees();
     private static readonly AOEShapeCone _shape = new(24f, 22.5f.Degrees());
 

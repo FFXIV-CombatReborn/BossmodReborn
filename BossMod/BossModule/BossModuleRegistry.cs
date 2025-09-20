@@ -2,6 +2,7 @@
 
 namespace BossMod;
 
+[SkipLocalsInit]
 public static class BossModuleRegistry
 {
     public sealed class Info

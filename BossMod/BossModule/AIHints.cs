@@ -1,6 +1,7 @@
 ﻿namespace BossMod;
 
 // information relevant for AI decision making process for a specific player
+[SkipLocalsInit]
 public sealed class AIHints
 {
     public class Enemy(Actor actor, int priority, bool shouldBeTanked)
@@ -16,7 +17,7 @@ public sealed class AIHints
         public float AttackStrength = 0.05f; // target's predicted HP percent is decreased by this amount (0.05 by default)
         public WPos DesiredPosition = actor.Position; // tank AI will try to move enemy to this position
         public Angle DesiredRotation = actor.Rotation; // tank AI will try to rotate enemy to this angle
-        public float TankDistance = 2; // enemy will start moving if distance between hitboxes is bigger than this
+        public float TankDistance = 2f; // enemy will start moving if distance between hitboxes is bigger than this
         public bool ShouldBeTanked = shouldBeTanked; // tank AI will try to tank this enemy
         public bool PreferProvoking; // tank AI will provoke enemy if not targeted
         public bool ForbidDOTs; // if true, dots on target are forbidden
@@ -51,7 +52,7 @@ public sealed class AIHints
         public readonly PredictedDamageType Type = type;
     }
 
-    public static readonly ArenaBounds DefaultBounds = new ArenaBoundsSquare(30f, AllowObstacleMap: true);
+    public static readonly ArenaBounds DefaultBounds = new ArenaBoundsSquare(30f, allowObstacleMap: true);
 
     // information needed to build base pathfinding map (onto which forbidden/goal zones are later rasterized), if needed (lazy, since it's somewhat expensive and not always needed)
     public WPos PathfindMapCenter;
@@ -84,7 +85,7 @@ public sealed class AIHints
 
     // positioning: list of shapes that are either forbidden to stand in now or will be in near future
     // AI will try to move in such a way to avoid standing in any forbidden zone after its activation or outside of some restricted zone after its activation, even at the cost of uptime
-    public readonly List<(Func<WPos, float> shapeDistance, DateTime activation, ulong Source)> ForbiddenZones = [];
+    public readonly List<(ShapeDistance shapeDistance, DateTime activation, ulong Source)> ForbiddenZones = [];
 
     // positioning: list of goal functions
     // AI will try to move to reach non-forbidden point with highest goal value (sum of values returned by all functions)
@@ -93,7 +94,7 @@ public sealed class AIHints
     public readonly List<Func<WPos, float>> GoalZones = [];
 
     // AI will treat the pixels inside these shapes as unreachable and not try to pathfind through them (unlike imminent forbidden zones)
-    public List<Func<WPos, float>> TemporaryObstacles = [];
+    public List<ShapeDistance> TemporaryObstacles = [];
 
     // positioning: next positional hint (TODO: reconsider, maybe it should be a list prioritized by in-gcds, and imminent should be in-gcds instead? or maybe it should be property of an enemy? do we need correct?)
     public (Actor? Target, Positional Pos, bool Imminent, bool Correct) RecommendedPositional;
@@ -218,7 +219,7 @@ public sealed class AIHints
     public void InteractWithOID(WorldState ws, uint oid) => InteractWithTarget = ws.Actors.FirstOrDefault(a => a.OID == oid && a.IsTargetable);
     public void InteractWithOID<OID>(WorldState ws, OID oid) where OID : Enum => InteractWithOID(ws, (uint)(object)oid);
 
-    public void AddForbiddenZone(Func<WPos, float> shapeDistance, DateTime activation = default, ulong source = default) => ForbiddenZones.Add((shapeDistance, activation, source));
+    public void AddForbiddenZone(ShapeDistance shapeDistance, DateTime activation = default, ulong source = default) => ForbiddenZones.Add((shapeDistance, activation, source));
     public void AddForbiddenZone(AOEShape shape, WPos origin, Angle rot = default, DateTime activation = default, ulong source = default) => ForbiddenZones.Add((shape.Distance(origin, rot), activation, source));
 
     public void AddPredictedDamage(BitMask players, DateTime activation, PredictedDamageType type = PredictedDamageType.Raidwide) => PredictedDamage.Add(new(players, activation, type));

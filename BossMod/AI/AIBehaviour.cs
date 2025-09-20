@@ -288,7 +288,7 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
                 var len = pixels.Length;
                 for (var i = 0; i < len; ++i)
                 {
-                    ref readonly var p = ref pixels[i];
+                    var p = pixels[i];
                     var px = p.x;
                     var py = p.y;
                     if (!_naviCtx.Map.InBounds(px, py) || _naviCtx.Map.PixelMaxG[_naviCtx.Map.GridToIndex(px, py)] < startG)

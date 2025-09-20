@@ -37,8 +37,8 @@ public enum AID : uint
     VoidDeathIV = 41351 // Boss->self, 3.0s cast, range 40 circle, enrage if seal got broken
 }
 
-sealed class SundersealRoar(BossModule module) : Components.RaidwideCastDelay(module, (uint)AID.SundersealRoarVisual, (uint)AID.SundersealRoar, 0.9f);
-sealed class Gigaflare(BossModule module) : Components.RaidwideCastDelay(module, (uint)AID.GigaflareVisual, (uint)AID.Gigaflare, 0.9f, "Raidwide + bleed");
+sealed class SundersealRoar(BossModule module) : Components.RaidwideCastDelay(module, (uint)AID.SundersealRoarVisual, (uint)AID.SundersealRoar, 0.9d);
+sealed class Gigaflare(BossModule module) : Components.RaidwideCastDelay(module, (uint)AID.GigaflareVisual, (uint)AID.Gigaflare, 0.9d, "Raidwide + bleed");
 sealed class VoidThunderIII(BossModule module) : Components.SimpleAOEs(module, (uint)AID.VoidThunderIII, new AOEShapeRect(60f, 4f), 4);
 sealed class TidalBreath(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TidalBreath, new AOEShapeCone(40f, 90f.Degrees()));
 sealed class KarmicDrain(BossModule module) : Components.SimpleAOEs(module, (uint)AID.KarmicDrain, new AOEShapeCone(60f, 30f.Degrees()), 3);
@@ -50,13 +50,14 @@ sealed class Seals(BossModule module) : Components.GenericTowersOpenWorld(module
 {
     public override void OnActorEAnim(Actor actor, uint state)
     {
-        if (state == 0x00040008u && actor.OID == (uint)OID.Tower)
+        if (state == 0x00040008u && Towers.Count != 0 && actor.OID == (uint)OID.Tower)
         {
             var count = Towers.Count;
             var pos = actor.Position;
+            var towers = CollectionsMarshal.AsSpan(Towers);
             for (var i = 0; i < count; ++i)
             {
-                if (Towers[i].Position == pos)
+                if (towers[i].Position == pos)
                 {
                     Towers.RemoveAt(i);
                     return;
@@ -68,7 +69,9 @@ sealed class Seals(BossModule module) : Components.GenericTowersOpenWorld(module
     public override void OnActorCreated(Actor actor)
     {
         if (actor.OID == (uint)OID.Tower)
+        {
             Towers.Add(new(actor.Position, 3f, 4, 8, activation: DateTime.MaxValue));
+        }
     }
 }
 
@@ -89,7 +92,7 @@ sealed class CE108CalamityBoundStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 37)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 37)]
 public sealed class CE108CalamityBound(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly ArenaBoundsCustom arena = new([new Polygon(new(-340f, 800f), 29.5f, 32)]);

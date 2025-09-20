@@ -7,7 +7,7 @@ sealed class HeavensWrathKnockback(BossModule module) : Components.GenericKnockb
 {
     private readonly List<Knockback> _sources = new(2);
     private static readonly AOEShapeRect _shape = new(60f, 50f, -5f);
-    private static readonly Func<WPos, float> eastKB = ShapeDistance.InvertedTri(new WPos(-262f, -415f) + 15f * (-90f.Degrees()).ToDirection(),
+    private static readonly ShapeDistance eastKB = new SDInvertedTri(new WPos(-262f, -415f) + 15f * (-90f.Degrees()).ToDirection(),
     new RelTriangle(default, 20f * 150f.Degrees().ToDirection(), 20f * 30f.Degrees().ToDirection()));
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor) => CollectionsMarshal.AsSpan(_sources);
@@ -34,7 +34,7 @@ sealed class HeavensWrathKnockback(BossModule module) : Components.GenericKnockb
     {
         if (_sources.Count != 0)
         {
-            hints.AddForbiddenZone(eastKB, _sources[0].Activation);
+            hints.AddForbiddenZone(eastKB, _sources.Ref(0).Activation);
         }
     }
 }

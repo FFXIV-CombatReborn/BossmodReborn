@@ -117,7 +117,13 @@ sealed class DualPyresSteelfoldStrike(BossModule module) : Components.GenericAOE
                 AddAOE(cone);
                 if (_aoes.Count == 2)
                 {
-                    _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                    var aoes = CollectionsMarshal.AsSpan(_aoes);
+                    ref var aoe1 = ref aoes[0];
+                    ref var aoe2 = ref aoes[1];
+                    if (aoe1.Activation > aoe2.Activation)
+                    {
+                        (aoe1, aoe2) = (aoe2, aoe1);
+                    }
                 }
                 break;
             case (uint)AID.SteelfoldStrike:
@@ -263,7 +269,7 @@ sealed class HeartOfTuralRaidwides(BossModule module) : Components.RaidwideCast(
 
 sealed class HeartOfTural : Components.SimpleAOEs
 {
-    public HeartOfTural(BossModule module) : base(module, (uint)AID.HeartOfTural, new AOEShapeRect(20f, 20f, InvertForbiddenZone: true)) { Color = Colors.SafeFromAOE; }
+    public HeartOfTural(BossModule module) : base(module, (uint)AID.HeartOfTural, new AOEShapeRect(20f, 20f, invertForbiddenZone: true)) { Color = Colors.SafeFromAOE; }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {

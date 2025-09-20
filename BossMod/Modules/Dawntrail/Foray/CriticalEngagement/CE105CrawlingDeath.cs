@@ -59,7 +59,7 @@ sealed class Clawmarks(BossModule module) : Components.GenericAOEs(module)
         var index = 0;
         while (index < count)
         {
-            ref readonly var aoe = ref aoes[index];
+            ref var aoe = ref aoes[index];
             if (aoe.Activation >= deadline)
             {
                 break;
@@ -112,13 +112,14 @@ sealed class Clawmarks(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID is (uint)AID.LethalNails1 or (uint)AID.LethalNails2 or (uint)AID.LethalNails3)
+        if (AOEs.Count != 0 && spell.Action.ID is (uint)AID.LethalNails1 or (uint)AID.LethalNails2 or (uint)AID.LethalNails3)
         {
             var count = AOEs.Count;
             var id = caster.InstanceID;
+            var aoes = CollectionsMarshal.AsSpan(AOEs);
             for (var i = 0; i < count; ++i)
             {
-                if (AOEs[i].ActorID == id)
+                if (aoes[i].ActorID == id)
                 {
                     AOEs.RemoveAt(i);
                     return;
@@ -206,9 +207,9 @@ sealed class Crosshatch(BossModule module) : Components.GenericAOEs(module)
         base.AddAIHints(slot, actor, assignment, hints);
         if (count > 2)
         {
-            var aoe = _aoes[0];
+            var aoe = _aoes.Ref(0);
             // stay close to the middle if there is more than one aoe left
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(aoe.Origin, 5f), aoe.Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(aoe.Origin, 5f), aoe.Activation);
         }
     }
 }
@@ -226,7 +227,7 @@ sealed class CE105CrawlingDeathStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 36)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 36)]
 public sealed class CE105CrawlingDeath(WorldState ws, Actor primary) : BossModule(ws, primary, new(681, 534f), new ArenaBoundsSquare(21f))
 {
     protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InSquare(Arena.Center, 21f);

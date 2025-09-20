@@ -92,7 +92,7 @@ sealed class ArenaChanges(BossModule module) : BossComponent(module)
         Square[] brokenTiles = [.. brokenTilesList];
         if (brokenTiles.Length == 16) // prevents empty sequence error at end of enrage
             brokenTiles = [];
-        var arena = new ArenaBoundsCustom(defaultSquare, brokenTiles);
+        var arena = new ArenaBoundsCustom(defaultSquare, brokenTiles, Offset: -1f);
         Arena.Bounds = arena;
         Arena.Center = arena.Center;
     }

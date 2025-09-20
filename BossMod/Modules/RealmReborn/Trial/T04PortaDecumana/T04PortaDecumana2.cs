@@ -101,14 +101,14 @@ sealed class Aetheroplasm(BossModule module) : BossComponent(module)
         var count = orbs.Count;
         if (count != 0)
         {
-            var orbz = new Func<WPos, float>[count];
+            var orbz = new ShapeDistance[count];
             hints.ActionsToExecute.Push(ActionDefinitions.IDSprint, actor, ActionQueue.Priority.High);
             for (var i = 0; i < count; ++i)
             {
                 var o = orbs[i];
-                orbz[i] = ShapeDistance.InvertedRect(o.Position + 0.5f * o.Rotation.ToDirection(), new WDir(default, 1f), 0.5f, 0.5f, 0.5f);
+                orbz[i] = new SDInvertedRect(o.Position + 0.5f * o.Rotation.ToDirection(), new WDir(default, 1f), 0.5f, 0.5f, 0.5f);
             }
-            hints.AddForbiddenZone(ShapeDistance.Intersection(orbz), DateTime.MaxValue);
+            hints.AddForbiddenZone(new SDIntersection(orbz), DateTime.MaxValue);
         }
     }
 

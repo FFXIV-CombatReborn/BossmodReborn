@@ -22,7 +22,7 @@ sealed class ChillingCollision(BossModule module) : Components.GenericKnockback(
             var act = kb.Activation;
             if (!IsImmune(slot, act))
             {
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(kb.Origin, 9f), act);
+                hints.AddForbiddenZone(new SDInvertedCircle(kb.Origin, 9f), act);
             }
         }
     }

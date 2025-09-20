@@ -31,7 +31,7 @@ sealed class D040VanguardSentryR7States : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 831, NameID = 12778, SortOrder = 2)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 831, NameID = 12778, SortOrder = 2)]
 public sealed class D040VanguardSentryR7(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly WPos[] vertices = [new(-93.53f, 262.87f), new(-91.94f, 262.9f), new(-90.82f, 263.02f), new(-90.31f, 263.21f), new(-90.22f, 263.86f),
@@ -71,6 +71,8 @@ public sealed class D040VanguardSentryR7(WorldState ws, Actor primary) : BossMod
     {
         var count = hints.PotentialTargets.Count;
         for (var i = 0; i < count; ++i)
+        {
             hints.PotentialTargets[i].Priority = 0;
+        }
     }
 }

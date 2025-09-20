@@ -80,7 +80,7 @@ sealed class BitingWindUpdraftVoidzone(BossModule module) : Components.GenericAO
         if (activation != DateTime.MaxValue && WorldState.CurrentTime < activation)
         {
             ref var aoe = ref _aoe[0];
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(aoe.Origin, 12f), activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(aoe.Origin, 12f), activation);
         }
     }
 }

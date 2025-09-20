@@ -92,7 +92,7 @@ sealed class LoomingNightmare(BossModule module) : Components.StandardChasingAOE
         base.AddAIHints(slot, actor, assignment, hints);
         if (Targets[slot])
         {
-            hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 13.5f), Activation);
+            hints.AddForbiddenZone(new SDCircle(Arena.Center, 13.5f), Activation);
         }
     }
 }
@@ -208,7 +208,7 @@ sealed class D081HisRoyalHeadnessLeonoggIStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 981, NameID = 13073)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 981, NameID = 13073)]
 public sealed class D081HisRoyalHeadnessLeonoggI(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, StartingBounds)
 {
     public static readonly WPos ArenaCenter = new(default, 150f);

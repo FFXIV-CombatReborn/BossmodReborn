@@ -74,7 +74,7 @@ class Thundercall2(BossModule module) : Components.GenericBaitAway(module, cente
             ref var b = ref CurrentBaits.Ref(0);
             if (b.Target == actor)
             {
-                hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 17.5f), b.Activation);
+                hints.AddForbiddenZone(new SDCircle(Arena.Center, 17.5f), b.Activation);
             }
         }
     }

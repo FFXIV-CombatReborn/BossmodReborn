@@ -2,23 +2,25 @@
 
 class AngrySeasAOE(BossModule module) : Components.GenericAOEs(module)
 {
-    private readonly List<AOEInstance> _aoes = [];
+    private AOEInstance[] _aoe = [];
 
-    private static readonly AOEShapeRect _shape = new(40f, 5f);
+    private static readonly AOEShapeRect _shape = new(46f, 5f);
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID is (uint)AID.NAngrySeasAOE or (uint)AID.SAngrySeasAOE)
-            _aoes.Add(new(_shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell)));
+        {
+            _aoe = [new(_shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell))];
+        }
     }
 }
 
 // TODO: generalize
 class AngrySeasKnockback(BossModule module) : Components.GenericKnockback(module)
 {
-    private readonly List<Knockback> _sources = [];
+    private readonly List<Knockback> _sources = new(2);
     private static readonly AOEShapeCone _shape = new(30f, 90f.Degrees());
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor) => CollectionsMarshal.AsSpan(_sources);
@@ -29,10 +31,10 @@ class AngrySeasKnockback(BossModule module) : Components.GenericKnockback(module
         {
             _sources.Clear();
             var activation = Module.CastFinishAt(spell);
-            var pos = Arena.Center.Quantized();
+            var pos = Arena.Center;
             // charge always happens through center, so create two sources with origin at center looking orthogonally
-            _sources.Add(new(pos, 12f, activation, _shape, spell.Rotation + 90f.Degrees(), Kind.DirForward));
-            _sources.Add(new(pos, 12f, activation, _shape, spell.Rotation - 90f.Degrees(), Kind.DirForward));
+            _sources.Add(new(pos, 12f, activation, _shape, 90f.Degrees(), Kind.DirForward));
+            _sources.Add(new(pos, 12f, activation, _shape, -90f.Degrees(), Kind.DirForward));
         }
     }
 

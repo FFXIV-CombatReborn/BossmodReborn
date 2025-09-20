@@ -115,7 +115,7 @@ public sealed class BLM(RotationModuleManager manager, Actor player) : Castxan<A
 
     public const int AOEBreakpoint = 2;
 
-    private float InstantCastLeft => MathF.Max(TriplecastLeft, SwiftcastLeft);
+    private float InstantCastLeft => Math.Max(TriplecastLeft, SwiftcastLeft);
 
     protected override float GetCastTime(AID aid)
     {

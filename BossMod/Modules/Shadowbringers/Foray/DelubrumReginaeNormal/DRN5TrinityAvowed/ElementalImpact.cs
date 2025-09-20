@@ -25,7 +25,7 @@ sealed class ElementalImpact(BossModule module) : Components.GenericAOEs(module)
 sealed class ElementalImpactTemperature(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance>[] _aoes = new List<AOEInstance>[PartyState.MaxAllianceSize];
-    private static readonly AOEShapeCircle circle = new(22f);
+    private static readonly AOEShapeCircle circle = new(22f), circleInv = new(22f, true);
     private readonly PlayerTemperatures _temps = module.FindComponent<PlayerTemperatures>()!;
     private readonly List<AOEInstance>?[] aoePerTemp = new List<AOEInstance>?[5];
 
@@ -59,7 +59,7 @@ sealed class ElementalImpactTemperature(BossModule module) : Components.GenericA
                 if (playertemp != default && playertemp == temp)
                 {
                     color = safecolor;
-                    shape = circle with { InvertForbiddenZone = true };
+                    shape = circleInv;
                 }
                 if (_aoes[i] == null)
                     _aoes[i] = new(4);
@@ -79,7 +79,7 @@ sealed class ElementalImpactTemperature(BossModule module) : Components.GenericA
 
                         for (var j = 0; j < 4; ++j)
                         {
-                            ref readonly var aoe = ref aoes[j];
+                            ref var aoe = ref aoes[j];
                             var circle = new Polygon(aoe.Origin, 22f, 64);
                             if (aoe.Color == safecolor)
                             {
@@ -92,16 +92,17 @@ sealed class ElementalImpactTemperature(BossModule module) : Components.GenericA
                         }
                         if (safeShapes.Count == 2)
                         {
-                            AOEShapeCustom xor = new([safeShapes[0]], Shapes2: [safeShapes[1]], Operand: OperandType.Xor);
-                            AOEShapeCustom difference = new(dangerShapes);
+                            AOEShapeCustom xor = new([safeShapes[0]], shapes2: [safeShapes[1]], operand: OperandType.Xor);
+                            AOEShapeCustom difference = new(dangerShapes, invertForbiddenZone: true);
                             var clipper = new PolygonClipper();
                             var combinedShapes = clipper.Difference(new PolygonClipper.Operand(xor.GetCombinedPolygon(center)),
                             new PolygonClipper.Operand(difference.GetCombinedPolygon(center)));
-                            aoePerTemp[playertemp] = [new(difference with { Polygon = combinedShapes, InvertForbiddenZone = true }, center, default, Module.CastFinishAt(spell), safecolor)];
+                            difference.Polygon = combinedShapes;
+                            aoePerTemp[playertemp] = [new(difference, center, default, Module.CastFinishAt(spell), safecolor)];
                         }
                         else
                         {
-                            aoePerTemp[playertemp] = [new(new AOEShapeCustom(safeShapes, dangerShapes, InvertForbiddenZone: true), center, default, Module.CastFinishAt(spell), safecolor)];
+                            aoePerTemp[playertemp] = [new(new AOEShapeCustom(safeShapes, dangerShapes, invertForbiddenZone: true), center, default, Module.CastFinishAt(spell), safecolor)];
                         }
                     }
                     _aoes[i] = aoePerTemp[playertemp]!;

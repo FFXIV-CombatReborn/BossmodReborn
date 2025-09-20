@@ -38,7 +38,7 @@ sealed class SlipperySoapCharge(BossModule module) : Components.GenericKnockback
             var toTarget = _chargeTarget.Position - Module.PrimaryActor.Position;
             var len = toTarget.Length() + 0.01f; // add eps to ensure charge target is considered 'inside'
             if (_chargeShape.LengthFront != len)
-                _chargeShape = _chargeShape with { LengthFront = len };
+                _chargeShape = new AOEShapeRect(len, 5f);
             _chargeDir = Angle.FromDirection(toTarget); // keep shape's offset zero to properly support dir-forward
         }
     }

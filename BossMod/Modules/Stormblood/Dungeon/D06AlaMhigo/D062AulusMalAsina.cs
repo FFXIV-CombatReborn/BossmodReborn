@@ -82,7 +82,7 @@ class MindJack(BossModule module) : BossComponent(module)
             var t = _tethers[i];
             if (t.target == id)
             {
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(t.source, 2f));
+                hints.AddForbiddenZone(new SDInvertedCircle(t.source, 2f));
                 return;
             }
         }

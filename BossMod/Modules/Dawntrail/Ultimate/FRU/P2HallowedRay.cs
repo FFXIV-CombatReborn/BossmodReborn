@@ -13,7 +13,7 @@ sealed class P2HallowedRay(BossModule module) : Components.GenericWildCharge(mod
             WDir averageDir = default;
             foreach (var p in Raid.WithoutSlot(false, true, true))
                 averageDir += (p.Position - Source.Position).Normalized();
-            hints.AddForbiddenZone(ShapeDistance.InvertedRect(Source.Position, Angle.FromDirection(averageDir), 20f, -6f, 2f), Activation);
+            hints.AddForbiddenZone(new SDInvertedRect(Source.Position, Angle.FromDirection(averageDir), 20f, -6f, 2f), Activation);
         }
         else
         {

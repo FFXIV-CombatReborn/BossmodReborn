@@ -65,10 +65,10 @@ sealed class PounceErrant(BossModule module) : Components.GenericStackSpread(mod
             var count = cages.Count;
             if (count == 0)
                 return;
-            var forbidden = new Func<WPos, float>[count];
+            var forbidden = new ShapeDistance[count];
             for (var i = 0; i < count; ++i)
-                forbidden[i] = ShapeDistance.Circle(cages[i].Position, 11f);
-            hints.AddForbiddenZone(ShapeDistance.Union(forbidden), Spreads[0].Activation);
+                forbidden[i] = new SDCircle(cages[i].Position, 11f);
+            hints.AddForbiddenZone(new SDUnion(forbidden), Spreads[0].Activation);
         }
     }
 
@@ -145,18 +145,18 @@ sealed class ForlornImpact(BossModule module) : Components.GenericBaitAway(modul
         var bait = ActiveBaitsOn(actor);
         if (bait.Count != 0)
         {
-            var b = bait[0];
+            ref var b = ref bait.Ref(0);
             var cages = Module.Enemies((uint)OID.IronCage);
             var count = cages.Count;
             if (count == 0)
                 return;
-            var forbidden = new Func<WPos, float>[count];
+            var forbidden = new ShapeDistance[count];
             for (var i = 0; i < count; ++i)
             {
                 var a = cages[i];
-                forbidden[i] = ShapeDistance.Cone(b.Source.Position, 100f, b.Source.AngleTo(a), Angle.Asin(3.5f / (a.Position - b.Source.Position).Length()));
+                forbidden[i] = new SDCone(b.Source.Position, 100f, b.Source.AngleTo(a), Angle.Asin(3.5f / (a.Position - b.Source.Position).Length()));
             }
-            hints.AddForbiddenZone(ShapeDistance.Union(forbidden), b.Activation);
+            hints.AddForbiddenZone(new SDUnion(forbidden), b.Activation);
         }
     }
 

@@ -17,7 +17,7 @@ sealed class ElevateAndEviscerateShockwave(BossModule module) : Components.Gener
             {
                 aoes.Add(new(Rect, ArenaChanges.CellCenter(ArenaChanges.CellIndex(_kb.CurrentTarget.Position)), default, _kb.CurrentDeadline.AddSeconds(2d)));
             }
-            else if (_kb.CurrentKnockbackDistance == 10f && Module.InBounds(_kb.Cache))
+            else if (_kb.CurrentKnockbackDistance == 10f && Arena.InBounds(_kb.Cache))
             {
                 aoes.Add(new(Rect, ArenaChanges.CellCenter(ArenaChanges.CellIndex(_kb.Cache)), default, _kb.CurrentDeadline.AddSeconds(4.2d)));
             }
@@ -31,7 +31,7 @@ sealed class ElevateAndEviscerateShockwave(BossModule module) : Components.Gener
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID is (uint)AID.ElevateAndEviscerateHitAOE or (uint)AID.ElevateAndEviscerateKnockbackAOE && Module.InBounds(_kb.Cache))
+        if (spell.Action.ID is (uint)AID.ElevateAndEviscerateHitAOE or (uint)AID.ElevateAndEviscerateKnockbackAOE && Arena.InBounds(_kb.Cache))
         {
             _aoe = [new(Rect, ArenaChanges.CellCenter(ArenaChanges.CellIndex(_kb.Cache)), default, WorldState.FutureTime(_kb.CurrentKnockbackDistance == default ? 1.4d : 3.6d))];
         }
@@ -134,14 +134,13 @@ sealed class ElevateAndEviscerate(BossModule module) : Components.GenericKnockba
             var len = aoes.Length;
             for (var i = 0; i < len; ++i)
             {
-                ref readonly var aoe = ref aoes[i];
-                if (aoe.Check(pos))
+                if (aoes[i].Check(pos))
                 {
                     return true;
                 }
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }
 

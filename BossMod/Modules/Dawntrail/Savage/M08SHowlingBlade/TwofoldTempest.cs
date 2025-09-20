@@ -51,7 +51,7 @@ sealed class TwofoldTempestTetherAOE(BossModule module) : Components.InterceptTe
         {
             if (!vulnerability[slot])
             {
-                hints.AddForbiddenZone(ShapeDistance.Circle(boss, 23.5f), Activation);
+                hints.AddForbiddenZone(new SDCircle(boss, 23.5f), Activation);
             }
         }
         else

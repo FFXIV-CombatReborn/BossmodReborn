@@ -47,10 +47,8 @@ sealed class DarkNebula(BossModule module) : Components.GenericKnockback(module)
         if (Casters.Count == 0)
             return;
 
-        var forbidden = new List<Func<WPos, float>>(2);
+        var forbidden = new List<ShapeDistance>(2);
         var caster0 = Casters[0];
-        static Func<WPos, float> CreateForbiddenZone(int circleIndex, WDir dir)
-         => ShapeDistance.InvertedRect(A14ShadowLord.Circles[circleIndex].Center, dir, Length, 0f, HalfWidth);
 
         var rot = (int)caster0.Rotation.Deg;
         (int[], WDir) indices = rot switch
@@ -65,16 +63,20 @@ sealed class DarkNebula(BossModule module) : Components.GenericKnockback(module)
         if (Casters.Count == 1)
         {
             if (indices != default)
+            {
                 for (var i = 0; i < 2; ++i)
-                    forbidden.Add(CreateForbiddenZone(indices.Item1[i], indices.Item2));
-            hints.AddForbiddenZone(ShapeDistance.Intersection(forbidden), act);
+                {
+                    forbidden.Add(new SDInvertedRect(A14ShadowLord.Circles[indices.Item1[i]].Center, indices.Item2, Length, default, HalfWidth));
+                }
+            }
+            hints.AddForbiddenZone(new SDIntersection([.. forbidden]), act);
         }
         else
         {
             var caster1 = Casters[1];
             var rotationMatch = caster0.Rotation.AlmostEqual(caster1.Rotation + a90, Angle.DegToRad);
             var circleIndex = rotationMatch ? indices.Item1[0] : indices.Item1[1];
-            hints.AddForbiddenZone(CreateForbiddenZone(circleIndex, indices.Item2), act);
+            hints.AddForbiddenZone(new SDInvertedRect(A14ShadowLord.Circles[circleIndex].Center, indices.Item2, Length, 0f, HalfWidth), act);
         }
     }
 }

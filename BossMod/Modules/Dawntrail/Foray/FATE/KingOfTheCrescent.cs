@@ -38,7 +38,9 @@ sealed class Airburst(BossModule module) : Components.GenericAOEs(module)
     public override void OnActorCreated(Actor actor)
     {
         if (actor.OID == (uint)OID.GaleSphere)
+        {
             _aoes.Add(new(circle, actor.Position.Quantized(), default, WorldState.FutureTime(9.8d), actorID: actor.InstanceID));
+        }
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
@@ -47,9 +49,10 @@ sealed class Airburst(BossModule module) : Components.GenericAOEs(module)
         {
             var count = _aoes.Count;
             var id = caster.InstanceID;
+            var aoes = CollectionsMarshal.AsSpan(_aoes);
             for (var i = 0; i < count; ++i)
             {
-                if (_aoes[i].ActorID == id)
+                if (aoes[i].ActorID == id)
                 {
                     _aoes.RemoveAt(i);
                     return;
@@ -72,5 +75,5 @@ sealed class KingOfTheCrescentStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.ForayFATE, GroupID = 1018, NameID = 1964)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.ForayFATE, GroupID = 1018, NameID = 1964)]
 public sealed class KingOfTheCrescent(WorldState ws, Actor primary) : SimpleBossModule(ws, primary);

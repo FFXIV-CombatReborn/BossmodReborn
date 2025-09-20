@@ -38,7 +38,7 @@ class ZenosYaeGalvusStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, GroupType = BossModuleInfo.GroupType.Quest, GroupID = 69311, NameID = 6039)]
-public class ZenosYaeGalvus(WorldState ws, Actor primary) : BossModule(ws, primary, new(-321.03f, 617.73f), new ArenaBoundsCircle(20))
+public class ZenosYaeGalvus(WorldState ws, Actor primary) : BossModule(ws, primary, new(-321.03f, 617.73f), new ArenaBoundsCircle(20f))
 {
     public static readonly uint[] swords = [(uint)OID.TheStorm, (uint)OID.TheSwell, (uint)OID.AmeNoHabakiri];
 
@@ -47,16 +47,5 @@ public class ZenosYaeGalvus(WorldState ws, Actor primary) : BossModule(ws, prima
         Arena.Actors(this, swords);
     }
 
-    protected override bool CheckPull()
-    {
-        var enemies = Enemies(swords);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.InCombat)
-                return true;
-        }
-        return false;
-    }
+    protected override bool CheckPull() => IsAnyActorInCombat(swords);
 }

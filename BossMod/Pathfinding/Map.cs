@@ -8,6 +8,8 @@
 // - goal: destination with X priority (X > 0); 'default' is considered a goal with priority 0
 // - goal and danger are mutually exclusive, 'danger' overriding 'goal' state
 // typically we try to find a path to goal with highest priority; if that fails, try lower priorities; if no paths can be found (e.g. we're currently inside an imminent aoe) we find direct path to closest safe pixel
+
+[SkipLocalsInit]
 public sealed class Map
 {
     public float Resolution; // pixel size, in world units
@@ -15,7 +17,6 @@ public sealed class Map
     public int Height; // always even
     public float[] PixelMaxG = []; // == MaxValue if not dangerous (TODO: consider changing to a byte per pixel?), < 0 if impassable
     public float[] PixelPriority = [];
-    private const float Epsilon = 1e-5f;
 
     public WPos Center; // position of map center in world units
     public Angle Rotation; // rotation relative to world space (=> ToDirection() is equal to direction of local 'height' axis in world space)
@@ -31,7 +32,7 @@ public sealed class Map
     public int MaxY;
 
     public Map() { }
-    public Map(float resolution, WPos center, float worldHalfWidth, float worldHalfHeight, Angle rotation = new()) => Init(resolution, center, worldHalfWidth, worldHalfHeight, rotation);
+    public Map(float resolution, WPos center, float worldHalfWidth, float worldHalfHeight, Angle rotation = default) => Init(resolution, center, worldHalfWidth, worldHalfHeight, rotation);
 
     public void Init(float resolution, WPos center, float worldHalfWidth, float worldHalfHeight, Angle rotation = default)
     {
@@ -93,6 +94,7 @@ public sealed class Map
         MaxY = source.MaxY;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Vector2 WorldToGridFrac(WPos world)
     {
         var offset = world - Center;
@@ -101,14 +103,22 @@ public sealed class Map
         return new((Width >> 1) + x, (Height >> 1) + y);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int GridToIndex(int x, int y) => y * Width + x;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int GridToIndex((int x, int y) p) => GridToIndex(p.x, p.y);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public (int x, int y) IndexToGrid(int index) => (index % Width, index / Width);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static (int x, int y) FracToGrid(Vector2 frac) => ((int)MathF.Floor(frac.X), (int)MathF.Floor(frac.Y));
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public (int x, int y) WorldToGrid(WPos world) => FracToGrid(WorldToGridFrac(world));
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public (int x, int y) ClampToGrid((int x, int y) pos) => (Math.Clamp(pos.x, 0, Width - 1), Math.Clamp(pos.y, 0, Height - 1));
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool InBounds(int x, int y) => x >= 0 && x < Width && y >= 0 && y < Height;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public WPos GridToWorld(int gx, int gy, float fx, float fy)
     {
         var rsq = Resolution * Resolution; // since we then multiply by _localZDivRes, end result is same as * res * rotation.ToDir()
@@ -118,7 +128,7 @@ public sealed class Map
     }
 
     // block all pixels for which function returns value smaller than threshold ('inside' shape + extra cushion)
-    public void BlockPixelsInside(Func<WPos, float> shape, float maxG, float threshold)
+    public void BlockPixelsInside(ShapeDistance shape, float maxG, float threshold)
     {
         MaxG = Math.Max(MaxG, maxG);
         var width = Width;
@@ -132,58 +142,19 @@ public sealed class Map
         var threshold_ = threshold;
         var shape_ = shape;
 
-        Parallel.For(0, height, y =>
+        for (var y = 0; y < height; ++y)
         {
             var posY = startPos + y * dy;
             var rowBaseIndex = y * width;
             for (var x = 0; x < width; ++x)
             {
                 var pos = posY + x * dx;
-                if (shape_(pos) <= threshold_)
+                if (shape_.Distance(pos) <= threshold_)
                 {
                     PixelMaxG[rowBaseIndex + x] = maxG_;
                 }
             }
-        });
-    }
-
-    // for testing 4 points per pixel for increased accuracy to rasterize circle and rectangle arena bounds
-    public void BlockPixelsInside2(Func<WPos, float> shape, float maxG)
-    {
-        MaxG = Math.Max(MaxG, maxG);
-        var width = Width;
-        var height = Height;
-        var resolution = Resolution;
-        var dir = Rotation.ToDirection();
-        var dx = dir.OrthoL() * resolution;
-        var dy = dir * resolution;
-        var startPos = Center - (width >> 1) * dx - (height >> 1) * dy;
-        var maxG_ = maxG;
-        var shape_ = shape;
-
-        float[] offsetsX = [Epsilon, Epsilon, 1f - Epsilon, 1f - Epsilon];
-        float[] offsetsZ = [Epsilon, 1f - Epsilon, Epsilon, 1f - Epsilon];
-
-        Parallel.For(0, height, y =>
-        {
-            var posY = startPos + y * dy;
-            var rowBaseIndex = y * width;
-
-            for (var x = 0; x < width; ++x)
-            {
-                var posBase = posY + x * dx;
-                for (var i = 0; i < 4; ++i)
-                {
-                    var pos = posBase + offsetsX[i] * dx + offsetsZ[i] * dy;
-
-                    if (shape_(pos) <= 0f)
-                    {
-                        PixelMaxG[rowBaseIndex + x] = maxG_;
-                        break;
-                    }
-                }
-            }
-        });
+        }
     }
 
     public (int x, int y, WPos center)[] EnumeratePixels()

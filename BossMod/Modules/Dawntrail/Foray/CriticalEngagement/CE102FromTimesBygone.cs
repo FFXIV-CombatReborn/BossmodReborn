@@ -51,7 +51,7 @@ sealed class MythicMirror(BossModule module) : Components.GenericAOEs(module)
         var index = 0;
         while (index < count)
         {
-            ref readonly var aoe = ref aoes[index];
+            ref var aoe = ref aoes[index];
             if (aoe.Activation >= deadline)
             {
                 break;
@@ -83,9 +83,10 @@ sealed class MythicMirror(BossModule module) : Components.GenericAOEs(module)
         {
             var count = _aoes.Count;
             var id = caster.InstanceID;
+            var aoes = CollectionsMarshal.AsSpan(_aoes);
             for (var i = 0; i < count; ++i)
             {
-                if (_aoes[i].ActorID == id)
+                if (aoes[i].ActorID == id)
                 {
                     _aoes.RemoveAt(i);
                     return;
@@ -184,7 +185,7 @@ sealed class ArcaneOrb(BossModule module) : Components.GenericAOEs(module)
         {
             return;
         }
-        hints.AddForbiddenZone(ShapeDistance.Circle(Arena.Center, 6.6f), WorldState.FutureTime(8d));
+        hints.AddForbiddenZone(new SDCircle(Arena.Center, 6.6f), WorldState.FutureTime(8d));
     }
 }
 
@@ -203,7 +204,7 @@ sealed class CE102FromTimesBygoneStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 39)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018, NameID = 39)]
 public sealed class CE102FromTimesBygone(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly ArenaBoundsCustom arena = new([new Polygon(new(-800f, 245f), 24.5f, 32)]);

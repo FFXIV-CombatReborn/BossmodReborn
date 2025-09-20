@@ -1,6 +1,7 @@
 ﻿namespace BossMod;
 
 // class that creates and manages instances of proper boss modules in response to world state changes
+[SkipLocalsInit]
 public sealed class BossModuleManager : IDisposable
 {
     public readonly WorldState WorldState;
@@ -78,15 +79,19 @@ public sealed class BossModuleManager : IDisposable
                     m.Dispose();
                     continue;
                 }
-
+                if (m.OnlyLoadIfTargetable && !m.PrimaryActor.IsTargetable)
+                {
+                    continue;
+                }
                 if ((playerPos - prim.PosRot.AsVector3()).LengthSquared() <= maxSq)
                 {
                     var countL = LoadedModules.Count;
                     var oid = prim.OID;
+
                     var exists = false;
                     for (var j = 0; j < countL; ++j)
                     {
-                        if (oid == LoadedModules[j].PrimaryActor.OID) // mob is likely a trash mob and there is already a loaded module for it
+                        if (oid == LoadedModules[j].PrimaryActor.OID)
                         {
                             exists = true;
                             break;
@@ -95,7 +100,7 @@ public sealed class BossModuleManager : IDisposable
                     if (!exists)
                     {
                         LoadedModules.Add(m);
-                        Service.Log($"[BMM] Boss module '{m.GetType()}' moved from pending to loaded for actor {m.PrimaryActor}");
+                        Service.Log($"[BMM] Boss module '{m.GetType()}' moved from pending to loaded for actor {prim}");
                         ModuleLoaded.Fire(m);
                         PendingModules.RemoveAt(i);
                     }
@@ -231,9 +236,10 @@ public sealed class BossModuleManager : IDisposable
             for (var i = 0; i < count; ++i)
             {
                 var module = LoadedModules[i];
-                if (module.PrimaryActor.OID == actor.OID)
+                var prim = module.PrimaryActor;
+                if (prim.OID == actor.OID)
                 {
-                    if (module.PrimaryActor.InstanceID == actor.InstanceID)  // module already exists, but actor reference was no longer valid (eg due to teleports at Necron)
+                    if (prim.InstanceID == actor.InstanceID)  // module already exists, but actor reference was no longer valid (eg due to teleports at Necron)
                     {
                         module.PrimaryActor = actor;
                         return;
@@ -242,7 +248,7 @@ public sealed class BossModuleManager : IDisposable
                     return;
                 }
             }
-            LoadModule(m);
+            LoadModule(m, m.OnlyLoadIfTargetable);
         }
     }
 

@@ -2,7 +2,8 @@
 
 // 64-bit mask; out-of-range accesses are safe and well-defined ('get' always returns 0, 'set' is no-op)
 // this is often used e.g. to store per-player flags (in such case only 8 lowest bits are used for 'normal' raids, or 24 lowest for full alliances)
-public record struct BitMask(ulong Raw)
+[SkipLocalsInit]
+public struct BitMask(ulong raw)
 {
     public bool this[int index]
     {
@@ -18,6 +19,7 @@ public record struct BitMask(ulong Raw)
         }
     }
 
+    public ulong Raw = raw;
     public void Reset() => Raw = default;
     public void Set(int index) => Raw |= MaskForBit(index);
     public void Clear(int index) => Raw &= ~MaskForBit(index);
@@ -32,6 +34,8 @@ public record struct BitMask(ulong Raw)
     public readonly BitMask WithBit(int index) => new(Raw | MaskForBit(index));
     public readonly BitMask WithoutBit(int index) => new(Raw & ~MaskForBit(index));
 
+    public static bool operator !=(BitMask a, BitMask b) => a.Raw != b.Raw;
+    public static bool operator ==(BitMask a, BitMask b) => a.Raw == b.Raw;
     public static BitMask operator ~(BitMask a) => new(~a.Raw);
     public static BitMask operator &(BitMask a, BitMask b) => new(a.Raw & b.Raw);
     public static BitMask operator |(BitMask a, BitMask b) => new(a.Raw | b.Raw);
@@ -76,6 +80,10 @@ public record struct BitMask(ulong Raw)
     }
 
     private static ulong MaskForBit(int index) => (uint)index < 64u ? (1ul << index) : default;
+
+    public readonly bool Equals(BitMask other) => Raw == other.Raw;
+    public override readonly bool Equals(object? obj) => obj is BitMask other && Equals(other);
+    public override readonly int GetHashCode() => Raw.GetHashCode();
 
     public override readonly string ToString() => $"{Raw:X}";
 }

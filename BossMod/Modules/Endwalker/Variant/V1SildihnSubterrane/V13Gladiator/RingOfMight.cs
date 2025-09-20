@@ -15,7 +15,7 @@ abstract class RingOfMight(BossModule module, AOEShape[] shapes, double riskyWit
             ref var s = ref Sequences.Ref(0);
             if (Shapes[1] is AOEShapeDonut donut)
             {
-                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(s.Origin, donut.InnerRadius + 2f), s.NextActivation);
+                hints.AddForbiddenZone(new SDInvertedCircle(s.Origin, donut.InnerRadius + 2f), s.NextActivation);
             }
         }
     }

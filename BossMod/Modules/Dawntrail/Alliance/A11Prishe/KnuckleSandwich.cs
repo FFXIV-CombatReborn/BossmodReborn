@@ -34,7 +34,7 @@ sealed class KnuckleSandwich(BossModule module) : Components.GenericAOEs(module)
         if (_aoes.Count == 2 && _aoes.Ref(1).Shape is AOEShapeDonut donut)
         {
             ref var aoe = ref _aoes.Ref(0);
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(aoe.Origin, donut.InnerRadius + 2f), aoe.Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(aoe.Origin, donut.InnerRadius + 2f), aoe.Activation);
         }
     }
 

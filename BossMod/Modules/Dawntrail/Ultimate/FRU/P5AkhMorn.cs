@@ -40,8 +40,8 @@ sealed class P5AkhMorn(BossModule module) : Components.UniformStackSpread(module
     {
         if (Source != null && _leftSoakers.Any() && _fulgent?.NumCasts > 6)
         {
-            var dir = Source.Rotation + (_leftSoakers[slot] ? -45 : 45).Degrees(); // note that left group go to boss right!
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Source.Position + 5 * dir.ToDirection(), 1), _activation);
+            var dir = Source.Rotation + (_leftSoakers[slot] ? -45f : 45f).Degrees(); // note that left group go to boss right!
+            hints.AddForbiddenZone(new SDInvertedCircle(Source.Position + 5f * dir.ToDirection(), 1f), _activation);
         }
     }
 
@@ -50,7 +50,7 @@ sealed class P5AkhMorn(BossModule module) : Components.UniformStackSpread(module
         if (spell.Action.ID == (uint)AID.AkhMornPandora)
         {
             Source = caster;
-            _activation = Module.CastFinishAt(spell, 0.1f);
+            _activation = Module.CastFinishAt(spell, 0.1d);
             foreach (var (slot, group) in _config.P5AkhMornAssignments.Resolve(Raid))
                 _leftSoakers[slot] = group == 0;
         }

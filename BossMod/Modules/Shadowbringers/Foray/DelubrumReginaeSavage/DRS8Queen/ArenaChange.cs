@@ -26,7 +26,7 @@ sealed class ArenaChange(BossModule module) : Components.GenericAOEs(module)
             }
             else if (state == 0x00200010u)
             {
-                Arena.Bounds = new ArenaBoundsSquare(29.5f);
+                Arena.Bounds = new ArenaBoundsSquare(25f);
                 _aoe = [];
             }
         }

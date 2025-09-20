@@ -1,7 +1,7 @@
 namespace BossMod.Dawntrail.Alliance.A22UltimaOmega;
 
 sealed class MultiMissileSmall(BossModule module) : Components.SimpleAOEs(module, (uint)AID.MultiMissileSmall, 6f, riskyWithSecondsLeft: 1.5d);
-sealed class MultiMissileBig(BossModule module) : Components.SimpleAOEs(module, (uint)AID.MultiMissileBig, 10f, riskyWithSecondsLeft: 1.5d);
+sealed class MultiMissileBig(BossModule module) : Components.SimpleAOEs(module, (uint)AID.MultiMissileBig, 10f, riskyWithSecondsLeft: 2.5d);
 
 sealed class CitadelSiege(BossModule module) : Components.GenericAOEs(module)
 {
@@ -14,8 +14,7 @@ sealed class CitadelSiege(BossModule module) : Components.GenericAOEs(module)
     {
         if (spell.Action.ID == (uint)AID.CitadelSiege)
         {
-            ++NumCasts;
-            _aoes.Add(new(rect, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell), risky: NumCasts != 4));
+            _aoes.Add(new(rect, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell)));
         }
     }
 
@@ -65,6 +64,8 @@ sealed class CitadelSiege(BossModule module) : Components.GenericAOEs(module)
             }
         }
     }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) { }
 }
 
 sealed class CitadelSiegeHint(BossModule module) : Components.GenericAOEs(module)
@@ -105,7 +106,7 @@ sealed class CitadelSiegeHint(BossModule module) : Components.GenericAOEs(module
     {
         if (active && actor.PosRot.X > 780f)
         {
-            hints.GoalZones.Add(hints.GoalRectangle(new(782f, 800f), new(default, 1f), 2f, 23.5f));
+            hints.GoalZones.Add(hints.GoalRectangle(new(782f, 800f), new(default, 1f), 2f, 23.5f, 99f));
         }
     }
 }

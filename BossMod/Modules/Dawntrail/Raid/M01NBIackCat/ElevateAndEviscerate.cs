@@ -88,7 +88,7 @@ sealed class ElevateAndEviscerate(BossModule module) : Components.GenericKnockba
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
@@ -112,27 +112,8 @@ sealed class ElevateAndEviscerate(BossModule module) : Components.GenericKnockba
             {
                 temp[len + i] = aoes2[i].Origin;
             }
-            var center = Arena.Center;
-            var origin = Tether.source.Position;
-            var polygon = poly;
-            hints.AddForbiddenZone(p =>
-            {
-                var offsetSource = (p - origin).Normalized();
-                var offsetCenter = p - center;
-                if (polygon.Contains(offsetCenter + 10f * offsetSource.Normalized()))
-                {
-                    var offset = p + 10f * offsetSource;
-                    for (var i = 0; i < total; ++i)
-                    {
-                        if (offset.InSquare(temp[i], 5f))
-                        {
-                            return default;
-                        }
-                    }
-                    return 1f;
-                }
-                return default;
-            }, kb[0].Activation);
+
+            hints.AddForbiddenZone(new SDKnockbackInComplexPolygonAwayFromOriginPlusAOEAABBSquares(Arena.Center, Tether.source.Position, 10f, poly, temp, 5f, total), kb[0].Activation);
         }
     }
 }
@@ -171,7 +152,7 @@ sealed class ElevateAndEviscerateImpact(BossModule module) : Components.GenericA
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var aoes = new List<AOEInstance>();
-        if (_kb.Tether != default && _kb.Tether.target != actor && Module.InBounds(_kb.Cache))
+        if (_kb.Tether != default && _kb.Tether.target != actor && Arena.InBounds(_kb.Cache))
         {
             aoes.Add(new(ElevateAndEviscerateHint.Rect, ArenaChanges.CellCenter(ArenaChanges.CellIndex(_kb.Cache)), default, _kb.Activation.AddSeconds(3.6d)));
         }
@@ -184,7 +165,7 @@ sealed class ElevateAndEviscerateImpact(BossModule module) : Components.GenericA
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.ElevateAndEviscerate && Module.InBounds(_kb.Cache))
+        if (spell.Action.ID == (uint)AID.ElevateAndEviscerate && Arena.InBounds(_kb.Cache))
         {
             _aoe = [new(ElevateAndEviscerateHint.Rect, ArenaChanges.CellCenter(ArenaChanges.CellIndex(_kb.Cache)), default, Module.CastFinishAt(spell, 3.6d))];
         }

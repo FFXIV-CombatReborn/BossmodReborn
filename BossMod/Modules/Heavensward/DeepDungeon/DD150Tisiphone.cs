@@ -40,8 +40,8 @@ class BossAdds(BossModule module) : Components.AddsMulti(module, [(uint)OID.Fana
             for (var i = 0; i < count; ++i)
             {
                 var zombie = zombies[i];
-                hints.AddForbiddenZone(ShapeDistance.Circle(zombie.Position, 3f));
-                hints.AddForbiddenZone(ShapeDistance.Circle(zombie.Position, 8f), WorldState.FutureTime(5d));
+                hints.AddForbiddenZone(new SDCircle(zombie.Position, 3f));
+                hints.AddForbiddenZone(new SDCircle(zombie.Position, 8f), WorldState.FutureTime(5d));
             }
         }
         else

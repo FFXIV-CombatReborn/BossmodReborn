@@ -36,7 +36,7 @@ class FordolaShield(BossModule module) : BossComponent(module)
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (Shield != null)
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Shield.Position, 4f), WorldState.FutureTime(5d));
+            hints.AddForbiddenZone(new SDInvertedCircle(Shield.Position, 4f), WorldState.FutureTime(5d));
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)

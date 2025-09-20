@@ -140,7 +140,7 @@ sealed class QuickMarchBow1(BossModule module) : QuickMarch(module)
             ref var aoe = ref _flames.AOE[0];
             return aoe.Check(pos);
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }
 
@@ -164,5 +164,5 @@ sealed class QuickMarchBow2(BossModule module) : QuickMarch(module)
 {
     private readonly ShimmeringShot2? _shimmering = module.FindComponent<ShimmeringShot2>();
 
-    public override bool DestinationUnsafe(int slot, Actor actor, WPos pos) => !Module.InBounds(pos) || (_shimmering?.ActorUnsafeAt(actor, pos) ?? false);
+    public override bool DestinationUnsafe(int slot, Actor actor, WPos pos) => !Arena.InBounds(pos) || (_shimmering?.ActorUnsafeAt(actor, pos) ?? false);
 }

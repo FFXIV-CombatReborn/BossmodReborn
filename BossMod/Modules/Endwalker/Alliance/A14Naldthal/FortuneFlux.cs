@@ -206,13 +206,13 @@ class FortuneFluxKnockback(BossModule module) : Components.GenericKnockback(modu
                 var act = m.activation;
                 if (!IsImmune(slot, act))
                 {
-                    hints.AddForbiddenZone(ShapeDistance.InvertedCone(m.source, 5f, m.rotation + a180, a45), act);
+                    hints.AddForbiddenZone(new SDInvertedCone(m.source, 5f, m.rotation + a180, a45), act);
                     for (var j = _order.NumComplete; j < countM; ++j)
                     {
                         var mj = _order.Mechanics[j];
                         if (mj.mechanic == FortuneFluxOrder.Mechanic.AOE)
                         {
-                            hints.AddForbiddenZone(ShapeDistance.Cone(m.source, 100f, Angle.FromDirection(m.source - mj.source), Angle.Asin(20f / (mj.source - m.source).Length())), act.AddSeconds(1d));
+                            hints.AddForbiddenZone(new SDCone(m.source, 100f, Angle.FromDirection(m.source - mj.source), Angle.Asin(20f / (mj.source - m.source).Length())), act.AddSeconds(1d));
                         }
                     }
                     return;

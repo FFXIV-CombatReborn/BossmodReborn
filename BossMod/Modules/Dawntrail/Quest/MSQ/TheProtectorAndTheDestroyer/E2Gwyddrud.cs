@@ -85,7 +85,7 @@ sealed class VioletVoltage(BossModule module) : Components.GenericAOEs(module)
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.VioletVoltageTelegraph)
-            _aoes.Add(new(cone, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell, 6)));
+            _aoes.Add(new(cone, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell, 6d)));
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
@@ -106,8 +106,7 @@ sealed class RoaringBoltKB(BossModule module) : Components.SimpleKnockbacks(modu
         var count = _aoe.Casters.Count;
         for (var i = 0; i < count; ++i)
         {
-            ref readonly var aoe = ref aoes[i];
-            if (aoe.Check(pos))
+            if (aoes[i].Check(pos))
             {
                 return true;
             }
@@ -124,13 +123,13 @@ sealed class RoaringBoltKB(BossModule module) : Components.SimpleKnockbacks(modu
         var len = aoes.Length;
         if (len != 0)
         {
-            var forbidden = new Func<WPos, float>[len];
+            var forbidden = new ShapeDistance[len];
             for (var i = 0; i < len; ++i)
             {
                 ref readonly var aoe = ref aoes[i];
-                forbidden[i] = ShapeDistance.Cone(Arena.Center, 20f, Angle.FromDirection(aoe.Origin - Arena.Center), a25);
+                forbidden[i] = new SDCone(Arena.Center, 20f, Angle.FromDirection(aoe.Origin - Arena.Center), a25);
             }
-            hints.AddForbiddenZone(ShapeDistance.Union(forbidden), Casters.Ref(0).Activation);
+            hints.AddForbiddenZone(new SDUnion(forbidden), Casters.Ref(0).Activation);
         }
     }
 }

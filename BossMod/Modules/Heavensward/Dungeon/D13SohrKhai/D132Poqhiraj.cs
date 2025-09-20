@@ -59,7 +59,7 @@ class ArenaChanges(BossModule module) : BossComponent(module)
 
     public override void OnActorEAnim(Actor actor, uint state)
     {
-        if (state != 0x00100020)
+        if (state != 0x00100020u)
             return;
 
         var wallIndex = actor.OID switch
@@ -78,7 +78,19 @@ class ArenaChanges(BossModule module) : BossComponent(module)
         var wallPos = wallPositions[wallIndex];
         var adjustment = wallIndex is 0 or 4 ? offset : wallIndex is 3 or 7 ? -offset : default;
         removedWalls.Add(new(wallPos + adjustment, 0.25f, adjustment != default ? 4.875f : 5f));
-        _kb.safeWalls.RemoveAll(x => x.Vertex1 == new WPos(GallopKB.xPositions[wallIndex / 4], wallPos.Z - 5f));
+        var safewalls = CollectionsMarshal.AsSpan(_kb.safeWalls);
+        var len = safewalls.Length;
+        var pos = new WPos(GallopKB.xPositions[wallIndex / 4], wallPos.Z - 5f);
+        for (var i = 0; i < len; ++i)
+        {
+            ref readonly var safewall = ref safewalls[i];
+            if (safewall.Vertex1 == pos)
+            {
+                _kb.safeWalls.RemoveAt(i);
+                break;
+            }
+        }
+
         ArenaBoundsCustom arena = new([.. baseArena, .. removedWalls]);
         Arena.Bounds = arena;
         Arena.Center = arena.Center;
@@ -102,8 +114,12 @@ class GallopKB(BossModule module) : Components.GenericKnockback(module)
         List<SafeWall> list = new(8);
 
         for (var i = 0; i < 2; ++i)
+        {
             for (var j = 0; j < 4; ++j)
+            {
                 list.Add(new(new(xPositions[i], zStart + j * zStep - 5f), new(xPositions[i], zStart + j * zStep + 5f)));
+            }
+        }
         return list;
     }
 
@@ -112,13 +128,17 @@ class GallopKB(BossModule module) : Components.GenericKnockback(module)
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.GallopKB)
+        {
             _sources.Add(new(spell.LocXZ, 30f, Module.CastFinishAt(spell), rect, spell.Rotation, Kind.DirForward, default, safeWalls));
+        }
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.GallopKB)
+        {
             _sources.Clear();
+        }
     }
 }
 
@@ -133,11 +153,13 @@ class GallopKBHint(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (_aoe == null && spell.Action.ID == (uint)AID.GallopKB)
+        if (_aoe.Length == 0 && spell.Action.ID == (uint)AID.GallopKB)
         {
             var count = _kb.safeWalls.Count;
             if (count is 0 or 8)
+            {
                 return;
+            }
             List<RectangleSE> rects = new(count);
             for (var i = 0; i < count; ++i)
             {
@@ -146,7 +168,7 @@ class GallopKBHint(BossModule module) : Components.GenericAOEs(module)
                 var pos = new WPos(safeWall.X, safeWall.Z + 5f);
                 rects.Add(new(pos + dir, pos - 3.5f * dir, 5f));
             }
-            AOEShapeCustom aoe = new([.. rects], InvertForbiddenZone: true);
+            AOEShapeCustom aoe = new([.. rects], invertForbiddenZone: true);
             _aoe = [new(aoe, Arena.Center, default, Module.CastFinishAt(spell), Colors.SafeFromAOE, true)];
         }
     }
@@ -176,7 +198,7 @@ class BurningBright(BossModule module) : Components.BaitAwayCast(module, (uint)A
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
         base.DrawArenaForeground(pcSlot, pc);
-        if (CurrentBaits.Count != 0 && CurrentBaits[0].Target == pc)
+        if (CurrentBaits.Count != 0 && CurrentBaits.Ref(0).Target == pc)
         {
             var walls = Module.Enemies((uint)OID.PrayerWall);
             var count = walls.Count;
@@ -207,20 +229,23 @@ class BurningBright(BossModule module) : Components.BaitAwayCast(module, (uint)A
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         base.AddAIHints(slot, actor, assignment, hints);
-        if (CurrentBaits.Count != 0 && CurrentBaits[0] is var bait && bait.Target == actor)
+        if (CurrentBaits.Count != 0)
         {
-            var walls = Module.Enemies((uint)OID.PrayerWall);
-            var count = walls.Count;
-            if (count <= 4) // don't care if most walls are up plus most of the arena would likely be forbidden anyway depending on player positioning
+            ref var bait = ref CurrentBaits.Ref(0);
+            if (bait.Target == actor)
             {
-                var forbidden = new Func<WPos, float>[count];
-                for (var i = 0; i < count; ++i)
+                var walls = Module.Enemies((uint)OID.PrayerWall);
+                var count = walls.Count;
+                if (count is <= 4 and > 0) // don't care if most walls are up plus most of the arena would likely be forbidden anyway depending on player positioning
                 {
-                    var a = walls[i];
-                    forbidden[i] = ShapeDistance.Cone(bait.Source.Position, 100f, bait.Source.AngleTo(a), Angle.Asin(8f / (a.Position - bait.Source.Position).Length()));
+                    var forbidden = new ShapeDistance[count];
+                    for (var i = 0; i < count; ++i)
+                    {
+                        var a = walls[i];
+                        forbidden[i] = new SDCone(bait.Source.Position, 100f, bait.Source.AngleTo(a), Angle.Asin(8f / (a.Position - bait.Source.Position).Length()));
+                    }
+                    hints.AddForbiddenZone(new SDUnion(forbidden), bait.Activation);
                 }
-                if (forbidden.Length != 0)
-                    hints.AddForbiddenZone(ShapeDistance.Union(forbidden), bait.Activation);
             }
         }
     }
@@ -299,7 +324,7 @@ class CloudCall(BossModule module) : Components.GenericBaitAway(module, centerAt
         base.AddAIHints(slot, actor, assignment, hints);
         if (CurrentBaits.Count != 0 && CurrentBaits.Ref(0).Target == actor)
         {
-            hints.AddForbiddenZone(ShapeDistance.Rect(Arena.Center, new WDir(default, 1f), 19f, 19f, 5f));
+            hints.AddForbiddenZone(new SDRect(Arena.Center, new WDir(default, 1f), 19f, 19f, 5f));
         }
     }
 

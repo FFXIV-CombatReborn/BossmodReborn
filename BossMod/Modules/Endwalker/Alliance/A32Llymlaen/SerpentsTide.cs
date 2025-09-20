@@ -2,7 +2,7 @@ namespace BossMod.Endwalker.Alliance.A32Llymlaen;
 
 sealed class SerpentsTide(BossModule module) : Components.GenericAOEs(module)
 {
-    public readonly List<AOEInstance> AOEs = [];
+    public readonly List<AOEInstance> AOEs = new(2);
     private static readonly AOEShapeRect _shape = new(80f, 10f);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(AOEs);

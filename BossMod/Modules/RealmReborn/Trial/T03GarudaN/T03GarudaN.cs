@@ -34,7 +34,7 @@ class Friction(BossModule module) : BossComponent(module)
             var monoliths = Module.Enemies((uint)OID.Monolith);
             var count = monoliths.Count;
             for (var i = 0; i < count; ++i)
-                hints.AddForbiddenZone(ShapeDistance.Circle(monoliths[i].Position, 5));
+                hints.AddForbiddenZone(new SDCircle(monoliths[i].Position, 5));
         }
     }
 }

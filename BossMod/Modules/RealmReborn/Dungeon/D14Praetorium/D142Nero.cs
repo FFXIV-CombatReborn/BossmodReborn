@@ -31,7 +31,7 @@ class AugmentedSuffering(BossModule module) : Components.SimpleKnockbacks(module
     {
         if (Casters.Count != 0)
         {
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(Arena.Center, 8f), Casters.Ref(0).Activation);
+            hints.AddForbiddenZone(new SDInvertedCircle(Arena.Center, 8f), Casters.Ref(0).Activation);
         }
     }
 }

@@ -89,7 +89,7 @@ sealed class GoldorAeroIII(BossModule module) : Components.SimpleKnockbacks(modu
                 return true;
             }
         }
-        return !Module.InBounds(pos);
+        return !Arena.InBounds(pos);
     }
 }
 

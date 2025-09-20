@@ -8,7 +8,7 @@ sealed class AbominableBlink(BossModule module) : Components.BaitAwayIcon(module
         var baits = ActiveBaitsOn(actor);
         if (baits.Count != 0)
         {
-            hints.AddForbiddenZone(ShapeDistance.Rect(Arena.Center, new WDir(default, 1f), 24f, 24f, 25f), baits.Ref(0).Activation.AddSeconds(1d));
+            hints.AddForbiddenZone(new SDRect(Arena.Center, new WDir(default, 1f), 24f, 24f, 25f), baits.Ref(0).Activation.AddSeconds(1d));
         }
     }
 }

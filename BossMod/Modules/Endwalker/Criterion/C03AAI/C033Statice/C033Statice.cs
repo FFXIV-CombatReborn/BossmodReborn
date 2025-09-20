@@ -12,7 +12,7 @@ class SFaerieRing(BossModule module) : FaerieRing(module, (uint)AID.SFaerieRing)
 
 public abstract class C033Statice(WorldState ws, Actor primary) : BossModule(ws, primary, new(-200f, default), new ArenaBoundsCircle(20f));
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, PrimaryActorOID = (uint)OID.NBoss, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 979, NameID = 12506, SortOrder = 9, PlanLevel = 90)]
+[ModuleInfo(BossModuleInfo.Maturity.Verified, PrimaryActorOID = (uint)OID.NBoss, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 979, NameID = 12506, SortOrder = 9, PlanLevel = 90, ConfigType = typeof(C033SStaticeConfig))]
 public class C033NStatice(WorldState ws, Actor primary) : C033Statice(ws, primary);
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, PrimaryActorOID = (uint)OID.SBoss, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 980, NameID = 12506, SortOrder = 9, PlanLevel = 90)]

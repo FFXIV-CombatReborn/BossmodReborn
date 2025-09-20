@@ -65,11 +65,11 @@ sealed class BambooSplits(BossModule module) : Components.GenericAOEs(module)
                     AddAOE(circle, default);
                     break;
                 case (uint)OID.HelperSingleRect:
-                    AddAOE(rect, 90.Degrees());
+                    AddAOE(rect, 90f.Degrees());
                     break;
                 case (uint)OID.HelperDoubleRect:
-                    AddAOE(rect, 90.Degrees());
-                    AddAOE(rect, -90.Degrees());
+                    AddAOE(rect, 90f.Degrees());
+                    AddAOE(rect, -90f.Degrees());
                     break;
             }
         }
@@ -83,9 +83,10 @@ sealed class BambooSplits(BossModule module) : Components.GenericAOEs(module)
             void RemoveAOE(AOEShape shape)
             {
                 var pos = caster.Position.Quantized();
+                var aoes = CollectionsMarshal.AsSpan(_aoes);
                 for (var i = 0; i < count; ++i)
                 {
-                    var aoe = _aoes[i];
+                    ref var aoe = ref aoes[i];
                     if (aoe.Origin == pos && aoe.Shape == shape)
                     {
                         _aoes.RemoveAt(i);
@@ -118,7 +119,7 @@ sealed class TheSliceIsRightStates : StateMachineBuilder
         TrivialPhase()
             .ActivateOnEnter<BambooSplits>()
             .ActivateOnEnter<DaigoroGilJump>()
-            .Raw.Update = () => module.PrimaryActor.IsDeadOrDestroyed || !module.InBounds(module.Raid.Player()!.Position);
+            .Raw.Update = () => module.PrimaryActor.IsDeadOrDestroyed || !module.Arena.InBounds(module.Raid.Player()!.Position);
     }
 }
 
@@ -126,5 +127,5 @@ sealed class TheSliceIsRightStates : StateMachineBuilder
 public sealed class TheSliceIsRight(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly ArenaBoundsCustom arena = new([new Polygon(new(70.5f, -36f), 15f * CosPI.Pi28th, 28)]);
-    protected override bool CheckPull() => InBounds(Raid.Player()!.Position); // only activate module if player is taking part in the event
+    protected override bool CheckPull() => Arena.InBounds(Raid.Player()!.Position); // only activate module if player is taking part in the event
 }
