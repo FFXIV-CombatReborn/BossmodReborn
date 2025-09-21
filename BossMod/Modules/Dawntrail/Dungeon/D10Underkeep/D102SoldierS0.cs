@@ -158,8 +158,9 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
 
     private enum MechanicState { None, OrderedFire, StaticForce, ElectricExcess }
     private MechanicState _currentMechanic;
-    private DateTime _orderedFireActivation;
+    private DateTime? _orderedFireActivation = null;
     private DateTime _electricExcessActivation;
+    private WPos? _lastSafeQuad;
     private readonly Dictionary<PartyRolesConfig.Assignment, WPos> partyElectricExcessHintPos = [];
     private readonly Dictionary<PartyRolesConfig.Assignment, WPos> partyOrderedFireHintPos = [];
 
@@ -192,27 +193,28 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
         if (!_config.MultiboxMode || assignment == PartyRolesConfig.Assignment.Unassigned)
             return;
 
-        AddGenericMTNorthHint(slot, actor, assignment, hints);
+        if (_currentMechanic is not MechanicState.OrderedFire and not MechanicState.StaticForce)
+        {
+            AddGenericMTNorthHint(slot, actor, assignment, hints);
+        }
 
-        if (WorldState.CurrentTime > _electricExcessActivation.AddSeconds(3))
+        if (WorldState.CurrentTime > _electricExcessActivation)
         {
             partyElectricExcessHintPos.Clear();
         }
 
-        if (WorldState.CurrentTime > _orderedFireActivation.AddSeconds(3))
+        if (WorldState.CurrentTime > _orderedFireActivation)
         {
             partyOrderedFireHintPos.Clear();
         }
 
-        switch (_currentMechanic)
+        if (_currentMechanic is MechanicState.OrderedFire or MechanicState.StaticForce || WorldState.CurrentTime < _orderedFireActivation?.AddSeconds(5))
         {
-            case MechanicState.StaticForce:
-            case MechanicState.OrderedFire:
-                AddOrderedFireHints(slot, actor, assignment, hints);
-                break;
-            case MechanicState.ElectricExcess:
-                AddElectricExcessHints(slot, actor, assignment, hints);
-                break;
+            AddOrderedFireHints(slot, actor, assignment, hints);
+        }
+        else if (_currentMechanic is MechanicState.ElectricExcess)
+        {
+            AddElectricExcessHints(slot, actor, assignment, hints);
         }
     }
 
@@ -263,7 +265,7 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
 
     private void AddElectricExcessHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        var spreadRadius = _electricExcess.SpreadRadius + 1.0f;
+        var spreadRadius = _electricExcess.SpreadRadius;
 
         var activeRoles = new List<PartyRolesConfig.Assignment>();
         for (var index = 0; index < Raid.Members.Count(); ++index)
@@ -339,8 +341,6 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
         if (meleeCount == 4) // All melee comp (ex: MT/OT/M1/M2)
         {
             // MT north, OT under boss, M1/M2 at SW/SE for positionals
-            if (tanks.Contains(PartyRolesConfig.Assignment.MT))
-                positions[PartyRolesConfig.Assignment.MT] = baseRadius * Cardinal.North.ToDirection();
             if (tanks.Contains(PartyRolesConfig.Assignment.OT))
                 positions[PartyRolesConfig.Assignment.OT] = new WDir(0, 0); // Under boss
             if (melees.Contains(PartyRolesConfig.Assignment.M1))
@@ -350,10 +350,6 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
         }
         else if (meleeCount == 3 && rangedCount == 1) // 3 melee + 1 ranged
         {
-            // MT north
-            if (tanks.Contains(PartyRolesConfig.Assignment.MT))
-                positions[PartyRolesConfig.Assignment.MT] = baseRadius * Cardinal.North.ToDirection();
-
             // the single ranged under the boss
             if (ranged.Count > 0)
                 positions[ranged[0]] = new WDir(0, 0); // Under boss
@@ -371,10 +367,6 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
         }
         else if (meleeCount == 2 && rangedCount == 2) // Standard comp (2 melee, 2 ranged)
         {
-            // MT north
-            if (tanks.Contains(PartyRolesConfig.Assignment.MT))
-                positions[PartyRolesConfig.Assignment.MT] = baseRadius * Cardinal.North.ToDirection();
-
             // non-MT melee at south
             if (tanks.Contains(PartyRolesConfig.Assignment.OT))
                 positions[PartyRolesConfig.Assignment.OT] = baseRadius * Cardinal.South.ToDirection();
@@ -404,9 +396,7 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
         else // 1 melee, 3 ranged or anything else - cardinals
         {
             // melee north, 
-            if (tanks.Contains(PartyRolesConfig.Assignment.MT))
-                positions[PartyRolesConfig.Assignment.MT] = baseRadius * Cardinal.North.ToDirection();
-            else if (tanks.Contains(PartyRolesConfig.Assignment.OT))
+            if (tanks.Contains(PartyRolesConfig.Assignment.OT))
                 positions[PartyRolesConfig.Assignment.OT] = baseRadius * Cardinal.North.ToDirection();
             else if (melees.Count > 0)
                 positions[melees[0]] = baseRadius * Cardinal.North.ToDirection();
@@ -441,7 +431,15 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
 
         var safeQuadrant = GetOrderedFireSafeQuadrant();
         if (safeQuadrant == null)
-            return;
+        {
+            if (_lastSafeQuad == null)
+                return;
+            safeQuadrant = _lastSafeQuad;
+        }
+        else
+        {
+            _lastSafeQuad = (WPos)safeQuadrant;
+        }
 
         bool orderedFireResolved = _orderedFire.NumCasts > 0 || WorldState.CurrentTime > _orderedFireActivation || _currentMechanic == MechanicState.StaticForce;
         var positions = AssignOrderedFirePositions(activeRoles, safeQuadrant.Value, orderedFireResolved);
