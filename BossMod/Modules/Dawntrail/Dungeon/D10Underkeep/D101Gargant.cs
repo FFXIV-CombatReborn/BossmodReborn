@@ -82,10 +82,14 @@ sealed class SphereShatter(BossModule module) : Components.GenericAOEs(module)
 sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
 {
     private readonly SedimentaryDebris _sedimentaryDebris = module.FindComponent<SedimentaryDebris>()!;
+    private readonly AerialAmbush _aerialAmbush = module.FindComponent<AerialAmbush>()!;
 
-    private enum MechanicState { None, SedimentaryDebris }
+
+    private enum MechanicState { None, SedimentaryDebris, AerialAmbush }
     private MechanicState _currentMechanic;
     private DateTime _sedimentaryDebrisActivation;
+    private DateTime _aerialAmbushActivation;
+    private readonly Dictionary<PartyRolesConfig.Assignment, WPos> partyAerialAmbushHintPos = [];
     private readonly Dictionary<PartyRolesConfig.Assignment, WPos> partySedimentaryDebrisHintPos = [];
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
@@ -96,12 +100,16 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
                 _currentMechanic = MechanicState.SedimentaryDebris;
                 _sedimentaryDebrisActivation = Module.CastFinishAt(spell, 5.5f);
                 break;
+            case AID.AerialAmbushVisual:
+                _currentMechanic = MechanicState.AerialAmbush;
+                _aerialAmbushActivation = Module.CastFinishAt(spell, 3.5f);
+                break;
         }
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID is ((uint)AID.SedimentaryDebris))
+        if (spell.Action.ID is ((uint)AID.SedimentaryDebris) or ((uint)AID.AerialAmbush))
             _currentMechanic = MechanicState.None;
     }
 
@@ -112,15 +120,19 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
 
         AddGenericMTNorthHint(slot, actor, assignment, hints);
 
-        if (WorldState.CurrentTime > _sedimentaryDebrisActivation.AddSeconds(3))
-        {
+        if (WorldState.CurrentTime > _sedimentaryDebrisActivation)
             partySedimentaryDebrisHintPos.Clear();
-        }
+
+        if (WorldState.CurrentTime > _aerialAmbushActivation)
+            partyAerialAmbushHintPos.Clear();
 
         switch (_currentMechanic)
         {
             case MechanicState.SedimentaryDebris:
                 AddSedimentaryDebrisHints(slot, actor, assignment, hints);
+                break;
+            case MechanicState.AerialAmbush:
+                AddAerialAmbushHints(slot, actor, assignment, hints);
                 break;
         }
     }
@@ -140,14 +152,66 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
                 PartyRolesConfig.Assignment.H1 or PartyRolesConfig.Assignment.H2 => Colors.Healer,
                 _ => 0
             };
-            uint color2 = Colors.Safe;
 
             if (color != 0)
             {
-                Arena.ZoneCircle(kvp.Value.Quantized(), _sedimentaryDebris.SpreadRadius, color2);
+                Arena.ZoneCircle(kvp.Value.Quantized(), _sedimentaryDebris.SpreadRadius, Colors.Safe);
                 Arena.ZoneCircle(kvp.Value.Quantized(), 0.5f, color);
             }
         }
+
+        foreach (var kvp in partyAerialAmbushHintPos)
+        {
+            uint color = kvp.Key switch
+            {
+                PartyRolesConfig.Assignment.MT or PartyRolesConfig.Assignment.OT => Colors.Tank,
+                PartyRolesConfig.Assignment.M1 or PartyRolesConfig.Assignment.M2 => Colors.Melee,
+                _ => 0
+            };
+
+            if (color != 0)
+            {
+                Arena.ZoneCircle(kvp.Value.Quantized(), 0.5f, color);
+            }
+        }
+    }
+
+    private void AddAerialAmbushHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        // Only position melees - ranged can stay wherever safe
+        var isMelee = assignment is PartyRolesConfig.Assignment.MT or PartyRolesConfig.Assignment.OT
+                                  or PartyRolesConfig.Assignment.M1 or PartyRolesConfig.Assignment.M2;
+
+        //if (!isMelee)
+        //    return;
+
+        if (_aerialAmbush.ActiveCasters.Length == 0)
+            return;
+
+        var aoe = _aerialAmbush.ActiveCasters[0];
+        var rectLength = 30f; // From AOEShapeRect(30f, 7.5f)
+
+        // where boss will appear
+        var endPosition = aoe.Origin + rectLength * aoe.Rotation.ToDirection();
+
+        // which side is closer to the actor's current position?
+        var leftSide = endPosition + 3f * (aoe.Rotation + 90.Degrees()).ToDirection();
+        var rightSide = endPosition + 3f * (aoe.Rotation - 90.Degrees()).ToDirection();
+
+        var distToLeft = (leftSide - actor.Position).LengthSq();
+        var distToRight = (rightSide - actor.Position).LengthSq();
+
+        var targetPosition = distToLeft < distToRight ? leftSide : rightSide;
+
+        if (actor.InstanceID == Raid.Player()?.InstanceID)
+        {
+            AddGenericGoalDestination(hints, targetPosition);
+            partyAerialAmbushHintPos.Clear();
+            partyAerialAmbushHintPos[assignment] = targetPosition;
+        }
+
+        // debug visualization
+        partyAerialAmbushHintPos[assignment] = targetPosition;
     }
 
     private void AddSedimentaryDebrisHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)

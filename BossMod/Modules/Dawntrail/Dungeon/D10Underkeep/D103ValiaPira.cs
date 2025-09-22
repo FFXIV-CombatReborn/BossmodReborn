@@ -220,10 +220,10 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
 
         AddGenericMTNorthHint(slot, actor, assignment, hints);
 
-        if (WorldState.CurrentTime > _concurrentFieldActivation.AddSeconds(3))
+        if (WorldState.CurrentTime > _concurrentFieldActivation)
             partyConcurrentFieldHintPos.Clear();
 
-        if (WorldState.CurrentTime > _hyperchargedLightActivation.AddSeconds(3))
+        if (WorldState.CurrentTime > _hyperchargedLightActivation)
             partyHyperchargedLightHintPos.Clear();
 
         switch (_currentMechanic)
