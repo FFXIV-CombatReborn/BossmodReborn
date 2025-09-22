@@ -237,7 +237,7 @@ public abstract class CastLineOfSightAOEComplex(BossModule module, uint aid, Rel
         {
             var center = Arena.Center;
             var pos = caster.Position; // these LoS casts seem to typically use caster.Position instead of spell.LocXz
-            AOEs.Add(new(new AOEShapeCustom([new PolygonCustomRel(Visibility.Compute(pos - center, BlockerShape))],
+            AOEs.Add(new(new AOEShapeCustom([new PolygonCustomRel(BlockerShape.Visibility(pos - center))],
             MaxRange != default ? [new DonutV(pos, MaxRange, 1000f, 64)] : null),
             center, default, Module.CastFinishAt(spell), actorID: caster.InstanceID));
         }

@@ -51,7 +51,7 @@ sealed class LitFuse(BossModule module) : Components.GenericAOEs(module)
         {
             _aoes.Add(new(circle, actor.Position, default, activation));
             if (_aoes.Count == 8)
-                _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
         }
         switch (status.ID)
         {

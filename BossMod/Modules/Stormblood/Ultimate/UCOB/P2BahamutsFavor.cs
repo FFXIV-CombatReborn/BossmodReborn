@@ -122,7 +122,7 @@ class P2BahamutsFavorDeathstorm(BossModule module) : BossComponent(module)
         if (status.ID == (uint)SID.Doom)
         {
             _dooms.Add((actor, status.ExpireAt, false));
-            _dooms.Sort((a, b) => a.expiration.CompareTo(b.expiration));
+            _dooms.Sort(static (a, b) => a.expiration.CompareTo(b.expiration));
         }
     }
 

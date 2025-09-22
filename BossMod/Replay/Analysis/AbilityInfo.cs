@@ -355,7 +355,7 @@ sealed class AbilityInfo : CommonEnumInfo
 
                 _points.Add((i, minDistance));
             }
-            _points.Sort((b, a) => a.MinDistance.CompareTo(b.MinDistance));
+            _points.Sort(static (b, a) => a.MinDistance.CompareTo(b.MinDistance));
         }
 
         public void Draw(UITree tree) => tree.LeafNodes(_points, p => $"{p.MinDistance:f3}: {p.Inst.TimestampString()}");

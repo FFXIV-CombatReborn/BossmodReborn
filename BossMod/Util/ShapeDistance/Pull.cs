@@ -11,7 +11,7 @@ public sealed class SDKnockbackTowardsOriginPlusAOECirclesPlusAABBSquareIntersec
     private readonly float tileHalfWidth = TileHalfWidth;
     private readonly int len = Length;
 
-    public override float Distance(WPos p)
+    public override bool Contains(WPos p)
     {
         var offsetCenter = p - center;
         var length = offsetCenter.Length();
@@ -22,16 +22,15 @@ public sealed class SDKnockbackTowardsOriginPlusAOECirclesPlusAABBSquareIntersec
         {
             if ((p + projected).InCircle(aoes[i], radius))
             {
-                return default;
+                return true;
             }
         }
 
-        if (Intersect.RayAABB(centerTile - center, offsetSource, tileHalfWidth, tileHalfWidth) > lengthAdj)
-        {
-            return 1f;
-        }
-        return default;
+        return Intersect.RayAABB(centerTile - center, offsetSource, tileHalfWidth, tileHalfWidth) <= lengthAdj;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override float Distance(WPos p) => Contains(p) ? 0f : 1f;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;

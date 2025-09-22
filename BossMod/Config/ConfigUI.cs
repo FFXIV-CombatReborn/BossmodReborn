@@ -302,7 +302,7 @@ public sealed class ConfigUI : IDisposable
 
     private static void SortByOrder(List<UINode> nodes)
     {
-        nodes.Sort((a, b) => a.Order.CompareTo(b.Order));
+        nodes.Sort(static (a, b) => a.Order.CompareTo(b.Order));
         foreach (var n in nodes)
             SortByOrder(n.Children);
     }

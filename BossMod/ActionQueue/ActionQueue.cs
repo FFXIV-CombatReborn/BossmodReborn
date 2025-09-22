@@ -53,7 +53,7 @@ public sealed class ActionQueue
 
     public Entry FindBest(WorldState ws, Actor player, ReadOnlySpan<Cooldown> cooldowns, float animationLock, AIHints hints, float instantAnimLockDelay, bool allowDismount)
     {
-        Entries.Sort((b, a) => (a.Priority, -a.Expire).CompareTo((b.Priority, -b.Expire)));
+        Entries.Sort(static (b, a) => (a.Priority, -a.Expire).CompareTo((b.Priority, -b.Expire)));
         Entry best = default;
         var deadline = float.MaxValue; // any candidate we consider, if executed, should allow executing next action by this deadline
         var entries = CollectionsMarshal.AsSpan(Entries);

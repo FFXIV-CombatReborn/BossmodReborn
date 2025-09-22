@@ -153,7 +153,7 @@ sealed class SystematicBombardment(BossModule module) : Components.GenericAOEs(m
             _aoes.Add(new(rect, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell), risky: false));
             if (_aoes.Count == 16)
             {
-                _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
             }
         }
     }

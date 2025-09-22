@@ -148,7 +148,7 @@ sealed class TimeEruptionBombReproduce(BossModule module) : Components.GenericAO
         _clocks.Add((actor.Position, delay));
         if (_clocks.Count == 9)
         {
-            _clocks.Sort((a, b) => a.delay.CompareTo(b.delay));
+            _clocks.Sort(static (a, b) => a.delay.CompareTo(b.delay));
             var count = _clocks.Count;
             if (count >= 2)
             {

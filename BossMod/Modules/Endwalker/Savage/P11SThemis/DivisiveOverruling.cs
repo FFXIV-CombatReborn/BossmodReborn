@@ -54,7 +54,7 @@ class DivisiveOverruling(BossModule module) : Components.GenericAOEs(module)
         void AddAOE(AOEShapeRect shape)
         {
             AOEs.Add(new(shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell)));
-            AOEs.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+            AOEs.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
         }
     }
 

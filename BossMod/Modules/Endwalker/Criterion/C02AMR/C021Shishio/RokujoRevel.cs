@@ -82,7 +82,7 @@ class RokujoRevel(BossModule module) : Components.GenericAOEs(module)
             case (uint)AID.SRokujoRevelAOE:
                 _pendingLines.Add((spell.Rotation, Module.CastFinishAt(spell)));
                 AddHitClouds(_clouds.InShape(_shapeLine, caster.Position, spell.Rotation), Module.CastFinishAt(spell), ShapeCircle?.Radius ?? 0f);
-                _pendingCircles.Sort((a, b) => a.activation.CompareTo(b.activation));
+                _pendingCircles.Sort(static (a, b) => a.activation.CompareTo(b.activation));
                 break;
             case (uint)AID.NLeapingLevin1:
             case (uint)AID.NLeapingLevin2:

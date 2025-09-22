@@ -5,30 +5,37 @@ public sealed class SDKnockbackInAABBSquareLeftRightAlongXAxisPlusAOECircles(WPo
 {
     private readonly WPos center = Center;
     private readonly float originX = Center.X;
-    private readonly WDir dir1 = new(default, Distance);
-    private readonly WDir dir2 = new(default, -Distance);
+    private readonly WDir dir1 = new(Distance, default);
+    private readonly WDir dir2 = new(-Distance, default);
     private readonly float halfWidth = HalfWidth;
     private readonly WPos[] aoes = AOEs;
     private readonly float radius = Radius;
     private readonly int len = Length;
 
-    public override float Distance(WPos p)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
     {
         var projected = p + (p.X > originX ? dir1 : dir2);
+        if (!projected.InSquare(center, halfWidth))
+        {
+            return true;
+        }
+
         for (var i = 0; i < len; ++i)
         {
             if (projected.InCircle(aoes[i], radius))
             {
-                return default;
+                return true;
             }
         }
-        if (projected.InSquare(center, halfWidth))
-        {
-            return 1f;
-        }
-
-        return default;
+        return false;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override float Distance(WPos p) => Contains(p) ? 0f : 1f;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
 }
 
 [SkipLocalsInit]
@@ -39,14 +46,17 @@ public sealed class SDKnockbackInAABBSquareAwayFromOrigin(WPos Center, WPos Orig
     private readonly float halfWidth = HalfWidth;
     private readonly float distance = Distance;
 
-    public override float Distance(WPos p)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
     {
-        if ((p + distance * (p - origin).Normalized()).InSquare(center, halfWidth))
-        {
-            return 1f;
-        }
-        return default;
+        return !(p + distance * (p - origin).Normalized()).InSquare(center, halfWidth);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override float Distance(WPos p) => Contains(p) ? 0f : 1f;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
 }
 
 [SkipLocalsInit]
@@ -70,6 +80,15 @@ public sealed class SDKnockbackInAABBSquareAwayFromOriginPlusRectAOE(WPos Center
         }
         return default;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
 }
 
 [SkipLocalsInit]
@@ -82,6 +101,7 @@ public sealed class SDKnockbackInAABBSquareAwayFromOriginIntoCircle(WPos Center,
     private readonly WPos circleOrigin = CircleOrigin;
     private readonly float radius = Radius;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override float Distance(WPos p)
     {
         var projected = p + distance * (p - origin);
@@ -91,6 +111,15 @@ public sealed class SDKnockbackInAABBSquareAwayFromOriginIntoCircle(WPos Center,
         }
         return default;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
 }
 
 [SkipLocalsInit]
@@ -100,6 +129,7 @@ public sealed class SDKnockbackInAABBSquareFixedDirection(WPos Center, WDir Dire
     private readonly WDir direction = Direction; // direction includes distance, not normalized
     private readonly float halfWidth = HalfWidth;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override float Distance(WPos p)
     {
         if ((p + direction).InSquare(center, halfWidth))
@@ -108,6 +138,15 @@ public sealed class SDKnockbackInAABBSquareFixedDirection(WPos Center, WDir Dire
         }
         return default;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
 }
 
 [SkipLocalsInit]
@@ -119,15 +158,21 @@ public sealed class SDKnockbackInAABBSquareFixedDirectionPlusAOECircle(WPos Cent
     private readonly WPos circleOrigin = CircleOrigin;
     private readonly float radius = Radius;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override float Distance(WPos p)
     {
         var projected = p + direction;
-        if (projected.InSquare(center, halfWidth) && !projected.InCircle(circleOrigin, radius))
-        {
-            return 1f;
-        }
-        return default;
+        return projected.InSquare(center, halfWidth) && !projected.InCircle(circleOrigin, radius) ? 1f : default;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
 }
 
 [SkipLocalsInit]
@@ -143,6 +188,11 @@ public sealed class SDKnockbackInAABBSquareFixedDirectionPlusAOECircles(WPos Cen
     public override float Distance(WPos p)
     {
         var projected = p + direction;
+
+        if (!projected.InSquare(center, halfWidth))
+        {
+            return default;
+        }
         for (var i = 0; i < len; ++i)
         {
             if (projected.InCircle(origins[i], radius))
@@ -150,12 +200,18 @@ public sealed class SDKnockbackInAABBSquareFixedDirectionPlusAOECircles(WPos Cen
                 return default;
             }
         }
-        if (projected.InSquare(center, halfWidth))
-        {
-            return 1f;
-        }
-        return default;
+
+        return 1f;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
 }
 
 [SkipLocalsInit]
@@ -185,6 +241,12 @@ public sealed class SDKnockbackInAABBSquareAwayFromOriginPlusAOECirclesMixedRadi
             }
         }
         return 1f;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -228,6 +290,12 @@ public sealed class SDKnockbackInAABBSquareAwayFromOriginPlusAOECirclesMixedRadi
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
 }
 
@@ -245,6 +313,12 @@ public sealed class SDKnockbackInAABBSquareAwayFromOriginPlusAOECircles(WPos Cen
     public override float Distance(WPos p)
     {
         var projected = p + distance * (p - origin).Normalized();
+
+        if (!projected.InSquare(center, halfWidth))
+        {
+            return default;
+        }
+
         for (var i = 0; i < len; ++i)
         {
             if (projected.InCircle(aoes[i], radius))
@@ -252,11 +326,13 @@ public sealed class SDKnockbackInAABBSquareAwayFromOriginPlusAOECircles(WPos Cen
                 return default;
             }
         }
-        if (projected.InSquare(center, halfWidth))
-        {
-            return 1f;
-        }
-        return default;
+        return 1f;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -278,6 +354,12 @@ public sealed class SDKnockbackInAABBSquareAwayFromOriginPlusAOERects(WPos Cente
     public override float Distance(WPos p)
     {
         var projected = p + distance * (p - origin).Normalized();
+
+        if (!projected.InSquare(center, halfWidth))
+        {
+            return default;
+        }
+
         for (var i = 0; i < len; ++i)
         {
             ref var aoe = ref aoes[i];
@@ -286,11 +368,14 @@ public sealed class SDKnockbackInAABBSquareAwayFromOriginPlusAOERects(WPos Cente
                 return default;
             }
         }
-        if (projected.InSquare(center, halfWidth))
-        {
-            return 1f;
-        }
-        return default;
+
+        return 1f;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -309,6 +394,12 @@ public sealed class SDKnockbackInAABBSquareFixedDirectionPlusMixedAOEs(WPos Cent
     public override float Distance(WPos p)
     {
         var projected = p + direction;
+
+        if (!projected.InSquare(center, halfWidth))
+        {
+            return default;
+        }
+
         for (var i = 0; i < len; ++i)
         {
             ref var aoe = ref aoes[i];
@@ -317,11 +408,14 @@ public sealed class SDKnockbackInAABBSquareFixedDirectionPlusMixedAOEs(WPos Cent
                 return default;
             }
         }
-        if (projected.InSquare(center, halfWidth))
-        {
-            return 1f;
-        }
-        return default;
+
+        return 1f;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

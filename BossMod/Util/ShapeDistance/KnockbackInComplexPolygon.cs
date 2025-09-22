@@ -8,14 +8,14 @@ public sealed class SDKnockbackInComplexPolygonAwayFromOrigin(WPos Center, WPos 
     private readonly float distance = Distance;
     private readonly RelSimplifiedComplexPolygon polygon = Polygon;
 
-    public override float Distance(WPos p)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
     {
-        if (polygon.Contains(p - center + distance * (p - origin).Normalized()))
-        {
-            return 1f;
-        }
-        return default;
+        return !polygon.Contains(p - center + distance * (p - origin).Normalized());
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override float Distance(WPos p) => Contains(p) ? 0f : 1f;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
@@ -28,14 +28,14 @@ public sealed class SDKnockbackInComplexPolygonFixedDirection(WPos Center, WDir 
     private readonly WDir direction = Direction;
     private readonly RelSimplifiedComplexPolygon polygon = Polygon;
 
-    public override float Distance(WPos p)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
     {
-        if (polygon.Contains(p - center + direction))
-        {
-            return 1f;
-        }
-        return default;
+        return !polygon.Contains(p - center + direction);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override float Distance(WPos p) => Contains(p) ? 0f : 1f;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
@@ -52,24 +52,27 @@ public sealed class SDKnockbackInComplexPolygonAwayFromOriginPlusAOEAABBSquares(
     private readonly float halfWidth = HalfWidth;
     private readonly int len = Length;
 
-    public override float Distance(WPos p)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override float Distance(WPos p) => Contains(p) ? 0f : 1f;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
     {
         var dir = distance * (p - origin).Normalized();
-        var offsetCenter = p - center;
+        if (!polygon.Contains(p - center + dir))
+        {
+            return true;
+        }
+
         var projected = p + dir;
         for (var i = 0; i < len; ++i)
         {
-            ref var aoe = ref aoes[i];
             if (projected.InSquare(aoes[i], halfWidth))
             {
-                return default;
+                return true;
             }
         }
-        if (polygon.Contains(offsetCenter + dir))
-        {
-            return 1f;
-        }
-        return default;
+        return false;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -87,25 +90,28 @@ public sealed class SDKnockbackInComplexPolygonAwayFromOriginPlusAOECircles(WPos
     private readonly float radius = Radius;
     private readonly int len = Length;
 
-    public override float Distance(WPos p)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
     {
         var dir = distance * (p - origin).Normalized();
-        var offsetCenter = p - center;
+        if (!polygon.Contains(p - center + dir))
+        {
+            return true;
+        }
+
         var projected = p + dir;
         for (var i = 0; i < len; ++i)
         {
-            ref var aoe = ref aoes[i];
             if (projected.InCircle(aoes[i], radius))
             {
-                return default;
+                return true;
             }
         }
-        if (polygon.Contains(offsetCenter + dir))
-        {
-            return 1f;
-        }
-        return default;
+        return false;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override float Distance(WPos p) => Contains(p) ? 0f : 1f;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
@@ -119,17 +125,16 @@ public sealed class SDKnockbackInComplexPolygonAwayFromOriginPlusIntersectionTes
     private readonly float distance = Distance;
     private readonly RelSimplifiedComplexPolygon polygon = Polygon;
 
-    public override float Distance(WPos p)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
     {
         var offset = p - center;
         var dir = (p - origin).Normalized();
-        // while doing a point in polygon test and intersection test seems like double the work, the intersection test is actually a lot slower than the PiP test, so this is a net positive to filter out some cells beforehand
-        if (polygon.Contains(offset + distance * dir) && Intersect.RayPolygon(offset, dir, polygon) > distance)
-        {
-            return 1f;
-        }
-        return default;
+        return !polygon.Contains(offset + distance * dir) || Intersect.RayPolygon(offset, dir, polygon) < distance;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override float Distance(WPos p) => Contains(p) ? 0f : 1f;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;

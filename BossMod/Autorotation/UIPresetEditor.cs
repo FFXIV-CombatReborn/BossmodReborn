@@ -386,7 +386,7 @@ public sealed class UIPresetEditor
             cat = sub;
         }
         cat.Leafs.Add((type, def, builder));
-        cat.Leafs.Sort((a, b) => a.def.DisplayName.CompareTo(b.def.DisplayName));
+        cat.Leafs.Sort(static (a, b) => a.def.DisplayName.CompareTo(b.def.DisplayName));
     }
 
     private void RemoveAvailableModule(ModuleCategory cat, Type type)

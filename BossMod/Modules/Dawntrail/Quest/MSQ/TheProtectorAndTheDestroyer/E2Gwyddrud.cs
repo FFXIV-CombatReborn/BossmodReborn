@@ -57,7 +57,7 @@ sealed class UntamedCurrentRaidwide(BossModule module) : Components.RaidwideCast
 sealed class VioletVoltage(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = new(4);
-    private static readonly AOEShapeCone cone = new(20f, 90f.Degrees());
+    private readonly AOEShapeCone cone = new(20f, 90f.Degrees());
     private static readonly Angle a180 = 180f.Degrees();
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
@@ -98,7 +98,6 @@ sealed class VioletVoltage(BossModule module) : Components.GenericAOEs(module)
 sealed class RoaringBoltKB(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.RoaringBoltKB, 12f, stopAtWall: true)
 {
     private readonly RoaringBolt _aoe = module.FindComponent<RoaringBolt>()!;
-    private static readonly Angle a25 = 25f.Degrees();
 
     public override bool DestinationUnsafe(int slot, Actor actor, WPos pos)
     {
@@ -117,19 +116,22 @@ sealed class RoaringBoltKB(BossModule module) : Components.SimpleKnockbacks(modu
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (Casters.Count == 0)
+        {
             return;
+        }
         var aoes = CollectionsMarshal.AsSpan(_aoe.Casters);
-
+        ref var c = ref Casters.Ref(0);
         var len = aoes.Length;
         if (len != 0)
         {
-            var forbidden = new ShapeDistance[len];
+            var pos = c.Origin;
+            var act = Casters.Ref(0).Activation;
             for (var i = 0; i < len; ++i)
             {
-                ref readonly var aoe = ref aoes[i];
-                forbidden[i] = new SDCone(Arena.Center, 20f, Angle.FromDirection(aoe.Origin - Arena.Center), a25);
+                ref var aoe = ref aoes[i];
+                var origin = aoe.Origin;
+                hints.AddForbiddenZone(new SDCone(pos, 100f, Angle.FromDirection(origin - pos), Angle.Asin(6f / (origin - pos).Length())), act);
             }
-            hints.AddForbiddenZone(new SDUnion(forbidden), Casters.Ref(0).Activation);
         }
     }
 }

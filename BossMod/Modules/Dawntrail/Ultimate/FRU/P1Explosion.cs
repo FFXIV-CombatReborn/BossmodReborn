@@ -112,7 +112,7 @@ sealed class P1Explosion(BossModule module) : Components.GenericTowers(module)
             ReportError($"Unexpected tower state");
             return;
         }
-        Towers.Sort((a, b) => a.Position.Z.CompareTo(b.Position.Z));
+        Towers.Sort(static (a, b) => a.Position.Z.CompareTo(b.Position.Z));
         var towerDirX = Towers.Sum(t => t.Position.X - Arena.Center.X) > 0 ? 1 : -1;
         TowerDir = new(towerDirX, TowerDir.Z);
 

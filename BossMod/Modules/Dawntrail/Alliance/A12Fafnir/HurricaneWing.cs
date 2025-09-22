@@ -23,7 +23,7 @@ sealed class HurricaneWingAOE(BossModule module) : Components.GenericAOEs(module
             AOEs.Add(new(shape, spell.LocXZ, default, Module.CastFinishAt(spell), actorID: caster.InstanceID));
             if (AOEs.Count >= 4)
             {
-                AOEs.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                AOEs.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
             }
         }
     }
@@ -131,28 +131,25 @@ sealed class Whirlwinds(BossModule module) : Components.GenericAOEs(module)
     {
         var countSmall = _smallWhirldwinds.Count;
         var countBig = _bigWhirldwinds.Count;
-        var total = countSmall + countBig;
-        if (countSmall == 0 && countBig == 0)
-            return;
-        var forbiddenImminent = new ShapeDistance[total];
-        var forbiddenFuture = new ShapeDistance[total];
 
+        if (countSmall == 0 && countBig == 0)
+        {
+            return;
+        }
+        var act = WorldState.FutureTime(1.5d);
         const float length = Length + 6f;
         for (var i = 0; i < countBig; ++i)
         {
             var w = _bigWhirldwinds[i];
-            forbiddenFuture[i] = new SDCapsule(w.Position, !moving ? w.Rotation + a180 : w.Rotation, length, 10f);
-            forbiddenImminent[i] = new SDCircle(w.Position, 10f);
+            hints.AddForbiddenZone(new SDCapsule(w.Position, !moving ? w.Rotation + a180 : w.Rotation, length, 10f), act);
+            hints.TemporaryObstacles.Add(new SDCircle(w.Position, 10f));
         }
         for (var i = 0; i < countSmall; ++i)
         {
             var w = _smallWhirldwinds[i];
-            forbiddenImminent[i + countBig] = new SDCircle(w.Position, 5f);
-            forbiddenFuture[i + countBig] = new SDCapsule(w.Position, !moving ? w.Rotation + a180 : w.Rotation, length, 5f);
+            hints.TemporaryObstacles.Add(new SDCircle(w.Position, 5f));
+            hints.AddForbiddenZone(new SDCapsule(w.Position, !moving ? w.Rotation + a180 : w.Rotation, length, 5f), act);
         }
-
-        hints.AddForbiddenZone(new SDUnion(forbiddenFuture), WorldState.FutureTime(1.5d));
-        hints.AddForbiddenZone(new SDUnion(forbiddenImminent));
     }
 }
 

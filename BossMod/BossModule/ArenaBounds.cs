@@ -17,7 +17,6 @@ public abstract class ArenaBounds(float radius, float mapResolution, float scale
     public RelSimplifiedComplexPolygon ShapeSimplified = new();
     public List<RelTriangle> ShapeTriangulation = [];
     private readonly PolygonClipper.Operand _clipOperand = new();
-    public readonly Dictionary<object, object> Cache = [];
 
     public float ScreenHalfSize
     {
@@ -139,13 +138,6 @@ public abstract class ArenaBounds(float radius, float mapResolution, float scale
         var dir = (endOffset - startOffset).Normalized();
         var side = halfWidth * dir.OrthoR();
         return ClipAndTriangulate([startOffset + side, startOffset - side, endOffset - side, endOffset + side]);
-    }
-
-    public void AddToInstanceCache(object key, object value)
-    {
-        if (Cache.Count > 500)
-            Cache.Clear();
-        Cache[key] = value;
     }
 }
 
@@ -330,7 +322,6 @@ public sealed class ArenaBoundsCustom : ArenaBounds
 {
     private Pathfinding.Map? _cachedMap;
     public readonly RelSimplifiedComplexPolygon Polygon;
-    private readonly (WDir, WDir)[] edges;
     public readonly float HalfWidth, HalfHeight;
     private readonly float offset;
     public readonly WPos Center;
@@ -344,31 +335,6 @@ public sealed class ArenaBoundsCustom : ArenaBounds
         HalfHeight = halfHeight + Offset;
         Polygon = poly;
         offset = Offset;
-
-        var parts = Polygon.Parts;
-        var count = parts.Count;
-        var vertsCount = 0;
-        for (var i = 0; i < count; ++i)
-        {
-            vertsCount += parts[i].VerticesCount;
-        }
-        var edgeArray = new (WDir, WDir)[vertsCount];
-        var k = 0;
-        for (var i = 0; i < count; ++i)
-        {
-            var part = parts[i];
-            var extSpan = part.ExteriorEdges;
-            extSpan.CopyTo(edgeArray.AsSpan(k, extSpan.Length));
-            k += extSpan.Length;
-            var len = part.Holes.Length;
-            for (var j = 0; j < len; ++j)
-            {
-                var intSpan = part.InteriorEdges(j);
-                intSpan.CopyTo(edgeArray.AsSpan(k, intSpan.Length));
-                k += intSpan.Length;
-            }
-        }
-        edges = edgeArray;
     }
 
     private static float BuildBounds(Shape[] unionShapes, Shape[]? differenceShapes, Shape[]? additionalShapes, float scalefactor, bool adjustForHitbox, out RelSimplifiedComplexPolygon poly, out WPos center, out float halfWidth, out float halfHeight)
@@ -457,50 +423,20 @@ public sealed class ArenaBoundsCustom : ArenaBounds
     protected override PolygonClipper.Operand BuildClipPoly() => new(Polygon);
     public override void PathfindMap(Pathfinding.Map map, WPos center) => map.Init(_cachedMap ??= BuildMap(), center);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool Contains(WDir offset) => Polygon.Contains(offset);
 
-    public override float IntersectRay(WDir originOffset, WDir dir)
-    {
-        var cacheKey = (Polygon, originOffset, dir);
-        if (Cache.TryGetValue(cacheKey, out var cachedResult))
-            return (float)cachedResult;
-        var result = Intersect.RayPolygon(originOffset, dir, Polygon);
-        AddToInstanceCache(cacheKey, result);
-        return result;
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override float IntersectRay(WDir originOffset, WDir dir) => Intersect.RayPolygon(originOffset, dir, Polygon);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override WDir ClampToBounds(WDir offset)
     {
         if (offset.AlmostEqual(default, 1f) || Math.Abs(offset.X) < 0.1f) // if actor is almost in the center of the arena, do nothing (eg donut arena or wall boss)
         {
             return offset;
         }
-
-        var cacheKey = (Polygon, offset);
-        if (Cache.TryGetValue(cacheKey, out var cachedResult))
-            return (WDir)cachedResult;
-
-        var minDistance = float.MaxValue;
-        var nearestPoint = offset;
-        var len = edges.Length;
-        for (var i = 0; i < len; ++i)
-        {
-            ref var edge = ref edges[i];
-            var edge1 = edge.Item1;
-            var segmentVector = edge.Item2 - edge1;
-            var t = Math.Max(0, Math.Min(1f, (offset - edge1).Dot(segmentVector) / segmentVector.LengthSq()));
-            var nearest = edge1 + t * segmentVector;
-            var distance = (nearest - offset).LengthSq();
-
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                nearestPoint = nearest;
-            }
-        }
-
-        AddToInstanceCache(cacheKey, nearestPoint);
-        return nearestPoint;
+        return Polygon.ClampToBounds(offset);
     }
 
     private Pathfinding.Map BuildMap()
@@ -598,5 +534,15 @@ public sealed class ArenaBoundsCustom : ArenaBounds
         return combinedShape;
     }
 
-    public override string ToString() => $"{nameof(ArenaBoundsCustom)}, Radius {Radius}, HalfWidth: {HalfWidth}, HalfHeight: {HalfHeight}, MapResolution: {MapResolution}, Pathfinding offset: {offset}, Vertices: {edges.Length}, ScaleFactor: {ScaleFactor}";
+    public override string ToString()
+    {
+        var parts = Polygon.Parts;
+        var count = parts.Count;
+        var vertsCount = 0;
+        for (var i = 0; i < count; ++i)
+        {
+            vertsCount += parts[i].VerticesCount;
+        }
+        return $"{nameof(ArenaBoundsCustom)}, Radius {Radius}, HalfWidth: {HalfWidth}, HalfHeight: {HalfHeight}, MapResolution: {MapResolution}, Pathfinding offset: {offset}, Vertices: {vertsCount}, ScaleFactor: {ScaleFactor}";
+    }
 }

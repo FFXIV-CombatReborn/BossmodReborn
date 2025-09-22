@@ -112,7 +112,7 @@ public sealed class ModuleViewer : IDisposable
             for (var j = 0; j < (int)BossModuleInfo.Category.Count; ++j)
             {
                 var groups = _groups[i, j];
-                groups.Sort((a, b) => a.Info.SortOrder.CompareTo(b.Info.SortOrder));
+                groups.Sort(static (a, b) => a.Info.SortOrder.CompareTo(b.Info.SortOrder));
 
                 var count = groups.Count;
                 for (var g = 0; g < count - 1; ++g)
@@ -128,7 +128,7 @@ public sealed class ModuleViewer : IDisposable
                 for (var g = 0; g < count; ++g)
                 {
                     var group = groups[g];
-                    group.Modules.Sort((a, b) => a.SortOrder.CompareTo(b.SortOrder));
+                    group.Modules.Sort(static (a, b) => a.SortOrder.CompareTo(b.SortOrder));
 
                     var countM = group.Modules.Count - 1;
                     for (var m = 0; m < countM; ++m)

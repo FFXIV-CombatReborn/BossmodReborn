@@ -30,7 +30,7 @@ class FlamesOfAsphodelos(BossModule module) : Components.GenericAOEs(module)
         {
             _aoes.Add(new(cone, caster.Position, spell.Rotation, Module.CastFinishAt(spell), risky: false));
             if (_aoes.Count == 6)
-                _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
         }
     }
 

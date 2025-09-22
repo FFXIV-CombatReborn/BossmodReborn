@@ -27,7 +27,7 @@ sealed class Landswallow(BossModule module) : Components.GenericAOEs(module)
             _aoes.Add(new(rect, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell, 0.4d)));
             if (_aoes.Count == 6)
             {
-                _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
             }
         }
     }

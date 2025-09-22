@@ -99,7 +99,7 @@ sealed class KnuckleCrusher : Components.SimpleAOEs
     }
 }
 
-sealed class KnuckleDown(BossModule module) : Components.RaidwideCastDelay(module, (uint)AID.KnuckleDownVisual, (uint)AID.KnuckleDown, 0.9f, "Raidwide x4");
+sealed class KnuckleDown(BossModule module) : Components.RaidwideCastDelay(module, (uint)AID.KnuckleDownVisual, (uint)AID.KnuckleDown, 0.9d, "Raidwide x4");
 sealed class Moatmaker(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Moatmaker, 9f);
 
 sealed class SpinningSiege(BossModule module) : Components.GenericRotatingAOE(module)
@@ -220,13 +220,14 @@ sealed class BlastKnuckles(BossModule module) : Components.GenericKnockback(modu
             {
                 var aoes = CollectionsMarshal.AsSpan(_aoe.Casters);
                 var len = aoes.Length;
-                var rects = new (WPos origin, WDir direction)[len];
-                for (var i = 0; i < len; ++i)
+                var max = len > 5 ? 5 : len;
+                var rects = new (WPos origin, WDir direction)[max];
+                for (var i = 0; i < max; ++i)
                 {
                     ref var aoe = ref aoes[i];
                     rects[i] = (aoe.Origin, aoe.Rotation.ToDirection());
                 }
-                hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOriginPlusAOERects(Arena.Center, kb.Origin, 15f, 20f, rects, 60f, 4.5f, len), act);
+                hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOriginPlusAOERects(Arena.Center, kb.Origin, 15f, 20f, rects, 60f, 4f, max), act);
             }
         }
     }

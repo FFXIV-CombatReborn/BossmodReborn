@@ -56,7 +56,7 @@ sealed class Stormcall(BossModule module) : Components.GenericAOEs(module, (uint
         {
             _aoes.Add(new(circle, Arena.Center + 30f * (actor.Position - Arena.Center).Normalized(), default, WorldState.FutureTime(status.Extra == 0x1E ? 9.7f : 19.9f), actorID: actor.InstanceID));
             if (_aoes.Count == 3)
-                _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
         }
     }
 

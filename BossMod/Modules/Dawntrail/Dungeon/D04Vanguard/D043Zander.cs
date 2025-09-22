@@ -106,7 +106,7 @@ sealed class SlitherbaneBurstCombo(BossModule module) : Components.GenericAOEs(m
         void AddAOE(AOEShape shape)
         {
             _aoes.Add(new(shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell)));
-            _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+            _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
         }
         switch (spell.Action.ID)
         {

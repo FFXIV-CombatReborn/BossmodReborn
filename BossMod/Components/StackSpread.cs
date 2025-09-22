@@ -802,7 +802,6 @@ public abstract class GenericBaitStack(BossModule module, uint aid = default, bo
             }
         }
         var forbiddenInverted = new List<ShapeDistance>();
-        var forbidden = new List<ShapeDistance>();
 
         var hasBuddies = false;
         var p = Raid.WithoutSlot(false, true);
@@ -834,18 +833,18 @@ public abstract class GenericBaitStack(BossModule module, uint aid = default, bo
                 }
                 else
                 {
-                    forbidden.Add(b.Shape.Distance(origin, angle));
+                    hints.AddForbiddenZone(b.Shape.Distance(origin, angle), b.Activation);
                 }
             }
             else if (b.Target != actor && isBaitTarget)
             {   // prevent overlapping if there are multiple stacks
                 if (b.Shape is AOEShapeCone cone)
                 {
-                    forbidden.Add(new SDCone(origin, cone.Radius, angle, cone.HalfAngle * 2f));
+                    hints.AddForbiddenZone(new SDCone(origin, cone.Radius, angle, cone.HalfAngle * 2f), b.Activation);
                 }
                 else if (b.Shape is AOEShapeRect rect)
                 {
-                    forbidden.Add(new SDRect(origin, angle, rect.LengthFront, rect.LengthBack, rect.HalfWidth * 2f));
+                    hints.AddForbiddenZone(new SDRect(origin, angle, rect.LengthFront, rect.LengthBack, rect.HalfWidth * 2f), b.Activation);
                 }
                 else if (b.Shape is AOEShapeCircle circle)
                 {
@@ -854,24 +853,32 @@ public abstract class GenericBaitStack(BossModule module, uint aid = default, bo
             }
             else if (hasBuddies && b.Target == actor) // try to go to NPCs since they usually will not actively come to your stack
             {
+                var forbiddenB = new List<ShapeDistance>();
                 for (var j = 0; j < lenP; ++j)
                 {
                     var member = p[j];
                     if (member.OID != default)
                     {
-                        forbiddenInverted.Add(new SDInvertedCircle(member.Position, 1f));
+                        forbiddenInverted.Add(new SDInvertedCircle(member.Position, 2f));
                     }
+                }
+                if (forbiddenB.Count != 0)
+                {
+                    hints.AddForbiddenZone(new SDIntersection([.. forbiddenB]), baits[0].Activation);
                 }
             }
         }
-        ref var bait = ref baits[0];
-        if (forbiddenInverted.Count != 0)
+        var countI = forbiddenInverted.Count;
+        if (countI != 0)
         {
-            hints.AddForbiddenZone(new SDOutsideOfUnion([.. forbiddenInverted]), bait.Activation);
-        }
-        if (forbidden.Count != 0)
-        {
-            hints.AddForbiddenZone(new SDUnion([.. forbidden]), bait.Activation);
+            if (countI > 1)
+            {
+                hints.AddForbiddenZone(new SDOutsideOfUnion([.. forbiddenInverted]), baits[0].Activation);
+            }
+            else
+            {
+                hints.AddForbiddenZone(forbiddenInverted[0], baits[0].Activation);
+            }
         }
 
         var firstActivation = DateTime.MaxValue;

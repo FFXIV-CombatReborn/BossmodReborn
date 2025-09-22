@@ -10,12 +10,14 @@ public sealed class SDPrecisePosition : ShapeDistance
 
     public SDPrecisePosition(WPos Origin, WDir Direction, float CellSize, WPos Starting, float Tolerance = default)
     {
+        // Snap origin like your PrecisePosition(...)
         var starting = Starting;
         var origin = Origin;
         cellSize = CellSize;
         var dir = Direction;
         var tolerance = Tolerance;
         var delta = starting - origin;
+
         var dparr = delta.Dot(dir);
         if (dparr > tolerance && dparr <= cellSize)
         {
@@ -36,6 +38,7 @@ public sealed class SDPrecisePosition : ShapeDistance
         {
             origin += cellSize * normal;
         }
+
         originX = origin.X;
         originZ = origin.Z;
         dirX = dir.X;
@@ -46,10 +49,12 @@ public sealed class SDPrecisePosition : ShapeDistance
 
     public override float Distance(WPos p)
     {
-        var pXoriginX = p.X - originX;
-        var pZoriginZ = p.Z - originZ;
-        var distParr = pXoriginX * dirX + pZoriginZ * dirZ;
-        var distOrtho = pXoriginX * normalX + pZoriginZ * normalZ;
+        var px = p.X - originX;
+        var pz = p.Z - originZ;
+
+        var distParr = px * dirX + pz * dirZ;
+        var distOrtho = px * normalX + pz * normalZ;
+
         var distFront = distParr - cellSize;
         var distBack = -distParr - cellSize;
         var distLeft = distOrtho - cellSize;
@@ -58,9 +63,28 @@ public sealed class SDPrecisePosition : ShapeDistance
         var maxParr = distFront > distBack ? distFront : distBack;
         var maxOrtho = distLeft > distRight ? distLeft : distRight;
 
-        return maxParr > maxOrtho ? maxParr : maxOrtho;
+        var regular = maxParr > maxOrtho ? maxParr : maxOrtho;
+
+        return -regular;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        var px = p.X - originX;
+        var pz = p.Z - originZ;
+
+        var parr = px * dirX + pz * dirZ;
+
+        if (parr > cellSize || parr < -cellSize)
+        {
+            return true;
+        }
+        var ortho = px * normalX + pz * normalZ;
+        return ortho > cellSize || ortho < -cellSize;
+    }
+
+    // always true since it is a tiny rect
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
 }

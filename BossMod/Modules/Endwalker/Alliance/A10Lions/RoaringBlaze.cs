@@ -14,7 +14,7 @@ class RoaringBlaze(BossModule module) : Components.GenericAOEs(module)
         {
             _aoes.Add(new(_shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell), actorID: caster.InstanceID));
             if (_aoes.Count > 1)
-                _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
         }
     }
 

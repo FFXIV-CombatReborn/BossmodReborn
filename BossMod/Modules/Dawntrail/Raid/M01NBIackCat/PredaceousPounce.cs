@@ -30,7 +30,7 @@ sealed class PredaceousPounce(BossModule module) : Components.GenericAOEs(module
             var count = _aoes.Count;
             if (count == 12)
             {
-                _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
                 var aoes = CollectionsMarshal.AsSpan(_aoes);
                 for (var i = 0; i < count; ++i)
                     aoes[i].Activation = WorldState.FutureTime(13.5d + i * 0.5d);

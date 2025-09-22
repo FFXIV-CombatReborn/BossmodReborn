@@ -109,7 +109,7 @@ sealed class OneTwoPawShade(BossModule module) : Components.GenericAOEs(module)
             var pos = source.Position.Quantized();
             _aoes.Add(new(_shape, pos, source.Rotation + _firstDirection, WorldState.FutureTime(20.3d)));
             _aoes.Add(new(_shape, pos, source.Rotation - _firstDirection, WorldState.FutureTime(23.3d)));
-            _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+            _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
         }
     }
 
