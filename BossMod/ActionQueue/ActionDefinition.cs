@@ -586,7 +586,7 @@ public sealed class ActionDefinitions : IDisposable
     {
         var trait = TraitData(traitId)!;
         _definitions[aid].MaxChargesOverride.Add((trait.Value, trait.Level, trait.Quest.RowId));
-        _definitions[aid].MaxChargesOverride.Sort((b, a) => a.Level.CompareTo(b.Level));
+        _definitions[aid].MaxChargesOverride.Sort(static (b, a) => a.Level.CompareTo(b.Level));
     }
     public void RegisterChargeIncreaseTrait<AID, TraitID>(AID aid, TraitID traitId) where AID : Enum where TraitID : Enum => RegisterChargeIncreaseTrait(ActionID.MakeSpell(aid), (uint)(object)traitId);
 }

@@ -19,6 +19,12 @@ public sealed class SDKnockbackInAABBRectFixedDirection(WPos Center, WDir Direct
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
+    }
 }
 
 [SkipLocalsInit]
@@ -41,6 +47,12 @@ public sealed class SDKnockbackInAABBRectAwayFromOrigin(WPos Center, WPos Origin
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
+    }
 }
 
 [SkipLocalsInit]
@@ -64,6 +76,12 @@ public sealed class SDKnockbackInAABBRectLeftRightAlongZAxis(WPos Center, float 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
+    }
 }
 
 [SkipLocalsInit]
@@ -83,6 +101,12 @@ public sealed class SDKnockbackInAABBRectLeftRightAlongZAxisPlusAOERects(WPos Ce
     public override float Distance(WPos p)
     {
         var projected = p + (p.Z > originZ ? dir1 : dir2);
+
+        if (!projected.InRect(center, halfWidth, halfHeight))
+        {
+            return default;
+        }
+
         for (var i = 0; i < len; ++i)
         {
             ref var aoe = ref aoes[i];
@@ -91,14 +115,16 @@ public sealed class SDKnockbackInAABBRectLeftRightAlongZAxisPlusAOERects(WPos Ce
                 return default;
             }
         }
-        if (projected.InRect(center, halfWidth, halfHeight))
-        {
-            return 1f;
-        }
 
-        return default;
+        return 1f;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
+    }
 }

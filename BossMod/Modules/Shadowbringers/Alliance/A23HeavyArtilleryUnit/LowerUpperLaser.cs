@@ -47,7 +47,7 @@ sealed class UpperLaser(BossModule module) : Components.GenericAOEs(module)
             }
             if (_aoes.Count == 9)
             {
-                _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
             }
         }
     }

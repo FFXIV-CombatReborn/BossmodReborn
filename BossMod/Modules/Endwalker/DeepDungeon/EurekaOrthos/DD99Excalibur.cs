@@ -196,8 +196,8 @@ sealed class Steelstrike(BossModule module) : Components.GenericAOEs(module)
                 AddSwordAOE(status.Extra == 0x219 ? swordsFire : swordsIce);
                 if (swordsFire.Count == 5 && swordsIce.Count == 5)
                 {
-                    swordsFire.Sort((a, b) => a.Rotation.Rad.CompareTo(b.Rotation.Rad));
-                    swordsIce.Sort((a, b) => a.Rotation.Rad.CompareTo(b.Rotation.Rad));
+                    swordsFire.Sort(static (a, b) => a.Rotation.Rad.CompareTo(b.Rotation.Rad));
+                    swordsIce.Sort(static (a, b) => a.Rotation.Rad.CompareTo(b.Rotation.Rad));
                 }
                 break;
             case (uint)SID.SoulOfFire:

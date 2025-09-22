@@ -82,7 +82,7 @@ public class PartyRolesConfig : ConfigNode
                         party.Add((m.ContentId, m.Name, ws.Party[i]?.Role.ToString()[0] ?? '?', this[m.ContentId]));
                 }
 
-                party.Sort((a, b) => a.role.CompareTo(b.role));
+                party.Sort(static (a, b) => a.role.CompareTo(b.role));
                 foreach (var (contentID, name, classRole, assignment) in party)
                 {
                     ImGui.TableNextRow();

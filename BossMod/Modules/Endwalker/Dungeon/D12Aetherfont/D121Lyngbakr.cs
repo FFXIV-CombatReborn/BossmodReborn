@@ -65,7 +65,7 @@ sealed class ExplosiveResonantFrequency(BossModule module) : Components.GenericA
             _aoes.Add(new(shape, spell.LocXZ, default, Module.CastFinishAt(spell), actorID: caster.InstanceID));
             if (_aoes.Count == 11)
             {
-                _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
             }
         }
     }

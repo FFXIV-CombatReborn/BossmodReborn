@@ -116,7 +116,7 @@ sealed class HoppingMad(BossModule module) : Components.GenericAOEs(module)
             if (shape == circleBig)
                 AddAOE(donutBig, 2.1d);
             if (_aoes.Count == 4)
-                _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
         }
         void AddAOE(AOEShape shape, double delay = default) => _aoes.Add(new(shape, spell.LocXZ, default, Module.CastFinishAt(spell, delay), risky: false));
     }

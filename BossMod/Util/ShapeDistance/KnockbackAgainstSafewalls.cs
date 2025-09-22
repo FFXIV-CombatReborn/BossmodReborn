@@ -23,6 +23,12 @@ public sealed class SDKnockbackFixedDirectionAgainstSafewalls(WDir Direction, Co
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
+    }
 }
 
 [SkipLocalsInit]
@@ -57,6 +63,12 @@ public sealed class SDKnockbackFixedDirectionAgainstSafewallsPlusRectAOE(WDir Di
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
+    }
 }
 
 [SkipLocalsInit]
@@ -95,4 +107,10 @@ public sealed class SDKnockbackWithWallsAwayFromOriginMultiAimIntoDonuts((WPos O
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
+    }
 }

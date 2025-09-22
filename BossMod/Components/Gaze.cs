@@ -172,7 +172,7 @@ public class CastGazes(BossModule module, uint[] aids, bool inverted = false, fl
                 Eyes.Add(new(spell.LocXZ, Module.CastFinishAt(spell), default, range, inverted, caster.InstanceID));
                 if (Eyes.Count == ExpectedNumCasters)
                 {
-                    Eyes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                    Eyes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
                 }
                 return;
             }

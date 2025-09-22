@@ -47,7 +47,7 @@ class P5ViscousAetheroplasmTriple(BossModule module) : Components.UniformStackSp
         if (status.ID == (uint)SID.ViscousAetheroplasm)
         {
             _aetheroplasms.Add((actor, status.ExpireAt));
-            _aetheroplasms.Sort((a, b) => a.resolve.CompareTo(b.resolve));
+            _aetheroplasms.Sort(static (a, b) => a.resolve.CompareTo(b.resolve));
             UpdateStackTargets();
         }
     }

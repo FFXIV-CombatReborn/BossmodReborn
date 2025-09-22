@@ -171,7 +171,7 @@ class Hailfire(BossModule module) : Components.GenericBaitAway(module)
         if (iconID is >= (uint)IconID.Hailfire1 and <= (uint)IconID.Hailfire4)
         {
             CurrentBaits.Add(new(Module.PrimaryActor, actor, rect, WorldState.FutureTime(8.2d + (iconID - (uint)IconID.Hailfire1) * 2.1d)));
-            CurrentBaits.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+            CurrentBaits.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
         }
     }
 }

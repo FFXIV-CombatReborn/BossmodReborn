@@ -31,7 +31,7 @@ sealed class Shockwave(BossModule module) : Components.SimpleKnockbacks(module, 
                     }
                 }
 
-                hints.AddForbiddenZone(new SDKnockbackInComplexPolygonAwayFromOriginPlusIntersectionTest(Arena.Center, c.Origin, 10f, polygon), act);
+                hints.AddForbiddenZone(new SDKnockbackInComplexPolygonAwayFromOriginPlusIntersectionTest(Arena.Center, c.Origin, 18f, polygon), act);
             }
         }
     }

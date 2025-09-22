@@ -119,7 +119,7 @@ sealed class PathoCircuitCrossPurge(BossModule module) : Components.GenericAOEs(
     private void AddAOE(AOEInstance aoe)
     {
         _aoes.Add(aoe);
-        _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+        _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)

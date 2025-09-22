@@ -64,11 +64,14 @@ sealed class PounceErrant(BossModule module) : Components.GenericStackSpread(mod
             var cages = Module.Enemies((uint)OID.IronCage);
             var count = cages.Count;
             if (count == 0)
+            {
                 return;
-            var forbidden = new ShapeDistance[count];
+            }
+            var act = Spreads.Ref(0).Activation;
             for (var i = 0; i < count; ++i)
-                forbidden[i] = new SDCircle(cages[i].Position, 11f);
-            hints.AddForbiddenZone(new SDUnion(forbidden), Spreads[0].Activation);
+            {
+                hints.AddForbiddenZone(new SDCircle(cages[i].Position, 11f), act);
+            }
         }
     }
 
@@ -89,7 +92,9 @@ sealed class PounceErrant(BossModule module) : Components.GenericStackSpread(mod
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         if (IsSpreadTarget(actor))
+        {
             hints.Add("Spread, avoid intersecting cage hitboxes!");
+        }
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
@@ -149,14 +154,14 @@ sealed class ForlornImpact(BossModule module) : Components.GenericBaitAway(modul
             var cages = Module.Enemies((uint)OID.IronCage);
             var count = cages.Count;
             if (count == 0)
+            {
                 return;
-            var forbidden = new ShapeDistance[count];
+            }
             for (var i = 0; i < count; ++i)
             {
                 var a = cages[i];
-                forbidden[i] = new SDCone(b.Source.Position, 100f, b.Source.AngleTo(a), Angle.Asin(3.5f / (a.Position - b.Source.Position).Length()));
+                hints.AddForbiddenZone(new SDCone(b.Source.Position, 100f, b.Source.AngleTo(a), Angle.Asin(3.5f / (a.Position - b.Source.Position).Length())), b.Activation);
             }
-            hints.AddForbiddenZone(new SDUnion(forbidden), b.Activation);
         }
     }
 

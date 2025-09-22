@@ -102,20 +102,6 @@ public static class Intersect
         return u >= 0f && u <= lineDir.LengthSq() ? t : float.MaxValue;
     }
 
-    public static float RaySegments(WDir rayOriginOffset, WDir rayDir, ReadOnlySpan<(WDir, WDir)> edges)
-    {
-        var minValue = float.MaxValue;
-        var len = edges.Length;
-        for (var i = 0; i < len; ++i)
-        {
-            ref readonly var edge = ref edges[i];
-            var result = RaySegment(rayOriginOffset, rayDir, edge.Item1, edge.Item2);
-            if (result < minValue)
-                minValue = result;
-        }
-        return minValue;
-    }
-
     public static float RaySegment(WPos rayOrigin, WDir rayDir, WPos vertexA, WPos vertexB)
     {
         var lineDir = vertexB - vertexA;
@@ -128,33 +114,13 @@ public static class Intersect
         return u >= 0f && u <= lineDir.LengthSq() ? t : float.MaxValue;
     }
 
-    public static float RayPolygon(WDir rayOriginOffset, WDir rayDir, RelPolygonWithHoles poly)
-    {
-        var dist = RaySegments(rayOriginOffset, rayDir, poly.ExteriorEdges);
-        var holes = poly.Holes;
-        var len = holes.Length;
-        for (var i = 0; i < len; ++i)
-        {
-            dist = Math.Min(dist, RaySegments(rayOriginOffset, rayDir, poly.InteriorEdges(holes[i])));
-        }
-        return dist;
-    }
-
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static float RayPolygon(WDir rayOriginOffset, WDir rayDir, RelSimplifiedComplexPolygon poly)
-    {
-        var minDistance = float.MaxValue;
-        var parts = poly.Parts;
-        var count = parts.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var distance = RayPolygon(rayOriginOffset, rayDir, parts[i]);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-            }
-        }
-        return minDistance;
-    }
+        => poly.Raycast(rayOriginOffset, rayDir);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float RayPolygon(WPos rayOrigin, WDir rayDir, WPos polyCenter, RelSimplifiedComplexPolygon poly)
+        => RayPolygon(rayOrigin - polyCenter, rayDir, poly);
 
     // circle-shape intersections; they return true if shapes intersect or touch, false otherwise
     // these are used e.g. for player-initiated aoes

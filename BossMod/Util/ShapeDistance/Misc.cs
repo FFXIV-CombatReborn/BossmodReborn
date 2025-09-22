@@ -14,6 +14,12 @@ public sealed class SDDeepDungeonLOS(Bitmap Map, WPos Origin) : ShapeDistance
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
 }
 
@@ -48,6 +54,12 @@ public sealed class SDBlockedAreaT01Caduceus(ShapeDistance[] platformShapes, (in
             }
         }
         return res;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        return Distance(p) <= 0f;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

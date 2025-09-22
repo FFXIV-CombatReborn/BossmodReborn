@@ -27,7 +27,7 @@ class LovesLight(BossModule module) : Components.GenericAOEs(module)
             AOEs.Add(new(_shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell)));
             if (AOEs.Count == 4)
             {
-                AOEs.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                AOEs.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
             }
         }
     }

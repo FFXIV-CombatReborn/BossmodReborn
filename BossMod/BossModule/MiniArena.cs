@@ -484,13 +484,16 @@ public sealed class MiniArena(WPos center, ArenaBounds bounds)
 
         var dir = to - from;
         var l = dir.Length();
+
         if (l == default)
             return; // can't determine projection direction
 
         dir /= l;
         var t = IntersectRayBounds(from, dir);
-        if (t < l)
+        if (t <= l)
+        {
             ActorOutsideBounds(from + t * dir, rotation, color);
+        }
     }
 
     public void Actor(WPos position, Angle rotation, uint color)

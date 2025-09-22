@@ -53,7 +53,7 @@ sealed class KnuckleSandwich(BossModule module) : Components.GenericAOEs(module)
         if (shape != null)
         {
             _aoes.Add(new(shape, spell.LocXZ, default, Module.CastFinishAt(spell)));
-            _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+            _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
         }
     }
 

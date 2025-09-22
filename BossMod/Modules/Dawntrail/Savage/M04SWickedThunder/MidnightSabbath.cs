@@ -31,7 +31,7 @@ sealed class MidnightSabbath(BossModule module) : Components.GenericAOEs(module)
         if (shape != default)
         {
             AOEs.Add(new(shape, actor.Position.Quantized(), actor.Rotation, WorldState.FutureTime(delay)));
-            AOEs.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+            AOEs.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
         }
     }
 

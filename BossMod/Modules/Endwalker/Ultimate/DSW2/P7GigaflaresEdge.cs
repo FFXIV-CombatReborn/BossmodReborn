@@ -13,7 +13,7 @@ sealed class P7GigaflaresEdge(BossModule module) : Components.GenericAOEs(module
         if (spell.Action.ID is (uint)AID.GigaflaresEdgeAOE1 or (uint)AID.GigaflaresEdgeAOE2 or (uint)AID.GigaflaresEdgeAOE3)
         {
             _aoes.Add(new(_shape, caster.Position, default, Module.CastFinishAt(spell)));
-            _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+            _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
         }
     }
 

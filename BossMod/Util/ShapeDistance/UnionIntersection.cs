@@ -63,6 +63,20 @@ public sealed class SDUnion : ShapeDistance // min distance func
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        var array = zones;
+        for (var i = 0; i < length; ++i)
+        {
+            if (array[i].Contains(p))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
 }
 
@@ -93,6 +107,20 @@ public sealed class SDInvertedUnion : ShapeDistance // -min distance func
             }
         }
         return -min;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        var array = zones;
+        for (var i = 0; i < length; ++i)
+        {
+            if (array[i].Contains(p))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -128,6 +156,20 @@ public sealed class SDInvertedUnionOffset : ShapeDistance // -min distance func
             }
         }
         return -min + offset;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Contains(WPos p)
+    {
+        var array = zones;
+        for (var i = 0; i < length; ++i)
+        {
+            if (array[i].Distance(p) < offset)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

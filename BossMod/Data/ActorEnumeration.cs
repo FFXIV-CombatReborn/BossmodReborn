@@ -163,7 +163,7 @@ public static class ActorEnumeration
             actors.Add((a, distanceSq));
         }
 
-        actors.Sort((a, b) => a.distanceSq.CompareTo(b.distanceSq));
+        actors.Sort(static (a, b) => a.distanceSq.CompareTo(b.distanceSq));
 
         for (var i = 0; i < actors.Count; ++i)
         {
@@ -181,7 +181,7 @@ public static class ActorEnumeration
             actors.Add((a.Item1, a.Item2, distanceSq));
         }
 
-        actors.Sort((a, b) => a.distanceSq.CompareTo(b.distanceSq));
+        actors.Sort(static (a, b) => a.distanceSq.CompareTo(b.distanceSq));
 
         for (var i = 0; i < actors.Count; ++i)
         {

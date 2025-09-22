@@ -244,11 +244,11 @@ public sealed class AIHints
     // TODO: note that the name is misleading - it actually happens mid frame, before all actions are gathered (eg before autorotation runs), but further steps (eg ai) might consume previously gathered data
     public void Normalize()
     {
-        PotentialTargets.Sort((b, a) => a.Priority.CompareTo(b.Priority));
+        PotentialTargets.Sort(static (b, a) => a.Priority.CompareTo(b.Priority));
         HighestPotentialTargetPriority = Math.Max(0, PotentialTargets.FirstOrDefault()?.Priority ?? 0);
-        ForbiddenZones.Sort((a, b) => a.activation.CompareTo(b.activation));
-        ForbiddenDirections.Sort((a, b) => a.activation.CompareTo(b.activation));
-        PredictedDamage.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+        ForbiddenZones.Sort(static (a, b) => a.activation.CompareTo(b.activation));
+        ForbiddenDirections.Sort(static (a, b) => a.activation.CompareTo(b.activation));
+        PredictedDamage.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
     }
 
     public void InitPathfindMap(Pathfinding.Map map)

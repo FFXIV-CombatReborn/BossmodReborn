@@ -32,7 +32,7 @@ sealed class TwilightSabbath(BossModule module) : Components.GenericAOEs(module)
         if (offset != default)
         {
             AOEs.Add(new(_shape, actor.Position.Quantized(), actor.Rotation + offset * 90f.Degrees(), WorldState.FutureTime(delay)));
-            AOEs.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+            AOEs.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
         }
     }
 

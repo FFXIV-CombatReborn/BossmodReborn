@@ -142,7 +142,7 @@ sealed class LetsDanceRemix(BossModule module) : Components.GenericAOEs(module)
                     var rot1 = aoe1.Rotation;
                     if (aoe1.Origin != Arena.Center.Quantized())
                     {
-                        aoe1.Origin -= 1.5f * rot1.ToDirection();
+                        aoe1.Origin -= 5f * rot1.ToDirection();
                     }
                     if (count > 2)
                     {

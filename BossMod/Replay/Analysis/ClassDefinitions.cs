@@ -94,7 +94,7 @@ sealed class ClassDefinitions
 
             bool traitIsInteresting(Lumina.Excel.Sheets.Trait t) => cjcSheet.GetRow(t.ClassJobCategory.RowId).ReadBoolColumn((int)i + 1);
             classData.Traits.AddRange(traitSheet.Where(traitIsInteresting));
-            classData.Traits.Sort((a, b) => a.Level.CompareTo(b.Level));
+            classData.Traits.Sort(static (a, b) => a.Level.CompareTo(b.Level));
         }
         var nullOwner = _classData[Class.None] = new(Class.None, Class.None);
 
@@ -179,10 +179,10 @@ sealed class ClassDefinitions
                 AddActionsToCDGroups(data, data.ExtraCDGroup);
             }
             foreach (var (_, list) in _byCategory)
-                list.Sort((a, b) => (a.Row?.ClassJobLevel ?? 0).CompareTo(b.Row?.ClassJobLevel ?? 0));
+                list.Sort(static (a, b) => (a.Row?.ClassJobLevel ?? 0).CompareTo(b.Row?.ClassJobLevel ?? 0));
             foreach (var (_, cd) in _classData)
             {
-                cd.Actions.Sort((a, b) => (a.Row?.ClassJobLevel ?? 0).CompareTo(b.Row?.ClassJobLevel ?? 0));
+                cd.Actions.Sort(static (a, b) => (a.Row?.ClassJobLevel ?? 0).CompareTo(b.Row?.ClassJobLevel ?? 0));
 
                 foreach (var a in cd.Actions)
                 {

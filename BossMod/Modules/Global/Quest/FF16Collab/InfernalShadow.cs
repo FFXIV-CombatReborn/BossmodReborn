@@ -48,7 +48,7 @@ class FireRampageCleave(BossModule module) : Components.GenericAOEs(module)
         {
             _aoes.Add(new(cone, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell)));
             if (_aoes.Count > 1)
-                _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
         }
     }
 
@@ -134,7 +134,7 @@ class Eruption2(BossModule module) : Components.GenericAOEs(module)
         {
             _aoes.Add(new(circle, spell.LocXZ, default, Module.CastFinishAt(spell)));
             if (_aoes.Count > 1)
-                _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
         }
     }
 

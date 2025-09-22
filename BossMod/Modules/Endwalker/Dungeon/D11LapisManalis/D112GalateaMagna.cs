@@ -85,7 +85,7 @@ sealed class ScarecrowChase(BossModule module) : Components.GenericAOEs(module)
             if (_aoes.Count is var count && (count == 4 || count == 2 && first))
             {
                 first = false;
-                _aoes.Sort((a, b) => a.Activation.CompareTo(b.Activation));
+                _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
             }
         }
     }
