@@ -5,6 +5,7 @@ using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using ECommons;
 using FFXIVClientStructs.FFXIV.Client.Game.Event;
 using System.IO;
 using System.Reflection;
@@ -47,6 +48,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public unsafe Plugin(IDalamudPluginInterface dalamud, ICommandManager commandManager, ISigScanner sigScanner, IDataManager dataManager)
     {
+        ECommonsMain.Init(dalamud, this, ECommons.Module.DalamudReflector, ECommons.Module.ObjectFunctions);
         if (!dalamud.ConfigDirectory.Exists)
             dalamud.ConfigDirectory.Create();
         var dalamudRoot = dalamud.GetType().Assembly.
@@ -133,6 +135,7 @@ public sealed class Plugin : IDalamudPlugin
         ActionDefinitions.Instance.Dispose();
         CommandManager.RemoveHandler("/bmr");
         GarbageCollection();
+        ECommonsMain.Dispose();
     }
 
     private void OnCommand(string cmd, string args)

@@ -1,4 +1,8 @@
-﻿namespace BossMod.AI;
+﻿using ECommons.ExcelServices;
+using ECommons.GameHelpers;
+using System.Text.Json.Serialization;
+
+namespace BossMod.AI;
 
 [ConfigDisplay(Name = "AI configuration (AI is very experimental, use at your own risk!)", Order = 7)]
 sealed class AIConfig : ConfigNode
@@ -46,8 +50,17 @@ sealed class AIConfig : ConfigNode
     [PropertyDisplay("Max distance to slot")]
     public float MaxDistanceToSlot = 1f;
 
-    [PropertyDisplay("Max distance to target")]
-    public float MaxDistanceToTarget = 2.6f;
+
+    [JsonIgnore]
+    public float MaxDistanceToTarget
+    {
+        get => MaxDistanceToTargetByJob[Player.Job];
+        set => MaxDistanceToTargetByJob[Player.Job] = value;
+    }
+    [PropertyDisplay("Max distance to target By Job")]
+    [PropertyDictionaryDefault(2.6f)]
+    public Dictionary<Job, float> MaxDistanceToTargetByJob = new Dictionary<Job, float>() ;
+
 
     [PropertyDisplay("Minimum distance to hitbox")]
     public float MinDistance = default;
