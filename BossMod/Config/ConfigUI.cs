@@ -1,8 +1,13 @@
 using BossMod.Autorotation;
+using BossModReborn.Data;
+using BossModReborn.Util;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility;
 using System.IO;
 using System.Reflection;
 using Dalamud.Interface.Utility.Raii;
+using ECommons.ExcelServices;
+using ECommons.GameHelpers;
 
 namespace BossMod;
 
@@ -359,7 +364,7 @@ public sealed class ConfigUI : IDisposable
         bool v => DrawProperty(label, tooltip, node, member, v),
         Enum v => DrawProperty(label, tooltip, node, member, v),
         float v => DrawProperty(label, tooltip, node, member, v),
-        int v => DrawProperty(label, tooltip, node, member, v),
+        Dictionary<Job, float> v => DrawProperty(label, tooltip, node, member, v),
         string v => DrawProperty(label, tooltip, node, member, v),
         Color v => DrawProperty(label, tooltip, node, member, v),
         Color[] v => DrawProperty(label, tooltip, node, member, v),
@@ -367,6 +372,48 @@ public sealed class ConfigUI : IDisposable
         _ => false
     };
 
+    private static bool DrawProperty(string label, string tooltip, ConfigNode node, FieldInfo member, Dictionary<Job, float> v)
+    {
+
+        var f = v.GetValueOrDefault(Player.Job, member.GetCustomAttribute<PropertyDictionaryDefaultAttribute>()!.f);
+        DrawHelp(tooltip);
+        DrawJobIcon();
+        ImGui.SameLine();
+        var slider = member.GetCustomAttribute<PropertySliderAttribute>();
+        if (slider != null)
+        {
+            var flags = ImGuiSliderFlags.None;
+            if (slider.Logarithmic)
+                flags |= ImGuiSliderFlags.Logarithmic;
+            ImGui.SetNextItemWidth(Math.Min(ImGui.GetWindowWidth() * 0.30f, 175));
+            if (ImGui.DragFloat(label, ref f, slider.Speed, slider.Min, slider.Max, "%.3f", flags))
+            {
+                v[Player.Job] = f;
+                member.SetValue(node, v);
+                return true;
+            }
+        }
+        else
+        {
+            if (ImGui.InputFloat(label, ref f))
+            {
+                v[Player.Job] = f;
+                member.SetValue(node, v);
+                return true;
+            }
+        }
+        return false;
+    }
+    protected static void DrawJobIcon()
+    {
+        ImGui.SameLine();
+
+        if (IconSet.GetTexture(IconSet.GetJobIcon(Player.Job, IconType.Framed), out Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? texture))
+        {
+            ImGui.Image(texture.Handle, Vector2.One * 24 * ImGuiHelpers.GlobalScale);
+            ImguiTooltips.HoveredTooltip(UiString.JobConfigTip.GetDescription());
+        }
+    }
     private static bool DrawProperty(string label, string tooltip, ConfigNode node, FieldInfo member, bool v)
     {
         DrawHelp(tooltip);

@@ -22,7 +22,7 @@
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
-    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,18 +39,19 @@
     <Using Include="System.Text" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <DalamudLibPath>$(appdata)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))'">
-    <DalamudLibPath>$(DALAMUD_HOME)/</DalamudLibPath>
-  </PropertyGroup>
+    <PropertyGroup>
+        <DalamudLibPath Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(appdata)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
+        <DalamudLibPath Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(HOME)/.xlcore/dalamud/Hooks/dev/</DalamudLibPath>
+        <DalamudLibPath Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(HOME)/Library/Application Support/XIV on Mac/dalamud/Hooks/dev/</DalamudLibPath>
+        <DalamudLibPath Condition="$(DALAMUD_HOME) != ''">$(DALAMUD_HOME)/</DalamudLibPath>
+    </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="DalamudPackager" Version="13.1.0" />
+    <PackageReference Include="ECommons" Version="3.0.1.16" />
     <PackageReference Include="PInvoke.User32" Version="0.7.124" />
     <PackageReference Include="SharpDX.Mathematics" Version="4.2.0" />
+    <PackageReference Include="Svg" Version="3.4.7" />
     <ProjectReference Include="..\FFXIVClientStructs\FFXIVClientStructs\FFXIVClientStructs.csproj" />
 
     <Reference Include="Dalamud">
@@ -88,6 +89,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+    
 
   <ItemGroup>
     <EmbeddedResource Include="Pathfinding\ObstacleMaps\*" />
@@ -95,13 +97,9 @@
 
   <Target Name="CopyOnlyPInvoke" AfterTargets="Build" Condition=" '$(CopyLocalLockFileAssemblies)' != 'true' ">
     <ItemGroup>
-      <_PInvokeFromNuGet Include="@(RuntimeCopyLocalItems)"
-                         Condition="'%(RuntimeCopyLocalItems.NuGetPackageId)' == 'PInvoke.User32' 
-                                   and $([System.String]::Copy('%(RuntimeCopyLocalItems.Extension)').ToLower()) == '.dll'" />
+      <_PInvokeFromNuGet Include="@(RuntimeCopyLocalItems)" Condition="'%(RuntimeCopyLocalItems.NuGetPackageId)' == 'PInvoke.User32' &#xA;                                   and $([System.String]::Copy('%(RuntimeCopyLocalItems.Extension)').ToLower()) == '.dll'" />
     </ItemGroup>
-    <Copy SourceFiles="@(_PInvokeFromNuGet)"
-          DestinationFolder="$(OutputPath)"
-          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_PInvokeFromNuGet)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
   </Target>
   
 </Project>
