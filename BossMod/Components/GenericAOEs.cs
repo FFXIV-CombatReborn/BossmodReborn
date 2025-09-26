@@ -161,7 +161,7 @@ public class ChargeAOEs(BossModule module, uint aid, float halfWidth, int maxCas
             var shape = new AOEShapeRect(dir.Length() + ExtraLengthFront, HalfWidth);
             var origin = caster.Position.Quantized();
             var rotation = Angle.FromDirection(dir);
-            Casters.Add(new(shape, origin, rotation, Module.CastFinishAt(spell), actorID: caster.InstanceID, shapeDistance: Shape.Distance(origin, rotation)));
+            Casters.Add(new(shape, origin, rotation, Module.CastFinishAt(spell), actorID: caster.InstanceID, shapeDistance: shape.Distance(origin, rotation)));
         }
     }
 }
@@ -248,8 +248,7 @@ public class SimpleAOEGroupsByTimewindow(BossModule module, uint[] aids, AOEShap
         var index = 0;
         while (index < count)
         {
-            ref var aoe = ref aoes[index];
-            if (aoe.Activation >= deadline)
+            if (aoes[index].Activation >= deadline)
             {
                 break;
             }
@@ -286,7 +285,7 @@ public class SimpleChargeAOEGroups(BossModule module, uint[] aids, float halfWid
                 var shape = new AOEShapeRect(dir.Length() + ExtraLengthFront, HalfWidth);
                 var origin = caster.Position.Quantized();
                 var rotation = Angle.FromDirection(dir);
-                Casters.Add(new(shape, origin, rotation, Module.CastFinishAt(spell), actorID: caster.InstanceID, shapeDistance: Shape.Distance(origin, rotation)));
+                Casters.Add(new(shape, origin, rotation, Module.CastFinishAt(spell), actorID: caster.InstanceID, shapeDistance: shape.Distance(origin, rotation)));
                 if (Casters.Count == ExpectedNumCasters)
                 {
                     Casters.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));

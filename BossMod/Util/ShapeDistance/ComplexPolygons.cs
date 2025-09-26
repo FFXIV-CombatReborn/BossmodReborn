@@ -22,26 +22,25 @@ public readonly struct SDPolygonWithHolesBase
     private readonly RelSimplifiedComplexPolygon _polygon;
     private readonly float _originX, _originZ;
     private readonly Edge[] _edges;
-    private readonly SpatialIndex _spatialIndex;
+    private readonly SpatialIndex _spatialIndex; // faster but less exact than the PolygonBoundaryIndex2D, should be sufficient though since we test upto 5 points per cell during rasterization anyway
 
     public SDPolygonWithHolesBase(WPos origin, RelSimplifiedComplexPolygon polygon)
     {
         _originX = origin.X;
         _originZ = origin.Z;
         _polygon = polygon;
-        var edgeCount = 0;
-        var countPolygonParts = polygon.Parts.Count;
-        for (var i = 0; i < countPolygonParts; ++i)
+
+        var parts = polygon.Parts;
+        var countP = parts.Count;
+        var vertsCount = 0;
+        for (var i = 0; i < countP; ++i)
         {
-            var part = polygon.Parts[i];
-            edgeCount += part.ExteriorEdges.Length;
-            var lenPolygonHoles = part.Holes.Length;
-            for (var j = 0; j < lenPolygonHoles; ++j)
-                edgeCount += part.InteriorEdges(j).Length;
+            vertsCount += parts[i].VerticesCount;
         }
-        _edges = new Edge[edgeCount];
+
+        _edges = new Edge[vertsCount];
         var edgeIndex = 0;
-        for (var i = 0; i < countPolygonParts; ++i)
+        for (var i = 0; i < countP; ++i)
         {
             var part = polygon.Parts[i];
             var exteriorEdges = GetEdges(part.Exterior, origin);

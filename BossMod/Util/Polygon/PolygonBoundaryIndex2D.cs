@@ -1,4 +1,7 @@
-﻿namespace BossMod;
+﻿using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
+
+namespace BossMod;
 
 [SkipLocalsInit]
 internal sealed class PolygonBoundaryIndex2D
@@ -217,17 +220,24 @@ internal sealed class PolygonBoundaryIndex2D
             }
             ++hCounts[r];
         }
+        // decide SIMD pad width
+        var padWidth = (Vector512.IsHardwareAccelerated && Avx512F.IsSupported) ? 16 : (Vector256.IsHardwareAccelerated && Avx.IsSupported) ? 8 : 1;
 
-        // prefix sums → offsets
-        var rowOffsets = new int[rows + 1];
+        // prefix sums with padding
+        var rowOffsets = new int[rows + 1]; // padded offsets
+        var paddedCounts = new int[rows];
         var total = 0;
         for (var r = 0; r < rows; ++r)
         {
             rowOffsets[r] = total;
-            total += counts[r];
+            var c = counts[r];
+            var pc = padWidth == 1 ? c : RoundUp(c, padWidth);
+            paddedCounts[r] = pc;
+            total += pc;
         }
         rowOffsets[rows] = total;
 
+        // horizontals offsets (no padding needed)
         var hRowOffsets = new int[rows + 1];
         var hTotal = 0;
         for (var r = 0; r < rows; ++r)
@@ -279,6 +289,23 @@ internal sealed class PolygonBoundaryIndex2D
             }
         }
 
+        // fill rows (padding as NaN sentinels)
+        for (var r = 0; r < rows; ++r)
+        {
+            var start = rowOffsets[r];
+            var endActual = start + counts[r];
+            var endPad = start + paddedCounts[r];
+            for (var i = endActual; i < endPad; ++i)
+            {
+                e_y0_Row[i] = float.NaN; // makes span/den comparisons false
+                e_y1_Row[i] = float.NaN;
+                e_x0_Row[i] = float.NaN;
+                e_k_Row[i] = 0f;
+                e_minX_Row[i] = float.PositiveInfinity;
+                e_maxX_Row[i] = float.NegativeInfinity;
+            }
+        }
+
         var hwpos = new int[rows];
         Array.Copy(hRowOffsets, hwpos, rows);
         for (int idx = 0, hN = lenH; idx < hN; ++idx)
@@ -297,7 +324,7 @@ internal sealed class PolygonBoundaryIndex2D
             hRowIdx[hwpos[r]++] = idx;
         }
 
-        // per-row conservative X bounds
+        // per-row conservative X bounds (use actual counts only)
         var rowMinX = new float[rows];
         var rowMaxX = new float[rows];
 
@@ -309,8 +336,9 @@ internal sealed class PolygonBoundaryIndex2D
             var rMinX = float.PositiveInfinity;
             var rMaxX = float.NegativeInfinity;
 
-            int start = rowOffsets[r], end = rowOffsets[r + 1];
-            for (var i = start; i < end; ++i)
+            var start = rowOffsets[r];
+            var endActual = start + counts[r];
+            for (var i = start; i < endActual; ++i)
             {
                 var y0 = e_y0_Row[i];
                 var y1 = e_y1_Row[i];
@@ -357,43 +385,46 @@ internal sealed class PolygonBoundaryIndex2D
 
         return new PolygonBoundaryIndex2D(e_y0_Row, e_y1_Row, e_x0_Row, e_k_Row, e_minX_Row, e_maxX_Row,
             rowOffsets, hEdges, hRowOffsets, hRowIdx, rows, bbMinY, cellH, invCellH, bbMinX, bbMinY, bbMaxX, bbMaxY, rowMinX, rowMaxX);
-    }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void AccumBB(in WDir a, in WDir b, ref float minX, ref float minY, ref float maxX, ref float maxY)
-    {
-        float ax = a.X, ay = a.Z, bx = b.X, by = b.Z;
-        if (ax < minX)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static int RoundUp(int v, int m) => (v + (m - 1)) / m * m;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void AccumBB(in WDir a, in WDir b, ref float minX, ref float minY, ref float maxX, ref float maxY)
         {
-            minX = ax;
-        }
-        if (ay < minY)
-        {
-            minY = ay;
-        }
-        if (ax > maxX)
-        {
-            maxX = ax;
-        }
-        if (ay > maxY)
-        {
-            maxY = ay;
-        }
-        if (bx < minX)
-        {
-            minX = bx;
-        }
-        if (by < minY)
-        {
-            minY = by;
-        }
-        if (bx > maxX)
-        {
-            maxX = bx;
-        }
-        if (by > maxY)
-        {
-            maxY = by;
+            float ax = a.X, ay = a.Z, bx = b.X, by = b.Z;
+            if (ax < minX)
+            {
+                minX = ax;
+            }
+            if (ay < minY)
+            {
+                minY = ay;
+            }
+            if (ax > maxX)
+            {
+                maxX = ax;
+            }
+            if (ay > maxY)
+            {
+                maxY = ay;
+            }
+            if (bx < minX)
+            {
+                minX = bx;
+            }
+            if (by < minY)
+            {
+                minY = by;
+            }
+            if (bx > maxX)
+            {
+                maxX = bx;
+            }
+            if (by > maxY)
+            {
+                maxY = by;
+            }
         }
     }
 
@@ -409,7 +440,6 @@ internal sealed class PolygonBoundaryIndex2D
         var px = p.X;
         var py = p.Z;
 
-        // Global bbox reject
         if (px < _bbMinX - Eps || px > _bbMaxX + Eps || py < _bbMinY - Eps || py > _bbMaxY + Eps)
         {
             return false;
@@ -417,118 +447,285 @@ internal sealed class PolygonBoundaryIndex2D
 
         var row = ClampRow(py);
 
-        // Horizontal boundary hits (row-local)
-        var hs = _hRowOffsets[row];
-        var he = _hRowOffsets[row + 1];
+        int hs = _hRowOffsets[row], he = _hRowOffsets[row + 1];
         for (var i = hs; i < he; ++i)
         {
             ref readonly var h = ref _hEdges[_hRowIdx[i]];
             if (Math.Abs(py - h.y) <= Eps && px >= h.minX - Eps && px <= h.maxX + Eps)
             {
-                return true; // on boundary
+                return true;
             }
         }
 
-        // Row X-range early-out (conservative)
         if (px < _rowMinX[row] - Eps || px > _rowMaxX[row] + Eps)
         {
             return false;
         }
 
-        // Non-horizontals: SIMD parity + boundary
         int es = _rowOffsets[row], ee = _rowOffsets[row + 1];
         if (ee - es == 0)
         {
             return false;
         }
 
-        var i0 = es;
         var parity = 0;
 
-        // Vectorized loop
-        var lanes = Vector<float>.Count;
-        var v_py = new Vector<float>(py);
-        var v_px = new Vector<float>(px);
-        var v_eps = new Vector<float>(Eps);
-
-        // loop over vector blocks
-        for (; i0 + lanes <= ee; i0 += lanes)
+        // AVX512F path: unrolled ×2 (32 lanes/iter)
+        if (Vector512.IsHardwareAccelerated && Avx512F.IsSupported)
         {
-            // Load SoA lanes
-            var y0 = LoadVec(_e_y0_Row, i0);
-            var y1 = LoadVec(_e_y1_Row, i0);
-            var x0 = LoadVec(_e_x0_Row, i0);
-            var k = LoadVec(_e_k_Row, i0);
-            var mn = LoadVec(_e_minX_Row, i0);
-            var mx = LoadVec(_e_maxX_Row, i0);
+            var v_py = Vector512.Create(py);
+            var v_px = Vector512.Create(px);
+            var v_eps2 = Vector512.Create(Eps * Eps);
 
-            var ge_y0 = Vector.GreaterThanOrEqual(v_py, y0);
-            var lt_y1 = Vector.LessThan(v_py, y1);
-            var span = ge_y0 & lt_y1;
+            var i0 = es;
 
-            // xAt(py) = x0 + k*(py - y0)
-            var x = x0 + k * (v_py - y0);
-
-            // Boundary: |px - x| <= eps && px within [minX,maxX]
-            var dx = Vector.Abs(v_px - x);
-            var near = Vector.LessThanOrEqual(dx, v_eps);
-            var ge_mn = Vector.GreaterThanOrEqual(v_px, mn);
-            var le_mx = Vector.LessThanOrEqual(v_px, mx);
-            var onBoundary = span & near & ge_mn & le_mx;
-
-            if (!Vector.EqualsAll(onBoundary, default))
+            for (; i0 + 32 <= ee; i0 += 32)
             {
-                return true;
+                // block 0
+                var y0_0 = Load512(_e_y0_Row, i0);
+                var y1_0 = Load512(_e_y1_Row, i0);
+                var x0_0 = Load512(_e_x0_Row, i0);
+                var k_0 = Load512(_e_k_Row, i0);
+                var mn_0 = Load512(_e_minX_Row, i0);
+                var mx_0 = Load512(_e_maxX_Row, i0);
+
+                var span0 = Vector512.GreaterThanOrEqual(v_py, y0_0) & Vector512.LessThan(v_py, y1_0);
+                var x0v = x0_0 + k_0 * (v_py - y0_0);
+                var dx0 = v_px - x0v;
+                var near0 = Vector512.LessThanOrEqual(dx0 * dx0, v_eps2);
+                var onB0 = span0 & near0 & Vector512.GreaterThanOrEqual(v_px, mn_0) & Vector512.LessThanOrEqual(v_px, mx_0);
+
+                // block 1
+                var b = i0 + 16;
+                var y0_1 = Load512(_e_y0_Row, b);
+                var y1_1 = Load512(_e_y1_Row, b);
+                var x0_1 = Load512(_e_x0_Row, b);
+                var k_1 = Load512(_e_k_Row, b);
+                var mn_1 = Load512(_e_minX_Row, b);
+                var mx_1 = Load512(_e_maxX_Row, b);
+
+                var span1 = Vector512.GreaterThanOrEqual(v_py, y0_1) & Vector512.LessThan(v_py, y1_1);
+                var x1v = x0_1 + k_1 * (v_py - y0_1);
+                var dx1 = v_px - x1v;
+                var near1 = Vector512.LessThanOrEqual(dx1 * dx1, v_eps2);
+                var onB1 = span1 & near1 & Vector512.GreaterThanOrEqual(v_px, mn_1) & Vector512.LessThanOrEqual(v_px, mx_1);
+
+                // boundary early-out
+                if ((onB0.ExtractMostSignificantBits() | onB1.ExtractMostSignificantBits()) != default)
+                {
+                    return true;
+                }
+
+                // parity from both blocks
+                var gt0 = (Vector512.GreaterThan(x0v, v_px) & span0).ExtractMostSignificantBits();
+                var gt1 = (Vector512.GreaterThan(x1v, v_px) & span1).ExtractMostSignificantBits();
+                parity ^= (BitOperations.PopCount((uint)gt0) + BitOperations.PopCount((uint)gt1)) & 1;
             }
 
-            // Crossings: x > px under span
-            var gt = Vector.GreaterThan(x, v_px) & span;
+            // final 16 if any (rows are padded to 16; this runs when length % 32 == 16)
+            for (; i0 + 16 <= ee; i0 += 16)
+            {
+                var y0 = Load512(_e_y0_Row, i0);
+                var y1 = Load512(_e_y1_Row, i0);
+                var x0 = Load512(_e_x0_Row, i0);
+                var k = Load512(_e_k_Row, i0);
+                var mn = Load512(_e_minX_Row, i0);
+                var mx = Load512(_e_maxX_Row, i0);
 
-            // Count lane bits (popcount over mask)
-            parity ^= Parity(gt);
+                var span = Vector512.GreaterThanOrEqual(v_py, y0) & Vector512.LessThan(v_py, y1);
+                var x = x0 + k * (v_py - y0);
+                var dx = v_px - x;
+                var near = Vector512.LessThanOrEqual(dx * dx, v_eps2);
+                var onB = span & near & Vector512.GreaterThanOrEqual(v_px, mn) & Vector512.LessThanOrEqual(v_px, mx);
+                if (onB.ExtractMostSignificantBits() != default)
+                {
+                    return true;
+                }
+                var gt = Vector512.GreaterThan(x, v_px) & span;
+                parity ^= BitOperations.PopCount(gt.ExtractMostSignificantBits()) & 1;
+            }
+
+            return (parity & 1) != 0;
+            static Vector512<float> Load512(float[] arr, int index)
+            {
+                ref var r0 = ref MemoryMarshal.GetArrayDataReference(arr);
+                return Vector512.LoadUnsafe(ref r0, (nuint)index);
+            }
         }
 
-        // Scalar tail
-        for (; i0 < ee; ++i0)
+        // AVX2 path (2×8 unrolled, fully padded)
+        if (Vector256.IsHardwareAccelerated && Avx.IsSupported)
         {
-            var y0 = _e_y0_Row[i0];
-            if (py < y0 - Eps)
-            {
-                continue;
-            }
-            var y1 = _e_y1_Row[i0];
-            if (py >= y1 - Eps)
-            {
-                continue;
-            }
+            var v_py = Vector256.Create(py);
+            var v_px = Vector256.Create(px);
+            var v_eps2 = Vector256.Create(Eps * Eps);
 
-            var x = _e_x0_Row[i0] + _e_k_Row[i0] * (py - y0);
-
-            if (Math.Abs(px - x) <= Eps && px >= _e_minX_Row[i0] - Eps && px <= _e_maxX_Row[i0] + Eps)
+            var i0 = es;
+            for (; i0 + 16 <= ee; i0 += 16)
             {
-                return true;
+                // block 0
+                {
+                    var y0 = Load256(_e_y0_Row, i0);
+                    var y1 = Load256(_e_y1_Row, i0);
+                    var x0 = Load256(_e_x0_Row, i0);
+                    var k = Load256(_e_k_Row, i0);
+                    var mn = Load256(_e_minX_Row, i0);
+                    var mx = Load256(_e_maxX_Row, i0);
+
+                    var span = Vector256.BitwiseAnd(Vector256.GreaterThanOrEqual(v_py, y0), Vector256.LessThan(v_py, y1));
+
+                    var x = Avx.Add(x0, Avx.Multiply(k, Avx.Subtract(v_py, y0)));
+                    var dx = Avx.Subtract(v_px, x);
+                    var near = Vector256.LessThanOrEqual(Avx.Multiply(dx, dx), v_eps2);
+                    var onB = Vector256.BitwiseAnd(Vector256.BitwiseAnd(span, near),
+                               Vector256.BitwiseAnd(Vector256.GreaterThanOrEqual(v_px, mn), Vector256.LessThanOrEqual(v_px, mx)));
+                    if (onB.ExtractMostSignificantBits() != default)
+                    {
+                        return true;
+                    }
+
+                    var gt = Vector256.BitwiseAnd(Vector256.GreaterThan(x, v_px), span);
+                    parity ^= BitOperations.PopCount(gt.ExtractMostSignificantBits()) & 1;
+                }
+                // block 1
+                {
+                    var b = i0 + 8;
+                    var y0 = Load256(_e_y0_Row, b);
+                    var y1 = Load256(_e_y1_Row, b);
+                    var x0 = Load256(_e_x0_Row, b);
+                    var k = Load256(_e_k_Row, b);
+                    var mn = Load256(_e_minX_Row, b);
+                    var mx = Load256(_e_maxX_Row, b);
+
+                    var span = Vector256.BitwiseAnd(Vector256.GreaterThanOrEqual(v_py, y0), Vector256.LessThan(v_py, y1));
+
+                    var x = Avx.Add(x0, Avx.Multiply(k, Avx.Subtract(v_py, y0)));
+                    var dx = Avx.Subtract(v_px, x);
+                    var near = Vector256.LessThanOrEqual(Avx.Multiply(dx, dx), v_eps2);
+                    var onB = Vector256.BitwiseAnd(Vector256.BitwiseAnd(span, near),
+                               Vector256.BitwiseAnd(Vector256.GreaterThanOrEqual(v_px, mn), Vector256.LessThanOrEqual(v_px, mx)));
+                    if (onB.ExtractMostSignificantBits() != default)
+                    {
+                        return true;
+                    }
+
+                    var gt = Vector256.BitwiseAnd(Vector256.GreaterThan(x, v_px), span);
+                    parity ^= BitOperations.PopCount(gt.ExtractMostSignificantBits()) & 1;
+                }
             }
-
-            if (x > px)
+            // final 8 if any (rows are padded to 16; this runs when length % 16 == 8)
+            for (; i0 + 8 <= ee; i0 += 8)
             {
-                parity ^= 1;
+                var y0 = Load256(_e_y0_Row, i0);
+                var y1 = Load256(_e_y1_Row, i0);
+                var x0 = Load256(_e_x0_Row, i0);
+                var k = Load256(_e_k_Row, i0);
+                var mn = Load256(_e_minX_Row, i0);
+                var mx = Load256(_e_maxX_Row, i0);
+
+                var span = Vector256.BitwiseAnd(Vector256.GreaterThanOrEqual(v_py, y0), Vector256.LessThan(v_py, y1));
+
+                var x = Avx.Add(x0, Avx.Multiply(k, Avx.Subtract(v_py, y0)));
+                var dx = Avx.Subtract(v_px, x);
+                var near = Vector256.LessThanOrEqual(Avx.Multiply(dx, dx), v_eps2);
+                var onB = Vector256.BitwiseAnd(Vector256.BitwiseAnd(span, near),
+                           Vector256.BitwiseAnd(Vector256.GreaterThanOrEqual(v_px, mn), Vector256.LessThanOrEqual(v_px, mx)));
+                if (onB.ExtractMostSignificantBits() != default)
+                {
+                    return true;
+                }
+
+                var gt = Vector256.BitwiseAnd(Vector256.GreaterThan(x, v_px), span);
+                parity ^= BitOperations.PopCount(gt.ExtractMostSignificantBits()) & 1;
+            }
+            return (parity & 1) != 0;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static Vector256<float> Load256(float[] arr, int index)
+            {
+                ref var r0 = ref MemoryMarshal.GetArrayDataReference(arr);
+                return Vector256.LoadUnsafe(ref r0, (nuint)index);
             }
         }
 
-        return (parity & 1) != 0;
+        // Vector<T>
+        {
+            var i0 = es;
+            var lanes = Vector<float>.Count;
+            var v_py = new Vector<float>(py);
+            var v_px = new Vector<float>(px);
+            var v_eps = new Vector<float>(Eps);
+
+            for (; i0 + lanes <= ee; i0 += lanes)
+            {
+                var y0 = LoadVec(_e_y0_Row, i0);
+                var y1 = LoadVec(_e_y1_Row, i0);
+                var x0 = LoadVec(_e_x0_Row, i0);
+                var k = LoadVec(_e_k_Row, i0);
+                var mn = LoadVec(_e_minX_Row, i0);
+                var mx = LoadVec(_e_maxX_Row, i0);
+
+                var ge_y0 = Vector.GreaterThanOrEqual(v_py, y0);
+                var lt_y1 = Vector.LessThan(v_py, y1);
+                var span = ge_y0 & lt_y1;
+
+                var x = x0 + k * (v_py - y0);
+                var dx = Vector.Abs(v_px - x);
+                var near = Vector.LessThanOrEqual(dx, v_eps);
+                var ge_mn = Vector.GreaterThanOrEqual(v_px, mn);
+                var le_mx = Vector.LessThanOrEqual(v_px, mx);
+                var onB = span & near & ge_mn & le_mx;
+
+                if (!Vector.EqualsAll(onB, default))
+                {
+                    return true;
+                }
+
+                var gt = Vector.GreaterThan(x, v_px) & span;
+                parity ^= Parity(gt);
+            }
+
+            for (; i0 < ee; ++i0)
+            {
+                var y0s = _e_y0_Row[i0];
+                if (py < y0s - Eps)
+                {
+                    continue;
+                }
+                var y1s = _e_y1_Row[i0];
+                if (py >= y1s - Eps)
+                {
+                    continue;
+                }
+                var x = _e_x0_Row[i0] + _e_k_Row[i0] * (py - y0s);
+
+                if (Math.Abs(px - x) <= Eps && px >= _e_minX_Row[i0] - Eps && px <= _e_maxX_Row[i0] + Eps)
+                {
+                    return true;
+                }
+
+                if (x > px)
+                {
+                    parity ^= 1;
+                }
+            }
+
+            return (parity & 1) != 0;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static Vector<float> LoadVec(float[] src, int index) => new(src, index);
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int Parity(Vector<int> mask)
         {
-            // lanes are 0 or -1; XOR signbits for parity.
+            // XOR signbits for parity
             switch (Vector<int>.Count)
             {
                 case 4: return ((mask[0] >> 31) ^ (mask[1] >> 31) ^ (mask[2] >> 31) ^ (mask[3] >> 31)) & 1;
                 case 8:
                     return ((mask[0] >> 31) ^ (mask[1] >> 31) ^ (mask[2] >> 31) ^ (mask[3] >> 31)
-                               ^ (mask[4] >> 31) ^ (mask[5] >> 31) ^ (mask[6] >> 31) ^ (mask[7] >> 31)) & 1;
+                          ^ (mask[4] >> 31) ^ (mask[5] >> 31) ^ (mask[6] >> 31) ^ (mask[7] >> 31)) & 1;
                 case 16:
                     return ((mask[0] >> 31) ^ (mask[1] >> 31) ^ (mask[2] >> 31) ^ (mask[3] >> 31)
                           ^ (mask[4] >> 31) ^ (mask[5] >> 31) ^ (mask[6] >> 31) ^ (mask[7] >> 31)
@@ -550,7 +747,7 @@ internal sealed class PolygonBoundaryIndex2D
         float ox = o.X, oz = o.Z;
         float dx = d.X, dz = d.Z;
 
-        // AABB slab reject (fast coarse pruning)
+        // AABB slab prune
         float tmin = -float.Epsilon, tmax = float.MaxValue;
         if (Math.Abs(dx) > Eps)
         {
@@ -591,7 +788,7 @@ internal sealed class PolygonBoundaryIndex2D
             return float.MaxValue;
         }
 
-        // Horizontal ray fast path (why: hot case, cheaper than general solve)
+        // Horizontal ray fast path
         if (Math.Abs(dz) <= Eps)
         {
             if (Math.Abs(dx) <= Eps)
@@ -650,81 +847,320 @@ internal sealed class PolygonBoundaryIndex2D
             return best;
         }
 
-        // DDA rows + robust segment-ray solve
         var bestT = float.MaxValue;
         var rowCur = ClampRow(oz);
         var step = dz > 0f ? +1 : -1;
         var nextY = (dz > 0f) ? (_minY + (rowCur + 1) * _cellH) : (_minY + rowCur * _cellH);
 
-        var v_dx = new Vector<float>(dx);
-        var v_dz = new Vector<float>(dz);
-        var v_ox = new Vector<float>(ox);
-        var v_oz = new Vector<float>(oz);
-        var v_inf = new Vector<float>(float.PositiveInfinity);
-        var v_tiny = new Vector<float>(1e-9f); // stricter than Eps for denom
-        var v_one = new Vector<float>(1f);
-
-        while ((uint)rowCur < (uint)_rows)
+        // SIMD kernels for non-horizontal segments in a row
+        // AVX512 kernel (unrolled ×2)
+        static void KernelSIMD512(float[] y0Arr, float[] y1Arr, float[] x0Arr, float[] kArr,
+            int es, int ee, float ox, float oz, float dx, float dz, ref float bestT)
         {
-            var tBoundary = (nextY - oz) / dz;
-            if (bestT <= tBoundary + 1e-6f)
-            {
-                break; // small bias to avoid row-transition jitter
-            }
+            var v_dx = Vector512.Create(dx);
+            var v_dz = Vector512.Create(dz);
+            var v_ox = Vector512.Create(ox);
+            var v_oz = Vector512.Create(oz);
+            var v_inf = Vector512.Create(float.PositiveInfinity);
+            var v_tiny = Vector512.Create(1e-9f);
+            var v_one = Vector512.Create(1f);
+            Vector512<float> v_zero = default;
 
-            int es = _rowOffsets[rowCur], ee = _rowOffsets[rowCur + 1];
+            Span<float> buf = stackalloc float[16];
 
-            // SIMD blocks
             var i = es;
-            var lanes = Vector<float>.Count;
-            for (; i + lanes <= ee; i += lanes)
+            for (; i + 32 <= ee; i += 32)
             {
-                // Edge anchor A and vector e
-                var y0 = LoadVec(_e_y0_Row, i);
-                var y1 = LoadVec(_e_y1_Row, i);
-                var x0 = LoadVec(_e_x0_Row, i);
-                var k = LoadVec(_e_k_Row, i);
-
-                var ey = y1 - y0; // dy
-                var ex = k * ey; // dx
-                var wox = x0 - v_ox; // A - o
-                var woz = y0 - v_oz;
-
-                // den = cross(d, e) = dx*ey - dz*ex
-                var den = v_dx * ey - v_dz * ex;
-                var absDen = Vector.Abs(den);
-                var nonParallel = Vector.GreaterThan(absDen, v_tiny);
-
-                // t = cross(w, e)/den = (w.x*ey - w.y*ex)/den
-                var t = (wox * ey - woz * ex) / den;
-
-                // u = cross(w, d)/den = (w.x*dz - w.y*dx)/den
-                var u = (wox * v_dz - woz * v_dx) / den;
-
-                var tNonNeg = Vector.GreaterThanOrEqual(t, default);
-                // half-open on u to avoid counting far vertex twice
-                var ge0 = Vector.GreaterThanOrEqual(u, default);
-                var lt1 = Vector.LessThan(u, v_one);
-                var inSeg = ge0 & lt1;
-
-                var valid = nonParallel & tNonNeg & inSeg;
-
-                var tCand = Vector.ConditionalSelect(valid, t, v_inf);
-                var v_best = new Vector<float>(bestT);
-                tCand = Vector.Min(tCand, v_best);
-
-                var laneMin = ReduceMin(tCand);
-                if (laneMin < bestT)
+                // block 0
                 {
-                    bestT = laneMin;
+                    var y0 = Load512(y0Arr, i);
+                    var y1 = Load512(y1Arr, i);
+                    var x0 = Load512(x0Arr, i);
+                    var k = Load512(kArr, i);
+
+                    var dy = y1 - y0;
+                    var dxE = k * dy;
+                    var wox = x0 - v_ox;
+                    var woz = y0 - v_oz;
+
+                    var den = v_dx * dy - v_dz * dxE;
+                    var validDen = Vector512.GreaterThan(Vector512.Abs(den), v_tiny);
+
+                    var t = (wox * dy - woz * dxE) / den;
+                    var u = (wox * v_dz - woz * v_dx) / den;
+
+                    var valid = validDen
+                             & Vector512.GreaterThanOrEqual(t, v_zero)
+                             & Vector512.GreaterThanOrEqual(u, v_zero)
+                             & Vector512.LessThan(u, v_one);
+
+                    var tCand = Vector512.ConditionalSelect(valid, t, v_inf);
+
+                    var v_best = Vector512.Create(bestT);
+                    var anyBetter = Vector512.LessThan(tCand, v_best).ExtractMostSignificantBits();
+                    if (anyBetter != default)
+                    {
+                        tCand.CopyTo(buf);
+                        for (var m = 0; m < 16; ++m)
+                        {
+                            var tv = buf[m];
+                            if (tv < bestT)
+                            {
+                                bestT = tv;
+                            }
+                        }
+                    }
+                }
+
+                // block 1
+                {
+                    var b = i + 16;
+                    var y0 = Load512(y0Arr, b);
+                    var y1 = Load512(y1Arr, b);
+                    var x0 = Load512(x0Arr, b);
+                    var k = Load512(kArr, b);
+
+                    var dy = y1 - y0;
+                    var dxE = k * dy;
+                    var wox = x0 - v_ox;
+                    var woz = y0 - v_oz;
+
+                    var den = v_dx * dy - v_dz * dxE;
+                    var validDen = Vector512.GreaterThan(Vector512.Abs(den), v_tiny);
+
+                    var t = (wox * dy - woz * dxE) / den;
+                    var u = (wox * v_dz - woz * v_dx) / den;
+
+                    var valid = validDen
+                             & Vector512.GreaterThanOrEqual(t, v_zero)
+                             & Vector512.GreaterThanOrEqual(u, v_zero)
+                             & Vector512.LessThan(u, v_one);
+
+                    var tCand = Vector512.ConditionalSelect(valid, t, v_inf);
+
+                    var v_best = Vector512.Create(bestT);
+                    var anyBetter = Vector512.LessThan(tCand, v_best).ExtractMostSignificantBits();
+                    if (anyBetter != default)
+                    {
+                        tCand.CopyTo(buf);
+                        for (var m = 0; m < 16; ++m)
+                        {
+                            var tv = buf[m];
+                            if (tv < bestT)
+                            {
+                                bestT = tv;
+                            }
+                        }
+                    }
                 }
             }
 
-            // Scalar tail (with collinear handling)
-            for (; i < ee; ++i)
+            // final 16 if any
+            for (; i + 16 <= ee; i += 16)
             {
-                float y0s = _e_y0_Row[i], y1s = _e_y1_Row[i], x0s = _e_x0_Row[i];
-                float eys = y1s - y0s, exs = _e_k_Row[i] * eys;
+                var y0 = Load512(y0Arr, i);
+                var y1 = Load512(y1Arr, i);
+                var x0 = Load512(x0Arr, i);
+                var k = Load512(kArr, i);
+
+                var dy = y1 - y0;
+                var dxE = k * dy;
+                var wox = x0 - v_ox;
+                var woz = y0 - v_oz;
+
+                var den = v_dx * dy - v_dz * dxE;
+                var validDen = Vector512.GreaterThan(Vector512.Abs(den), v_tiny);
+
+                var t = (wox * dy - woz * dxE) / den;
+                var u = (wox * v_dz - woz * v_dx) / den;
+
+                Vector512<float> v_zero2 = default;
+                var valid = validDen
+                         & Vector512.GreaterThanOrEqual(t, v_zero2)
+                         & Vector512.GreaterThanOrEqual(u, v_zero2)
+                         & Vector512.LessThan(u, v_one);
+
+                var tCand = Vector512.ConditionalSelect(valid, t, v_inf);
+
+                var v_best = Vector512.Create(bestT);
+                var anyBetter = Vector512.LessThan(tCand, v_best).ExtractMostSignificantBits();
+                if (anyBetter != default)
+                {
+                    tCand.CopyTo(buf);
+                    for (var m = 0; m < 16; ++m)
+                    {
+                        var tv = buf[m];
+                        if (tv < bestT)
+                        {
+                            bestT = tv;
+                        }
+                    }
+                }
+            }
+            static Vector512<float> Load512(float[] arr, int index)
+            {
+                ref var r0 = ref MemoryMarshal.GetArrayDataReference(arr);
+                return Vector512.LoadUnsafe(ref r0, (nuint)index);
+            }
+        }
+
+        // AVX2 kernel (unrolled ×2)
+        static void KernelSIMD256(float[] y0Arr, float[] y1Arr, float[] x0Arr, float[] kArr,
+            int es, int ee, float ox, float oz, float dx, float dz, ref float bestT)
+        {
+            var v_dx = Vector256.Create(dx);
+            var v_dz = Vector256.Create(dz);
+            var v_ox = Vector256.Create(ox);
+            var v_oz = Vector256.Create(oz);
+            var v_inf = Vector256.Create(float.PositiveInfinity);
+            var v_tiny = Vector256.Create(1e-9f);
+            var v_one = Vector256.Create(1f);
+            Vector256<float> v_zero = default;
+
+            Span<float> buf = stackalloc float[8];
+
+            var i = es;
+            for (; i + 16 <= ee; i += 16)
+            {
+                // block 0
+                {
+                    var y0 = Load256(y0Arr, i);
+                    var y1 = Load256(y1Arr, i);
+                    var x0 = Load256(x0Arr, i);
+                    var k = Load256(kArr, i);
+
+                    var dy = y1 - y0;
+                    var dxE = k * dy;
+                    var wox = x0 - v_ox;
+                    var woz = y0 - v_oz;
+
+                    var den = v_dx * dy - v_dz * dxE;
+                    var validDen = Vector256.GreaterThan(Vector256.Abs(den), v_tiny);
+
+                    var t = (wox * dy - woz * dxE) / den;
+                    var u = (wox * v_dz - woz * v_dx) / den;
+
+                    var valid = validDen
+                             & Vector256.GreaterThanOrEqual(t, v_zero)
+                             & Vector256.GreaterThanOrEqual(u, v_zero)
+                             & Vector256.LessThan(u, v_one);
+
+                    var tCand = Vector256.ConditionalSelect(valid, t, v_inf);
+
+                    var v_best = Vector256.Create(bestT);
+                    var anyBetter = Vector256.LessThan(tCand, v_best).ExtractMostSignificantBits();
+                    if (anyBetter != default)
+                    {
+                        tCand.CopyTo(buf);
+                        for (var m = 0; m < 8; ++m)
+                        {
+                            var tv = buf[m];
+                            if (tv < bestT)
+                            {
+                                bestT = tv;
+                            }
+                        }
+                    }
+                }
+                // block 1
+                {
+                    var b = i + 8;
+                    var y0 = Load256(y0Arr, b);
+                    var y1 = Load256(y1Arr, b);
+                    var x0 = Load256(x0Arr, b);
+                    var k = Load256(kArr, b);
+
+                    var dy = y1 - y0;
+                    var dxE = k * dy;
+                    var wox = x0 - v_ox;
+                    var woz = y0 - v_oz;
+
+                    var den = v_dx * dy - v_dz * dxE;
+                    var validDen = Vector256.GreaterThan(Vector256.Abs(den), v_tiny);
+
+                    var t = (wox * dy - woz * dxE) / den;
+                    var u = (wox * v_dz - woz * v_dx) / den;
+
+                    var valid = validDen
+                             & Vector256.GreaterThanOrEqual(t, v_zero)
+                             & Vector256.GreaterThanOrEqual(u, v_zero)
+                             & Vector256.LessThan(u, v_one);
+
+                    var tCand = Vector256.ConditionalSelect(valid, t, v_inf);
+
+                    var v_best = Vector256.Create(bestT);
+                    var anyBetter = Vector256.LessThan(tCand, v_best).ExtractMostSignificantBits();
+                    if (anyBetter != default)
+                    {
+                        tCand.CopyTo(buf);
+                        for (var m = 0; m < 8; ++m)
+                        {
+                            var tv = buf[m];
+                            if (tv < bestT)
+                            {
+                                bestT = tv;
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (; i + 8 <= ee; i += 8)
+            {
+                var y0 = Load256(y0Arr, i);
+                var y1 = Load256(y1Arr, i);
+                var x0 = Load256(x0Arr, i);
+                var k = Load256(kArr, i);
+
+                var dy = y1 - y0;
+                var dxE = k * dy;
+                var wox = x0 - v_ox;
+                var woz = y0 - v_oz;
+
+                var den = v_dx * dy - v_dz * dxE;
+                var validDen = Vector256.GreaterThan(Vector256.Abs(den), v_tiny);
+
+                var t = (wox * dy - woz * dxE) / den;
+                var u = (wox * v_dz - woz * v_dx) / den;
+
+                var valid = validDen
+                         & Vector256.GreaterThanOrEqual(t, v_zero)
+                         & Vector256.GreaterThanOrEqual(u, v_zero)
+                         & Vector256.LessThan(u, v_one);
+
+                var tCand = Vector256.ConditionalSelect(valid, t, v_inf);
+
+                var v_best = Vector256.Create(bestT);
+                var anyBetter = Vector256.LessThan(tCand, v_best).ExtractMostSignificantBits();
+                if (anyBetter != default)
+                {
+                    tCand.CopyTo(buf);
+                    for (var m = 0; m < 8; ++m)
+                    {
+                        var tv = buf[m];
+                        if (tv < bestT)
+                        {
+                            bestT = tv;
+                        }
+                    }
+                }
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static Vector256<float> Load256(float[] arr, int index)
+            {
+                ref var r0 = ref MemoryMarshal.GetArrayDataReference(arr);
+                return Vector256.LoadUnsafe(ref r0, (nuint)index);
+            }
+        }
+
+        // Scalar kernel (fallback when no AVX available)
+        static void KernelScalar(float[] y0Arr, float[] y1Arr, float[] x0Arr, float[] kArr, int es, int ee,
+            float ox, float oz, float dx, float dz, ref float bestT)
+        {
+            for (var i = es; i < ee; ++i)
+            {
+                float y0s = y0Arr[i], y1s = y1Arr[i], x0s = x0Arr[i];
+                float eys = y1s - y0s, exs = kArr[i] * eys;
 
                 float woxs = x0s - ox, wozs = y0s - oz;
                 var den = dx * eys - dz * exs;
@@ -734,24 +1170,22 @@ internal sealed class PolygonBoundaryIndex2D
                     var t = (woxs * eys - wozs * exs) / den;
                     if (t < 0f || t >= bestT)
                     {
-                        goto NEXT_SCALAR;
+                        continue;
                     }
 
                     var u = (woxs * dz - wozs * dx) / den;
                     if (u is < 0f or >= (1f - 1e-6f))
                     {
-                        goto NEXT_SCALAR; // half-open
+                        continue;
                     }
 
                     bestT = t;
                 }
                 else
                 {
-                    // Possible parallel; if also collinear, project segment onto ray.
-                    var col = woxs * dz - wozs * dx; // cross(w, d)
+                    var col = woxs * dz - wozs * dx;
                     if (Math.Abs(col) <= Eps)
                     {
-                        // param along ray for edge endpoints
                         var iddd = 1f / (dx * dx + dz * dz + 1e-20f);
                         var tA = (woxs * dx + wozs * dz) * iddd;
                         var tB = ((x0s + exs - ox) * dx + (y0s + eys - oz) * dz) * iddd;
@@ -760,7 +1194,6 @@ internal sealed class PolygonBoundaryIndex2D
                         {
                             (tA, tB) = (tB, tA);
                         }
-                        // nearest non-negative overlap
                         var cand = tA >= 0f ? tA : (tB >= 0f ? tB : float.MaxValue);
                         if (cand < bestT)
                         {
@@ -768,26 +1201,48 @@ internal sealed class PolygonBoundaryIndex2D
                         }
                     }
                 }
-            NEXT_SCALAR:
-                ;
+            }
+        }
+
+        // DDA over rows; SIMD handles full width, thanks to padding
+        while ((uint)rowCur < (uint)_rows)
+        {
+            var tBoundary = (nextY - oz) / dz;
+            if (bestT <= tBoundary + 1e-6f)
+            {
+                break; // small bias avoids row-oscillation
             }
 
-            // horizontals in this row
+            int es = _rowOffsets[rowCur], ee = _rowOffsets[rowCur + 1];
+
+            if (Vector512.IsHardwareAccelerated && Avx512F.IsSupported)
+            {
+                KernelSIMD512(_e_y0_Row, _e_y1_Row, _e_x0_Row, _e_k_Row, es, ee, ox, oz, dx, dz, ref bestT);
+            }
+            else if (Vector256.IsHardwareAccelerated && Avx.IsSupported)
+            {
+                KernelSIMD256(_e_y0_Row, _e_y1_Row, _e_x0_Row, _e_k_Row, es, ee, ox, oz, dx, dz, ref bestT);
+            }
+            else
+            {
+                KernelScalar(_e_y0_Row, _e_y1_Row, _e_x0_Row, _e_k_Row, es, ee, ox, oz, dx, dz, ref bestT);
+            }
+
+            // no scalar tail needed; rows are padded to SIMD width
+
+            // horizontals (scalar)
             int hs = _hRowOffsets[rowCur], he = _hRowOffsets[rowCur + 1];
             for (var k = hs; k < he; ++k)
             {
                 ref readonly var h = ref _hEdges[_hRowIdx[k]];
-                // general ray vs horizontal segment, using same cross-based rule
                 var eHx = h.maxX - h.minX;
-                var eHy = 0f;
 
-                // den = cross(d, eH) = dx*0 - dz*eHx = -dz*eHx
                 var denH = -dz * eHx;
                 float woxH = h.minX - ox, wozH = h.y - oz;
 
                 if (Math.Abs(denH) > 1e-9f)
                 {
-                    var t = (woxH * eHy - wozH * eHx) / denH; // simplifies to -wozH*eHx/denH
+                    var t = (0f - wozH * eHx) / denH;
                     if (t >= 0f && t < bestT)
                     {
                         var u = (woxH * dz - wozH * dx) / denH;
@@ -799,7 +1254,6 @@ internal sealed class PolygonBoundaryIndex2D
                 }
                 else
                 {
-                    // collinear with horizontal: project
                     if (Math.Abs(wozH * dx - woxH * dz) <= Eps)
                     {
                         var iddd = 1f / (dx * dx + dz * dz + 1e-20f);
@@ -823,33 +1277,12 @@ internal sealed class PolygonBoundaryIndex2D
         }
 
         return bestT;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static Vector<float> LoadVec(float[] src, int index) => new(src, index);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static float ReduceMin(in Vector<float> v)
-        {
-            Span<float> buf = stackalloc float[Vector<float>.Count];
-            v.CopyTo(buf);
-            var m = buf[0];
-            var len = buf.Length;
-            for (var i = 1; i < len; ++i)
-            {
-                if (buf[i] < m)
-                {
-                    m = buf[i];
-                }
-            }
-            return m;
-        }
     }
 
     public WDir ClosestPointOnBoundary(in WDir p)
     {
         float px = p.X, py = p.Z;
 
-        // setup outward row scan starting from the row containing py
         var row0 = ClampRow(py);
         int rNeg = row0, rPos = row0 + 1;
 
@@ -858,7 +1291,318 @@ internal sealed class PolygonBoundaryIndex2D
 
         var cellH = 1f / _invCellH;
 
-        // process one row range [start, end).
+        // SIMD kernels for projection onto segments in a row
+        static void KernelClosest512(float[] y0Arr, float[] y1Arr, float[] x0Arr, float[] kArr,
+            int es, int ee, float px, float py, ref float bestSq, ref float bestX, ref float bestY)
+        {
+            var v_px = Vector512.Create(px);
+            var v_py = Vector512.Create(py);
+            var v_one = Vector512.Create(1f);
+            var v_tiny = Vector512.Create(1e-12f);
+
+            Span<float> bD = stackalloc float[16];
+            Span<float> bX = stackalloc float[16];
+            Span<float> bY = stackalloc float[16];
+
+            var i = es;
+            for (; i + 32 <= ee; i += 32)
+            {
+                // block 0
+                {
+                    var y0 = Load512(y0Arr, i);
+                    var y1 = Load512(y1Arr, i);
+                    var x0 = Load512(x0Arr, i);
+                    var k = Load512(kArr, i);
+
+                    var dy = y1 - y0;
+                    var dx = k * dy;
+                    var relx = v_px - x0;
+                    var rely = v_py - y0;
+
+                    var len2 = dx * dx + dy * dy;
+                    var valid = Vector512.GreaterThan(len2, v_tiny); // also false for NaN
+
+                    var t = (relx * dx + rely * dy) / len2;
+                    Vector512<float> vz = default;
+                    t = Vector512.Min(Vector512.Max(t, vz), v_one);
+
+                    var nx = x0 + t * dx;
+                    var ny = y0 + t * dy;
+
+                    var dxp = nx - v_px;
+                    var dyp = ny - v_py;
+                    var dist2 = dxp * dxp + dyp * dyp;
+
+                    // only if any lane beats best
+                    var anyBetter = Vector512.LessThan(dist2, Vector512.Create(bestSq)).ExtractMostSignificantBits();
+                    if (anyBetter != default)
+                    {
+                        dist2.CopyTo(bD);
+                        nx.CopyTo(bX);
+                        ny.CopyTo(bY);
+                        for (var m = 0; m < 16; ++m)
+                        {
+                            var d2 = bD[m];
+                            if (d2 < bestSq)
+                            {
+                                bestSq = d2;
+                                bestX = bX[m];
+                                bestY = bY[m];
+                            }
+                        }
+                    }
+                }
+                // block 1
+                {
+                    var b = i + 16;
+                    var y0 = Load512(y0Arr, b);
+                    var y1 = Load512(y1Arr, b);
+                    var x0 = Load512(x0Arr, b);
+                    var k = Load512(kArr, b);
+
+                    var dy = y1 - y0;
+                    var dx = k * dy;
+                    var relx = v_px - x0;
+                    var rely = v_py - y0;
+
+                    var len2 = dx * dx + dy * dy;
+                    var valid = Vector512.GreaterThan(len2, v_tiny);
+
+                    var t = (relx * dx + rely * dy) / len2;
+                    Vector512<float> vz = default;
+                    t = Vector512.Min(Vector512.Max(t, vz), v_one);
+
+                    var nx = x0 + t * dx;
+                    var ny = y0 + t * dy;
+
+                    var dxp = nx - v_px;
+                    var dyp = ny - v_py;
+                    var dist2 = dxp * dxp + dyp * dyp;
+
+                    var anyBetter = Vector512.LessThan(dist2, Vector512.Create(bestSq)).ExtractMostSignificantBits();
+                    if (anyBetter != default)
+                    {
+                        dist2.CopyTo(bD);
+                        nx.CopyTo(bX);
+                        ny.CopyTo(bY);
+                        for (var m = 0; m < 16; ++m)
+                        {
+                            var d2 = bD[m];
+                            if (d2 < bestSq)
+                            {
+                                bestSq = d2;
+                                bestX = bX[m];
+                                bestY = bY[m];
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (; i + 16 <= ee; i += 16)
+            {
+                var y0 = Load512(y0Arr, i);
+                var y1 = Load512(y1Arr, i);
+                var x0 = Load512(x0Arr, i);
+                var k = Load512(kArr, i);
+
+                var dy = y1 - y0;
+                var dx = k * dy;
+                var relx = v_px - x0;
+                var rely = v_py - y0;
+
+                var len2 = dx * dx + dy * dy;
+                var valid = Vector512.GreaterThan(len2, v_tiny);
+
+                var t = (relx * dx + rely * dy) / len2;
+                Vector512<float> vz = default;
+                t = Vector512.Min(Vector512.Max(t, vz), v_one);
+
+                var nx = x0 + t * dx;
+                var ny = y0 + t * dy;
+
+                var dxp = nx - v_px;
+                var dyp = ny - v_py;
+                var dist2 = dxp * dxp + dyp * dyp;
+
+                var anyBetter = Vector512.LessThan(dist2, Vector512.Create(bestSq)).ExtractMostSignificantBits();
+                if (anyBetter != 0)
+                {
+                    dist2.CopyTo(bD);
+                    nx.CopyTo(bX);
+                    ny.CopyTo(bY);
+                    for (var m = 0; m < 16; ++m)
+                    {
+                        var d2 = bD[m];
+                        if (d2 < bestSq)
+                        {
+                            bestSq = d2;
+                            bestX = bX[m];
+                            bestY = bY[m];
+                        }
+                    }
+                }
+            }
+            static Vector512<float> Load512(float[] arr, int index)
+            {
+                ref var r0 = ref MemoryMarshal.GetArrayDataReference(arr);
+                return Vector512.LoadUnsafe(ref r0, (nuint)index);
+            }
+        }
+
+        static void KernelClosest256(float[] y0Arr, float[] y1Arr, float[] x0Arr, float[] kArr, int es, int ee,
+            float px, float py, ref float bestSq, ref float bestX, ref float bestY)
+        {
+            var v_px = Vector256.Create(px);
+            var v_py = Vector256.Create(py);
+            var v_one = Vector256.Create(1f);
+            var v_tiny = Vector256.Create(1e-12f);
+
+            Span<float> bD = stackalloc float[8];
+            Span<float> bX = stackalloc float[8];
+            Span<float> bY = stackalloc float[8];
+
+            var i = es;
+            for (; i + 16 <= ee; i += 16)
+            {
+                // block 0
+                {
+                    var y0 = Load256(y0Arr, i);
+                    var y1 = Load256(y1Arr, i);
+                    var x0 = Load256(x0Arr, i);
+                    var k = Load256(kArr, i);
+
+                    var dy = y1 - y0;
+                    var dx = k * dy;
+                    var relx = v_px - x0;
+                    var rely = v_py - y0;
+
+                    var len2 = dx * dx + dy * dy;
+                    var t = (relx * dx + rely * dy) / len2;
+                    Vector256<float> vz = default;
+                    t = Vector256.Min(Vector256.Max(t, vz), v_one);
+
+                    var nx = x0 + t * dx;
+                    var ny = y0 + t * dy;
+
+                    var dxp = nx - v_px;
+                    var dyp = ny - v_py;
+                    var dist2 = dxp * dxp + dyp * dyp;
+
+                    var anyBetter = Vector256.LessThan(dist2, Vector256.Create(bestSq)).ExtractMostSignificantBits();
+                    if (anyBetter != default)
+                    {
+                        dist2.CopyTo(bD);
+                        nx.CopyTo(bX);
+                        ny.CopyTo(bY);
+                        for (var m = 0; m < 8; ++m)
+                        {
+                            var d2 = bD[m];
+                            if (d2 < bestSq)
+                            {
+                                bestSq = d2;
+                                bestX = bX[m];
+                                bestY = bY[m];
+                            }
+                        }
+                    }
+                }
+                // block 1
+                {
+                    var b = i + 8;
+                    var y0 = Load256(y0Arr, b);
+                    var y1 = Load256(y1Arr, b);
+                    var x0 = Load256(x0Arr, b);
+                    var k = Load256(kArr, b);
+
+                    var dy = y1 - y0;
+                    var dx = k * dy;
+                    var relx = v_px - x0;
+                    var rely = v_py - y0;
+
+                    var len2 = dx * dx + dy * dy;
+                    var t = (relx * dx + rely * dy) / len2;
+                    Vector256<float> vz = default;
+                    t = Vector256.Min(Vector256.Max(t, vz), v_one);
+
+                    var nx = x0 + t * dx;
+                    var ny = y0 + t * dy;
+
+                    var dxp = nx - v_px;
+                    var dyp = ny - v_py;
+                    var dist2 = dxp * dxp + dyp * dyp;
+
+                    var anyBetter = Vector256.LessThan(dist2, Vector256.Create(bestSq)).ExtractMostSignificantBits();
+                    if (anyBetter != default)
+                    {
+                        dist2.CopyTo(bD);
+                        nx.CopyTo(bX);
+                        ny.CopyTo(bY);
+                        for (var m = 0; m < 8; ++m)
+                        {
+                            var d2 = bD[m];
+                            if (d2 < bestSq)
+                            {
+                                bestSq = d2;
+                                bestX = bX[m];
+                                bestY = bY[m];
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (; i + 8 <= ee; i += 8)
+            {
+                var y0 = Load256(y0Arr, i);
+                var y1 = Load256(y1Arr, i);
+                var x0 = Load256(x0Arr, i);
+                var k = Load256(kArr, i);
+
+                var dy = y1 - y0;
+                var dx = k * dy;
+                var relx = v_px - x0;
+                var rely = v_py - y0;
+
+                var len2 = dx * dx + dy * dy;
+                var t = (relx * dx + rely * dy) / len2;
+                Vector256<float> vz = default;
+                t = Vector256.Min(Vector256.Max(t, vz), v_one);
+
+                var nx = x0 + t * dx;
+                var ny = y0 + t * dy;
+
+                var dxp = nx - v_px;
+                var dyp = ny - v_py;
+                var dist2 = dxp * dxp + dyp * dyp;
+
+                var anyBetter = Vector256.LessThan(dist2, Vector256.Create(bestSq)).ExtractMostSignificantBits();
+                if (anyBetter != default)
+                {
+                    dist2.CopyTo(bD);
+                    nx.CopyTo(bX);
+                    ny.CopyTo(bY);
+                    for (var m = 0; m < 8; ++m)
+                    {
+                        var d2 = bD[m];
+                        if (d2 < bestSq)
+                        {
+                            bestSq = d2;
+                            bestX = bX[m];
+                            bestY = bY[m];
+                        }
+                    }
+                }
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static Vector256<float> Load256(float[] arr, int index)
+            {
+                ref var r0 = ref MemoryMarshal.GetArrayDataReference(arr);
+                return Vector256.LoadUnsafe(ref r0, (nuint)index);
+            }
+        }
+
+        // Process one row (with SIMD where available)
         void ProcessRow(int row)
         {
             int es = _rowOffsets[row], ee = _rowOffsets[row + 1];
@@ -867,14 +1611,11 @@ internal sealed class PolygonBoundaryIndex2D
                 return;
             }
 
-            // Row band prune using circle test against [rowMinX,rowMaxX] × [rowMinY,rowMaxY]
             var rMinY = _minY + row * cellH;
             var rMaxY = rMinY + cellH;
 
-            // vertical distance from py to row band
             var vDist = py < rMinY ? (rMinY - py) : (py > rMaxY ? (py - rMaxY) : 0f);
 
-            // horizontal distance from px to row's x-range (conservative)
             var rMinX = _rowMinX[row];
             var rMaxX = _rowMaxX[row];
 
@@ -888,107 +1629,113 @@ internal sealed class PolygonBoundaryIndex2D
                 hDist = px - rMaxX;
             }
 
-            // if even the best possible distance within this row band can't beat bestSq, skip.
             var bandBestSq = vDist * vDist + hDist * hDist;
-            if (bandBestSq >= bestSq)
+            if (bandBestSq < bestSq)
             {
-                goto HORIZ_ONLY_IF_ANY; // still let horizontals run if rowMinX/Max were unset
-            }
-
-            // SIMD over non-horizontal segments
-            var lanes = Vector<float>.Count;
-            var v_px = new Vector<float>(px);
-            var v_py = new Vector<float>(py);
-            var v_one = new Vector<float>(1f);
-            var v_tiny = new Vector<float>(1e-12f);
-            Span<float> bufD = stackalloc float[lanes];
-            Span<float> bufX = stackalloc float[lanes];
-            Span<float> bufY = stackalloc float[lanes];
-            var i = es;
-            for (; i + lanes <= ee; i += lanes)
-            {
-                // Segment A = (x0,y0), D = (dx,dy); dx = k*(y1 - y0), dy = (y1 - y0)
-                var y0 = LoadVec(_e_y0_Row, i);
-                var y1 = LoadVec(_e_y1_Row, i);
-                var x0 = LoadVec(_e_x0_Row, i);
-                var k = LoadVec(_e_k_Row, i);
-
-                var dy = y1 - y0;
-                var dx = k * dy;
-                var relx = v_px - x0;
-                var rely = v_py - y0;
-
-                // t = clamp( (rel · D) / |D|^2 , [0,1] )
-                var len2 = dx * dx + dy * dy;
-                len2 = Vector.Max(len2, v_tiny);
-                var t = (relx * dx + rely * dy) / len2;
-                t = Vector.Min(Vector.Max(t, default), v_one);
-
-                var nx = x0 + t * dx;
-                var ny = y0 + t * dy;
-
-                var dxp = nx - v_px;
-                var dyp = ny - v_py;
-                var dist2 = dxp * dxp + dyp * dyp;
-
-                // Reduce lane min and update best point
-                dist2.CopyTo(bufD);
-                nx.CopyTo(bufX);
-                ny.CopyTo(bufY);
-
-                for (var m = 0; m < lanes; ++m)
+                if (Vector512.IsHardwareAccelerated && Avx512F.IsSupported)
                 {
-                    var d2 = bufD[m];
-                    if (d2 < bestSq)
+                    KernelClosest512(_e_y0_Row, _e_y1_Row, _e_x0_Row, _e_k_Row, es, ee, px, py, ref bestSq, ref bestX, ref bestY);
+                }
+                else if (Vector256.IsHardwareAccelerated && Avx.IsSupported)
+                {
+                    KernelClosest256(_e_y0_Row, _e_y1_Row, _e_x0_Row, _e_k_Row, es, ee, px, py, ref bestSq, ref bestX, ref bestY);
+                }
+                else
+                {
+                    // Vector<T> fallback
+                    var lanes = Vector<float>.Count;
+                    var v_px = new Vector<float>(px);
+                    var v_py = new Vector<float>(py);
+                    var v_one = new Vector<float>(1f);
+                    var v_tiny = new Vector<float>(1e-12f);
+                    Span<float> bufD = stackalloc float[lanes];
+                    Span<float> bufX = stackalloc float[lanes];
+                    Span<float> bufY = stackalloc float[lanes];
+                    var i = es;
+                    for (; i + lanes <= ee; i += lanes)
                     {
-                        bestSq = d2;
-                        bestX = bufX[m];
-                        bestY = bufY[m];
+                        var y0 = new Vector<float>(_e_y0_Row, i);
+                        var y1 = new Vector<float>(_e_y1_Row, i);
+                        var x0 = new Vector<float>(_e_x0_Row, i);
+                        var k = new Vector<float>(_e_k_Row, i);
+
+                        var dy = y1 - y0;
+                        var dx = k * dy;
+                        var relx = v_px - x0;
+                        var rely = v_py - y0;
+
+                        var len2 = dx * dx + dy * dy;
+                        len2 = Vector.Max(len2, v_tiny);
+                        var t = (relx * dx + rely * dy) / len2;
+                        t = Vector.Min(Vector.Max(t, default), v_one);
+
+                        var nx = x0 + t * dx;
+                        var ny = y0 + t * dy;
+
+                        var dxp = nx - v_px;
+                        var dyp = ny - v_py;
+                        var dist2 = dxp * dxp + dyp * dyp;
+
+                        var anyBetter = Vector.LessThan(dist2, new Vector<float>(bestSq));
+                        if (!Vector.EqualsAll(anyBetter, default))
+                        {
+                            dist2.CopyTo(bufD);
+                            nx.CopyTo(bufX);
+                            ny.CopyTo(bufY);
+                            for (var m = 0; m < lanes; ++m)
+                            {
+                                var d2 = bufD[m];
+                                if (d2 < bestSq)
+                                {
+                                    bestSq = d2;
+                                    bestX = bufX[m];
+                                    bestY = bufY[m];
+                                }
+                            }
+                        }
+                    }
+
+                    for (; i < ee; ++i)
+                    {
+                        var y0s = _e_y0_Row[i];
+                        var y1s = _e_y1_Row[i];
+                        var x0s = _e_x0_Row[i];
+                        var ks = _e_k_Row[i];
+
+                        var dys = y1s - y0s;
+                        var dxs = ks * dys;
+                        var rx = px - x0s;
+                        var ry = py - y0s;
+
+                        var len2s = dxs * dxs + dys * dys + 1e-12f;
+                        var t = (rx * dxs + ry * dys) / len2s;
+                        if (t < 0f)
+                        {
+                            t = 0f;
+                        }
+                        else if (t > 1f)
+                        {
+                            t = 1f;
+                        }
+
+                        var nx = x0s + t * dxs;
+                        var ny = y0s + t * dys;
+
+                        var dxp = nx - px;
+                        var dyp = ny - py;
+                        var d2 = dxp * dxp + dyp * dyp;
+
+                        if (d2 < bestSq)
+                        {
+                            bestSq = d2;
+                            bestX = nx;
+                            bestY = ny;
+                        }
                     }
                 }
             }
 
-            // Scalar tail
-            for (; i < ee; ++i)
-            {
-                var y0s = _e_y0_Row[i];
-                var y1s = _e_y1_Row[i];
-                var x0s = _e_x0_Row[i];
-                var ks = _e_k_Row[i];
-
-                var dys = y1s - y0s;
-                var dxs = ks * dys;
-                var rx = px - x0s;
-                var ry = py - y0s;
-
-                var len2s = dxs * dxs + dys * dys + 1e-12f; // avoid div-by-zero
-                var t = (rx * dxs + ry * dys) / len2s;
-                if (t < 0f)
-                {
-                    t = 0f;
-                }
-                else if (t > 1f)
-                {
-                    t = 1f;
-                }
-
-                var nx = x0s + t * dxs;
-                var ny = y0s + t * dys;
-
-                var dxp = nx - px;
-                var dyp = ny - py;
-                var d2 = dxp * dxp + dyp * dyp;
-
-                if (d2 < bestSq)
-                {
-                    bestSq = d2;
-                    bestX = nx;
-                    bestY = ny;
-                }
-            }
-
-        HORIZ_ONLY_IF_ANY:
-            // ---- Horizontal edges (scalar; cheap & few) ----
+            // horizontals
             int hs = _hRowOffsets[row], he = _hRowOffsets[row + 1];
             for (var h = hs; h < he; ++h)
             {
@@ -1006,7 +1753,6 @@ internal sealed class PolygonBoundaryIndex2D
             }
         }
 
-        // Process the seed row, then expand outwards while rows can still beat current best.
         if ((uint)row0 < (uint)_rows)
         {
             ProcessRow(row0);
@@ -1017,11 +1763,9 @@ internal sealed class PolygonBoundaryIndex2D
         {
             var progressed = false;
 
-            // step down
             if (rNeg - 1 >= 0)
             {
                 var rn = --rNeg;
-                // vertical distance to that row band
                 var rMinY = _minY + rn * cellH;
                 var rMaxY = rMinY + cellH;
                 var vDist = py < rMinY ? (rMinY - py) : (py > rMaxY ? (py - rMaxY) : 0f);
@@ -1032,7 +1776,6 @@ internal sealed class PolygonBoundaryIndex2D
                 }
             }
 
-            // step up
             if (rPos <= maxRow)
             {
                 var rp = rPos++;
@@ -1046,24 +1789,13 @@ internal sealed class PolygonBoundaryIndex2D
                 }
             }
 
-            if (!progressed)
-            {
-                break; // both directions can no longer beat best
-            }
-            if (bestSq == 0f)
-            {
-                break; // exact hit
-            }
-            if (rNeg <= 0 && rPos > maxRow)
+            if (!progressed || bestSq == 0f || rNeg <= 0 && rPos > maxRow)
             {
                 break;
             }
         }
 
-        return new WDir(bestX, bestY);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static Vector<float> LoadVec(float[] src, int index) => new(src, index);
+        return new(bestX, bestY);
     }
 
     public WDir[] VisibilityFrom(in WDir origin, RelSimplifiedComplexPolygon polygon)
