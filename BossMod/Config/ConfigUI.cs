@@ -1,6 +1,5 @@
 using BossMod.Autorotation;
 using BossModReborn.Data;
-using BossModReborn.Util;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using System.IO;
@@ -411,7 +410,6 @@ public sealed class ConfigUI : IDisposable
         if (IconSet.GetTexture(IconSet.GetJobIcon(Player.Job, IconType.Framed), out Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap? texture))
         {
             ImGui.Image(texture.Handle, Vector2.One * 24 * ImGuiHelpers.GlobalScale);
-            ImguiTooltips.HoveredTooltip(UiString.JobConfigTip.GetDescription());
         }
     }
     private static bool DrawProperty(string label, string tooltip, ConfigNode node, FieldInfo member, bool v)
