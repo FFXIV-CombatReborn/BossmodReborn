@@ -1,5 +1,6 @@
 ﻿using ECommons.ExcelServices;
 using ECommons.GameHelpers;
+using System.Reflection;
 using System.Text.Json.Serialization;
 
 namespace BossMod.AI;
@@ -54,9 +55,15 @@ sealed class AIConfig : ConfigNode
     [JsonIgnore]
     public float MaxDistanceToTarget
     {
-        get => MaxDistanceToTargetByJob[Player.Job];
+        get
+        {
+            return MaxDistanceToTargetByJob.TryGetValue(Player.Job, out var maxDistanceToTarget)
+                ? maxDistanceToTarget
+                : MaxDistanceToTargetByJob.GetType().GetCustomAttribute<PropertyDictionaryDefaultAttribute>()!.f;
+        }
         set => MaxDistanceToTargetByJob[Player.Job] = value;
     }
+
     [PropertyDisplay("Max distance to target By Job")]
     [PropertyDictionaryDefault(2.6f)]
     public Dictionary<Job, float> MaxDistanceToTargetByJob = new Dictionary<Job, float>() ;
