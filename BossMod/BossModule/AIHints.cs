@@ -221,6 +221,16 @@ public sealed class AIHints
 
     public void AddForbiddenZone(ShapeDistance shapeDistance, DateTime activation = default, ulong source = default) => ForbiddenZones.Add((shapeDistance, activation, source));
     public void AddForbiddenZone(AOEShape shape, WPos origin, Angle rot = default, DateTime activation = default, ulong source = default) => ForbiddenZones.Add((shape.Distance(origin, rot), activation, source));
+    public void AddForbiddenZoneIfNotMultibox(BossModule module, ShapeDistance shapeDistance, DateTime activation = default, ulong source = default)
+    {
+        if (module.Info == null || !(module.Info.MultiboxSupport && Service.Config.Get<AI.AIConfig>().MultiboxMode))
+            ForbiddenZones.Add((shapeDistance, activation, source));
+    }
+    public void AddForbiddenZoneIfNotMultibox(BossModule module, AOEShape shape, WPos origin, Angle rot = default, DateTime activation = default, ulong source = default)
+    {
+        if (module.Info == null || !(module.Info.MultiboxSupport && Service.Config.Get<AI.AIConfig>().MultiboxMode))
+            ForbiddenZones.Add((shape.Distance(origin, rot), activation, source));
+    }
 
     public void AddPredictedDamage(BitMask players, DateTime activation, PredictedDamageType type = PredictedDamageType.Raidwide) => PredictedDamage.Add(new(players, activation, type));
 
