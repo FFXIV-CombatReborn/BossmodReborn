@@ -85,7 +85,7 @@ sealed class DisruptionArenaChange(BossModule module) : Components.GenericAOEs(m
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x28 && state == 0x00020001u)
         {
@@ -147,7 +147,7 @@ sealed class Compression(BossModule module) : Components.SimpleAOEs(module, (uin
 sealed class Overexposure(BossModule module) : Components.LineStack(module, aidMarker: (uint)AID.OverexposureMarker, (uint)AID.Overexposure, 5d, 40f, 3f);
 sealed class LightOfDevotion(BossModule module) : Components.LineStack(module, aidMarker: (uint)AID.LightOfDevotionMarker, (uint)AID.LightOfDevotion, 5.5d, 40f, 3f)
 {
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x2F && state == 0x00080004u) // as soon as limit break phase ends the line stack gets cancelled
         {
@@ -177,7 +177,7 @@ sealed class LightOfSalvation(BossModule module) : Components.GenericBaitAway(mo
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x2F && state == 0x00080004u) // as soon as limit break phase ends the line stack gets cancelled
         {

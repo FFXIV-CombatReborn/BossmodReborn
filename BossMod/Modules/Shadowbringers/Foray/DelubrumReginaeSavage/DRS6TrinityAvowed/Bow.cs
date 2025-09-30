@@ -67,7 +67,7 @@ class ShimmeringShot(BossModule module, double spawnToActivation) : TemperatureA
             ++NumCasts;
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         var pattern = (index, state) switch
         {

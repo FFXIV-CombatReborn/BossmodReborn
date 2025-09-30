@@ -36,7 +36,7 @@ sealed class AlexandrianThunderIII(BossModule module) : Components.GenericAOEs(m
         return result.AsSpan()[..index];
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         // arena slices:
         // 0x04: 180°  → index 0

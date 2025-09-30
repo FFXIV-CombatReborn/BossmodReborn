@@ -76,16 +76,25 @@ public sealed class ThetaStar
         _mapResolution = map.Resolution;
         _mapHalfResolution = map.Resolution * 0.5f;
 
+        var startFrac = map.WorldToGridFrac(startPos);
+        var gridPos = Map.FracToGrid(startFrac);
+        var start = map.ClampToGrid(gridPos);
+        StartNodeIndex = _bestIndex = _fallbackIndex = _map.GridToIndex(start.x, start.y);
+        var gridPosX = gridPos.x;
+        var gridPosY = gridPos.y;
+        if (gridPosX < 0 || gridPosX >= map.Width || gridPosY < 0 || gridPosY >= map.Height) // hack to make AI go back into arena bounds after failed knockbacks etc
+        {
+            _map.PixelPriority[StartNodeIndex] = float.MinValue;
+        }
+
         PrefillH();
 
-        var startFrac = map.WorldToGridFrac(startPos);
-        var start = map.ClampToGrid(Map.FracToGrid(startFrac));
-        StartNodeIndex = _bestIndex = _fallbackIndex = _map.GridToIndex(start.x, start.y);
         _startMaxG = _map.PixelMaxG[StartNodeIndex];
         _startPrio = _map.PixelPriority[StartNodeIndex];
         //if (_startMaxG < 0)
         //    _startMaxG = float.MaxValue; // TODO: this is a hack that allows navigating outside the obstacles, reconsider...
         _startScore = CalculateScore(_startMaxG, _startMaxG, _startMaxG, StartNodeIndex);
+
         NumSteps = NumReopens = 0;
 
         startFrac.X -= start.x + 0.5f;
@@ -156,8 +165,15 @@ public sealed class ThetaStar
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int Execute()
     {
-        while (_nodes[_bestIndex].HScore > 0f && _fallbackIndex == StartNodeIndex && ExecuteStep())
-            ;
+        var pixelMaxG = _map.PixelMaxG;
+        while (_fallbackIndex == StartNodeIndex && ExecuteStep())
+        {
+            ref var nd = ref _nodes[_bestIndex]; // instead of only looking for the perfect cell we search for a cell that is reasonably better
+            if (nd.Score >= Score.SafeBetterPrio && nd.PathLeeway > 0f || nd.Score > _startScore && pixelMaxG[_bestIndex] > pixelMaxG[StartNodeIndex] + 2f || nd.HScore <= 0f)
+            {
+                break;
+            }
+        }
         return BestIndex();
     }
 
@@ -482,11 +498,11 @@ public sealed class ThetaStar
         var pixelPriority = _map.PixelPriority;
         var nodes = _nodes;
 
-        const float INFf = 1e18f;
-        const double INFd = 1e18d;
+        const float INFf = 1e30f; // large but safe for float ops
+        const double INFd = 1e300d; // keep far from finite s intersections
+
         var deltaGSide = _deltaGSide;
 
-        // temporary storage for column-pass squared distances
         var colDist = ArrayPool<float>.Shared.Rent(width * height);
         try
         {
@@ -501,8 +517,10 @@ public sealed class ThetaStar
                 Span<float> d = stackalloc float[n];
                 Span<int> v = stackalloc int[n];
                 Span<double> z = stackalloc double[n + 1];
+                // f: input; d: output; v: parabola sites; z: intersections
                 for (var x = x1; x < x2; ++x)
                 {
+                    // features: 0 at goals, +INF elsewhere
                     for (var y = 0; y < n; ++y)
                     {
                         var idx = y * width + x;
@@ -518,7 +536,7 @@ public sealed class ThetaStar
                 }
             });
 
-            // 2) Row-wise 1D EDT (parallel over rows) using column results -> final distances
+            // 2) Row-wise 1D EDT from column results (parallel over rows)
             partitioner = Partitioner.Create(0, height);
             Parallel.ForEach(partitioner, range =>
             {
@@ -529,7 +547,6 @@ public sealed class ThetaStar
                 Span<float> d = stackalloc float[n];
                 Span<int> v = stackalloc int[n];
                 Span<double> z = stackalloc double[n + 1];
-
                 for (var y = y1; y < y2; ++y)
                 {
                     var rowBase = y * width;
@@ -537,6 +554,7 @@ public sealed class ThetaStar
                     {
                         f[x] = colDist[rowBase + x];
                     }
+
                     DistanceTransform1D(f, d, v, z, n, INFd);
 
                     for (var x = 0; x < n; ++x)
@@ -555,42 +573,40 @@ public sealed class ThetaStar
         {
             ArrayPool<float>.Shared.Return(colDist, false);
         }
-        // 1D squared distance transform (Felzenszwalb) using provided buffers
+
+        // Felzenszwalb 1D squared distance transform
+        // f: 0 at sites, +INF elsewhere. d: output squared distance
         static void DistanceTransform1D(Span<float> f, Span<float> d, Span<int> v, Span<double> z, int n, double INF)
         {
             var k = 0;
             v[0] = 0;
             z[0] = -INF;
-            z[1] = INF;
+            z[1] = +INF;
 
             for (var q = 1; q < n; ++q)
             {
-                double s;
-                while (true)
+                // compute intersection with current lower envelope
+                var s = Intersection(f, q, v[k]);
+
+                // important invariant: z[0] stays -INF; we never allow k < 0
+                while (s <= z[k])
                 {
-                    var vk = v[k];
-                    // compute intersection
-                    // (f[q] + q*q) - (f[vk] + vk*vk)
-                    var num = f[q] + (float)q * q - (f[vk] + (float)vk * vk);
-                    var den = 2d * (q - vk);
-                    s = num / den;
-                    if (s <= z[k])
+                    --k;
+                    if (k < 0)
                     {
-                        --k;
-                        if (k < 0)
-                        {
-                            break;
-                        }
-                        continue;
+                        k = 0; // keep envelope valid
+                        break; // will recompute s below with v[0]
                     }
-                    break;
+                    s = Intersection(f, q, v[k]);
                 }
+
                 ++k;
                 v[k] = q;
                 z[k] = s;
-                z[k + 1] = INF;
+                z[k + 1] = +INF;
             }
 
+            // evaluate distances
             k = 0;
             for (var q = 0; q < n; ++q)
             {
@@ -600,6 +616,16 @@ public sealed class ThetaStar
                 }
                 var diff = q - v[k];
                 d[q] = diff * diff + f[v[k]];
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static double Intersection(Span<float> f, int q, int vk)
+            {
+                // s = ((f[q] + q^2) - (f[vk] + vk^2)) / (2(q - vk))
+                // use double for stability
+                double fq = f[q];
+                double fv = f[vk];
+                return (fq + q * q - (fv + vk * vk)) / (2d * (q - vk));
             }
         }
     }

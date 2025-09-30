@@ -124,7 +124,7 @@ sealed class CellBlock(BossModule module) : Components.GenericAOEs(module)
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => AssignedBoss[slot] == null ? CollectionsMarshal.AsSpan(_aoes) : [];
 
-    public override void OnEventEnvControl(byte index, uint state) // Hellmaker AOEs, only get drawn if not chained anymore
+    public override void OnMapEffect(byte index, uint state) // Hellmaker AOEs, only get drawn if not chained anymore
     {
         WPos pos = index switch
         {

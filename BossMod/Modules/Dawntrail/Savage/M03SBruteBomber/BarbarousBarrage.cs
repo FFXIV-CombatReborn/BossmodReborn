@@ -19,7 +19,7 @@ sealed class BarbarousBarrageTowers(BossModule module) : Components.GenericTower
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (CurState == State.None && index is 0x0E or 0x0F)
             SetState(index == 0x0E ? State.NextNS : State.NextEW, 4, 10.1d);

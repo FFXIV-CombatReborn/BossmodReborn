@@ -5,8 +5,8 @@ public static class Layouts
     public static readonly WPos ArenaCenter = new(100f, 100f);
     private static readonly Angle a45 = 45f.Degrees();
     private static readonly Angle a90a = 89.98f.Degrees(), a90b = 90f.Degrees();
-    private static readonly Polygon[] _circleBig = [new Polygon(ArenaCenter, 25f * CosPI.Pi32th, 32)];
-    private static readonly Polygon[] _circleBigAdj = [new Polygon(ArenaCenter, 24.5f * CosPI.Pi32th, 32)];
+    private static readonly Polygon[] _circleBig = [new Polygon(ArenaCenter, 25f, 64)];
+    private static readonly Polygon[] _circleBigAdj = [new Polygon(ArenaCenter, 24.5f, 64)];
     private static readonly Rectangle[] walls = [new(new(90f, 94.75f), 5f, 0.25f), new(new(94.75f, 92f), 3.01134109f, 0.25f, a90a),
     new(new(110f, 94.75f), 5f, 0.25f), new(new(105.25f, 92f), 3.01134109f, 0.25f, a90b)];
     private static readonly Square[] _bigQuad = [new Square(ArenaCenter, 4.9f, a45)];

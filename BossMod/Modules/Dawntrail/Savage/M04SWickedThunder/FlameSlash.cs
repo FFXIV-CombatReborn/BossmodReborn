@@ -26,7 +26,7 @@ sealed class FlameSlash(BossModule module) : Components.GenericAOEs(module, (uin
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 17 && state == 0x00400001u)
         {

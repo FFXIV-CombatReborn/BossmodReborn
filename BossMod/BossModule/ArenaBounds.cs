@@ -230,7 +230,7 @@ public abstract class ABRect : ArenaBounds
     {
         var halfWidth = HalfWidth;
         var halfHeight = HalfHeight;
-        var map = new Pathfinding.Map(MapResolution, default, halfWidth + 0.5f, halfHeight + 0.5f, Rotation); // +0.5 offset because otherwise the AI will not run back into the rectangle for some reason
+        var map = new Pathfinding.Map(MapResolution, default, halfWidth, halfHeight, Rotation);
         // pixels can be partially covered by the rectangle, so we need to rasterize it carefully
         var width = map.Width;
         var height = map.Height;
@@ -270,7 +270,6 @@ public abstract class ABRect : ArenaBounds
                 }
             }
         }
-
         return map;
     }
 
@@ -432,7 +431,7 @@ public sealed class ArenaBoundsCustom : ArenaBounds
         {
             return offset;
         }
-        return Polygon.ClampToBounds(offset);
+        return Polygon.ClosestPointOnBoundary(offset);
     }
 
     private Pathfinding.Map BuildMap()

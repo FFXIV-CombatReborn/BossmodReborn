@@ -67,7 +67,7 @@ public sealed class RelSimplifiedComplexPolygon(List<RelPolygonWithHoles> parts)
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public WDir ClampToBounds(in WDir offset)
+    public WDir ClosestPointOnBoundary(in WDir offset)
     {
         var idx = _rayIndex;
         if (idx == null)

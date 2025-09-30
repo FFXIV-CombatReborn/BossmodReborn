@@ -26,7 +26,7 @@ sealed class SlimeExplosion(BossModule module) : Components.GenericStackSpread(m
     {
         if (!Module.PrimaryActor.IsDead)
         {
-            if (Module.PrimaryActor.Position.InCircle(Module.PrimaryActor.Position, 7.6f))
+            if (actor.Position.InCircle(Module.PrimaryActor.Position, 7.6f))
             {
                 hints.Add("In slime explosion radius!");
             }
@@ -38,7 +38,7 @@ sealed class Hints(BossModule module) : BossComponent(module)
 {
     public override void AddGlobalHints(GlobalHints hints)
     {
-        hints.Add("For this stage the spells Sticky Tongue and Snort are recommended.\nUse them to pull or push Slimes close toIce Sprites.\nThen hit the slime from a distance with anything but fire spells to set of an explosion.");
+        hints.Add("For this stage the spells Sticky Tongue and Snort are recommended.\nUse them to pull or push Slimes close to Ice Sprites.\nThen hit the slime from a distance with anything but fire spells to set of an explosion.");
     }
 }
 

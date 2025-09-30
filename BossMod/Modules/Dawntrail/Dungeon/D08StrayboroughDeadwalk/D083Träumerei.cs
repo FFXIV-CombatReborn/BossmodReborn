@@ -48,7 +48,7 @@ sealed class ImpactArenaChange(BossModule module) : BossComponent(module)
 {
     private bool active;
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x0B)
         {
@@ -121,7 +121,7 @@ sealed class GhostlyGuise(BossModule module) : Components.GenericAOEs(module)
         return new AOEInstance[1] { new(shape, Arena.Center, default, activation, shape == circlesInverted ? Colors.SafeFromAOE : default) };
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00020001u && index == 0x0Cu) // 0x0C, 0x0D, 0x0E, 0xOF happen at the same time, one for each platform
             activated = true;

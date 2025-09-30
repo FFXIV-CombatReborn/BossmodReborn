@@ -2,7 +2,7 @@ namespace BossMod.Dawntrail.Raid.M03NBruteBomber;
 
 sealed class BarbarousBarrageTower(BossModule module) : Components.GenericTowers(module)
 {
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x01 && state == 0x00020004u)
         {

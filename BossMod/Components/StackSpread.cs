@@ -799,24 +799,13 @@ public abstract class GenericBaitStack(BossModule module, uint aid = default, bo
         }
         var forbiddenInverted = new List<ShapeDistance>();
 
-        var hasBuddies = false;
-        var p = Raid.WithoutSlot(false, true);
-        var lenP = p.Length;
-        for (var i = 0; i < lenP; ++i)
-        {
-            if (p[i].OID != default)
-            {
-                hasBuddies = true;
-                break;
-            }
-        }
-
         for (var i = 0; i < len; ++i)
         {
             ref var b = ref baits[i];
             var origin = BaitOrigin(ref b);
             var angle = Angle.FromDirection(b.Target.Position - origin);
-            if (b.Target != actor && !isBaitTarget)
+            var t = b.Target;
+            if (t != actor && !isBaitTarget)
             {
                 if (!b.Forbidden[slot])
                 {
@@ -827,7 +816,7 @@ public abstract class GenericBaitStack(BossModule module, uint aid = default, bo
                     hints.AddForbiddenZone(b.Shape.Distance(origin, angle), b.Activation);
                 }
             }
-            else if (b.Target != actor && isBaitTarget)
+            else if (t != actor && isBaitTarget)
             {   // prevent overlapping if there are multiple stacks
                 if (b.Shape is AOEShapeCone cone)
                 {
@@ -842,33 +831,53 @@ public abstract class GenericBaitStack(BossModule module, uint aid = default, bo
                     forbiddenInverted.Add(new SDCircle(origin, circle.Radius * 2f));
                 }
             }
-            else if (hasBuddies && b.Target == actor) // try to go to NPCs since they usually will not actively come to your stack
+            else if (t == actor) // try to go to party members since they might not actively come to your stack
             {
+                var stacks = CollectionsMarshal.AsSpan(CurrentBaits);
+                var lenStacks = stacks.Length;
                 var forbiddenB = new List<ShapeDistance>();
-                for (var j = 0; j < lenP; ++j)
+                var partyWOS = Raid.WithSlot();
+                var lenPWOS = partyWOS.Length;
+                for (var k = 0; k < lenPWOS; ++k) // if player got stackmarker we should try finding a good candidate to stack with
                 {
-                    var member = p[j];
-                    if (member.OID != default)
+                    ref var p = ref partyWOS[k];
+                    var a = p.Item2;
+                    if (t != a)
                     {
-                        forbiddenB.Add(new SDInvertedCircle(member.Position, 2f));
+                        if (b.Forbidden[p.Item1]) // party member is forbidden from stacking
+                        {
+                            continue;
+                        }
+                        for (var l = 0; l < lenStacks; ++l)
+                        {
+                            if (stacks[l].Target == a)
+                            {
+                                goto done; // player got a stack marker and we don't want to stack stacks
+                            }
+                        }
+                        // buddy is not target of stacks or spreads, so a good candidate
+                        forbiddenB.Add(new SDInvertedCircle(a.Position, 2f));
+                    done:
+                        ;
                     }
                 }
                 if (forbiddenB.Count != 0)
                 {
-                    hints.AddForbiddenZone(new SDIntersection([.. forbiddenB]), baits[0].Activation);
+                    hints.AddForbiddenZone(new SDIntersection([.. forbiddenB]), b.Activation);
                 }
             }
         }
         var countI = forbiddenInverted.Count;
         if (countI != 0)
         {
+            var act = baits[0].Activation;
             if (countI > 1)
             {
-                hints.AddForbiddenZone(new SDOutsideOfUnion([.. forbiddenInverted]), baits[0].Activation);
+                hints.AddForbiddenZone(new SDOutsideOfUnion([.. forbiddenInverted]), act);
             }
             else
             {
-                hints.AddForbiddenZone(forbiddenInverted[0], baits[0].Activation);
+                hints.AddForbiddenZone(forbiddenInverted[0], act);
             }
         }
 

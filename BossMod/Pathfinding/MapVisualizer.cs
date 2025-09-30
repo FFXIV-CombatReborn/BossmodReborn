@@ -142,13 +142,13 @@ public sealed class MapVisualizer
             {
                 ImGui.TextUnformatted($"Pixel at {x}x{y} ({wpos}): blocked, g={pixMaxG:f3}, prio={pixPriority}");
             }
-            else if (pixPriority != 0)
+            else if (pixPriority != default)
             {
                 ImGui.TextUnformatted($"Pixel at {x}x{y} ({wpos}): goal, prio={pixPriority}");
             }
             else
             {
-                ImGui.TextUnformatted($"Pixel at {x}x{y} ({wpos}): normal, prio={pixPriority}");
+                ImGui.TextUnformatted($"Pixel at {x}x{y} ({wpos}): normal");
             }
 
             ref var pfNode = ref _pathfind.NodeByIndex(hoverNode);
@@ -293,8 +293,8 @@ public sealed class MapVisualizer
         var (x1, y1) = Map.IndexToGrid(startingIndex);
         var (x2, y2) = Map.IndexToGrid(nextIndex);
         var futureCenter = _pathfind.CellCenter(startingIndex);
-        int maxIterations = Map.Width * Map.Height;
-        int iterations = 0;
+        var maxIterations = Map.Width * Map.Height;
+        var iterations = 0;
 
         while ((x1 != x2 || y1 != y2) && iterations <= maxIterations)
         {
@@ -308,7 +308,7 @@ public sealed class MapVisualizer
             (x1, y1) = (x2, y2);
             (x2, y2) = Map.IndexToGrid(nextIndex);
             futureCenter = curCenter;
-            iterations++;
+            ++iterations;
         }
     }
 

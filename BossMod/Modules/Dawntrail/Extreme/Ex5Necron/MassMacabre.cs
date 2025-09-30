@@ -33,7 +33,7 @@ sealed class MassMacabre(BossModule module) : Components.GenericTowers(module)
 
     private void AddTower(WPos pos, int soakers, ulong index, double delay) => Towers.Add(new(pos.Quantized(), 3f, soakers, soakers, activation: WorldState.FutureTime(delay), actorID: index));
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00020001u && numAdded < 8) // if players leave a tower state 20001 triggers again, so we need a counter
         {

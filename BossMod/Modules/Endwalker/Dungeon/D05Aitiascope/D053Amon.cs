@@ -42,7 +42,7 @@ class CurtainCallArenaChange(BossModule module) : BossComponent(module)
     private static readonly Polygon[] circle = [new Polygon(new(11f, -490f), 6.5f, 20, 8.5f.Degrees())];
     public static readonly ArenaBoundsCustom CurtaincallArena = new(D053Amon.union, [.. D053Amon.difference, .. circle]);
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x05)
         {

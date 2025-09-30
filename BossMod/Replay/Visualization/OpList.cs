@@ -199,9 +199,35 @@ sealed class OpList(Replay replay, Replay.Encounter? enc, BossModuleRegistry.Inf
             ActorState.OpRenderflags op => $"Renderflag: {ActorString(op.InstanceID, op.Timestamp)} -> {op.Value}",
             ActorState.OpModelState op => $"Model state: {ActorString(op.InstanceID, op.Timestamp)} -> {op.Value}",
             ClientState.OpDutyActionsChange op => $"Player duty actions change: {string.Join(", ", op.Slots)}",
-            ClientState.OpBozjaHolsterChange op => $"Player bozja holster change: {string.Join(", ", op.Contents.Select(e => $"{e.count}x {e.entry}"))}",
+            ClientState.OpBozjaHolsterChange op => $"Player bozja holster change: {GetOpBozjaHolsterChangeString(op.Contents)}",
+            WorldState.OpMapEffect op => $"MapEffect: {op.Index:X2} {op.State:X8}",
+            WorldState.OpLegacyMapEffect op => $"MapEffect (legacy): seq={op.Sequence} param={op.Param} data={GetOpLegacyMapEffectString(op.Data)}",
+            WorldState.OpSystemLogMessage op => $"LogMessage {op.MessageID}: \"{Service.LuminaRow<Lumina.Excel.Sheets.LogMessage>(op.MessageID)?.Text}\"",
             _ => DumpOp(o)
         };
+    }
+
+    private static string GetOpBozjaHolsterChangeString(List<(BozjaHolsterID entry, byte count)> contents)
+    {
+        var count = contents.Count;
+        var str = new string[count];
+        for (var i = 0; i < count; ++i)
+        {
+            var c = contents[i];
+            str[i] = $"{c.count}x {c.entry}";
+        }
+        return string.Join(", ", str);
+    }
+
+    private static string GetOpLegacyMapEffectString(byte[] data)
+    {
+        var len = data.Length;
+        var str = new string[len];
+        for (var i = 0; i < len; ++i)
+        {
+            str[i] = data[i].ToString("X2");
+        }
+        return string.Join(" ", str);
     }
 
     private Action<UITree>? OpChildren(WorldState.Operation o)

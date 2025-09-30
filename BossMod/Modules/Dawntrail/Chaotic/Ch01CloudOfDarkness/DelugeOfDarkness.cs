@@ -49,7 +49,7 @@ sealed class Phase2InnerCells(BossModule module) : Components.GenericAOEs(module
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         // 03-1E = mid squares
         // - 08000001 - init

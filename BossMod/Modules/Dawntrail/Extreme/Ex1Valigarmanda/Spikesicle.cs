@@ -24,7 +24,7 @@ sealed class Spikesicle(BossModule module) : Components.GenericAOEs(module)
         return aoes;
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00020004 && index is >= 4 and <= 13)
         {

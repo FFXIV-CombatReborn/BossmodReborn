@@ -54,7 +54,7 @@ sealed class ElectrowaveArenaChange(BossModule module) : Components.GenericAOEs(
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x0A && state == 0x00020001u)
         {

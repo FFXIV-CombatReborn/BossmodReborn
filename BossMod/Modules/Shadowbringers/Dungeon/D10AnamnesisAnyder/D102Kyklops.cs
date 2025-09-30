@@ -69,7 +69,7 @@ class TerribleBladeHammer(BossModule module) : Components.GenericAOEs(module)
         return aoes[..index];
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         // 0D - 08000400 - hammer X pattern, 20001000 - hammer cross pattern
         // 0E - 00800040 - blade cross pattern, 02000100 - blade X pattern

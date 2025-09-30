@@ -4,7 +4,7 @@ sealed class MassMacabre(BossModule module) : Components.GenericTowers(module, p
 {
     private int numAdded;
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00020001u && numAdded < 4) // if players leave a tower state 20001 triggers again, so we need a counter
         {

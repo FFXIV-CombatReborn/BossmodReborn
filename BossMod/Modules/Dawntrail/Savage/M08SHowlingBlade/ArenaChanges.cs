@@ -31,7 +31,7 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x01)
         {
@@ -153,7 +153,7 @@ class Teleporters(BossModule module) : BossComponent(module)
         return [.. positions];
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index is >= 0x02 and <= 0x0B)
         {

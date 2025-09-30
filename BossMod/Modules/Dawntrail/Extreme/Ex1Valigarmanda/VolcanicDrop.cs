@@ -8,7 +8,7 @@ sealed class VolcanicDrop(BossModule module) : Components.GenericAOEs(module, (u
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => AOE;
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         // state transitions:
         // 00020001 - both volcanos, appear after skyruin end

@@ -18,8 +18,9 @@ public enum OID : uint
 
 public enum AID : uint
 {
-    AutoAttack = 1853, // Boss->player, no cast, single-target
+    AutoAttack1 = 1853, // Boss->player, no cast, single-target
     AutoAttack2 = 870, // WavespineSahagin->player, no cast, single-target
+
     BodySlamRectAOE = 1860, // Boss->self, no cast, range 30+R width 10 rect
     BodySlamNorth = 1938, // Helper->self, no cast, ???
     BodySlamSouth = 1937, // Helper->self, no cast, ???

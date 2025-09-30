@@ -38,7 +38,7 @@ sealed class FocusedTremorYokiUzu(BossModule module) : Components.GenericAOEs(mo
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00020001u)
         {

@@ -15,7 +15,7 @@ public enum AID : uint
 
 sealed class ArenaChanges(BossModule module) : BossComponent(module)
 {
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x0D)
         {

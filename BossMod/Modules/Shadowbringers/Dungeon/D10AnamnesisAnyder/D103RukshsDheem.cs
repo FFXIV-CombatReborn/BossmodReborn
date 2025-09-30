@@ -43,7 +43,7 @@ public enum AID : uint
 
 class ArenaChanges(BossModule module) : BossComponent(module)
 {
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00020001)
         {
@@ -182,7 +182,7 @@ class Drains(BossModule module) : Components.GenericAOEs(module)
 
     public static bool IsBlockingDrain(Actor actor, WPos pos) => actor.Position.InRect(pos, dir, SideLength, SideLength, SideLength);
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         // 0x00020001 enabled, 0x00080004 temp disabled, 0x00200004 perm disabled disabled
         // 0x0F - -11, -465 to 0x12 - -11, -435

@@ -81,7 +81,7 @@ public sealed class AIHintsBuilder : IDisposable
         hints.Normalize();
         if (_rsr != null)
         {
-            var soon = _ws.CurrentTime.AddSeconds(0.5d);
+            var soon = _ws.CurrentTime.AddSeconds(0.75d);
             var hasForbiddenDirection = hints.ForbiddenDirections.Count > 0;
 
             if (!isRSRpaused && (hasForbiddenDirection && hints.ForbiddenDirections.Ref(0).activation < soon || hints.ImminentSpecialMode.mode == AIHints.SpecialMode.Pyretic && hints.ImminentSpecialMode.activation < soon) && _rsr.IsInstalled)
@@ -139,19 +139,33 @@ public sealed class AIHintsBuilder : IDisposable
     private void CalculateAutoHints(AIHints hints, Actor player)
     {
         var inFate = Utils.IsPlayerSyncedToFate(_ws);
-        var center = inFate ? _ws.Client.ActiveFate.Center : player.PosRot.XYZ();
+        var fate = _ws.Client.ActiveFate;
+        var center = inFate ? fate.Center : player.PosRot.XYZ();
         var (e, bitmap) = Obstacles.Find(center);
         var resolution = bitmap?.PixelSize ?? 0.5f;
         if (inFate)
         {
-            hints.PathfindMapCenter = new(_ws.Client.ActiveFate.Center.XZ());
-            hints.PathfindMapBounds = (_activeFateBounds ??= new ArenaBoundsCircle(_ws.Client.ActiveFate.Radius, resolution, true));
+            hints.PathfindMapCenter = new(fate.Center.XZ());
+
+            // if in a big fate with no obstacle map available, reduce resolution to avoid destroying fps
+            // fates don't need precise pathfinding anyway since they are just orange circle simulators
+            if (bitmap == null)
+            {
+                resolution = fate.Radius switch
+                {
+                    > 60 => 2,
+                    > 30 => 1,
+                    _ => resolution
+                };
+            }
+
+            hints.PathfindMapBounds = (_activeFateBounds ??= new ArenaBoundsCircle(fate.Radius, resolution));
             if (e != null && bitmap != null)
             {
                 var originCell = (hints.PathfindMapCenter - e.Origin) / resolution;
                 var originX = (int)originCell.X;
                 var originZ = (int)originCell.Z;
-                var halfSize = (int)(_ws.Client.ActiveFate.Radius / resolution);
+                var halfSize = (int)(fate.Radius / resolution);
                 hints.PathfindMapObstacles = new(bitmap, new(originX - halfSize, originZ - halfSize, originX + halfSize, originZ + halfSize));
             }
         }

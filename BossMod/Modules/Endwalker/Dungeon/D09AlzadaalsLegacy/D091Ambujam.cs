@@ -37,7 +37,7 @@ sealed class ToxinShowerCorrosiveVenom(BossModule module) : Components.GenericAO
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         WPos? pos = (index, state) switch
         {

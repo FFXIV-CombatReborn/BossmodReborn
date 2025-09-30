@@ -130,7 +130,7 @@ sealed class ArenaChange(BossModule module) : Components.GenericAOEs(module)
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (NumCasts == 0 && index == 0x01 && state == 0x00020001u)
         {

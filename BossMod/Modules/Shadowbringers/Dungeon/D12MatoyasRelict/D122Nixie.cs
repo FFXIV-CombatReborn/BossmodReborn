@@ -48,7 +48,7 @@ class Gurgle(BossModule module) : Components.GenericAOEs(module)
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00020001u && index is > 0x12 and < 0x1B)
         {
@@ -133,7 +133,7 @@ sealed class GeysersCloudPlatform(BossModule module) : Components.GenericAOEs(mo
         return [];
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x12)
         {

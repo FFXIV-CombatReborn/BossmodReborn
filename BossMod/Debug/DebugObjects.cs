@@ -47,6 +47,7 @@ public sealed class DebugObjects
                 _tree.LeafNode($"Targetable: {obj.IsTargetable}");
                 _tree.LeafNode($"Is character: {internalObj->IsCharacter()}");
                 _tree.LeafNode($"Event state: {Utils.GameObjectInternal(obj)->EventState}");
+                _tree.LeafNode($"Renderflags: {Utils.GameObjectInternal(obj)->RenderFlags}");
                 foreach (var n1 in _tree.Node("Event IDs"))
                 {
                     _tree.LeafNode($"Primary: {internalObj->EventId.Id:X}");

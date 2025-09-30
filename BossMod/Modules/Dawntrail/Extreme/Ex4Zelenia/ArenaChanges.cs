@@ -15,7 +15,7 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index != 0x01)
         {
@@ -61,7 +61,7 @@ class FloorTiles(BossModule module) : BossComponent(module)
         return tileDirs;
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         // arena slices (tile start angle, -22.5° to get center)
         // inner Ring:
@@ -269,7 +269,7 @@ class ActiveTiles(BossModule module) : Components.GenericAOEs(module)
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00800040u && index is >= 0x04 and <= 0x13)
         {

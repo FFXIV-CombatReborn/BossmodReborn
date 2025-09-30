@@ -65,7 +65,7 @@ sealed class TrismegistosArenaChange(BossModule module) : Components.GenericAOEs
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x08 && state == 0x00020001u)
         {

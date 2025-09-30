@@ -212,13 +212,7 @@ public sealed class SDOutsideOfUnion : ShapeDistance
             }
         }
 
-        // If nothing contributed, treat as empty (outside everywhere)
-        if (minAbs == float.MaxValue)
-        {
-            return float.MaxValue;
-        }
-
-        // Exactly one shape contains the point => inside (negative)
+        // exactly one shape contains the point => inside (negative)
         return (insideCount == 1) ? minAbs : -minAbs;
     }
 
@@ -226,19 +220,14 @@ public sealed class SDOutsideOfUnion : ShapeDistance
     public override bool Contains(in WPos p)
     {
         var array = zones;
-        var insideCount = 0;
         for (var i = 0; i < length; ++i)
         {
             if (array[i].Contains(p))
             {
-                ++insideCount;
-                if (insideCount > 1)
-                {
-                    return true;
-                }
+                return false;
             }
         }
-        return false;
+        return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
