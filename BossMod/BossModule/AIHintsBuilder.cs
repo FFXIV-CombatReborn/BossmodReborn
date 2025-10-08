@@ -98,7 +98,69 @@ public sealed class AIHintsBuilder : IDisposable
                 _rsr.UnPauseRSR();
                 isRSRpaused = false;
             }
+
+            // Additional RSR special triggers based on AI hints (avoid spamming while paused)
+            if (!isRSRpaused && _rsr.IsInstalled)
+            {
+                var rsrCfg = Service.Config.Get<RSRIntegrationConfig>();
+                if (rsrCfg.Enable)
+                {
+                    // Anti-knockback when a knockback is queued on the player
+                    if (rsrCfg.TriggerAntiKnockback && player != null && player.PendingKnockbacks.Count > 0 && ShouldTriggerRSR(RotationSolverRebornModule.SpecialCommandType.AntiKnockback))
+                    {
+                        _rsr.TriggerSpecialState(RotationSolverRebornModule.SpecialCommandType.AntiKnockback);
+                        MarkRSRTrigger(RotationSolverRebornModule.SpecialCommandType.AntiKnockback);
+                    }
+
+                    // Dispel window if any party member needs cleansing; restrict to BRD/WHM/SGE/SCH/AST
+                    if (rsrCfg.TriggerDispelStancePositional && hints.ShouldCleanse.Any() && player != null)
+                    {
+                        var cls = player.Class;
+                        bool allowedJob = cls == Class.BRD || cls == Class.WHM || cls == Class.SGE || cls == Class.SCH || cls == Class.AST;
+                        if (allowedJob && ShouldTriggerRSR(RotationSolverRebornModule.SpecialCommandType.DispelStancePositional))
+                        {
+                            _rsr.TriggerSpecialState(RotationSolverRebornModule.SpecialCommandType.DispelStancePositional);
+                            MarkRSRTrigger(RotationSolverRebornModule.SpecialCommandType.DispelStancePositional);
+                        }
+                    }
+
+                    // Defensive windows based on predicted damage
+                    var soonish = _ws.CurrentTime.AddSeconds(1.0d);
+                    for (int i = 0; i < hints.PredictedDamage.Count; i++)
+                    {
+                        var pd = hints.PredictedDamage[i];
+                        if (pd.Activation > soonish)
+                            continue;
+
+                        if (rsrCfg.TriggerDefenseArea && pd.Type == AIHints.PredictedDamageType.Raidwide && ShouldTriggerRSR(RotationSolverRebornModule.SpecialCommandType.DefenseArea))
+                        {
+                            _rsr.TriggerSpecialState(RotationSolverRebornModule.SpecialCommandType.DefenseArea);
+                            MarkRSRTrigger(RotationSolverRebornModule.SpecialCommandType.DefenseArea);
+                            break;
+                        }
+                        if (rsrCfg.TriggerDefenseSingle && pd.Type == AIHints.PredictedDamageType.Tankbuster && player != null && pd.Players[playerSlot] && ShouldTriggerRSR(RotationSolverRebornModule.SpecialCommandType.DefenseSingle))
+                        {
+                            _rsr.TriggerSpecialState(RotationSolverRebornModule.SpecialCommandType.DefenseSingle);
+                            MarkRSRTrigger(RotationSolverRebornModule.SpecialCommandType.DefenseSingle);
+                            break;
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    private RotationSolverRebornModule.SpecialCommandType? _lastRSRSpecial;
+    private DateTime _lastRSRSpecialAt;
+    private bool ShouldTriggerRSR(RotationSolverRebornModule.SpecialCommandType cmd)
+    {
+        // trigger if different from last or if last trigger was a while ago
+        return _lastRSRSpecial != cmd || (DateTime.Now - _lastRSRSpecialAt) > TimeSpan.FromSeconds(2);
+    }
+    private void MarkRSRTrigger(RotationSolverRebornModule.SpecialCommandType cmd)
+    {
+        _lastRSRSpecial = cmd;
+        _lastRSRSpecialAt = DateTime.Now;
     }
 
     // Fill list of potential targets from world state
