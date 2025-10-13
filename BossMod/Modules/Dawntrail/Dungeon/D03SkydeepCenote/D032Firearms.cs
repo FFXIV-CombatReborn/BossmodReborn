@@ -75,6 +75,108 @@ sealed class Artillery(BossModule module) : Components.SimpleAOEGroups(module, [
 sealed class Pummel(BossModule module) : Components.SingleTargetCast(module, (uint)AID.Pummel);
 sealed class ThunderlightFlurry(BossModule module) : Components.SpreadFromCastTargets(module, (uint)AID.ThunderlightFlurry, 6f);
 
+sealed class MultiboxSupport(BossModule module) : Components.MultiboxComponent(module)
+{
+    private readonly ThunderlightFlurry _thunderlightFlurry = module.FindComponent<ThunderlightFlurry>()!;
+
+    private enum MechanicState { None, ThunderlightFlurry }
+    private MechanicState _currentMechanic;
+    private DateTime _thunderlightFlurryActivation;
+    private readonly Dictionary<PartyRolesConfig.Assignment, WPos> partyThunderlightFlurryHintPos = [];
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.ThunderlightFlurry)
+        {
+            _currentMechanic = MechanicState.ThunderlightFlurry;
+            _thunderlightFlurryActivation = Module.CastFinishAt(spell);
+        }
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID == (uint)AID.ThunderlightFlurry)
+            _currentMechanic = MechanicState.None;
+    }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        if (!_config.MultiboxMode || assignment == PartyRolesConfig.Assignment.Unassigned)
+            return;
+
+        AddGenericMTNorthHint(slot, actor, assignment, hints);
+
+        if (WorldState.CurrentTime > _thunderlightFlurryActivation)
+            partyThunderlightFlurryHintPos.Clear();
+
+        if (_currentMechanic == MechanicState.ThunderlightFlurry)
+            AddThunderlightFlurryHints(slot, actor, assignment, hints);
+    }
+
+    public override void DrawArenaBackground(int pcSlot, Actor pc)
+    {
+        if (!_config.MultiboxMode)
+            return;
+
+        foreach (var kvp in partyThunderlightFlurryHintPos)
+        {
+            uint color = kvp.Key switch
+            {
+                PartyRolesConfig.Assignment.MT or PartyRolesConfig.Assignment.OT => Colors.Tank,
+                PartyRolesConfig.Assignment.M1 or PartyRolesConfig.Assignment.M2 => Colors.Melee,
+                PartyRolesConfig.Assignment.R1 or PartyRolesConfig.Assignment.R2 => Colors.Caster,
+                PartyRolesConfig.Assignment.H1 or PartyRolesConfig.Assignment.H2 => Colors.Healer,
+                _ => 0
+            };
+
+            if (color != 0)
+            {
+                Arena.ZoneCircle(kvp.Value.Quantized(), _thunderlightFlurry.SpreadRadius, Colors.Safe);
+                Arena.ZoneCircle(kvp.Value.Quantized(), 0.5f, color);
+            }
+        }
+    }
+
+    private void AddThunderlightFlurryHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        var boss = Module.PrimaryActor;
+        var bossPos = boss.Position;
+        var spreadRadius = _thunderlightFlurry.SpreadRadius;
+
+        var activeRoles = new List<PartyRolesConfig.Assignment>();
+        for (var index = 0; index < Raid.Members.Count(); ++index)
+        {
+            var role = _prc[Raid.Members[index].ContentId];
+            if (Raid.Members[index].IsValid() && role != PartyRolesConfig.Assignment.Unassigned)
+            {
+                activeRoles.Add(role);
+            }
+        }
+
+        var relativePositions = GenericSpreadAroundBoss(activeRoles, spreadRadius, true);
+        var positions = new Dictionary<PartyRolesConfig.Assignment, WPos>();
+        foreach (var kvp in relativePositions)
+        {
+            positions[kvp.Key] = bossPos + kvp.Value;
+        }
+
+        if (actor.InstanceID == Raid.Player()?.InstanceID)
+        {
+            if (positions.TryGetValue(assignment, out var assignedPos))
+            {
+                AddGenericGoalDestination(hints, assignedPos);
+            }
+        }
+
+        // debug visualization
+        partyThunderlightFlurryHintPos.Clear();
+        foreach (var kvp in positions)
+        {
+            partyThunderlightFlurryHintPos[kvp.Key] = kvp.Value;
+        }
+    }
+}
+
 sealed class D032FirearmsStates : StateMachineBuilder
 {
     public D032FirearmsStates(BossModule module) : base(module)
@@ -89,11 +191,12 @@ sealed class D032FirearmsStates : StateMachineBuilder
             .ActivateOnEnter<ThunderlightBurst4>()
             .ActivateOnEnter<Artillery>()
             .ActivateOnEnter<Pummel>()
-            .ActivateOnEnter<ThunderlightFlurry>();
+            .ActivateOnEnter<ThunderlightFlurry>()
+            .ActivateOnEnter<MultiboxSupport>();
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 829, NameID = 12888)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 829, NameID = 12888, MultiboxSupport = true)]
 public sealed class D032Firearms(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, StartingBounds)
 {
     public static readonly WPos ArenaCenter = new(-85f, -155f);
