@@ -4,12 +4,13 @@ namespace BossMod.Autorotation.MiscAI;
 
 public sealed class NormalMovement : RotationModule
 {
-    public enum Track { Destination, Range, Cast, SpecialModes, ForbiddenZoneCushion }
+    public enum Track { Destination, Range, Cast, SpecialModes, ForbiddenZoneCushion, Async }
     public enum DestinationStrategy { None, Pathfind, Explicit }
     public enum RangeStrategy { Any, MaxRange, GreedGCDExplicit, GreedLastMomentExplicit, GreedAutomatic }
     public enum CastStrategy { Leeway, Explicit, Greedy, FinishMove, DropMove, FinishInstants, DropInstants }
     public enum ForbiddenZoneCushionStrategy { None, Small, Medium, Large }
     public enum SpecialModesStrategy { Automatic, Ignore }
+    public enum AsyncStrategy { Off, On }
 
     public const float GreedTolerance = 0.15f;
 
@@ -65,7 +66,28 @@ public sealed class NormalMovement : RotationModule
     private readonly NavigationDecision.Context _navCtx = new();
 
     public const float MeleeRange = 2.6f; // Note: melee range is always hitbox radius + 2.6 for auto attacks, doesn't matter if skills have 3 range...
-    public const float CasterRange = 25;
+    public const float CasterRange = 25f;
+
+    private Task<NavigationDecision> _decisionTask = Task.FromResult(default(NavigationDecision));
+    private NavigationDecision _lastDecision;
+
+    private NavigationDecision GetDecision(StrategyValues strategy, float speed, float cushionSize)
+    {
+        if (_decisionTask.IsCompletedSuccessfully)
+        {
+            _lastDecision = _decisionTask.Result;
+        }
+
+        if (_decisionTask.IsCompleted)
+        {
+            if (_decisionTask.Exception is { } exception)
+                Service.Log($"exception during pathfind: {exception}");
+
+            _decisionTask = Task.Run(() => NavigationDecision.Build(_navCtx, World.CurrentTime, Hints, Player, speed, forbiddenZoneCushion: cushionSize));
+        }
+
+        return _lastDecision;
+    }
 
     public override void Execute(StrategyValues strategy, Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
     {
@@ -94,10 +116,11 @@ public sealed class NormalMovement : RotationModule
 
             if (Hints.InteractWithTarget != null)
             {
+                var targetPos = Hints.InteractWithTarget.Position;
                 // strongly prefer moving towards interact target
                 Hints.GoalZones.Add(p =>
                 {
-                    var length = (p - Hints.InteractWithTarget.Position).LengthSq();
+                    var length = (p - targetPos).LengthSq();
 
                     // 99% of eventobjects have an interact range of 3.5y, while the rest have a range of 2.09y
                     // checking only for the shorter range here would be fine in the vast majority of cases, but it can break interact pathfinding in the case that the target object is partially covered by a forbidden zone with a radius between 2.1 and 3.5
@@ -118,18 +141,32 @@ public sealed class NormalMovement : RotationModule
             ForbiddenZoneCushionStrategy.Large => 3.0f,
             _ => 0f
         };
-        var navi = destinationStrategy switch
+        NavigationDecision navi = default;
+        var resetStats = true;
+        switch (destinationStrategy)
         {
-            DestinationStrategy.Pathfind => NavigationDecision.Build(_navCtx, World, Hints, Player, speed, forbiddenZoneCushion: cushionSize),
-            DestinationStrategy.Explicit => new() { Destination = ResolveTargetLocation(destinationOpt.Value), TimeToGoal = destinationOpt.Value.ExpireIn },
-            _ => default
-        };
+            case DestinationStrategy.Pathfind:
+                navi = GetDecision(strategy, speed, cushionSize);
+                resetStats = false;
+                break;
+            case DestinationStrategy.Explicit:
+                navi = new() { Destination = ResolveTargetLocation(destinationOpt.Value), TimeToGoal = destinationOpt.Value.ExpireIn };
+                break;
+        }
+
+        if (resetStats)
+        {
+            _lastDecision = default;
+            Manager.LastPathfindMs = 0;
+            Manager.LastRasterizeMs = 0;
+        }
+
         if (navi.Destination == null)
             return; // nothing to do
 
         var rangeOpt = strategy.Option(Track.Range);
         var rangeStrategy = rangeOpt.As<RangeStrategy>();
-        if (rangeStrategy != RangeStrategy.Any)
+        if (rangeStrategy != RangeStrategy.Any && Player.InCombat)
         {
             var rangeReference = ResolveTargetOverride(rangeOpt.Value) ?? primaryTarget;
             if (rangeReference != null)
@@ -156,12 +193,14 @@ public sealed class NormalMovement : RotationModule
                             if (navi.LeewaySeconds > (rangeStrategy == RangeStrategy.GreedGCDExplicit ? GCD : 0))
                                 navi.Destination = uptimePosition;
                             break;
+
+                        // TODO: don't use a _navCtx that's being modified in a background thread; we should hold onto two of them and swap them when the task completes
                         case RangeStrategy.GreedAutomatic:
                             var uptimeCell = _navCtx.Map.GridToIndex(_navCtx.Map.WorldToGrid(uptimePosition));
                             var curCell = _navCtx.ThetaStar.StartNodeIndex;
                             if (navi.LeewaySeconds > 0)
                             {
-                                if (_navCtx.Map.PixelMaxG[uptimeCell] >= _navCtx.Map.PixelMaxG[curCell])
+                                if (_navCtx.Map.PixelMaxG.BoundSafeAt(uptimeCell) >= _navCtx.Map.PixelMaxG.BoundSafeAt(curCell))
                                     navi.Destination = uptimePosition;
                                 else if (Player.DistanceToHitbox(primaryTarget) <= maxRange)
                                     navi.Destination = Player.Position;

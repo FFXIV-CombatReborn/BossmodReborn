@@ -134,13 +134,15 @@ sealed class Fetters(BossModule module) : BossComponent(module)
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.ChainDown)
+        {
             casting = false;
+        }
     }
 }
 
 sealed class Aethersup(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeCone cone = new(24f, 60f.Degrees());
+    private readonly AOEShapeCone cone = new(24f, 60f.Degrees());
     private AOEInstance[] _aoe = [];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
@@ -159,7 +161,9 @@ sealed class Aethersup(BossModule module) : Components.GenericAOEs(module)
     {
         if (spell.Action.ID == (uint)AID.AethersupFirst)
         {
-            _aoe = [new(cone, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell))];
+            var origin = spell.LocXZ;
+            var rotation = spell.Rotation;
+            _aoe = [new(cone, origin, rotation, Module.CastFinishAt(spell), shapeDistance: cone.Distance(origin, rotation))];
         }
     }
 
@@ -181,18 +185,24 @@ sealed class Aethersup(BossModule module) : Components.GenericAOEs(module)
 
 sealed class PendulumFlare(BossModule module) : Components.BaitAwayIcon(module, 20f, (uint)IconID.SpreadFlare, (uint)AID.PendulumAOE1, 5.1d)
 {
+    private readonly SDCircle shapedistance = new(D013Philia.ArenaCenter, 18.5f);
+
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         base.AddAIHints(slot, actor, assignment, hints);
         if (ActiveBaitsOn(actor).Count != 0)
-            hints.AddForbiddenZone(new SDCircle(D013Philia.ArenaCenter, 18.5f));
+        {
+            hints.AddForbiddenZone(shapedistance);
+        }
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         base.AddHints(slot, actor, hints);
         if (ActiveBaitsOn(actor).Count != 0)
+        {
             hints.Add("Bait away!");
+        }
     }
 }
 
@@ -206,7 +216,7 @@ sealed class IntoTheLight(BossModule module) : Components.LineStack(module, aidM
 
 sealed class CatONineTails(BossModule module) : Components.GenericRotatingAOE(module)
 {
-    private static readonly AOEShapeCone _shape = new(25f, 60f.Degrees());
+    private readonly AOEShapeCone _shape = new(25f, 60f.Degrees());
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
@@ -227,7 +237,7 @@ sealed class CatONineTails(BossModule module) : Components.GenericRotatingAOE(mo
 
 sealed class FierceBeating(BossModule module) : Components.Exaflare(module, 4f)
 {
-    private static readonly AOEShapeCircle circle = new(4f);
+    private readonly AOEShapeCircle circle = new(4f);
     private readonly List<AOEInstance> _predictions = new(2);
 
     public override void Update()
@@ -241,23 +251,28 @@ sealed class FierceBeating(BossModule module) : Components.Exaflare(module, 4f)
             var imminentLen = imminentAOEs.Length;
             var predictionsCount = _predictions.Count;
             var total = futureLen + imminentLen + predictionsCount;
-            var index = 0;
+
             _aoes = new AOEInstance[total];
             for (var i = 0; i < futureLen; ++i)
             {
                 ref var aoe = ref futureAOEs[i];
-                _aoes[index++] = new(Shape, aoe.Item1, aoe.Item3, aoe.Item2, FutureColor);
+                var origin = aoe.Item1;
+                var rotation = aoe.Item3;
+                _aoes[i] = new(Shape, origin, rotation, aoe.Item2, FutureColor, shapeDistance: Shape.Distance(origin, rotation));
             }
+
             for (var i = 0; i < imminentLen; ++i)
             {
                 ref var aoe = ref imminentAOEs[i];
-                _aoes[index++] = new(Shape, aoe.Item1, aoe.Item3, aoe.Item2, ImminentColor);
+                var origin = aoe.Item1;
+                var rotation = aoe.Item3;
+                _aoes[futureLen + i] = new(Shape, origin, rotation, aoe.Item2, ImminentColor, shapeDistance: Shape.Distance(origin, rotation));
             }
             var predictions = CollectionsMarshal.AsSpan(_predictions);
             for (var i = 0; i < predictionsCount; ++i)
             {
                 ref var aoe = ref predictions[i];
-                _aoes[index++] = aoe;
+                _aoes[imminentLen + futureLen + i] = aoe;
             }
             lastCount = linesCount;
             lastVersion = currentVersion;
@@ -320,7 +335,8 @@ sealed class FierceBeating(BossModule module) : Components.Exaflare(module, 4f)
         }
         if (NumCasts <= 14)
         {
-            _predictions.Add(new(circle, WPos.RotateAroundOrigin(45f, D013Philia.ArenaCenter, caster.Position.Quantized()), default, WorldState.FutureTime(3.7d)));
+            var origin = WPos.RotateAroundOrigin(45f, D013Philia.ArenaCenter, caster.Position.Quantized());
+            _predictions.Add(new(circle, origin, default, WorldState.FutureTime(3.7d), shapeDistance: circle.Distance(origin, default)));
             ++currentVersion;
         }
         if (NumCasts == 16)

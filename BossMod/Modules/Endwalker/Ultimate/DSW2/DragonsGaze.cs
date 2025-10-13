@@ -23,7 +23,7 @@ abstract class DragonsGaze(BossModule module, uint bossOID, double activationDel
         return [];
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         // seen indices: 2 = E, 5 = SW, 6 = W => inferring 0=N, 1=NE, ... cw order
         if (index <= 0x07 && state == 0x00020001u)

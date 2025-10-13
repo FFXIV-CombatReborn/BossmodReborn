@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Dawntrail.Ultimate.FRU;
 
-sealed class P1CyclonicBreakSpreadStack(BossModule module) : Components.UniformStackSpread(module, 6f, 6f, 2, 2, true)
+sealed class P1CyclonicBreakSpreadStack(BossModule module) : Components.UniformStackSpread(module, 6f, 6f, 2, 2)
 {
     public DateTime Activation = DateTime.MaxValue;
     private bool _fullHints; // we only need to actually stack/spread after first protean bait

@@ -5,23 +5,24 @@ sealed class GleamingBarrage(BossModule module) : Components.SimpleAOEs(module, 
 sealed class ChampionsCircuit(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = new(5);
-    private static readonly AOEShapeCone cone = new(22f, 30f.Degrees());
-    private static readonly AOEShapeDonut donut = new(4f, 13f);
-    private static readonly AOEShapeDonutSector donutS = new(16f, 28f, 30f.Degrees());
-    private static readonly AOEShapeRect rect = new(30f, 6f);
+    private readonly AOEShapeCone cone = new(22f, 30f.Degrees());
+    private readonly AOEShapeDonut donut = new(4f, 13f);
+    private readonly AOEShapeDonutSector donutS = new(16f, 28f, 30f.Degrees());
+    private readonly AOEShapeRect rect = new(30f, 6f);
     private bool clockwise;
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.ChampionsCircuitCW)
+        var id = spell.Action.ID;
+        if (id == (uint)AID.ChampionsCircuitCW)
         {
             clockwise = true;
             return;
         }
 
-        AOEShape? shape = spell.Action.ID switch
+        AOEShape? shape = id switch
         {
             (uint)AID.ChampionsCircuitDonutSectorFirst1 or (uint)AID.ChampionsCircuitDonutSectorFirst2 => donutS,
             (uint)AID.ChampionsCircuitDonutFirst => donut,
@@ -30,7 +31,9 @@ sealed class ChampionsCircuit(BossModule module) : Components.GenericAOEs(module
             _ => null
         };
         if (shape != null)
+        {
             _aoes.Add(new(shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell)));
+        }
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)

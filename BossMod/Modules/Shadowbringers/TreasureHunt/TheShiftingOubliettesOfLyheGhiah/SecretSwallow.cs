@@ -2,7 +2,7 @@ namespace BossMod.Shadowbringers.TreasureHunt.ShiftingOubliettesOfLyheGhiah.Secr
 
 public enum OID : uint
 {
-    Boss = 0x302B, //R=4.0
+    SecretSwallow = 0x302B, //R=4.0
     SwallowHatchling = 0x302C, //R=2.0
     KeeperOfKeys = 0x3034, // R3.23
     FuathTrickster = 0x3033, // R0.75
@@ -11,15 +11,15 @@ public enum OID : uint
 
 public enum AID : uint
 {
-    AutoAttack1 = 870, // Boss/SwallowHatchling->player, no cast, single-target
+    AutoAttack1 = 870, // SecretSwallow/SwallowHatchling->player, no cast, single-target
     AutoAttack2 = 872, // KeeperOfKeys->player, no cast, single-target
 
-    ElectricWhorl = 21720, // Boss->self, 4.5s cast, range 8-60 donut
-    Hydrocannon = 21712, // Boss->self, no cast, single-target
+    ElectricWhorl = 21720, // SecretSwallow->self, 4.5s cast, range 8-60 donut
+    Hydrocannon = 21712, // SecretSwallow->self, no cast, single-target
     Hydrocannon2 = 21766, // Helper->location, 3.0s cast, range 8 circle
-    Ceras = 21716, // Boss->player, 4.0s cast, single-target, applies poison
-    SeventhWave = 21719, // Boss->self, 4.5s cast, range 11 circle
-    BodySlam = 21718, // Boss->location, 4.0s cast, range 10 circle, knockback 20, away from source
+    Ceras = 21716, // SecretSwallow->player, 4.0s cast, single-target, applies poison
+    SeventhWave = 21719, // SecretSwallow->self, 4.5s cast, range 11 circle
+    BodySlam = 21718, // SecretSwallow->location, 4.0s cast, range 10 circle, knockback 20, away from source
     PrevailingCurrent = 21717, // SwallowHatchling->self, 3.0s cast, range 22+R width 6 rect
 
     Telega = 9630, // KeeperOfKeys/FuathTrickster->self, no cast, single-target, bonus adds disappear
@@ -29,17 +29,17 @@ public enum AID : uint
     Scoop = 21768 // KeeperOfKeys->self, 4.0s cast, range 15 120-degree cone
 }
 
-class ElectricWhorl(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SeventhWave, 11f);
-class PrevailingCurrent(BossModule module) : Components.SimpleAOEs(module, (uint)AID.PrevailingCurrent, new AOEShapeRect(24f, 3f));
-class SeventhWave(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ElectricWhorl, new AOEShapeDonut(8f, 60f));
-class Hydrocannon(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Hydrocannon2, 8f);
-class Ceras(BossModule module) : Components.SingleTargetCast(module, (uint)AID.Ceras);
-class BodySlam(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BodySlam, 10f);
-class Spin(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spin, 11f);
-class Mash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Mash, new AOEShapeRect(13f, 2f));
-class Scoop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Scoop, new AOEShapeCone(15f, 60f.Degrees()));
+sealed class ElectricWhorl(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SeventhWave, 11f);
+sealed class PrevailingCurrent(BossModule module) : Components.SimpleAOEs(module, (uint)AID.PrevailingCurrent, new AOEShapeRect(24f, 3f));
+sealed class SeventhWave(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ElectricWhorl, new AOEShapeDonut(8f, 60f));
+sealed class Hydrocannon(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Hydrocannon2, 8f);
+sealed class Ceras(BossModule module) : Components.SingleTargetCast(module, (uint)AID.Ceras);
+sealed class BodySlam(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BodySlam, 10f);
+sealed class Spin(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spin, 11f);
+sealed class Mash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Mash, new AOEShapeRect(13f, 2f));
+sealed class Scoop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Scoop, new AOEShapeCone(15f, 60f.Degrees()));
 
-class SecretSwallowStates : StateMachineBuilder
+sealed class SecretSwallowStates : StateMachineBuilder
 {
     public SecretSwallowStates(BossModule module) : base(module)
     {
@@ -57,16 +57,37 @@ class SecretSwallowStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "Malediktus", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 745, NameID = 9782)]
-public class SecretSwallow(WorldState ws, Actor primary) : THTemplate(ws, primary)
+[ModuleInfo(BossModuleInfo.Maturity.Verified,
+StatesType = typeof(SecretSwallowStates),
+ConfigType = null,
+ObjectIDType = typeof(OID),
+ActionIDType = typeof(AID),
+StatusIDType = null,
+TetherIDType = null,
+IconIDType = null,
+PrimaryActorOID = (uint)OID.SecretSwallow,
+Contributors = "The Combat Reborn Team (Malediktus)",
+Expansion = BossModuleInfo.Expansion.Shadowbringers,
+Category = BossModuleInfo.Category.TreasureHunt,
+GroupType = BossModuleInfo.GroupType.CFC,
+GroupID = 745u,
+NameID = 9782u,
+SortOrder = 11,
+PlanLevel = 0)]
+public sealed class SecretSwallow : THTemplate
 {
+    public SecretSwallow(WorldState ws, Actor primary) : base(ws, primary)
+    {
+        hatchlings = Enemies((uint)OID.SwallowHatchling);
+    }
+    private readonly List<Actor> hatchlings;
     private static readonly uint[] bonusAdds = [(uint)OID.FuathTrickster, (uint)OID.KeeperOfKeys];
-    public static readonly uint[] All = [(uint)OID.Boss, (uint)OID.SwallowHatchling, .. bonusAdds];
+    public static readonly uint[] All = [(uint)OID.SecretSwallow, (uint)OID.SwallowHatchling, .. bonusAdds];
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         Arena.Actor(PrimaryActor);
-        Arena.Actors(Enemies((uint)OID.SwallowHatchling));
+        Arena.Actors(hatchlings);
         Arena.Actors(this, bonusAdds, Colors.Vulnerable);
     }
 

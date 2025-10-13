@@ -10,7 +10,7 @@ sealed class P2OptimizedBladedance : Components.BaitAwayTethers
     }
 }
 
-sealed class P2BeyondDefense(BossModule module) : Components.UniformStackSpread(module, 6f, 5f, 3, alwaysShowSpreads: true)
+sealed class P2BeyondDefense(BossModule module) : Components.UniformStackSpread(module, 6f, 5f, 3)
 {
     public enum Mechanic { None, Spread, Stack }
 

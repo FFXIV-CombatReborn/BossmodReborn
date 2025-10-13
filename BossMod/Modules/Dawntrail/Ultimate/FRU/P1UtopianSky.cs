@@ -37,7 +37,7 @@ sealed class P1UtopianSkyBlastingZone(BossModule module) : Components.GenericAOE
     }
 }
 
-sealed class P1UtopianSkySpreadStack(BossModule module) : Components.UniformStackSpread(module, 6f, 5f, 4, 4, true)
+sealed class P1UtopianSkySpreadStack(BossModule module) : Components.UniformStackSpread(module, 6f, 5f, 4, 4)
 {
     public enum Mechanic { None, Spread, Stack }
 
@@ -110,7 +110,7 @@ sealed class P1UtopianSkyAIInitial(BossModule module) : BossComponent(module)
         if (clockspot >= 0)
         {
             // ... and in assigned cone
-            var assignedDirection = (180 - 45 * clockspot).Degrees();
+            var assignedDirection = (180f - 45f * clockspot).Degrees();
             hints.AddForbiddenZone(new SDInvertedCone(Arena.Center, 50f, assignedDirection, 5f.Degrees()), DateTime.MaxValue);
         }
     }

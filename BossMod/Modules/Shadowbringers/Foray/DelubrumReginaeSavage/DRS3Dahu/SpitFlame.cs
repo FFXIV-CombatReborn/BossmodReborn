@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Shadowbringers.Foray.DelubrumReginae.DRS3Dahu;
 
-sealed class SpitFlame(BossModule module) : Components.UniformStackSpread(module, default, 4f, alwaysShowSpreads: true, raidwideOnResolve: false)
+sealed class SpitFlame(BossModule module) : Components.UniformStackSpread(module, default, 4f, raidwideOnResolve: false)
 {
     private readonly Actor?[] _targets = [null, null, null, null];
     private readonly List<Actor> _adds = module.Enemies((uint)OID.Marchosias);

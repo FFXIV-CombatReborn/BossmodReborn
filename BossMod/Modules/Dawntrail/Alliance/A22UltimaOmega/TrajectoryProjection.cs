@@ -5,7 +5,7 @@ sealed class GuidedMissile(BossModule module) : Components.SimpleAOEs(module, (u
 sealed class TrajectoryProjection(BossModule module) : Components.GenericBaitAway(module, centerAtTarget: true)
 {
     private DateTime activation;
-    private static readonly AOEShapeCircle circle = new(6);
+    private readonly AOEShapeCircle circle = new(6);
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {

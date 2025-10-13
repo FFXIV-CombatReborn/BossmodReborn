@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Stormblood.Ultimate.UWU;
 
-class P2SearingWind(BossModule module) : Components.UniformStackSpread(module, 0, 14, alwaysShowSpreads: true, includeDeadTargets: true)
+class P2SearingWind(BossModule module) : Components.UniformStackSpread(module, default, 14f, includeDeadTargets: true)
 {
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
@@ -18,14 +18,14 @@ class P2SearingWind(BossModule module) : Components.UniformStackSpread(module, 0
             if (index < Spreads.Count)
             {
                 ref var spread = ref Spreads.Ref(index);
-                var status = spread.Target.FindStatus(SID.SearingWind);
-                if (status == null || (status.Value.ExpireAt - WorldState.CurrentTime).TotalSeconds < 6)
+                var status = spread.Target.FindStatus((uint)SID.SearingWind);
+                if (status == null || (status.Value.ExpireAt - WorldState.CurrentTime).TotalSeconds < 6d)
                 {
                     Spreads.RemoveAt(index);
                 }
                 else
                 {
-                    spread.Activation = WorldState.FutureTime(6);
+                    spread.Activation = WorldState.FutureTime(6d);
                 }
             }
         }

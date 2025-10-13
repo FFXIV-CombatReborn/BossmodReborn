@@ -30,30 +30,52 @@ public enum SID : uint
     StoneskinPhysical = 152 // none->Boss, extra=0x0
 }
 
-class StingerCell(BossModule module) : Components.Cleave(module, (uint)AID.StingerCell, new AOEShapeRect(8.4f, 2.5f), activeWhileCasting: false)
+sealed class StingerCell(BossModule module) : Components.Cleave(module, (uint)AID.StingerCell, new AOEShapeRect(8.4f, 2.5f), activeWhileCasting: false)
 {
-    private bool Stoneskin => Module.PrimaryActor.FindStatus((uint)SID.StoneskinPhysical) == null;
+    private bool stoneskin;
+
+    public override void OnStatusGain(Actor actor, ActorStatus status)
+    {
+        if (status.ID == (uint)SID.StoneskinPhysical)
+        {
+            stoneskin = true;
+        }
+    }
+
+    public override void OnStatusLose(Actor actor, ActorStatus status)
+    {
+        if (status.ID == (uint)SID.StoneskinPhysical)
+        {
+            stoneskin = false;
+        }
+    }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (Stoneskin)
+        if (stoneskin)
+        {
             base.AddHints(slot, actor, hints);
+        }
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (Stoneskin)
+        if (stoneskin)
+        {
             base.AddAIHints(slot, actor, assignment, hints);
+        }
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
-        if (Stoneskin)
+        if (stoneskin)
+        {
             base.DrawArenaForeground(pcSlot, pc);
+        }
     }
 }
 
-class Apitoxin(BossModule module) : Components.VoidzoneAtCastTarget(module, 6f, (uint)AID.Apitoxin, GetVoidzones, 0.7f)
+sealed class Apitoxin(BossModule module) : Components.VoidzoneAtCastTarget(module, 6f, (uint)AID.Apitoxin, GetVoidzones, 0.7d)
 {
     private static Actor[] GetVoidzones(BossModule module)
     {
@@ -74,10 +96,10 @@ class Apitoxin(BossModule module) : Components.VoidzoneAtCastTarget(module, 6f, 
     }
 }
 
-class StraightSpindle(BossModule module) : Components.SimpleAOEs(module, (uint)AID.StraightSpindle, new AOEShapeRect(51.08f, 1.5f));
-class Crossfire(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Crossfire, new AOEShapeRect(50.5f, 7f));
+sealed class StraightSpindle(BossModule module) : Components.SimpleAOEs(module, (uint)AID.StraightSpindle, new AOEShapeRect(51.08f, 1.5f));
+sealed class Crossfire(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Crossfire, new AOEShapeRect(50.5f, 7f));
 
-class D092QueenHawkStates : StateMachineBuilder
+sealed class D092QueenHawkStates : StateMachineBuilder
 {
     public D092QueenHawkStates(BossModule module) : base(module)
     {
@@ -90,7 +112,7 @@ class D092QueenHawkStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 41, NameID = 4656, SortOrder = 4)]
-public class D092QueenHawk(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaBounds.Center, ArenaBounds)
+public sealed class D092QueenHawk(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaBounds.Center, ArenaBounds)
 {
     public static readonly ArenaBoundsCustom ArenaBounds = new([new Polygon(new(-268f, -134f), 19.5f * CosPI.Pi48th, 48)]);
 

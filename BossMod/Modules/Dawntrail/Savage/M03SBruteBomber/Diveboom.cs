@@ -8,7 +8,7 @@ abstract class DiveKB(BossModule module, uint aid) : Components.SimpleKnockbacks
 sealed class OctoboomDiveKnockback(BossModule module) : DiveKB(module, (uint)AID.OctoboomDiveKnockbackAOE);
 sealed class QuadroboomDiveKnockback(BossModule module) : DiveKB(module, (uint)AID.QuadroboomDiveKnockbackAOE);
 
-class Diveboom(BossModule module) : Components.UniformStackSpread(module, 5f, 5f, 2, 2, alwaysShowSpreads: true)
+class Diveboom(BossModule module) : Components.UniformStackSpread(module, 5f, 5f, 2, 2)
 {
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {

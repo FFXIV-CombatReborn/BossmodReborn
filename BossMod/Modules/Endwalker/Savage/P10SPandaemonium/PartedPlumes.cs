@@ -7,7 +7,7 @@ class PartedPlumes : Components.SimpleAOEs
 
 class PartedPlumesVoidzone(BossModule module) : Components.GenericAOEs(module, default, "GTFO from voidzone!")
 {
-    private static readonly AOEShapeCircle _shape = new(8f);
+    private readonly AOEShapeCircle _shape = new(8f);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {

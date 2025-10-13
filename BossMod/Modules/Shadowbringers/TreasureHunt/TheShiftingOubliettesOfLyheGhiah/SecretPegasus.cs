@@ -2,7 +2,7 @@ namespace BossMod.Shadowbringers.TreasureHunt.ShiftingOubliettesOfLyheGhiah.Secr
 
 public enum OID : uint
 {
-    Boss = 0x3016, //R=2.5
+    SecretPegasus = 0x3016, //R=2.5
     Thunderhead = 0x3017, //R=1.0
     KeeperOfKeys = 0x3034, // R3.23
     SecretQueen = 0x3021, // R0.84, icon 5, needs to be killed in order from 1 to 5 for maximum rewards
@@ -16,12 +16,12 @@ public enum OID : uint
 
 public enum AID : uint
 {
-    AutoAttack = 872, // Boss/KeeperOfKeys->player, no cast, single-target
+    AutoAttack = 872, // SecretPegasus/KeeperOfKeys->player, no cast, single-target
 
-    BurningBright = 21667, // Boss->self, 3.0s cast, range 47 width 6 rect
-    Nicker = 21668, // Boss->self, 4.0s cast, range 12 circle
-    CloudCall = 21666, // Boss->self, 3.0s cast, single-target, calls clouds
-    Gallop = 21665, // Boss->players, no cast, width 10 rect charge, seems to target random player 5-6s after CloudCall
+    BurningBright = 21667, // SecretPegasus->self, 3.0s cast, range 47 width 6 rect
+    Nicker = 21668, // SecretPegasus->self, 4.0s cast, range 12 circle
+    CloudCall = 21666, // SecretPegasus->self, 3.0s cast, single-target, calls clouds
+    Gallop = 21665, // SecretPegasus->players, no cast, width 10 rect charge, seems to target random player 5-6s after CloudCall
     LightningBolt = 21669, // Thunderhead->self, 3.0s cast, range 8 circle
 
     Mash = 21767, // KeeperOfKeys->self, 3.0s cast, range 13 width 4 rect
@@ -36,19 +36,19 @@ public enum AID : uint
     Telega = 9630 // KeeperOfKeys->self, no cast, single-target, bonus adds disappear
 }
 
-class BurningBright(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BurningBright, new AOEShapeRect(47f, 3f));
-class Nicker(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Nicker, 12f);
-class CloudCall(BossModule module) : Components.CastHint(module, (uint)AID.CloudCall, "Calls thunderclouds");
-class LightningBolt(BossModule module) : Components.SimpleAOEs(module, (uint)AID.LightningBolt, 8f);
+sealed class BurningBright(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BurningBright, new AOEShapeRect(47f, 3f));
+sealed class Nicker(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Nicker, 12f);
+sealed class CloudCall(BossModule module) : Components.CastHint(module, (uint)AID.CloudCall, "Calls thunderclouds");
+sealed class LightningBolt(BossModule module) : Components.SimpleAOEs(module, (uint)AID.LightningBolt, 8f);
 
-class Spin(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spin, 11f);
-class Mash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Mash, new AOEShapeRect(13f, 2f));
-class Scoop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Scoop, new AOEShapeCone(15f, 60f.Degrees()));
+sealed class Spin(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spin, 11f);
+sealed class Mash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Mash, new AOEShapeRect(13f, 2f));
+sealed class Scoop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Scoop, new AOEShapeCone(15f, 60f.Degrees()));
 
-class MandragoraAOEs(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.PluckAndPrune, (uint)AID.TearyTwirl,
+sealed class MandragoraAOEs(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.PluckAndPrune, (uint)AID.TearyTwirl,
 (uint)AID.HeirloomScream, (uint)AID.PungentPirouette, (uint)AID.Pollen], 6.84f);
 
-class SecretPegasusStates : StateMachineBuilder
+sealed class SecretPegasusStates : StateMachineBuilder
 {
     public SecretPegasusStates(BossModule module) : base(module)
     {
@@ -65,12 +65,28 @@ class SecretPegasusStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "Malediktus", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 745, NameID = 9793)]
-public class SecretPegasus(WorldState ws, Actor primary) : THTemplate(ws, primary)
+[ModuleInfo(BossModuleInfo.Maturity.Verified,
+StatesType = typeof(SecretPegasusStates),
+ConfigType = null,
+ObjectIDType = typeof(OID),
+ActionIDType = typeof(AID),
+StatusIDType = null,
+TetherIDType = null,
+IconIDType = null,
+PrimaryActorOID = (uint)OID.SecretPegasus,
+Contributors = "The Combat Reborn Team (Malediktus)",
+Expansion = BossModuleInfo.Expansion.Shadowbringers,
+Category = BossModuleInfo.Category.TreasureHunt,
+GroupType = BossModuleInfo.GroupType.CFC,
+GroupID = 745u,
+NameID = 9793u,
+SortOrder = 8,
+PlanLevel = 0)]
+public sealed class SecretPegasus(WorldState ws, Actor primary) : THTemplate(ws, primary)
 {
     private static readonly uint[] bonusAdds = [(uint)OID.SecretEgg, (uint)OID.SecretGarlic, (uint)OID.SecretOnion, (uint)OID.SecretTomato,
     (uint)OID.SecretQueen, (uint)OID.KeeperOfKeys, (uint)OID.FuathTrickster];
-    public static readonly uint[] All = [(uint)OID.Boss, .. bonusAdds];
+    public static readonly uint[] All = [(uint)OID.SecretPegasus, .. bonusAdds];
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

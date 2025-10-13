@@ -9,13 +9,13 @@ public sealed class SDKnockbackInComplexPolygonAwayFromOrigin(WPos Center, WPos 
     private readonly RelSimplifiedComplexPolygon polygon = Polygon;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override bool Contains(WPos p)
+    public override bool Contains(in WPos p)
     {
         return !polygon.Contains(p - center + distance * (p - origin).Normalized());
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override float Distance(WPos p) => Contains(p) ? 0f : 1f;
+    public override float Distance(in WPos p) => Contains(p) ? 0f : 1f;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
@@ -29,13 +29,10 @@ public sealed class SDKnockbackInComplexPolygonFixedDirection(WPos Center, WDir 
     private readonly RelSimplifiedComplexPolygon polygon = Polygon;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override bool Contains(WPos p)
-    {
-        return !polygon.Contains(p - center + direction);
-    }
+    public override bool Contains(in WPos p) => !polygon.Contains(p - center + direction);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override float Distance(WPos p) => Contains(p) ? 0f : 1f;
+    public override float Distance(in WPos p) => Contains(p) ? 0f : 1f;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
@@ -53,10 +50,10 @@ public sealed class SDKnockbackInComplexPolygonAwayFromOriginPlusAOEAABBSquares(
     private readonly int len = Length;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override float Distance(WPos p) => Contains(p) ? 0f : 1f;
+    public override float Distance(in WPos p) => Contains(p) ? 0f : 1f;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override bool Contains(WPos p)
+    public override bool Contains(in WPos p)
     {
         var dir = distance * (p - origin).Normalized();
         if (!polygon.Contains(p - center + dir))
@@ -91,7 +88,7 @@ public sealed class SDKnockbackInComplexPolygonAwayFromOriginPlusAOECircles(WPos
     private readonly int len = Length;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override bool Contains(WPos p)
+    public override bool Contains(in WPos p)
     {
         var dir = distance * (p - origin).Normalized();
         if (!polygon.Contains(p - center + dir))
@@ -111,7 +108,7 @@ public sealed class SDKnockbackInComplexPolygonAwayFromOriginPlusAOECircles(WPos
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override float Distance(WPos p) => Contains(p) ? 0f : 1f;
+    public override float Distance(in WPos p) => Contains(p) ? 0f : 1f;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
@@ -126,7 +123,7 @@ public sealed class SDKnockbackInComplexPolygonAwayFromOriginPlusIntersectionTes
     private readonly RelSimplifiedComplexPolygon polygon = Polygon;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override bool Contains(WPos p)
+    public override bool Contains(in WPos p)
     {
         var offset = p - center;
         var dir = (p - origin).Normalized();
@@ -134,7 +131,7 @@ public sealed class SDKnockbackInComplexPolygonAwayFromOriginPlusIntersectionTes
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override float Distance(WPos p) => Contains(p) ? 0f : 1f;
+    public override float Distance(in WPos p) => Contains(p) ? 0f : 1f;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;

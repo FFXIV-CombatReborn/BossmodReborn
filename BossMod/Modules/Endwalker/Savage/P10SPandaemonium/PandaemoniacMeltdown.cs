@@ -6,8 +6,8 @@ class PandaemoniacMeltdown(BossModule module) : Components.CastCounter(module, (
     private Actor? _stackTarget;
     private readonly List<Actor> _spreadTargets = [];
 
-    private static readonly AOEShapeRect _shapeStack = new(50, 3);
-    private static readonly AOEShapeRect _shapeSpread = new(50, 2);
+    private readonly AOEShapeRect _shapeStack = new(50f, 3f);
+    private readonly AOEShapeRect _shapeSpread = new(50f, 2f);
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
@@ -55,7 +55,7 @@ class PandaemoniacMeltdown(BossModule module) : Components.CastCounter(module, (
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         base.OnEventCast(caster, spell);
-        if ((AID)spell.Action.ID == AID.PandaemoniacMeltdownTargetSelect)
+        if (spell.Action.ID == (uint)AID.PandaemoniacMeltdownTargetSelect)
             _stackTarget = WorldState.Actors.Find(spell.MainTargetID);
     }
 

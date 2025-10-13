@@ -7,7 +7,7 @@ public static class ReplayUtils
         if (p == null)
             return "<none>";
         var name = p.NameAt(t);
-        return $"{p.Type} {p.InstanceID:X} ({p.OID:X}/{name.id}) '{name.name}'";
+        return $"{p.Type} {p.InstanceID:X} ({p.OID:X}/{name.id}) '{name.name}' {p.LayoutID:X}";
     }
 
     public static string ParticipantPosRotString(Replay.Participant? p, DateTime t)

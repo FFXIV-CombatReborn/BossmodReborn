@@ -352,13 +352,13 @@ public sealed class VeynWAR(RotationModuleManager manager, Actor player) : Rotat
             Hints.ActionsToExecute.Push(BozjaActionID.GetNormal(BozjaHolsterID.BannerHonoredSacrifice), Player, ActionQueue.Priority.Low + (int)OGCDPriority.LostBanner);
 
         // ai hints for positioning
-        var goalST = primaryTarget != null ? Hints.GoalSingleTarget(primaryTarget, 3) : null;
+        var goalST = primaryTarget != null ? AIHints.GoalSingleTarget(primaryTarget, 3) : null;
         var goalAOE = Hints.GoalAOECircle(3);
         var goal = aoeStrategy switch
         {
             AOEStrategy.SingleTarget => goalST,
             AOEStrategy.ForceAOE => goalAOE,
-            _ => goalST != null ? Hints.GoalCombined(goalST, goalAOE, 3) : goalAOE
+            _ => goalST != null ? AIHints.GoalCombined(goalST, goalAOE, 3) : goalAOE
         };
         if (goal != null)
             Hints.GoalZones.Add(goal);

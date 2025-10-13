@@ -19,7 +19,7 @@ abstract class BlazingBenifice(BossModule module, uint aid, uint oid) : Componen
         var index = 0;
         while (index < count)
         {
-            ref readonly var aoe = ref aoes[index];
+            ref var aoe = ref aoes[index];
             var act = aoe.Activation;
             if (act < startTime || act >= deadline)
             {

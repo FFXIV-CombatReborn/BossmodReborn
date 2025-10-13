@@ -190,7 +190,7 @@ sealed class GlassyEyed(BossModule module) : Components.GenericGaze(module)
 
 sealed class TenebrismTowers(BossModule module) : Components.GenericTowers(module)
 {
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00010008u)
         {

@@ -27,4 +27,7 @@ public sealed class M08SHowlingBladeConfig() : ConfigNode()
 
     [PropertyDisplay("Revolutionary/Eminent Reign positioning hints")]
     public ReignStrategy ReignHints = ReignStrategy.Standard;
+
+    [PropertyDisplay("Show Rinon/Toxic Friends tower spots for Lone Wolf's Lament")]
+    public bool LoneWolfsLamentHints = true;
 }

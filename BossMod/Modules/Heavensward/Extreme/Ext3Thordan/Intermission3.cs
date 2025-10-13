@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Heavensward.Extreme.Ex3Thordan;
 
-sealed class HiemalStormSpread(BossModule module) : Components.UniformStackSpread(module, default, 6f, alwaysShowSpreads: true)
+sealed class HiemalStormSpread(BossModule module) : Components.UniformStackSpread(module, default, 6f)
 {
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {

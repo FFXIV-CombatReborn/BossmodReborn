@@ -50,7 +50,7 @@ class FlamesOfEventide(BossModule module) : Components.GenericBaitAway(module, (
         }
         else if (CurrentBaits.Count > 0)
         {
-            if (IsClippedBy(actor, CurrentBaits[0]))
+            if (IsClippedBy(actor, ref CurrentBaits.Ref(0)))
                 hints.Add("GTFO from tank!");
             if (_playerStacks[slot] < 2 && actor.Role == Role.Tank && Raid.FindSlot(Module.PrimaryActor.TargetID) is var tankSlot && tankSlot >= 0 && _playerStacks[tankSlot] >= 2)
                 hints.Add("Taunt!");

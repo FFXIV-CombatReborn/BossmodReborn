@@ -26,7 +26,6 @@ sealed class TwofoldTempestVoidzone(BossModule module) : Components.GenericAOEs(
 
 sealed class TwofoldTempestTetherAOE(BossModule module) : Components.InterceptTetherAOE(module, (uint)AID.TwofoldTempestCircle, (uint)TetherID.TwofoldTempest, 6f)
 {
-    private readonly WPos boss = module.Enemies((uint)OID.BossP2)[0].Position;
     private BitMask vulnerability;
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
@@ -46,12 +45,14 @@ sealed class TwofoldTempestTetherAOE(BossModule module) : Components.InterceptTe
     {
         var count = Tethers.Count;
         if (count == 0)
+        {
             return;
+        }
         if (Tethers[0].Player == actor)
         {
             if (!vulnerability[slot])
             {
-                hints.AddForbiddenZone(new SDCircle(boss, 23.5f), Activation);
+                hints.AddForbiddenZone(new SDCircle(new(100f, 100f), 23.5f), Activation);
             }
         }
         else
@@ -113,16 +114,16 @@ sealed class TwofoldTempestTetherVoidzone(BossModule module) : Components.Interc
 
 sealed class TwofoldTempestRect(BossModule module) : Components.GenericBaitStack(module, (uint)AID.TwofoldTempestRect, onlyShowOutlines: true)
 {
-    private static readonly AOEShapeRect rect = new(40f, 8f);
+    private readonly AOEShapeRect rect = new(40f, 8f);
     private DateTime _activation;
-    private readonly Actor boss = module.Enemies((uint)OID.BossP2)[0];
+    private readonly M08SHowlingBlade bossmod = (M08SHowlingBlade)module;
     private BitMask vulnerability;
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.TwofoldTempestVisual1)
         {
-            _activation = Module.CastFinishAt(spell, 0.1f);
+            _activation = Module.CastFinishAt(spell, 0.1d);
         }
     }
 
@@ -134,6 +135,7 @@ sealed class TwofoldTempestRect(BossModule module) : Components.GenericBaitStack
             var party = Raid.WithoutSlot(false, true, true);
             var len = party.Length;
             Actor? closest = null;
+            var boss = bossmod.BossP2()!;
             var closestDistSq = float.MaxValue;
 
             for (var i = 0; i < len; ++i)
@@ -148,7 +150,9 @@ sealed class TwofoldTempestRect(BossModule module) : Components.GenericBaitStack
             }
 
             if (closest != null)
+            {
                 CurrentBaits.Add(new(boss, closest, rect, _activation));
+            }
             var baits = CollectionsMarshal.AsSpan(CurrentBaits);
 
             if (baits.Length == 0)
@@ -191,9 +195,10 @@ sealed class TwofoldTempestRect(BossModule module) : Components.GenericBaitStack
             return;
         }
         var playerPlatform = 0;
+        var pos = actor.Position;
         for (var i = 0; i < 5; ++i)
         {
-            if (actor.Position.InCircle(ArenaChanges.EndArenaPlatforms[i].Center, 8f))
+            if (pos.InCircle(ArenaChanges.EndArenaPlatforms[i].Center, 8f))
             {
                 if (ArenaChanges.PlatformAngles[i] != baits[0].Rotation)
                 {
@@ -209,7 +214,7 @@ sealed class TwofoldTempestRect(BossModule module) : Components.GenericBaitStack
             }
         }
 
-        ref readonly var b = ref baits[0];
+        ref var b = ref baits[0];
         var countP = 0;
         var party = Raid.WithoutSlot(false, true, true);
         var pLen = party.Length;

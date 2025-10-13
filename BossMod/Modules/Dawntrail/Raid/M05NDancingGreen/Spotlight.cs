@@ -119,8 +119,7 @@ sealed class Spotlight(BossModule module) : Components.GenericAOEs(module)
         var pos = actor.Position;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var aoe = ref aoes[i];
-            if (aoe.Check(pos))
+            if (aoes[i].Check(pos))
             {
                 isInside = true;
                 break;

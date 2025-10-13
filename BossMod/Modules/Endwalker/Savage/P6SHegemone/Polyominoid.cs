@@ -82,7 +82,7 @@ class Polyominoid(BossModule module) : Components.GenericAOEs(module, (uint)AID.
     //    }
     //}
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         var square = index switch
         {

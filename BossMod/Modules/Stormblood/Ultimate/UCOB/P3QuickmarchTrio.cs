@@ -43,7 +43,7 @@ class P3MegaflareSpreadStack : Components.UniformStackSpread
 {
     private BitMask _stackTargets;
 
-    public P3MegaflareSpreadStack(BossModule module) : base(module, 5f, 5f, 3, 3, alwaysShowSpreads: true)
+    public P3MegaflareSpreadStack(BossModule module) : base(module, 5f, 5f, 3, 3)
     {
         AddSpreads(Raid.WithoutSlot(true, true, true), WorldState.FutureTime(2.6d));
     }

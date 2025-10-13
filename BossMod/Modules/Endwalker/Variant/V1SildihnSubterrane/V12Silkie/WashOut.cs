@@ -13,18 +13,15 @@ sealed class WashOut(BossModule module) : Components.SimpleKnockbacks(module, (u
             if (!IsImmune(slot, act))
             {
                 var count = waterVZs.Count;
-                var forbidden = new ShapeDistance[count + 1];
                 var dir = kb.Direction.ToDirection();
 
                 // square intentionally slightly smaller to prevent sus knockback
-                forbidden[count] = new SDKnockbackInAABBSquareFixedDirection(Arena.Center, 35f * dir, 19f);
+                hints.AddForbiddenZone(new SDKnockbackInAABBSquareFixedDirection(Arena.Center, 35f * dir, 19f));
 
                 for (var i = 0; i < count; ++i)
                 {
-                    var a = waterVZs[i].Position;
-                    forbidden[1 + i] = new SDRect(a, dir, 40f, 40f, 5f);
+                    hints.AddForbiddenZone(new SDRect(waterVZs[i].Position, dir, 40f, 40f, 5f), act);
                 }
-                hints.AddForbiddenZone(new SDUnion(forbidden), act);
             }
         }
     }

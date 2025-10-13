@@ -3,7 +3,6 @@ namespace BossMod.Endwalker.VariantCriterion.V2MountRokkon.V23Gorai;
 sealed class WorldlyPursuit(BossModule module) : Components.GenericRotatingAOE(module)
 {
     private static readonly AOEShapeCross cross = new(60f, 10f);
-    public override uint ImminentColor => Colors.AOE;
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
@@ -15,6 +14,7 @@ sealed class WorldlyPursuit(BossModule module) : Components.GenericRotatingAOE(m
         };
         if (increment != default)
         {
+            ImminentColor = Colors.AOE;
             Sequences.Add(new(cross, spell.LocXZ, spell.Rotation, increment, Module.CastFinishAt(spell), 3.7d, 5, 1));
         }
     }

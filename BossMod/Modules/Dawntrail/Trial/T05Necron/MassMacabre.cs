@@ -4,7 +4,7 @@ sealed class MassMacabre(BossModule module) : Components.GenericTowers(module, p
 {
     private int numAdded;
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00020001u && numAdded < 4) // if players leave a tower state 20001 triggers again, so we need a counter
         {
@@ -29,8 +29,7 @@ sealed class MassMacabre(BossModule module) : Components.GenericTowers(module, p
             var id = (ulong)index;
             for (var i = 0; i < count; ++i)
             {
-                ref var tower = ref towers[i];
-                if (tower.ActorID == id)
+                if (towers[i].ActorID == id)
                 {
                     Towers.RemoveAt(i);
                     if (Towers.Count == 0)

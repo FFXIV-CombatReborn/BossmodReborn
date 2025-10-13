@@ -2,7 +2,7 @@ namespace BossMod.Shadowbringers.TreasureHunt.ShiftingOubliettesOfLyheGhiah.Secr
 
 public enum OID : uint
 {
-    Boss = 0x3011, //R=3.6
+    SecretUndine = 0x3011, //R=3.6
     AqueousAether = 0x3013, //R=1.12
     Bubble = 0x3012, //R=1.3, untargetable
     SecretQueen = 0x3021, // R0.84, icon 5, needs to be killed in order from 1 to 5 for maximum rewards
@@ -16,15 +16,15 @@ public enum OID : uint
 
 public enum AID : uint
 {
-    AutoAttack1 = 23186, // Boss/AqueousAether->player, no cast, single-target
+    AutoAttack1 = 23186, // SecretUndine/AqueousAether->player, no cast, single-target
     AutoAttack2 = 872, // KeeperOfKeys/Mandragoras->player, no cast, single-target
 
-    Hydrowhirl = 21658, // Boss->self, 3.0s cast, range 8 circle
-    Hypnowave = 21659, // Boss->self, 3.0s cast, range 30 120-degree cone, causes sleep
-    HydrotaphVisual = 21661, // Boss->self, 4.0s cast, single-target
+    Hydrowhirl = 21658, // SecretUndine->self, 3.0s cast, range 8 circle
+    Hypnowave = 21659, // SecretUndine->self, 3.0s cast, range 30 120-degree cone, causes sleep
+    HydrotaphVisual = 21661, // SecretUndine->self, 4.0s cast, single-target
     Hydrotaph = 21662, // Helper->self, 4.0s cast, range 40 circle
     Hydrofan = 21663, // Bubble->self, 5.0s cast, range 44 30-degree cone
-    Hydropins = 21660, // Boss->self, 2.5s cast, range 12 width 4 rect
+    Hydropins = 21660, // SecretUndine->self, 2.5s cast, range 12 width 4 rect
     AquaGlobe = 21664, // AqueousAether->location, 3.0s cast, range 8 circle
 
     Pollen = 6452, // SecretQueen->self, 3.5s cast, range 6+R circle
@@ -39,21 +39,20 @@ public enum AID : uint
     Telega = 9630 // Mandragoras/KeeperOfKeys->self, no cast, single-target, bonus adds disappear
 }
 
-class Hydrofan(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Hydrofan, new AOEShapeCone(44f, 15f.Degrees()));
-class Hypnowave(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Hypnowave, new AOEShapeCone(30f, 60f.Degrees()));
-class Hydropins(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Hydropins, new AOEShapeRect(12f, 2f));
-class AquaGlobe(BossModule module) : Components.SimpleAOEs(module, (uint)AID.AquaGlobe, 8f);
-class Hydrowhirl(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Hydrowhirl, 8f);
-class Hydrotaph(BossModule module) : Components.RaidwideCast(module, (uint)AID.Hydrotaph);
+sealed class Hydrofan(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Hydrofan, new AOEShapeCone(44f, 15f.Degrees()));
+sealed class Hypnowave(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Hypnowave, new AOEShapeCone(30f, 60f.Degrees()));
+sealed class Hydropins(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Hydropins, new AOEShapeRect(12f, 2f));
+sealed class AquaGlobeHydrowhirl(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.AquaGlobe, (uint)AID.Hydrowhirl], 8f);
+sealed class Hydrotaph(BossModule module) : Components.RaidwideCast(module, (uint)AID.Hydrotaph);
 
-class MandragoraAOEs(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.PluckAndPrune, (uint)AID.TearyTwirl,
+sealed class MandragoraAOEs(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.PluckAndPrune, (uint)AID.TearyTwirl,
 (uint)AID.HeirloomScream, (uint)AID.PungentPirouette, (uint)AID.Pollen], 6.84f);
 
-class Spin(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spin, 11f);
-class Mash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Mash, new AOEShapeRect(13f, 2f));
-class Scoop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Scoop, new AOEShapeCone(15f, 60f.Degrees()));
+sealed class Spin(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spin, 11f);
+sealed class Mash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Mash, new AOEShapeRect(13f, 2f));
+sealed class Scoop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Scoop, new AOEShapeCone(15f, 60f.Degrees()));
 
-class SecretUndineStates : StateMachineBuilder
+sealed class SecretUndineStates : StateMachineBuilder
 {
     public SecretUndineStates(BossModule module) : base(module)
     {
@@ -61,8 +60,7 @@ class SecretUndineStates : StateMachineBuilder
             .ActivateOnEnter<Hydrofan>()
             .ActivateOnEnter<Hypnowave>()
             .ActivateOnEnter<Hydropins>()
-            .ActivateOnEnter<AquaGlobe>()
-            .ActivateOnEnter<Hydrowhirl>()
+            .ActivateOnEnter<AquaGlobeHydrowhirl>()
             .ActivateOnEnter<Hydrotaph>()
             .ActivateOnEnter<Spin>()
             .ActivateOnEnter<Mash>()
@@ -72,17 +70,38 @@ class SecretUndineStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "Malediktus", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 745, NameID = 9790)]
-public class SecretUndine(WorldState ws, Actor primary) : THTemplate(ws, primary)
+[ModuleInfo(BossModuleInfo.Maturity.Verified,
+StatesType = typeof(SecretUndineStates),
+ConfigType = null,
+ObjectIDType = typeof(OID),
+ActionIDType = typeof(AID),
+StatusIDType = null,
+TetherIDType = null,
+IconIDType = null,
+PrimaryActorOID = (uint)OID.SecretUndine,
+Contributors = "The Combat Reborn Team (Malediktus)",
+Expansion = BossModuleInfo.Expansion.Shadowbringers,
+Category = BossModuleInfo.Category.TreasureHunt,
+GroupType = BossModuleInfo.GroupType.CFC,
+GroupID = 745u,
+NameID = 9790u,
+SortOrder = 12,
+PlanLevel = 0)]
+public sealed class SecretUndine : THTemplate
 {
+    public SecretUndine(WorldState ws, Actor primary) : base(ws, primary)
+    {
+        aether = Enemies((uint)OID.AqueousAether);
+    }
+    private readonly List<Actor> aether;
     private static readonly uint[] bonusAdds = [(uint)OID.SecretEgg, (uint)OID.SecretGarlic, (uint)OID.SecretOnion, (uint)OID.SecretTomato,
     (uint)OID.SecretQueen, (uint)OID.KeeperOfKeys];
-    public static readonly uint[] All = [(uint)OID.Boss, (uint)OID.AqueousAether, .. bonusAdds];
+    public static readonly uint[] All = [(uint)OID.SecretUndine, (uint)OID.AqueousAether, .. bonusAdds];
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         Arena.Actor(PrimaryActor);
-        Arena.Actors(Enemies((uint)OID.AqueousAether));
+        Arena.Actors(aether);
         Arena.Actors(this, bonusAdds, Colors.Vulnerable);
     }
 

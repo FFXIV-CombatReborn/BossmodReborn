@@ -3,17 +3,41 @@ namespace BossMod.Components;
 [SkipLocalsInit]
 public class GenericTowers(BossModule module, uint aid = default, bool prioritizeInsufficient = false, AIHints.PredictedDamageType damageType = AIHints.PredictedDamageType.Raidwide) : CastCounter(module, aid)
 {
-    public struct Tower(WPos position, AOEShape shape, int minSoakers = 1, int maxSoakers = 1, BitMask forbiddenSoakers = default, DateTime activation = default, Angle rotation = default, ulong actorID = default)
+    public struct Tower
     {
-        public Tower(WPos position, float radius, int minSoakers = 1, int maxSoakers = 1, BitMask forbiddenSoakers = default, DateTime activation = default, ulong actorID = default) : this(position, new AOEShapeCircle(radius), minSoakers, maxSoakers, forbiddenSoakers, activation, default, actorID) { }
-        public WPos Position = position;
-        public Angle Rotation = rotation;
-        public AOEShape Shape = shape;
-        public int MinSoakers = minSoakers;
-        public int MaxSoakers = maxSoakers;
-        public BitMask ForbiddenSoakers = forbiddenSoakers;
-        public DateTime Activation = activation;
-        public ulong ActorID = actorID;
+        public Tower(WPos position, float radius, int minSoakers = 1, int maxSoakers = 1, BitMask forbiddenSoakers = default, DateTime activation = default, ulong actorID = default,
+        ShapeDistance? shapeDistance = null, ShapeDistance? invertedShapeDistance = null)
+        {
+            var shape = new AOEShapeCircle(radius);
+            this = new(position, shape, minSoakers, maxSoakers, forbiddenSoakers, activation, default, actorID,
+                shapeDistance ?? shape.Distance(position, default), invertedShapeDistance ?? shape.InvertedDistance(position, default));
+        }
+
+        public Tower(WPos position, AOEShape shape, int minSoakers = 1, int maxSoakers = 1, BitMask forbiddenSoakers = default, DateTime activation = default, Angle rotation = default,
+            ulong actorID = default, ShapeDistance? shapeDistance = null, ShapeDistance? invertedShapeDistance = null)
+        {
+            Position = position;
+            Rotation = rotation;
+            Shape = shape;
+            MinSoakers = minSoakers;
+            MaxSoakers = maxSoakers;
+            ForbiddenSoakers = forbiddenSoakers;
+            Activation = activation;
+            ActorID = actorID;
+            ShapeDistance = shapeDistance;
+            InvertedShapeDistance = invertedShapeDistance;
+        }
+
+        public WPos Position;
+        public Angle Rotation;
+        public AOEShape Shape;
+        public int MinSoakers;
+        public int MaxSoakers;
+        public BitMask ForbiddenSoakers;
+        public DateTime Activation;
+        public ulong ActorID;
+        public ShapeDistance? ShapeDistance;
+        public ShapeDistance? InvertedShapeDistance;
 
         public readonly bool IsInside(WPos pos) => Shape.Check(pos, Position, Rotation);
         public readonly bool IsInside(Actor actor) => IsInside(actor.Position);
@@ -27,12 +51,11 @@ public class GenericTowers(BossModule module, uint aid = default, bool prioritiz
             {
                 ref var indexActor = ref party[i];
                 if (!ForbiddenSoakers[indexActor.Item1] && Shape.Check(indexActor.Item2.Position, Position, Rotation))
-                {
                     ++count;
-                }
             }
             return count;
         }
+
         public readonly bool CorrectAmountInside(BossModule module) => NumInside(module) is var count && count >= MinSoakers && count <= MaxSoakers;
         public readonly bool InsufficientAmountInside(BossModule module) => NumInside(module) is var count && count < MaxSoakers;
     }
@@ -205,7 +228,8 @@ public class GenericTowers(BossModule module, uint aid = default, bool prioritiz
             }
             if (mostRelevantTower is Tower tow)
             {
-                forbiddenInverted.Add(tow.Shape.InvertedDistance(tow.Position, tow.Rotation));
+                ref var to = ref tow;
+                forbiddenInverted.Add(to.InvertedShapeDistance ?? to.Shape.InvertedDistance(to.Position, to.Rotation));
             }
         }
         var inTower = false;
@@ -244,11 +268,11 @@ public class GenericTowers(BossModule module, uint aid = default, bool prioritiz
                 var forbiddenSlot = t.ForbiddenSoakers[slot];
                 if (!forbiddenSlot && (numInside < max || isInside && correctAmount))
                 {
-                    forbiddenInverted.Add(t.Shape.InvertedDistance(t.Position, t.Rotation));
+                    forbiddenInverted.Add(t.InvertedShapeDistance ?? t.Shape.InvertedDistance(t.Position, t.Rotation));
                 }
                 else if (forbiddenSlot || numInside > max || !isInside && correctAmount)
                 {
-                    forbidden.Add(t.Shape.Distance(t.Position, t.Rotation));
+                    forbidden.Add(t.ShapeDistance ?? t.Shape.Distance(t.Position, t.Rotation));
                 }
             }
         }

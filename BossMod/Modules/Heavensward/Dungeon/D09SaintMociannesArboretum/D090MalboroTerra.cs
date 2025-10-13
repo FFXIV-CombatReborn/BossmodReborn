@@ -20,23 +20,38 @@ public enum AID : uint
     Spiritus = 5355 // Korpokkur->self, 3.0s cast, range 5+R 60-degree cone
 }
 
-class WallRemoval(BossModule module) : BossComponent(module)
+sealed class WallRemoval(BossModule module) : BossComponent(module)
 {
+    public bool Complete;
+
+    public override void OnLegacyMapEffect(byte seq, byte param, byte[] data)
+    {
+        if (seq == 0x01 && param == 0x00 && data[0] == 0x01) // could use the 2nd wall controller instead, but I assume this is safer since it doesn't rely on object table
+        {
+            Complete = true;
+        }
+    }
+
     public override void OnActorEAnim(Actor actor, uint state)
     {
-        if (state == 0x00040008 && actor.OID == (uint)OID.WallController)
+        if (state == 0x00040008u && actor.OID == (uint)OID.WallController)
         {
             SetArena(D090MalboroTerra.Arena1B);
         }
     }
 
-    public override void Update()
+    public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
-        var pZ = Module.Raid.Player()!.PosRot.Z;
-        if (Arena.Bounds == D090MalboroTerra.Arena1B && pZ < 16f)
+        var pZ = pc.PosRot.Z;
+        var bounds = Arena.Bounds;
+        if (bounds == D090MalboroTerra.Arena1B && pZ < 16f)
+        {
             SetArena(D090MalboroTerra.Arena2);
-        else if (Arena.Bounds == D090MalboroTerra.Arena2 && pZ > 16f)
+        }
+        else if (bounds == D090MalboroTerra.Arena2 && pZ > 16f)
+        {
             SetArena(D090MalboroTerra.Arena1B);
+        }
     }
 
     private void SetArena(ArenaBoundsCustom bounds)
@@ -46,18 +61,24 @@ class WallRemoval(BossModule module) : BossComponent(module)
     }
 }
 
-class OffalBreath(BossModule module) : Components.SimpleAOEs(module, (uint)AID.OffalBreath, 6f);
-class Spiritus(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spiritus, new AOEShapeCone(6f, 30f.Degrees()));
+sealed class OffalBreath(BossModule module) : Components.SimpleAOEs(module, (uint)AID.OffalBreath, 6f);
+sealed class Spiritus(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spiritus, new AOEShapeCone(6f, 30f.Degrees()));
 
-class D090MalboroTerraStates : StateMachineBuilder
+sealed class D090MalboroTerraStates : StateMachineBuilder
 {
+    private WallRemoval? walls;
+
     public D090MalboroTerraStates(BossModule module) : base(module)
     {
         TrivialPhase()
             .ActivateOnEnter<WallRemoval>()
             .ActivateOnEnter<OffalBreath>()
             .ActivateOnEnter<Spiritus>()
-            .Raw.Update = () => AllDeadOrDestroyed(D090MalboroTerra.Trash);
+            .Raw.Update = () =>
+            {
+                walls ??= module.FindComponent<WallRemoval>();
+                return walls!.Complete || module.WorldState.CurrentCFCID != 41u;
+            };
     }
 }
 
@@ -177,6 +198,8 @@ public class D090MalboroTerra(WorldState ws, Actor primary) : BossModule(ws, pri
     {
         var count = hints.PotentialTargets.Count;
         for (var i = 0; i < count; ++i)
+        {
             hints.PotentialTargets[i].Priority = 0;
+        }
     }
 }

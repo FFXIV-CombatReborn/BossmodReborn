@@ -7,7 +7,9 @@ public static class PolygonUtil
     {
         var count = contour.Length;
         if (count == 0)
+        {
             return [];
+        }
 
         var result = new (WDir, WDir)[count];
         var prev = contour[count - 1];

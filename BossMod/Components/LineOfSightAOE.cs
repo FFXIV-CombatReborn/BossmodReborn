@@ -101,7 +101,9 @@ public abstract class GenericLineOfSightAOE(BossModule module, uint aid, float m
             }
             if (unionShapes.Count != 0)
             {
-                Safezones.Add(new(new AOEShapeCustom([.. unionShapes], [.. differenceShapes], invertForbiddenZone: true), Arena.Center, default, activation, Colors.SafeFromAOE));
+                var shape = new AOEShapeCustom([.. unionShapes], [.. differenceShapes], invertForbiddenZone: true);
+                var origin = Arena.Center;
+                Safezones.Add(new(shape, origin, default, activation, Colors.SafeFromAOE, shapeDistance: shape.Distance(origin, default)));
             }
         }
     }
@@ -172,7 +174,7 @@ public abstract class CastLineOfSightAOE : GenericLineOfSightAOE
         }
     }
 
-    public void Refresh()
+    protected void Refresh()
     {
         var caster = ActiveCaster;
         WPos? position = caster != null ? caster.CastInfo!.LocXZ : null;
@@ -237,9 +239,9 @@ public abstract class CastLineOfSightAOEComplex(BossModule module, uint aid, Rel
         {
             var center = Arena.Center;
             var pos = caster.Position; // these LoS casts seem to typically use caster.Position instead of spell.LocXz
-            AOEs.Add(new(new AOEShapeCustom([new PolygonCustomRel(BlockerShape.Visibility(pos - center))],
-            MaxRange != default ? [new DonutV(pos, MaxRange, 1000f, 64)] : null),
-            center, default, Module.CastFinishAt(spell), actorID: caster.InstanceID));
+            var shape = new AOEShapeCustom([new PolygonCustomRel(BlockerShape.Visibility(pos - center))],
+            MaxRange != default ? [new DonutV(pos, MaxRange, 1000f, 64)] : null);
+            AOEs.Add(new(shape, center, default, Module.CastFinishAt(spell), actorID: caster.InstanceID, shapeDistance: shape.Distance(center, default)));
         }
     }
 

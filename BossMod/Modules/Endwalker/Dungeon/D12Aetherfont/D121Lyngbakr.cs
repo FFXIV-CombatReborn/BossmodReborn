@@ -41,7 +41,7 @@ sealed class ExplosiveResonantFrequency(BossModule module) : Components.GenericA
         var index = 0;
         while (index < count)
         {
-            ref readonly var aoe = ref aoes[index];
+            ref var aoe = ref aoes[index];
             if (aoe.Activation >= deadline)
             {
                 break;

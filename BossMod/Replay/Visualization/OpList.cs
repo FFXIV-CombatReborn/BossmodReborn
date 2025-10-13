@@ -148,11 +148,11 @@ sealed class OpList(Replay replay, Replay.Encounter? enc, BossModuleRegistry.Inf
             ClientState.OpActionRequest => false,
             ClientState.OpHateChange => false,
             ClientState.OpActionReject => false,
+            ClientState.OpProcTimersChange => false,
             ClientState.OpAnimationLockChange => false,
             ClientState.OpComboChange => false,
             ClientState.OpCooldown => false,
             ClientState.OpForcedMovementDirectionChange => false,
-            ClientState.OpProcTimersChange => false,
             WorldState.OpRSVData => false,
             ClientState.OpMoveSpeedChange => ShowCLMVEvents,
             NetworkState.OpServerIPC => false,
@@ -192,6 +192,7 @@ sealed class OpList(Replay replay, Replay.Encounter? enc, BossModuleRegistry.Inf
             ActorState.OpCastEvent op => $"Cast event: {ActorString(op.InstanceID, op.Timestamp)}: {op.Value.Action} ({ModuleInfo?.ActionIDType?.GetEnumName(op.Value.Action.ID)}) @ {CastEventTargetString(op.Value, op.Timestamp)} ({op.Value.Targets.Count} targets affected) #{op.Value.GlobalSequence}",
             ActorState.OpStatus op => $"Status change: {ActorString(op.InstanceID, op.Timestamp)} #{op.Index}: {StatusesString(op.InstanceID, op.Index, op.Timestamp)}",
             ActorState.OpIcon op => $"Icon: {ActorString(op.InstanceID, op.Timestamp)} -> {ActorString(op.TargetID, op.Timestamp)}: {op.IconID} ({ModuleInfo?.IconIDType?.GetEnumName(op.IconID)})",
+            ActorState.OpVFX op => $"VFX: {ActorString(op.InstanceID, op.Timestamp)} -> {ActorString(op.TargetID, op.Timestamp)}: {op.VfxID}",
             ActorState.OpEventObjectStateChange op => $"EObjState: {ActorString(op.InstanceID, op.Timestamp)} = {op.State:X4}",
             ActorState.OpEventObjectAnimation op => $"EObjAnim: {ActorString(op.InstanceID, op.Timestamp)} = {((uint)op.Param1 << 16) | op.Param2:X8}",
             ActorState.OpPlayActionTimelineEvent op => $"Play action timeline: {ActorString(op.InstanceID, op.Timestamp)} = {op.ActionTimelineID:X4}",
@@ -199,9 +200,35 @@ sealed class OpList(Replay replay, Replay.Encounter? enc, BossModuleRegistry.Inf
             ActorState.OpRenderflags op => $"Renderflag: {ActorString(op.InstanceID, op.Timestamp)} -> {op.Value}",
             ActorState.OpModelState op => $"Model state: {ActorString(op.InstanceID, op.Timestamp)} -> {op.Value}",
             ClientState.OpDutyActionsChange op => $"Player duty actions change: {string.Join(", ", op.Slots)}",
-            ClientState.OpBozjaHolsterChange op => $"Player bozja holster change: {string.Join(", ", op.Contents.Select(e => $"{e.count}x {e.entry}"))}",
+            ClientState.OpBozjaHolsterChange op => $"Player bozja holster change: {GetOpBozjaHolsterChangeString(op.Contents)}",
+            WorldState.OpMapEffect op => $"MapEffect: {op.Index:X2} {op.State:X8}",
+            WorldState.OpLegacyMapEffect op => $"MapEffect (legacy): seq={op.Sequence} param={op.Param} data={GetOpLegacyMapEffectString(op.Data)}",
+            WorldState.OpSystemLogMessage op => $"LogMessage {op.MessageID}: \"{Service.LuminaRow<Lumina.Excel.Sheets.LogMessage>(op.MessageID)?.Text}\"",
             _ => DumpOp(o)
         };
+    }
+
+    private static string GetOpBozjaHolsterChangeString(List<(BozjaHolsterID entry, byte count)> contents)
+    {
+        var count = contents.Count;
+        var str = new string[count];
+        for (var i = 0; i < count; ++i)
+        {
+            var c = contents[i];
+            str[i] = $"{c.count}x {c.entry}";
+        }
+        return string.Join(", ", str);
+    }
+
+    private static string GetOpLegacyMapEffectString(byte[] data)
+    {
+        var len = data.Length;
+        var str = new string[len];
+        for (var i = 0; i < len; ++i)
+        {
+            str[i] = data[i].ToString("X2");
+        }
+        return string.Join(" ", str);
     }
 
     private Action<UITree>? OpChildren(WorldState.Operation o)
@@ -307,7 +334,7 @@ sealed class OpList(Replay replay, Replay.Encounter? enc, BossModuleRegistry.Inf
     private string ActorString(ulong instanceID, DateTime timestamp)
     {
         var p = replay.FindParticipant(instanceID, timestamp);
-        return p != null || instanceID == 0 ? ActorString(p, timestamp) : $"<unknown> {instanceID:X}";
+        return p != null || instanceID == default ? ActorString(p, timestamp) : $"<unknown> {instanceID:X}";
     }
 
     private string CastEventTargetString(ActorCastEvent ev, DateTime timestamp) => $"{ActorString(ev.MainTargetID, timestamp)} / {Utils.Vec3String(ev.TargetPos)} / {ev.Rotation}";

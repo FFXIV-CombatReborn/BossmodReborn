@@ -37,7 +37,7 @@ class P4ViscousAetheroplasmResolve(BossModule module) : Components.UniformStackS
     }
 }
 
-class P5ViscousAetheroplasmTriple(BossModule module) : Components.UniformStackSpread(module, 4f, default, 8)
+class P5ViscousAetheroplasmTriple(BossModule module) : Components.UniformStackSpread(module, 4f, default, 8, 8)
 {
     public int NumCasts;
     private readonly List<(Actor target, DateTime resolve)> _aetheroplasms = [];

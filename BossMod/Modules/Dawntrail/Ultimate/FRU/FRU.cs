@@ -1,5 +1,7 @@
 ﻿namespace BossMod.Dawntrail.Ultimate.FRU;
 
+sealed class UsurperHP(BossModule module) : Components.HPThreshold(module, (uint)OID.BossP2, 0.2f);
+sealed class OracleHP(BossModule module) : Components.HPThreshold(module, (uint)OID.BossP3, 0.2f);
 sealed class P2QuadrupleSlap(BossModule module) : Components.TankSwap(module, (uint)AID.QuadrupleSlapFirst, (uint)AID.QuadrupleSlapFirst, (uint)AID.QuadrupleSlapSecond, default, 4.1d);
 sealed class P3Junction(BossModule module) : Components.CastCounter(module, (uint)AID.Junction);
 sealed class P3BlackHalo(BossModule module) : Components.CastSharedTankbuster(module, (uint)AID.BlackHalo, new AOEShapeCone(60f, 45f.Degrees())); // TODO: verify angle

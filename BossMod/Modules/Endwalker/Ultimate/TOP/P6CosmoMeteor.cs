@@ -22,7 +22,7 @@ sealed class P6CosmoMeteorSpread : Components.UniformStackSpread
     }
 }
 
-sealed class P6CosmoMeteorFlares(BossModule module) : Components.UniformStackSpread(module, 6f, 20f, 5, alwaysShowSpreads: true) // TODO: verify flare falloff
+sealed class P6CosmoMeteorFlares(BossModule module) : Components.UniformStackSpread(module, 6f, 20f, 5) // TODO: verify flare falloff
 {
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {

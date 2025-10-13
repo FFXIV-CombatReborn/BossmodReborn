@@ -63,7 +63,7 @@ class NecroticFluidMist(BossModule module) : Components.Exaflare(module, 6f)
     public enum Pattern { None, Southward, Northward }
     public Pattern CurrentWind = Pattern.None;
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x2B)
         {

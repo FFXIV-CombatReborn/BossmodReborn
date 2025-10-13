@@ -125,7 +125,7 @@ sealed class P2DiamondDustHouseOfLight(BossModule module) : Components.GenericBa
                 hints.Add("Bait cone away from raid!");
         }
 
-        if (ActiveBaitsNotOn(actor).Any(b => IsClippedBy(actor, b)))
+        if (ActiveBaitsNotOn(actor).Any(b => IsClippedBy(actor, ref b)))
             hints.Add("GTFO from baited cone!");
     }
 
@@ -469,7 +469,7 @@ sealed class P2TwinStillnessSilence(BossModule module) : Components.GenericAOEs(
 
             // now find closest allowed zone
             var actorDir = Angle.FromDirection(actor.Position - Arena.Center);
-            var closest = zoneList.Allowed(5.Degrees()).MinBy(z => actorDir.DistanceToRange(z.min, z.max).Abs().Rad);
+            var closest = zoneList.Allowed(5f.Degrees()).MinBy(z => actorDir.DistanceToRange(z.min, z.max).Abs().Rad);
             if (closest != default)
             {
                 var desiredDir = (closest.min + closest.max) * 0.5f;
@@ -519,7 +519,7 @@ sealed class P2TwinStillnessSilence(BossModule module) : Components.GenericAOEs(
             {
                 // if we're behind boss, slide over to the safe point as opposite to the boss as possible
                 var farthestDir = Angle.FromDirection(-sourceOffset);
-                var bestRange = zoneList.Allowed(5.Degrees()).MinBy(r => farthestDir.DistanceToRange(r.min, r.max).Abs().Rad);
+                var bestRange = zoneList.Allowed(5f.Degrees()).MinBy(r => farthestDir.DistanceToRange(r.min, r.max).Abs().Rad);
                 var dir = farthestDir.ClosestInRange(bestRange.min, bestRange.max);
                 hints.AddForbiddenZone(new SDInvertedCircle(actor.Position + SlideDistance * dir.ToDirection(), 1f), DateTime.MaxValue);
             }
@@ -534,7 +534,7 @@ sealed class P2TwinStillnessSilence(BossModule module) : Components.GenericAOEs(
                 {
                     hints.AddForbiddenZone(new SDInvertedCircle(_slideBackPos[slot], 1f), DateTime.MaxValue);
                 }
-                else if (zoneList.Allowed(1.Degrees()).MaxBy(r => (r.max - r.min).Rad) is var best && best.max.Rad > best.min.Rad)
+                else if (zoneList.Allowed(1f.Degrees()).MaxBy(r => (r.max - r.min).Rad) is var best && best.max.Rad > best.min.Rad)
                 {
                     var dir = 0.5f * (best.min + best.max);
                     hints.AddForbiddenZone(new SDInvertedCircle(actor.Position + SlideDistance * dir.ToDirection(), 1f), DateTime.MaxValue);

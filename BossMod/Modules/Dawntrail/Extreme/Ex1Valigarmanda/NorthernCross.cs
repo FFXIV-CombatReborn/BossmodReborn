@@ -12,7 +12,7 @@ sealed class NorthernCross(BossModule module) : Components.GenericAOEs(module)
         return _aoe?.AOEs.Count == 0 ? AOE : [];
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index != 0x03)
             return;

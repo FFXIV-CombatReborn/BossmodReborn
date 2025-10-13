@@ -82,7 +82,7 @@ public sealed class ArcList(WPos center, float radius)
     {
         if (Forbidden.Segments.Count == 0)
         {
-            yield return (-180.Degrees(), 180.Degrees());
+            yield return (-180f.Degrees(), 180f.Degrees());
             yield break;
         }
 
@@ -98,11 +98,11 @@ public sealed class ArcList(WPos center, float radius)
     public (Angle min, Angle max) NextAllowed(Angle dir, bool ccw)
     {
         if (Forbidden.Count == 0)
-            return (dir - 180.Degrees(), dir + 180.Degrees()); // everything is allowed
+            return (dir - 180f.Degrees(), dir + 180f.Degrees()); // everything is allowed
 
         (Angle, Angle) boundsBefore(int index)
         {
-            var min = index == 0 ? Forbidden.Segments[^1].Max.Radians() - 2 * MathF.PI.Radians() : Forbidden.Segments[index - 1].Max.Radians();
+            var min = index == 0 ? Forbidden.Segments[^1].Max.Radians() - Angle.DoublePI.Radians() : Forbidden.Segments[index - 1].Max.Radians();
             var max = index >= Forbidden.Segments.Count ? Forbidden.Segments[0].Min.Radians() + 2 * MathF.PI.Radians() : Forbidden.Segments[index].Min.Radians();
             return (min, max);
         }
@@ -130,10 +130,10 @@ public sealed class ArcList(WPos center, float radius)
     {
         var oo = origin - Center;
         // op = oo + dir * t, op^2 = R^2 => dir^2 * t^2 + 2 oo*dir t + oo^2 - R^2 = 0; dir^2 == 1
-        var b = 2 * oo.Dot(dir);
+        var b = 2f * oo.Dot(dir);
         var c = oo.LengthSq() - Radius * Radius;
         var d = b * b - 4 * c;
-        d = d > 0 ? MathF.Sqrt(d) : 0;
+        d = d > 0f ? MathF.Sqrt(d) : 0f;
         var t1 = (-b - d) * 0.5f;
         var t2 = (-b + d) * 0.5f;
         var op1 = oo + dir * t1;
@@ -145,18 +145,18 @@ public sealed class ArcList(WPos center, float radius)
     {
         if (Forbidden.Segments.Count == 0)
         {
-            yield return (-180.Degrees(), 180.Degrees());
+            yield return (-180f.Degrees(), 180f.Degrees());
             yield break;
         }
 
         var last = Forbidden.Segments[^1];
         if (Forbidden.Segments[0].Min > -MathF.PI)
-            yield return (last.Max.Radians() - 360.Degrees(), Forbidden.Segments[0].Min.Radians());
+            yield return (last.Max.Radians() - 360f.Degrees(), Forbidden.Segments[0].Min.Radians());
 
         for (var i = 1; i < Forbidden.Segments.Count; ++i)
             yield return (Forbidden.Segments[i - 1].Max.Radians(), Forbidden.Segments[i].Min.Radians());
 
         if (last.Max < MathF.PI)
-            yield return (last.Max.Radians(), Forbidden.Segments[0].Min.Radians() + 360.Degrees());
+            yield return (last.Max.Radians(), Forbidden.Segments[0].Min.Radians() + 360f.Degrees());
     }
 }

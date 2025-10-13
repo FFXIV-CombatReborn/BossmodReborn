@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Endwalker.VariantCriterion.C01ASS.C012Gladiator;
 
-sealed class CurseOfTheFallen(BossModule module) : Components.UniformStackSpread(module, 5f, 6f, 3, 3, true)
+sealed class CurseOfTheFallen(BossModule module) : Components.UniformStackSpread(module, 5f, 6f, 3, 3)
 {
     private readonly List<Actor> _fallen = [];
     private Actor? _thunderous;

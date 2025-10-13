@@ -25,7 +25,7 @@ sealed class DonutSectorTowers(BossModule module) : Components.GenericTowers(mod
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         // tower indices:
         // outer ring:

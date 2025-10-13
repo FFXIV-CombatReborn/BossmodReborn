@@ -87,8 +87,10 @@ sealed class Bombardment(BossModule module) : Components.GenericAOEs(module)
                     break;
                 }
             }
-            AOEs.Add(new(big ? circleBig : circleSmall, (big ? pos + 3.5f * actor.Rotation.Round(1f).ToDirection() : pos).Quantized(), default,
-            AOEs.Count == 0 ? WorldState.FutureTime(9.8d) : AOEs.Ref(0).Activation, actorID: big ? 1ul : default));
+            var shape = big ? circleBig : circleSmall;
+            var loc = (big ? pos + 3.5f * actor.Rotation.Round(1f).ToDirection() : pos).Quantized();
+            AOEs.Add(new(shape, loc, default,
+            AOEs.Count == 0 ? WorldState.FutureTime(9.8d) : AOEs.Ref(0).Activation, actorID: big ? 1ul : default, shapeDistance: shape.Distance(loc, default)));
         }
     }
 
@@ -145,7 +147,7 @@ sealed class ImpressionKB(BossModule module) : Components.SimpleKnockbacks(modul
                 circles[i] = (aoe.Origin, aoe.ActorID == default ? 4f : 15f);
             }
             // square intentionally slightly smaller to prevent sus knockback
-            hints.AddForbiddenZone(new SDKnockbackInAABBSquareAwayFromOriginPlusAOECirclesMixedRadiiPlusAvoidShape(Arena.Center, c.Origin, 11f, 18f, circles, len, innerCircle), act);
+            hints.AddForbiddenZone(new SDKnockbackInAABBSquareAwayFromOriginPlusAOECirclesMixedRadiiPlusAvoidShape(Arena.Center, c.Origin, 11f, 19f, circles, len, innerCircle), act);
         }
         else
         {

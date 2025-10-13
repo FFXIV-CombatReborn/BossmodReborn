@@ -77,7 +77,7 @@ public readonly struct Angle(float rad)
         return midDist.Rad > width.Rad ? min : midDist.Rad < -width.Rad ? max : this;
     }
 
-    public override readonly string ToString() => Deg.ToString("f3");
+    public override readonly string ToString() => Deg.ToString("f3", System.Globalization.CultureInfo.InvariantCulture);
     public readonly bool Equals(Angle other) => Rad == other.Rad;
     public override readonly bool Equals(object? obj) => obj is Angle other && Equals(other);
     public override readonly int GetHashCode() => Rad.GetHashCode();

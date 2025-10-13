@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Dawntrail.Savage.M02SHoneyBLovely;
 
-sealed class DropSplashOfVenom(BossModule module) : Components.UniformStackSpread(module, 6f, 6f, 2, 2, alwaysShowSpreads: true)
+sealed class DropSplashOfVenom(BossModule module) : Components.UniformStackSpread(module, 6f, 6f, 2, 2)
 {
     public enum Mechanic { None, Pairs, Spread }
 

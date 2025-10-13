@@ -31,7 +31,7 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x01)
         {
@@ -107,7 +107,9 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
             for (var i = 0; i < 5; ++i)
             {
                 if (activePlatforms[i])
+                {
                     Arena.TextWorld(numberPositions[i], $"{i + 1}", _config.PlatformNumberColors[i].ABGR, _config.PlatformNumberFontSize);
+                }
             }
         }
     }
@@ -134,10 +136,13 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
-class Teleporters(BossModule module) : BossComponent(module)
+sealed class Teleporters(BossModule module) : BossComponent(module)
 {
     private readonly List<WPos> activeTeleporters = new(10);
     private static readonly WPos[] teleporters = CalculateTeleporterPositions();
+    private readonly List<Pathfinding.Teleporter> activeTeleporterPairs = new(5);
+    private BitMask teleportingBlocked;
+    private BitMask activeTeleportersMask;
 
     private static WPos[] CalculateTeleporterPositions()
     {
@@ -147,30 +152,69 @@ class Teleporters(BossModule module) : BossComponent(module)
         {
             var zero = i == 0;
             var angle = ArenaChanges.PlatformAngles[i].Deg;
-            positions[index++] = ArenaChanges.EndArenaPlatforms[i].Center + 6f * (zero ? -120 : 120f + angle).Degrees().ToDirection();
-            positions[zero ? 9 : index++] = ArenaChanges.EndArenaPlatforms[i].Center + 6f * (zero ? 120 : -120f + angle).Degrees().ToDirection();
+            positions[index++] = ArenaChanges.EndArenaPlatforms[i].Center + 6f * (zero ? -120f : 120f + angle).Degrees().ToDirection();
+            positions[zero ? 9 : index++] = ArenaChanges.EndArenaPlatforms[i].Center + 6f * (zero ? 120f : -120f + angle).Degrees().ToDirection();
         }
         return [.. positions];
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnStatusGain(Actor actor, ActorStatus status)
+    {
+        if (status.ID == (uint)SID.ImmobileSuit)
+        {
+            teleportingBlocked.Set(Raid.FindSlot(actor.InstanceID));
+        }
+    }
+
+    public override void OnStatusLose(Actor actor, ActorStatus status)
+    {
+        if (status.ID == (uint)SID.ImmobileSuit)
+        {
+            teleportingBlocked.Clear(Raid.FindSlot(actor.InstanceID));
+        }
+    }
+
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index is >= 0x02 and <= 0x0B)
         {
-            if (state is 0x00020001u or 0x00200010u)
+            var idx = index - 0x02;
+            switch (state)
             {
-                var count = activeTeleporters.Count;
-                ref readonly var teleporter = ref teleporters[index - 0x02];
-                for (var i = 0; i < count; ++i)
-                {
-                    if (activeTeleporters[i] == teleporter) // prevent duplicates
-                        return;
-                }
-                activeTeleporters.Add(teleporter);
-            }
-            else if (state == 0x00080004u)
-            {
-                activeTeleporters.Remove(teleporters[index - 0x02]);
+                case 0x00020001u:
+                case 0x00200010u:
+                    if (!activeTeleportersMask[idx])
+                    {
+                        activeTeleportersMask.Set(idx);
+                        activeTeleporters.Add(teleporters[idx]);
+
+                        if ((idx & 1) == 1)
+                        {
+                            --idx;
+                        }
+                        if (activeTeleportersMask[idx])
+                        {
+                            activeTeleporterPairs.Add(new(teleporters[idx], teleporters[idx + 1], 1f, true));
+                        }
+                    }
+                    break;
+                case 0x00080004u:
+                    activeTeleportersMask.Clear(idx);
+                    var tele = teleporters[idx];
+                    activeTeleporters.Remove(tele);
+                    var count = activeTeleporterPairs.Count;
+                    var teles = CollectionsMarshal.AsSpan(activeTeleporterPairs);
+
+                    for (var i = 0; i < count; ++i)
+                    {
+                        ref var t = ref teles[i];
+                        if (t.Entrance == tele || t.Exit == tele)
+                        {
+                            activeTeleporterPairs.RemoveAt(i);
+                            return;
+                        }
+                    }
+                    break;
             }
         }
     }
@@ -181,6 +225,26 @@ class Teleporters(BossModule module) : BossComponent(module)
         for (var i = 0; i < count; ++i)
         {
             Arena.AddCircle(activeTeleporters[i], 1f, Colors.Object, 2f);
+        }
+    }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        hints.Teleporters.AddRange(activeTeleporterPairs);
+        if (teleportingBlocked[slot])
+        {
+            var count = activeTeleporters.Count;
+            var pos = actor.Position;
+            // block teleporter after arriving to avoid immediately teleporting back, pathfinding algorithm will handle acciddently reenters after leaving it
+            for (var i = 0; i < count; ++i)
+            {
+                var t = activeTeleporters[i];
+                if (pos.InCircle(t, 1.5f)) // make radius slightly bigger for safety
+                {
+                    hints.AddForbiddenZone(new SDCircle(t, 1.5f));
+                    return;
+                }
+            }
         }
     }
 }

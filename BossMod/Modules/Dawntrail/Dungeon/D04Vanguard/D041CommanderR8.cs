@@ -42,7 +42,6 @@ public enum AID : uint
 
 sealed class ElectrowaveArenaChange(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeCustom square = new([new Square(D041CommanderR8.ArenaCenter, 20f)], [new Square(D041CommanderR8.ArenaCenter, 17f)]);
     private AOEInstance[] _aoe = [];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
@@ -51,11 +50,11 @@ sealed class ElectrowaveArenaChange(BossModule module) : Components.GenericAOEs(
     {
         if (spell.Action.ID == (uint)AID.Electrowave && Arena.Bounds.Radius > 19f)
         {
-            _aoe = [new(square, Arena.Center, default, Module.CastFinishAt(spell, 0.4d))];
+            _aoe = [new(new AOEShapeCustom([new Square(D041CommanderR8.ArenaCenter, 20f)], [new Square(D041CommanderR8.ArenaCenter, 17f)]), Arena.Center, default, Module.CastFinishAt(spell, 0.4d))];
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x0A && state == 0x00020001u)
         {
@@ -68,7 +67,7 @@ sealed class ElectrowaveArenaChange(BossModule module) : Components.GenericAOEs(
 sealed class EnhancedMobility(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = new(2);
-    private static readonly AOEShapeRect[] rects = [new(14f, 3f), new(10f, 7f), new(20f, 7f)];
+    private readonly AOEShapeRect[] rects = [new(14f, 3f), new(10f, 7f), new(20f, 7f)];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
 
@@ -123,9 +122,9 @@ sealed class RapidRotary(BossModule module) : Components.GenericAOEs(module)
     private static readonly Angle a60 = 60f.Degrees();
     private static readonly Angle a120 = 120f.Degrees();
     private readonly List<AOEInstance> _aoes = new(6);
-    private static readonly AOEShapeDonutSector donutSectorSmall = new(11f, 17f, a60);
-    private static readonly AOEShapeDonutSector donutSectorBig = new(17f, 28f, a60);
-    private static readonly AOEShapeCone cone = new(14f, a60);
+    private readonly AOEShapeDonutSector donutSectorSmall = new(11f, 17f, a60);
+    private readonly AOEShapeDonutSector donutSectorBig = new(17f, 28f, a60);
+    private readonly AOEShapeCone cone = new(14f, a60);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
@@ -140,8 +139,7 @@ sealed class RapidRotary(BossModule module) : Components.GenericAOEs(module)
             var color = Colors.Danger;
             for (var i = 0; i < 2; ++i)
             {
-                ref var aoe = ref aoes[i];
-                aoe.Color = color;
+                aoes[i].Color = color;
             }
         }
         return aoes;

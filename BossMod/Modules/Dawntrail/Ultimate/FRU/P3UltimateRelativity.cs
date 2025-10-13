@@ -286,7 +286,7 @@ sealed class P3UltimateRelativity(BossModule module) : Components.CastCounter(mo
     }
 }
 
-sealed class P3UltimateRelativityDarkFireUnholyDarkness(BossModule module) : Components.UniformStackSpread(module, 6f, 8f, 5, alwaysShowSpreads: true)
+sealed class P3UltimateRelativityDarkFireUnholyDarkness(BossModule module) : Components.UniformStackSpread(module, 6f, 8f, 5)
 {
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) { } // handled by main component
 
@@ -342,7 +342,7 @@ sealed class P3UltimateRelativitySinboundMeltdownBait(BossModule module) : Compo
             hints.Add(shouldBait ? "Bait laser!" : "GTFO from hourglass!");
         }
 
-        if (ActiveBaitsNotOn(actor).Any(b => IsClippedBy(actor, b)))
+        if (ActiveBaitsNotOn(actor).Any(b => IsClippedBy(actor, ref b)))
             hints.Add("GTFO from baited aoe!");
     }
 

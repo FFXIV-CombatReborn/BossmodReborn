@@ -116,7 +116,8 @@ public abstract class BossModule : IDisposable
                 {
                     comp.OnActorDeath(actor);
                 }
-                comp.OnActorRenderflagsChanged(actor, actor.Renderflags);
+                comp.OnActorRenderflagsChange(actor, actor.Renderflags);
+                comp.OnActorEventStateChange(actor, actor.EventState);
             }
             ref var tether = ref actor.Tether;
             if (tether.ID != default)
@@ -172,21 +173,24 @@ public abstract class BossModule : IDisposable
             WorldState.Actors.Removed.Subscribe(OnActorDestroyed),
             WorldState.Actors.CastStarted.Subscribe(OnActorCastStarted),
             WorldState.Actors.CastFinished.Subscribe(OnActorCastFinished),
-            WorldState.Actors.IsTargetableChanged.Subscribe(OnIsTargetableChanged),
+            WorldState.Actors.IsTargetableChanged.Subscribe(OnIsTargetableChange),
             WorldState.Actors.IsDeadChanged.Subscribe(OnActorIsDead),
-            WorldState.Actors.RenderflagsChanged.Subscribe(OnActorRenderflagsChanged),
+            WorldState.Actors.RenderflagsChanged.Subscribe(OnActorRenderflagsChange),
+            WorldState.Actors.EventStateChanged.Subscribe(OnActorEventStateChange),
             WorldState.Actors.Tethered.Subscribe(OnActorTethered),
             WorldState.Actors.Untethered.Subscribe(OnActorUntethered),
             WorldState.Actors.StatusGain.Subscribe(OnActorStatusGain),
             WorldState.Actors.StatusLose.Subscribe(OnActorStatusLose),
             WorldState.Actors.IconAppeared.Subscribe(OnActorIcon),
+            WorldState.Actors.VFXAppeared.Subscribe(OnActorVFX),
             WorldState.Actors.CastEvent.Subscribe(OnActorCastEvent),
             WorldState.Actors.EventObjectStateChange.Subscribe(OnActorEState),
             WorldState.Actors.EventObjectAnimation.Subscribe(OnActorEAnim),
             WorldState.Actors.PlayActionTimelineEvent.Subscribe(OnActorPlayActionTimelineEvent),
             WorldState.Actors.EventNpcYell.Subscribe(OnActorNpcYell),
             WorldState.Actors.ModelStateChanged.Subscribe(OnActorModelStateChange),
-            WorldState.EnvControl.Subscribe(OnEnvControl),
+            WorldState.MapEffect.Subscribe(OnMapEffect),
+            WorldState.LegacyMapEffect.Subscribe(OnLegacyMapEffect),
             WorldState.DirectorUpdate.Subscribe(OnDirectorUpdate)
         );
 
@@ -241,7 +245,7 @@ public abstract class BossModule : IDisposable
                 DrawGlobalHints(CalculateGlobalHints());
 
             if (WindowConfig.ShowPlayerHints)
-                DrawPlayerHints(ref pcHints);
+                DrawPlayerHints(pcHints);
         }
         if (includeArena)
         {
@@ -256,12 +260,12 @@ public abstract class BossModule : IDisposable
                     break;
                 }
             }
-            DrawArena(pcSlot, ref pc, haveRisks);
+            DrawArena(pcSlot, pc, haveRisks);
             MiniArena.End();
         }
     }
 
-    public virtual void DrawArena(int pcSlot, ref Actor pc, bool haveRisks)
+    public virtual void DrawArena(int pcSlot, Actor pc, bool haveRisks)
     {
         // draw background
         DrawArenaBackground(pcSlot, pc);
@@ -279,7 +283,7 @@ public abstract class BossModule : IDisposable
             DrawWaymarks();
 
         // draw non-player alive party members
-        DrawPartyMembers(pcSlot, ref pc);
+        DrawPartyMembers(pcSlot, pc);
 
         // draw foreground
         DrawArenaForeground(pcSlot, pc);
@@ -287,13 +291,11 @@ public abstract class BossModule : IDisposable
             Components[i].DrawArenaForeground(pcSlot, pc);
         if (WindowConfig.ShowMeleeRangeIndicator)
         {
-            foreach (var a in WorldState.Actors)
+            var t = WorldState.Actors.Find(pc.TargetID);
+            var actor = t != null && !t.IsAlly && !t.IsDead && t.InCombat ? t : !PrimaryActor.IsDead && PrimaryActor.IsTargetable ? PrimaryActor : null;
+            if (actor != null)
             {
-                if (!a.IsAlly && a.IsTargetable && !a.IsDead && a.InCombat)
-                {
-                    Arena.ZoneDonut(a.Position, a.HitboxRadius + 2.6f, a.HitboxRadius + 2.9f, Colors.MeleeRangeIndicator);
-                    break;
-                }
+                Arena.ZoneDonut(actor.Position, actor.HitboxRadius + 2.6f, actor.HitboxRadius + 2.9f, Colors.MeleeRangeIndicator);
             }
         }
         // draw enemies & player
@@ -388,6 +390,38 @@ public abstract class BossModule : IDisposable
     {
         var b = Enemies(enemy);
         return b.Count != 0 && b[0].InCombat;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected bool IsAnyActorInCombat(uint enemy)
+    {
+        var enemies = Enemies(enemy);
+        var count = enemies.Count;
+        for (var j = 0; j < count; ++j)
+        {
+            var e = enemies[j];
+            if (e.InCombat)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected bool IsAnyActorTargetable(uint enemy)
+    {
+        var enemies = Enemies(enemy);
+        var count = enemies.Count;
+        for (var j = 0; j < count; ++j)
+        {
+            var e = enemies[j];
+            if (e.IsTargetable)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -487,7 +521,7 @@ public abstract class BossModule : IDisposable
         ImGui.NewLine();
     }
 
-    private void DrawPlayerHints(ref BossComponent.TextHints hints)
+    private void DrawPlayerHints(BossComponent.TextHints hints)
     {
         var count = hints.Count;
         for (var i = 0; i < count; ++i)
@@ -526,7 +560,7 @@ public abstract class BossModule : IDisposable
         }
     }
 
-    private void DrawPartyMembers(int pcSlot, ref Actor pc)
+    private void DrawPartyMembers(int pcSlot, Actor pc)
     {
         var raid = Raid.WithSlot();
         var len = raid.Length;
@@ -535,7 +569,7 @@ public abstract class BossModule : IDisposable
             var (slot, player) = raid[i];
             if (slot == pcSlot)
                 continue;
-            var (prio, color) = CalculateHighestPriority(pcSlot, ref pc, slot, player);
+            var (prio, color) = CalculateHighestPriority(pcSlot, pc, slot, player);
 
             var isFocus = WorldState.Client.FocusTargetId == player.InstanceID;
             if (prio == BossComponent.PlayerPriority.Irrelevant && !WindowConfig.ShowIrrelevantPlayers && !(isFocus && WindowConfig.ShowFocusTargetPlayer))
@@ -577,7 +611,7 @@ public abstract class BossModule : IDisposable
         }
     }
 
-    private (BossComponent.PlayerPriority, uint) CalculateHighestPriority(int pcSlot, ref Actor pc, int playerSlot, Actor player)
+    private (BossComponent.PlayerPriority, uint) CalculateHighestPriority(int pcSlot, Actor pc, int playerSlot, Actor player)
     {
         uint color = 0;
         var highestPrio = BossComponent.PlayerPriority.Irrelevant;
@@ -637,7 +671,7 @@ public abstract class BossModule : IDisposable
         }
     }
 
-    private void OnIsTargetableChanged(Actor actor)
+    private void OnIsTargetableChange(Actor actor)
     {
         if (actor.IsTargetable)
         {
@@ -663,13 +697,13 @@ public abstract class BossModule : IDisposable
         }
     }
 
-    private void OnActorRenderflagsChanged(Actor actor, int renderflags)
+    private void OnActorRenderflagsChange(Actor actor)
     {
         if (actor.Type is not ActorType.Player and not ActorType.Pet and not ActorType.Chocobo and not ActorType.Buddy)
         {
             var count = Components.Count;
             for (var i = 0; i < count; ++i)
-                Components[i].OnActorRenderflagsChanged(actor, renderflags);
+                Components[i].OnActorRenderflagsChange(actor, actor.Renderflags);
         }
     }
 
@@ -712,6 +746,13 @@ public abstract class BossModule : IDisposable
         var count = Components.Count;
         for (var i = 0; i < count; ++i)
             Components[i].OnEventIcon(actor, iconID, targetID);
+    }
+
+    private void OnActorVFX(Actor actor, uint vfxID, ulong targetID)
+    {
+        var count = Components.Count;
+        for (var i = 0; i < count; ++i)
+            Components[i].OnEventVFX(actor, vfxID, targetID);
     }
 
     private void OnActorCastEvent(Actor actor, ActorCastEvent cast)
@@ -759,15 +800,32 @@ public abstract class BossModule : IDisposable
         {
             var count = Components.Count;
             for (var i = 0; i < count; ++i)
-                Components[i].OnActorModelStateChange(actor, actor.ModelState.ModelState, actor.ModelState.AnimState1, actor.ModelState.AnimState2);
+            {
+                ref readonly var state = ref actor.ModelState;
+                Components[i].OnActorModelStateChange(actor, state.ModelState, state.AnimState1, state.AnimState2);
+            }
         }
     }
 
-    private void OnEnvControl(WorldState.OpEnvControl op)
+    private void OnActorEventStateChange(Actor actor)
     {
         var count = Components.Count;
         for (var i = 0; i < count; ++i)
-            Components[i].OnEventEnvControl(op.Index, op.State);
+            Components[i].OnActorEventStateChange(actor, actor.EventState);
+    }
+
+    private void OnMapEffect(WorldState.OpMapEffect op)
+    {
+        var count = Components.Count;
+        for (var i = 0; i < count; ++i)
+            Components[i].OnMapEffect(op.Index, op.State);
+    }
+
+    private void OnLegacyMapEffect(WorldState.OpLegacyMapEffect op)
+    {
+        var count = Components.Count;
+        for (var i = 0; i < count; ++i)
+            Components[i].OnLegacyMapEffect(op.Sequence, op.Param, op.Data);
     }
 
     private void OnDirectorUpdate(WorldState.OpDirectorUpdate op)

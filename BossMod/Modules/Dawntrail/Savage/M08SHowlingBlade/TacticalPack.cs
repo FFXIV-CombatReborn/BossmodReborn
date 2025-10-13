@@ -163,7 +163,7 @@ sealed class EarthWindborneEnd(BossModule module) : BossComponent(module)
 
 sealed class StalkingStoneWind(BossModule module) : Components.GenericBaitStack(module)
 {
-    private static readonly AOEShapeRect rect = new(40f, 3f);
+    private readonly AOEShapeRect rect = new(40f, 3f);
     private BitMask tanks;
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
@@ -178,7 +178,7 @@ sealed class StalkingStoneWind(BossModule module) : Components.GenericBaitStack(
                 var len = party.Length;
                 for (var i = 0; i < len; ++i)
                 {
-                    ref readonly var p = ref party[i];
+                    ref var p = ref party[i];
                     if (p.Item2.Role == Role.Tank)
                     {
                         tanks.Set(p.Item1);
@@ -210,7 +210,7 @@ sealed class StalkingStoneWind(BossModule module) : Components.GenericBaitStack(
 
 sealed class AlphaWindStone(BossModule module) : Components.GenericBaitAway(module, damageType: AIHints.PredictedDamageType.Tankbuster)
 {
-    private static readonly AOEShapeCone cone = new(40f, 45f.Degrees());
+    private readonly AOEShapeCone cone = new(40f, 45f.Degrees());
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {

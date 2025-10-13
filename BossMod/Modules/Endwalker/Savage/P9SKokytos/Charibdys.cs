@@ -21,7 +21,7 @@ class CometBurst(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Co
 
 class BeastlyBile(BossModule module) : Components.UniformStackSpread(module, 6, 0, 4)
 {
-    public int NumCasts { get; private set; }
+    public int NumCasts;
     private readonly Comet? _comet = module.FindComponent<Comet>();
     private DateTime _activation = module.WorldState.FutureTime(15); // assuming component is activated after proximity
     private BitMask _forbiddenPlayers;
@@ -49,7 +49,7 @@ class BeastlyBile(BossModule module) : Components.UniformStackSpread(module, 6, 
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if ((AID)spell.Action.ID == AID.BeastlyBileAOE)
+        if (spell.Action.ID == (uint)AID.BeastlyBileAOE)
         {
             ++NumCasts;
             _activation = WorldState.FutureTime(6);
@@ -63,7 +63,7 @@ class Thunderbolt(BossModule module) : Components.GenericBaitAway(module, (uint)
 {
     private readonly Comet? _comet = module.FindComponent<Comet>();
 
-    private static readonly AOEShapeCone _shape = new(40, 22.5f.Degrees());
+    private readonly AOEShapeCone _shape = new(40, 22.5f.Degrees());
 
     public override void Update()
     {
@@ -75,9 +75,26 @@ class Thunderbolt(BossModule module) : Components.GenericBaitAway(module, (uint)
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         base.AddHints(slot, actor, hints);
-        foreach (var b in ActiveBaitsOn(actor))
-            if (_comet?.Actors.Any(c => IsClippedBy(c, b)) ?? false)
-                hints.Add("Aim away from comets!");
+        var baits = CollectionsMarshal.AsSpan(CurrentBaits);
+        var len = baits.Length;
+        for (var i = 0; i < len; ++i)
+        {
+            ref var bait = ref baits[i];
+            if (!bait.Source.IsDead && bait.Target == actor)
+            {
+                var comets = _comet?.Actors;
+                var count = comets?.Count;
+                for (var j = 0; j < count; ++j)
+                {
+                    if (IsClippedBy(comets![i], ref bait))
+                    {
+                        hints.Add("Aim away from comets!");
+                        return;
+                    }
+                }
+                return;
+            }
+        }
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)

@@ -62,7 +62,7 @@ sealed class M08SHowlingBladeStates : StateMachineBuilder
         HerosBlow(id + 0x100000u, 9.4f);
         UltraviolentRay(id + 0x110000u, 12.3f);
         HowlingEight(id + 0x120000u, 16f);
-        SimpleState(id + 0x130000u, 1.5f, "Enrage");
+        SimpleState(id + 0x130000u, 11.3f, "Enrage");
     }
 
     private void ExtraplanarPursuit(uint id, float delay, bool last = false)
@@ -403,10 +403,10 @@ sealed class M08SHowlingBladeStates : StateMachineBuilder
 
     private void RiseOfTheHuntersBlade(uint id, float delay)
     {
-        ActorCast(id, _module.BossP2, (uint)AID.RiseOfTheHuntersBlade, delay, 7f, true, "Rise of the Hunter's Blade");
-        ActorCast(id + 0x10u, _module.BossP2, (uint)AID.LoneWolfsLament, 2.2f, 3f, true, "Lone Wolf's Lament");
-        ComponentCondition<LamentOfTheCloseDistant>(id + 0x20u, 0.8f, comp => comp.TethersAssigned, "Tethers assigned")
+        ActorCast(id, _module.BossP2, (uint)AID.RiseOfTheHuntersBlade, delay, 7f, true, "Rise of the Hunter's Blade")
             .ActivateOnEnter<LamentOfTheCloseDistant>();
+        ActorCast(id + 0x10u, _module.BossP2, (uint)AID.LoneWolfsLament, 2.2f, 3f, true, "Lone Wolf's Lament");
+        ComponentCondition<LamentOfTheCloseDistant>(id + 0x20u, 0.8f, comp => comp.TethersAssigned, "Tethers assigned");
         ComponentCondition<ProwlingGaleLast>(id + 0x30u, 18.2f, comp => comp.NumCasts != 0, "Towers resolve")
             .ActivateOnEnter<ProwlingGaleLast>()
             .DeactivateOnExit<ProwlingGaleLast>();

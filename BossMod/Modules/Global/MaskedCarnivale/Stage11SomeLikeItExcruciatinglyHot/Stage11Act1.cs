@@ -24,18 +24,7 @@ sealed class Stage11Act1States : StateMachineBuilder
     {
         TrivialPhase()
             .DeactivateOnEnter<Hints>()
-            .Raw.Update = () =>
-            {
-                var enemies = module.Enemies((uint)OID.Boss);
-                var count = enemies.Count;
-                for (var i = 0; i < count; ++i)
-                {
-                    var enemy = enemies[i];
-                    if (!enemy.IsDeadOrDestroyed)
-                        return false;
-                }
-                return true;
-            };
+            .Raw.Update = () => AllDeadOrDestroyed((uint)OID.Boss);
     }
 }
 
@@ -51,4 +40,6 @@ public sealed class Stage11Act1 : BossModule
     {
         Arena.Actors(Enemies((uint)OID.Boss));
     }
+
+    protected override bool CheckPull() => IsAnyActorInCombat((uint)OID.Boss);
 }

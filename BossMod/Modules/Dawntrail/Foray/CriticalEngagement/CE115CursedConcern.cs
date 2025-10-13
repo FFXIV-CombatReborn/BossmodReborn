@@ -329,7 +329,7 @@ sealed class WhatreYouBuying(BossModule module) : Components.GenericAOEs(module)
                 var coin = coinsE[i];
                 if (coin.IsTargetable)
                 {
-                    hints.GoalZones.Add(hints.GoalSingleTarget(coin, 2f, 5f));
+                    hints.GoalZones.Add(AIHints.GoalSingleTarget(coin, 2f, 5f));
                     var distSq = (actor.Position - coin.Position).LengthSq();
                     if (distSq < minDistSq)
                     {

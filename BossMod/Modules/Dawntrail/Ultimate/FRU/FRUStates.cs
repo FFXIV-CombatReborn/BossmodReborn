@@ -13,9 +13,11 @@ sealed class FRUStates : StateMachineBuilder
             .Raw.Update = () => Module.PrimaryActor.IsDeadOrDestroyed;
         SimplePhase(1, Phase2, "P2: Usurper of Frost")
             .SetHint(StateMachine.PhaseHint.StartWithDowntime)
+            .ActivateOnEnter<UsurperHP>()
             .Raw.Update = () => !Module.PrimaryActor.IsDead || (_module.BossP2()?.IsDestroyed ?? false) || (_module.IceVeil()?.IsDeadOrDestroyed ?? false);
         SimplePhase(2, Phase34, "P3/4: Oracle of Darkness & Both")
             .SetHint(StateMachine.PhaseHint.StartWithDowntime)
+            .ActivateOnEnter<OracleHP>()
             .Raw.Update = () => !Module.PrimaryActor.IsDead || (_module.BossP2()?.IsDestroyed ?? false) && (_module.BossP3()?.IsDestroyed ?? true) && IsActorDead(_module.BossP4Oracle(), true) && IsActorDead(_module.BossP4Usurper(), true);
         SimplePhase(3, Phase5, "P5: Pandora")
             .SetHint(StateMachine.PhaseHint.StartWithDowntime)

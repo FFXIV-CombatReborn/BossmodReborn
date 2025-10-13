@@ -2,7 +2,6 @@ namespace BossMod.Heavensward.Dungeon.D09SaintMociannesArboretum.D093Belladonna;
 
 public enum OID : uint
 {
-
     Boss = 0x1434, // R5.0
     BloatedBulb = 0x1435, // R0.75
     LilyOfTheSaint = 0x1436, // R1.0)
@@ -30,12 +29,12 @@ public enum IconID : uint
     Spreadmarker = 43 // player->self
 }
 
-class AtropineSpore(BossModule module) : Components.SimpleAOEs(module, (uint)AID.AtropineSpore, new AOEShapeDonut(9f, 40f));
-class SoulVacuum(BossModule module) : Components.RaidwideCast(module, (uint)AID.SoulVacuum);
-class FrondFatale(BossModule module) : Components.CastGaze(module, (uint)AID.FrondFatale);
-class Petal(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.Spreadmarker, (uint)AID.Petal, 8f, 3.1f);
+sealed class AtropineSpore(BossModule module) : Components.SimpleAOEs(module, (uint)AID.AtropineSpore, new AOEShapeDonut(9f, 40f));
+sealed class SoulVacuum(BossModule module) : Components.RaidwideCast(module, (uint)AID.SoulVacuum);
+sealed class FrondFatale(BossModule module) : Components.CastGaze(module, (uint)AID.FrondFatale);
+sealed class Petal(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.Spreadmarker, (uint)AID.Petal, 8f, 3.1f);
 
-class Deracinator(BossModule module) : Components.SingleTargetInstant(module, (uint)AID.Deracinator)
+sealed class Deracinator(BossModule module) : Components.SingleTargetInstant(module, (uint)AID.Deracinator)
 {
     private bool start = true;
 
@@ -82,9 +81,9 @@ class Deracinator(BossModule module) : Components.SingleTargetInstant(module, (u
     }
 }
 
-class Mildew(BossModule module) : Components.GenericAOEs(module)
+sealed class Mildew(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeCircle circle = new(6f);
+    private readonly AOEShapeCircle circle = new(6f);
     private readonly List<AOEInstance> _aoes = new(11);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
@@ -92,14 +91,18 @@ class Mildew(BossModule module) : Components.GenericAOEs(module)
     public override void OnActorModelStateChange(Actor actor, byte modelState, byte animState1, byte animState2)
     {
         if (actor.OID == (uint)OID.BloatedBulb)
-            if (animState1 == 1)
+            if (animState1 == 0x01)
+            {
                 _aoes.Add(new(circle, actor.Position.Quantized(), default, WorldState.FutureTime(10d))); // despite spawning at the same time, there can be multiple seconds difference between explosions, taking a low estimate here
+            }
             else
+            {
                 _aoes.Clear();
+            }
     }
 }
 
-class D093BelladonnaStates : StateMachineBuilder
+sealed class D093BelladonnaStates : StateMachineBuilder
 {
     public D093BelladonnaStates(BossModule module) : base(module)
     {
@@ -114,7 +117,7 @@ class D093BelladonnaStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 41, NameID = 4658, SortOrder = 6)]
-public class D093Belladonna(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
+public sealed class D093Belladonna(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly ArenaBoundsCustom arena = new([new Polygon(default, 19.5f * CosPI.Pi64th, 64)], [new Rectangle(new(-16.441f, -11.753f), 20f, 1.25f, 55.859f.Degrees())]);
 

@@ -44,12 +44,12 @@ class P2SoarTwinSpirit(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
-class P2SoarFlamingHalberd(BossModule module) : Components.UniformStackSpread(module, default, 12f, alwaysShowSpreads: true)
+class P2SoarFlamingHalberd(BossModule module) : Components.UniformStackSpread(module, default, 12f)
 {
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
         if (iconID == (uint)IconID.FlamingHalberd)
-            AddSpread(actor, WorldState.FutureTime(5.1f));
+            AddSpread(actor, WorldState.FutureTime(5.1d));
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
@@ -80,7 +80,7 @@ class P2SoarFlamingHalberdVoidzone(BossModule module) : Components.Voidzone(modu
     }
 }
 
-class P2SoarDemonicDiveCoolFlame(BossModule module) : Components.UniformStackSpread(module, 7, 8, 7, alwaysShowSpreads: true)
+class P2SoarDemonicDiveCoolFlame(BossModule module) : Components.UniformStackSpread(module, 7f, 8f, 7)
 {
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {

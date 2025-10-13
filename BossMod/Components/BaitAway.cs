@@ -45,7 +45,7 @@ public class GenericBaitAway(BossModule module, uint aid = default, bool alwaysD
             var count = CurrentBaits.Count;
             if (count == 0)
             {
-                return [];
+                return CurrentBaits;
             }
             List<Bait> activeBaits = new(count);
             var curBaits = CollectionsMarshal.AsSpan(CurrentBaits);
@@ -69,15 +69,14 @@ public class GenericBaitAway(BossModule module, uint aid = default, bool alwaysD
         var count = CurrentBaits.Count;
         if (count == 0)
         {
-            return [];
+            return CurrentBaits;
         }
         List<Bait> activeBaitsOnTarget = new(count);
         var curBaits = CollectionsMarshal.AsSpan(CurrentBaits);
-        var id = target.InstanceID;
         for (var i = 0; i < count; ++i)
         {
             ref var bait = ref curBaits[i];
-            if (!bait.Source.IsDead && bait.Target.InstanceID == id)
+            if (!bait.Source.IsDead && bait.Target == target)
             {
                 activeBaitsOnTarget.Add(bait);
             }
@@ -90,15 +89,15 @@ public class GenericBaitAway(BossModule module, uint aid = default, bool alwaysD
         var count = CurrentBaits.Count;
         if (count == 0)
         {
-            return [];
+            return CurrentBaits;
         }
         List<Bait> activeBaitsNotOnTarget = new(count);
         var curBaits = CollectionsMarshal.AsSpan(CurrentBaits);
-        var id = target.InstanceID;
+
         for (var i = 0; i < count; ++i)
         {
             ref var bait = ref curBaits[i];
-            if (!bait.Source.IsDead && bait.Target.InstanceID != id)
+            if (!bait.Source.IsDead && bait.Target != target)
             {
                 activeBaitsNotOnTarget.Add(bait);
             }
@@ -107,7 +106,7 @@ public class GenericBaitAway(BossModule module, uint aid = default, bool alwaysD
     }
 
     public WPos BaitOrigin(ref Bait bait) => (CenterAtTarget ? bait.Target : bait.Source).Position + bait.Offset;
-    public bool IsClippedBy(Actor actor, Bait bait) => bait.Shape.Check(actor.Position, BaitOrigin(ref bait), bait.Rotation);
+    public bool IsClippedBy(Actor actor, ref Bait bait) => bait.Shape.Check(actor.Position, BaitOrigin(ref bait), bait.Rotation);
     public List<Actor> PlayersClippedBy(ref Bait bait)
     {
         var actors = Raid.WithoutSlot();
@@ -164,7 +163,7 @@ public class GenericBaitAway(BossModule module, uint aid = default, bool alwaysD
                 ref var bait = ref baits[i];
                 if (bait.Target.InstanceID == id)
                     continue;
-                if (IsClippedBy(actor, bait))
+                if (IsClippedBy(actor, ref bait))
                 {
                     hints.Add("GTFO from baited aoe!");
                     break;
@@ -251,7 +250,7 @@ public class GenericBaitAway(BossModule module, uint aid = default, bool alwaysD
         for (var i = 0; i < len; ++i)
         {
             ref var b = ref baits[i];
-            if (!b.Source.IsDead && b.Target.InstanceID != pcID && (AlwaysDrawOtherBaits || IsClippedBy(pc, b)))
+            if (!b.Source.IsDead && b.Target.InstanceID != pcID && (AlwaysDrawOtherBaits || IsClippedBy(pc, ref b)))
             {
                 b.Shape.Draw(Arena, BaitOrigin(ref b), b.Rotation);
             }

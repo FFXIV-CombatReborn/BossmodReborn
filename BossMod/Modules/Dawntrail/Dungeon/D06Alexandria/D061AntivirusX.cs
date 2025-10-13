@@ -36,7 +36,7 @@ public enum IconID : uint
 
 sealed class ImmuneResponseArenaChange(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeCustom rect = new([new Rectangle(D061AntivirusX.ArenaCenter, 23f, 18f)], [new Rectangle(D061AntivirusX.ArenaCenter, 20f, 15f)]);
+    private readonly AOEShapeCustom rect = new([new Rectangle(D061AntivirusX.ArenaCenter, 23f, 18f)], [new Rectangle(D061AntivirusX.ArenaCenter, 20f, 15f)]);
     private AOEInstance[] _aoe = [];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
@@ -49,7 +49,7 @@ sealed class ImmuneResponseArenaChange(BossModule module) : Components.GenericAO
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x03 && state == 0x00020001u)
         {
@@ -61,40 +61,49 @@ sealed class ImmuneResponseArenaChange(BossModule module) : Components.GenericAO
 
 sealed class PathoCircuitCrossPurge(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeDonut donut = new(4f, 40f);
-    private static readonly AOEShapeCross cross = new(40f, 3f);
-    private static readonly AOEShapeCone coneSmall = new(40f, 60f.Degrees());
-    private static readonly AOEShapeCone coneBig = new(40f, 120f.Degrees());
-    private readonly List<AOEInstance> _aoes = new(5);
+    private readonly AOEShapeDonut donut = new(4f, 40f);
+    private readonly AOEShapeCross cross = new(40f, 3f);
+    private readonly AOEShapeCone coneSmall = new(40f, 60f.Degrees());
+    private readonly AOEShapeCone coneBig = new(40f, 120f.Degrees());
+    private readonly List<AOEInstance> _aoes = new(6);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _aoes.Count;
         if (count == 0)
-            return [];
-        var max = count > 2 ? 2 : count;
-        var aoes = CollectionsMarshal.AsSpan(_aoes);
-        for (var i = 0; i < max; ++i)
         {
-            ref var aoe = ref aoes[i];
-            if (i == 0)
-            {
-                if (count > 1)
-                    aoe.Color = Colors.Danger;
-                aoe.Risky = true;
-            }
-            else
-            {
-                ref readonly var aoe0 = ref aoes[0];
-                var isDonuts = aoe0.Shape == donut && aoe.Shape == donut;
-                var isConeWithDelay = (aoe.Shape == coneBig || aoe.Shape == coneSmall) && (aoe.Activation - aoe0.Activation).TotalSeconds > 2d;
-                var isCross = aoe0.Shape == cross;
-                var isFrontDonutAndConeSmall = aoe.Origin == Arena.Center && aoe.Shape == donut && aoe0.Shape == coneSmall;
-                var isRisky = !isDonuts && !isConeWithDelay && !isFrontDonutAndConeSmall || isCross;
-                aoe.Risky = isRisky;
-            }
+            return [];
         }
-        return aoes[..max];
+        var max = count > 2 ? 2 : count;
+        return CollectionsMarshal.AsSpan(_aoes)[..max];
+    }
+
+    private void UpdateAOE()
+    {
+        var count = _aoes.Count;
+        if (count == 0)
+        {
+            return;
+        }
+        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        ref var aoe0 = ref aoes[0];
+        if (NumCasts > 0 && aoe0.Shape == donut)
+        {
+            aoe0.ShapeDistance = aoe0.Shape.Distance(aoe0.Origin, default);
+        }
+        if (count > 1)
+        {
+            aoe0.Color = Colors.Danger;
+            ref var aoe1 = ref aoes[1];
+            var donut0 = aoe0.Shape == donut;
+            var isDonuts = donut0 && aoe1.Shape == donut;
+            var isConeWithDelay = (aoe1.Shape == coneBig || aoe1.Shape == coneSmall) && (aoe1.Activation - aoe0.Activation).TotalSeconds > 2d;
+            var isCross = aoe1.Shape == cross;
+            var isFrontDonutAndConeSmall = aoe1.Origin.AlmostEqual(Arena.Center, 1f) && aoe1.Shape == donut && aoe0.Shape == coneSmall;
+            var isRisky = !isDonuts && !(isConeWithDelay && isCross) && !isFrontDonutAndConeSmall && !(donut0 && isCross);
+            aoe1.Risky = isRisky;
+        }
+        aoe0.Risky = true;
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
@@ -102,7 +111,7 @@ sealed class PathoCircuitCrossPurge(BossModule module) : Components.GenericAOEs(
         if (spell.Action.ID is (uint)AID.ImmuneResponseBig or (uint)AID.ImmuneResponseSmall)
         {
             var coneType = spell.Action.ID == (int)AID.ImmuneResponseBig ? coneBig : coneSmall;
-            AddAOE(new(coneType, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell)));
+            AddAOE(coneType, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell));
         }
     }
 
@@ -111,15 +120,17 @@ sealed class PathoCircuitCrossPurge(BossModule module) : Components.GenericAOEs(
         if (actor.OID is (uint)OID.InterferonR or (uint)OID.InterferonC)
         {
             AOEShape shape = actor.OID == (int)OID.InterferonR ? donut : cross;
-            var activationTime = _aoes.Count == 0 ? WorldState.FutureTime(9.9d) : _aoes.Ref(0).Activation.AddSeconds(2.5d * _aoes.Count);
-            AddAOE(new(shape, actor.Position, default, activationTime)); // intentionally not using quantized values here
+            var act = _aoes.Count == 0 ? WorldState.FutureTime(9.9d) : _aoes.Ref(0).Activation.AddSeconds(2.5d * _aoes.Count);
+            AddAOE(shape, actor.Position.Quantized(), default, act);
         }
     }
 
-    private void AddAOE(AOEInstance aoe)
+    private void AddAOE(AOEShape shape, WPos origin, Angle rotation, DateTime activation)
     {
-        _aoes.Add(aoe);
+        var sdf = _aoes.Count == 0 || shape != donut ? shape.Distance(origin, rotation) : new SDDonut(origin, 5.5f, 40f);
+        _aoes.Add(new(shape, origin, rotation, activation, shapeDistance: sdf));
         _aoes.Sort(static (a, b) => a.Activation.CompareTo(b.Activation));
+        UpdateAOE();
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
@@ -130,9 +141,18 @@ sealed class PathoCircuitCrossPurge(BossModule module) : Components.GenericAOEs(
             {
                 case (uint)AID.PathocrossPurge:
                 case (uint)AID.PathocircuitPurge:
+                    _aoes.RemoveAt(0);
+                    ++NumCasts;
+                    UpdateAOE();
+                    if (NumCasts == 5)
+                    {
+                        NumCasts = 0;
+                    }
+                    break;
                 case (uint)AID.ImmuneResponseBig:
                 case (uint)AID.ImmuneResponseSmall:
                     _aoes.RemoveAt(0);
+                    UpdateAOE();
                     break;
             }
         }
@@ -157,7 +177,7 @@ sealed class Disinfection(BossModule module) : Components.BaitAwayIcon(module, 6
             {
                 if (b.Target == actor)
                 {
-                    hints.GoalZones.Add(hints.GoalSingleTarget(new WPos(852f, 808f), 3f, 1f));
+                    hints.GoalZones.Add(AIHints.GoalSingleTarget(new WPos(852f, 808f), 3f, 1f));
                 }
                 else
                 { }

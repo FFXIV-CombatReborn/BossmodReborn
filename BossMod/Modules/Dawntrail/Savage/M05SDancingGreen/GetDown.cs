@@ -11,8 +11,8 @@ sealed class GetDownCone : Components.SimpleAOEs
 sealed class GetDownOutIn(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = new(8);
-    private static readonly AOEShapeCircle circle = new(7f);
-    private static readonly AOEShapeDonut donut = new(5f, 40f);
+    private readonly AOEShapeCircle circle = new(7f);
+    private readonly AOEShapeDonut donut = new(5f, 40f);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoes.Count != 0 ? CollectionsMarshal.AsSpan(_aoes)[..1] : [];
 
@@ -22,12 +22,13 @@ sealed class GetDownOutIn(BossModule module) : Components.GenericAOEs(module)
         {
             for (var i = 0; i < 4; ++i)
             {
-                AddAOE(circle, i * 5f);
-                AddAOE(donut, i * 5f + 2.5f);
+                var delay = i * 5d;
+                AddAOE(circle, delay);
+                AddAOE(donut, delay + 2.5d);
             }
         }
 
-        void AddAOE(AOEShape shape, float delay)
+        void AddAOE(AOEShape shape, double delay)
             => _aoes.Add(new(shape, spell.LocXZ, default, Module.CastFinishAt(spell, delay)));
     }
 
@@ -37,7 +38,9 @@ sealed class GetDownOutIn(BossModule module) : Components.GenericAOEs(module)
         {
             ++NumCasts;
             if (_aoes.Count != 0)
+            {
                 _aoes.RemoveAt(0);
+            }
         }
     }
 }

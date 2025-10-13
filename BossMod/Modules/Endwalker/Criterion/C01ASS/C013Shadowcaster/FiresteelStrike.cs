@@ -9,7 +9,7 @@ sealed class FiresteelStrike : Components.UniformStackSpread
 
     private static readonly AOEShapeRect _cleaveShape = new(65f, 4f);
 
-    public FiresteelStrike(BossModule module) : base(module, default, 10f, alwaysShowSpreads: true)
+    public FiresteelStrike(BossModule module) : base(module, default, 10f)
     {
         AddSpreads(Raid.WithoutSlot(true, true, true));
     }

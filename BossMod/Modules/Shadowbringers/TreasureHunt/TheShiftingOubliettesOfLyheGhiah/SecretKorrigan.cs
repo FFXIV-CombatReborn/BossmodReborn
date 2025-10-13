@@ -2,7 +2,7 @@ namespace BossMod.Shadowbringers.TreasureHunt.ShiftingOubliettesOfLyheGhiah.Secr
 
 public enum OID : uint
 {
-    Boss = 0x3022, //R=2.85
+    SecretKorrigan = 0x3022, //R=2.85
     SecretMandragora = 0x301C, //R=0.84
     SecretQueen = 0x3021, // R0.84, icon 5, needs to be killed in order from 1 to 5 for maximum rewards
     SecretGarlic = 0x301F, // R0.84, icon 3, needs to be killed in order from 1 to 5 for maximum rewards
@@ -14,12 +14,12 @@ public enum OID : uint
 
 public enum AID : uint
 {
-    AutoAttack = 872, // Boss/SecretMandragora/Mandragoras->player, no cast, single-target
+    AutoAttack = 872, // SecretKorrigan/SecretMandragora/Mandragoras->player, no cast, single-target
 
-    Hypnotize = 21674, // Boss->self, 4.0s cast, range 40 circle
-    LeafDagger = 21675, // Boss->location, 2.5s cast, range 3 circle
-    SaibaiMandragora = 21676, // Boss->self, 3.0s cast, single-target
-    Ram = 21673, // Boss->player, 3.0s cast, single-target
+    Hypnotize = 21674, // SecretKorrigan->self, 4.0s cast, range 40 circle
+    LeafDagger = 21675, // SecretKorrigan->location, 2.5s cast, range 3 circle
+    SaibaiMandragora = 21676, // SecretKorrigan->self, 3.0s cast, single-target
+    Ram = 21673, // SecretKorrigan->player, 3.0s cast, single-target
 
     Pollen = 6452, // SecretQueen->self, 3.5s cast, range 6+R circle
     TearyTwirl = 6448, // SecretOnion->self, 3.5s cast, range 6+R circle
@@ -29,15 +29,15 @@ public enum AID : uint
     Telega = 9630 // Mandragoras->self, no cast, single-target, bonus adds disappear
 }
 
-class Hypnotize(BossModule module) : Components.CastGaze(module, (uint)AID.Hypnotize);
-class Ram(BossModule module) : Components.SingleTargetDelayableCast(module, (uint)AID.Ram);
-class SaibaiMandragora(BossModule module) : Components.CastHint(module, (uint)AID.SaibaiMandragora, "Calls adds");
-class LeafDagger(BossModule module) : Components.SimpleAOEs(module, (uint)AID.LeafDagger, 3f);
+sealed class Hypnotize(BossModule module) : Components.CastGaze(module, (uint)AID.Hypnotize);
+sealed class Ram(BossModule module) : Components.SingleTargetDelayableCast(module, (uint)AID.Ram);
+sealed class SaibaiMandragora(BossModule module) : Components.CastHint(module, (uint)AID.SaibaiMandragora, "Calls adds");
+sealed class LeafDagger(BossModule module) : Components.SimpleAOEs(module, (uint)AID.LeafDagger, 3f);
 
-class MandragoraAOEs(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.PluckAndPrune, (uint)AID.TearyTwirl,
+sealed class MandragoraAOEs(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.PluckAndPrune, (uint)AID.TearyTwirl,
 (uint)AID.HeirloomScream, (uint)AID.PungentPirouette, (uint)AID.Pollen], 6.84f);
 
-class SecretKorriganStates : StateMachineBuilder
+sealed class SecretKorriganStates : StateMachineBuilder
 {
     public SecretKorriganStates(BossModule module) : base(module)
     {
@@ -51,17 +51,39 @@ class SecretKorriganStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "Malediktus", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 745, NameID = 9806)]
-public class SecretKorrigan(WorldState ws, Actor primary) : THTemplate(ws, primary)
+[ModuleInfo(BossModuleInfo.Maturity.Verified,
+StatesType = typeof(SecretKorriganStates),
+ConfigType = null,
+ObjectIDType = typeof(OID),
+ActionIDType = typeof(AID),
+StatusIDType = null,
+TetherIDType = null,
+IconIDType = null,
+PrimaryActorOID = (uint)OID.SecretKorrigan,
+Contributors = "The Combat Reborn Team (Malediktus)",
+Expansion = BossModuleInfo.Expansion.Shadowbringers,
+Category = BossModuleInfo.Category.TreasureHunt,
+GroupType = BossModuleInfo.GroupType.CFC,
+GroupID = 745u,
+NameID = 9806u,
+SortOrder = 7,
+PlanLevel = 0)]
+public sealed class SecretKorrigan : THTemplate
 {
+    public SecretKorrigan(WorldState ws, Actor primary) : base(ws, primary)
+    {
+        secretMandragoras = Enemies((uint)OID.SecretMandragora);
+    }
+    private readonly List<Actor> secretMandragoras;
+
     private static readonly uint[] bonusAdds = [(uint)OID.SecretEgg, (uint)OID.SecretGarlic, (uint)OID.SecretOnion, (uint)OID.SecretTomato,
     (uint)OID.SecretQueen];
-    public static readonly uint[] All = [(uint)OID.Boss, (uint)OID.SecretMandragora, .. bonusAdds];
+    public static readonly uint[] All = [(uint)OID.SecretKorrigan, (uint)OID.SecretMandragora, .. bonusAdds];
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         Arena.Actor(PrimaryActor);
-        Arena.Actors(Enemies((uint)OID.SecretMandragora));
+        Arena.Actors(secretMandragoras);
         Arena.Actors(this, bonusAdds, Colors.Vulnerable);
     }
 

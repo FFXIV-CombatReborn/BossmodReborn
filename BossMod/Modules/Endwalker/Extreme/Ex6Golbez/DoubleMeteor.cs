@@ -22,7 +22,7 @@ class DragonsDescent(BossModule module) : Components.GenericKnockback(module, (u
     }
 }
 
-class DoubleMeteor(BossModule module) : Components.UniformStackSpread(module, default, 15f, alwaysShowSpreads: true) // TODO: verify falloff
+class DoubleMeteor(BossModule module) : Components.UniformStackSpread(module, default, 15f) // TODO: verify falloff
 {
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {

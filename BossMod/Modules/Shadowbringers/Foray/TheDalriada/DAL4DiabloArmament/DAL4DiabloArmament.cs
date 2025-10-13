@@ -80,7 +80,7 @@ new AOEShapeRect(60f, 11f))
         var index = 0;
         while (index < count)
         {
-            ref readonly var aoe = ref aoes[index];
+            ref var aoe = ref aoes[index];
             if (aoe.Activation >= deadline && aoe.Rotation == rot)
             {
                 break;

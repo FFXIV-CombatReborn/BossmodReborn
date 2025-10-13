@@ -240,7 +240,7 @@ public sealed class BLM(RotationModuleManager manager, Actor player) : Castxan<A
             (BestThunderTarget, TargetThunderLeft) = SelectDotTarget(strategy, dotTarget, GetTargetThunderLeft, 2);
         }
 
-        (BestAOEThunderTarget, NumAOEDotTargets) = SelectTarget(strategy, dotTarget, 25, (primary, other) => DotExpiring(other) && Hints.TargetInAOECircle(other, primary.Position, 5));
+        (BestAOEThunderTarget, NumAOEDotTargets) = SelectTarget(strategy, dotTarget, 25, (primary, other) => DotExpiring(other) && TargetInAOECircle(other, primary.Position, 5));
 
         if (CountdownRemaining > 0)
         {
@@ -299,7 +299,7 @@ public sealed class BLM(RotationModuleManager manager, Actor player) : Castxan<A
                 PushGCD((AID)PhantomID.Iainuki, primaryTarget, GCDPriority.Max);
 
             if (ready <= GCD + GCDLength * 2)
-                Hints.GoalZones.Add(Hints.GoalSingleTarget(primaryTarget.Actor, 8));
+                Hints.GoalZones.Add(GoalSingleTarget(primaryTarget.Actor, 8));
         }
 
         if (strategy.Enabled(Track.TimeMage))

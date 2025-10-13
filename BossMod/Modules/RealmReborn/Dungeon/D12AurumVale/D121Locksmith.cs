@@ -63,7 +63,7 @@ sealed class MorbolFruit(BossModule module) : BossComponent(module)
             var fruit = _fruits[i];
             if (fruit.IsTargetable)
             {
-                hints.GoalZones.Add(hints.GoalSingleTarget(fruit, 2f, 5f));
+                hints.GoalZones.Add(AIHints.GoalSingleTarget(fruit, 2f, 5f));
                 var distSq = (actor.Position - fruit.Position).LengthSq();
                 if (distSq < minDistSq)
                 {

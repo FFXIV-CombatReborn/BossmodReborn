@@ -44,7 +44,7 @@ public enum IconID : uint
 class Paradox(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Paradox, 5f);
 class Petrifaction(BossModule module) : Components.CastGaze(module, (uint)AID.Petrifaction);
 class Ka(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Ka, new AOEShapeCone(45f, 30f.Degrees()));
-class GaseousBomb(BossModule module) : Components.StackWithIcon(module, (uint)IconID.Stack, (uint)AID.GaseousBomb, 5f, 4.1f, 4, 4);
+class GaseousBomb(BossModule module) : Components.StackWithIcon(module, (uint)IconID.Stack, (uint)AID.GaseousBomb, 5f, 4.1d, 4, 4);
 class BallisticMissile(BossModule module) : Components.UniformStackSpread(module, 4f, default, 2, 2)
 {
     public override void OnStatusGain(Actor actor, ActorStatus status)

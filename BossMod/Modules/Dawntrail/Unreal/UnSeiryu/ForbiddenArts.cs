@@ -2,7 +2,7 @@ namespace BossMod.Dawntrail.Unreal.UnSeiryu;
 
 sealed class ForbiddenArts(BossModule module) : Components.GenericBaitStack(module)
 {
-    private static readonly AOEShapeRect rect = new(84.4f, 4f);
+    private readonly AOEShapeRect rect = new(84.4f, 4f);
     private BitMask forbidden;
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)

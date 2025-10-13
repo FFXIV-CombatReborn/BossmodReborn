@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Stormblood.Ultimate.UWU;
 
-class FlamingCrush(BossModule module) : Components.UniformStackSpread(module, 4, 0, 6)
+class FlamingCrush(BossModule module) : Components.UniformStackSpread(module, 4f, default, 6, 6)
 {
     protected BitMask Avoid;
 

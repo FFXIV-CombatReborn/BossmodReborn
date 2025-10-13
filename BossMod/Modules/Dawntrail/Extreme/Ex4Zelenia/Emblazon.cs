@@ -10,7 +10,7 @@ sealed class Emblazon(BossModule module) : Components.GenericTowers(module, (uin
     private int emblazoncounter;
     private bool pattern; // false pattern 1 (tower with index 0x2E), true pattern 2 (tower with index 0x2F)
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x2F && state == 0x00020001u)
         {

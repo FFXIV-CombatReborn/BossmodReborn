@@ -5,7 +5,7 @@ sealed class FearOfDeath(BossModule module) : Components.RaidwideCast(module, (u
 sealed class FearOfDeathAOE(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = new(8);
-    private static readonly AOEShapeCircle circle = new(3);
+    private readonly AOEShapeCircle circle = new(3);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
 

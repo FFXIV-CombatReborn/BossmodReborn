@@ -7,7 +7,7 @@ sealed class P2IntermissionHawkBlaster(BossModule module) : Components.GenericAO
     private Angle _blasterStartingDirection;
     private readonly TEAConfig _config = Service.Config.Get<TEAConfig>();
     private const float _blasterOffset = 14f;
-    private static readonly AOEShapeCircle _blasterShape = new(10f);
+    private readonly AOEShapeCircle _blasterShape = new(10f);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
@@ -49,7 +49,7 @@ sealed class P2IntermissionHawkBlaster(BossModule module) : Components.GenericAO
             {
                 var offset = spell.TargetXZ - Arena.Center;
                 // a bit of a hack: most strats (lpdu etc) select a half between W and NE inclusive to the 'first' group; ensure 'starting' direction is one of these
-                var invert = Math.Abs(offset.Z) < 2 ? offset.X > 0 : offset.Z > 0;
+                var invert = Math.Abs(offset.Z) < 2f ? offset.X > 0f : offset.Z > 0f;
                 if (invert)
                     offset = -offset;
                 _blasterStartingDirection = Angle.FromDirection(offset);

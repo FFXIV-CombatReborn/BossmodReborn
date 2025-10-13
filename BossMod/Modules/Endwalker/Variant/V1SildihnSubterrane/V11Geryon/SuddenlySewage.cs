@@ -16,7 +16,7 @@ sealed class SuddenlySewage(BossModule module) : Components.GenericAOEs(module)
         return CollectionsMarshal.AsSpan(_aoes)[..max];
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00020001u)
         {

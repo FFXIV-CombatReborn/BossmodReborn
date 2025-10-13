@@ -1,6 +1,6 @@
 namespace BossMod.Dawntrail.Savage.M06SSugarRiot;
 
-sealed class StickyMousse(BossModule module) : Components.GenericStackSpread(module, true, raidwideOnResolve: false)
+sealed class StickyMousse(BossModule module) : Components.GenericStackSpread(module, true)
 {
     public int NumCasts;
 
@@ -13,21 +13,27 @@ sealed class StickyMousse(BossModule module) : Components.GenericStackSpread(mod
             var act = Module.CastFinishAt(spell, 0.8d);
             for (var i = 0; i < len; ++i)
             {
-                Spreads.Add(new(party[i], 4f, act));
+                var p = party[i];
+                if (p.Role != Role.Tank) // never targets tanks unless pretty much everyone is dead, but then there are worse issues
+                {
+                    Spreads.Add(new(party[i], 4f, act));
+                }
             }
         }
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID == (uint)AID.StickyMousse)
+        switch (spell.Action.ID)
         {
-            Spreads.Clear();
-            Stacks.Add(new(WorldState.Actors.Find(spell.MainTargetID)!, 4f, 4, 4, WorldState.FutureTime(6d)));
-        }
-        else if (spell.Action.ID == (uint)AID.BurstStickyMousse)
-        {
-            ++NumCasts;
+            case (uint)AID.StickyMousse:
+                Spreads.Clear();
+                Stacks.Add(new(WorldState.Actors.Find(spell.MainTargetID)!, 4f, 4, 4, WorldState.FutureTime(6d)));
+                break;
+            case (uint)AID.BurstStickyMousse:
+                ++NumCasts;
+                break;
+
         }
     }
 }

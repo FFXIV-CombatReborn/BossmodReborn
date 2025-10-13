@@ -49,7 +49,7 @@ sealed class P4FateCalibrationAlphaStillnessMotion(BossModule module) : Componen
     }
 }
 
-sealed class P4FateCalibrationAlphaDebuffs(BossModule module) : Components.UniformStackSpread(module, 4f, 30f, 3, alwaysShowSpreads: true)
+sealed class P4FateCalibrationAlphaDebuffs(BossModule module) : Components.UniformStackSpread(module, 4f, 30f, 3)
 {
     public enum Debuff { None, Defamation, SharedSentence, AggravatedAssault }
 

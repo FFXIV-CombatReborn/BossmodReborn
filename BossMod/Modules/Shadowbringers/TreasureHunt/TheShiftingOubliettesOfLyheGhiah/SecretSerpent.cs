@@ -2,7 +2,7 @@ namespace BossMod.Shadowbringers.TreasureHunt.ShiftingOubliettesOfLyheGhiah.Secr
 
 public enum OID : uint
 {
-    Boss = 0x3025, //R=5.29
+    SecretSerpent = 0x3025, //R=5.29
     SerpentHatchling = 0x3026, //R=3.45
     WaterVoidzone = 0x1EA7D5,
     SecretQueen = 0x3021, // R0.84, icon 5, needs to be killed in order from 1 to 5 for maximum rewards
@@ -16,14 +16,14 @@ public enum OID : uint
 
 public enum AID : uint
 {
-    AutoAttack1 = 870, // Boss/SerpentHatchling->player, no cast, single-target
+    AutoAttack1 = 870, // SecretSerpent/SerpentHatchling->player, no cast, single-target
     AutoAttack2 = 872, // Mandragoras->player, no cast, single-target
 
-    Douse = 21701, // Boss->location, 3.0s cast, range 8 circle
-    Drench1 = 21700, // Boss->self, 3.0s cast, range 10+R 90-degree cone
+    Douse = 21701, // SecretSerpent->location, 3.0s cast, range 8 circle
+    Drench1 = 21700, // SecretSerpent->self, 3.0s cast, range 10+R 90-degree cone
     Drench2 = 22771, // SerpentHatchling->self, 3.0s cast, range 10+R 90-degree cone
-    FangsEnd = 21699, // Boss->player, 4.0s cast, single-target
-    ScaleRipple = 21702, // Boss->self, 2.5s cast, range 8 circle
+    FangsEnd = 21699, // SecretSerpent->player, 4.0s cast, single-target
+    ScaleRipple = 21702, // SecretSerpent->self, 2.5s cast, range 8 circle
 
     Mash = 21767, // KeeperOfKeys->self, 3.0s cast, range 13 width 4 rect
     Inhale = 21770, // KeeperOfKeys->self, no cast, range 20 120-degree cone, attract 25 between hitboxes, shortly before Spin
@@ -37,7 +37,7 @@ public enum AID : uint
     Telega = 9630 // Mandragoras->self, no cast, single-target, bonus adds disappear
 }
 
-class DouseVoidzone(BossModule module) : Components.Voidzone(module, 7.5f, GetVoidzones)
+sealed class DouseVoidzone(BossModule module) : Components.Voidzone(module, 7.5f, GetVoidzones)
 {
     private static Actor[] GetVoidzones(BossModule module)
     {
@@ -57,30 +57,28 @@ class DouseVoidzone(BossModule module) : Components.Voidzone(module, 7.5f, GetVo
         return voidzones[..index];
     }
 }
-class Douse(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Douse, 8f);
-class FangsEnd(BossModule module) : Components.SingleTargetCast(module, (uint)AID.FangsEnd);
-class Drench1(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Drench1, new AOEShapeCone(15.29f, 45f.Degrees()));
-class Drench2(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Drench2, new AOEShapeCone(13.45f, 45f.Degrees()));
-class ScaleRipple(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ScaleRipple, 8f);
+sealed class DouseScaleRipple(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.Douse, (uint)AID.ScaleRipple], 8f);
+sealed class FangsEnd(BossModule module) : Components.SingleTargetCast(module, (uint)AID.FangsEnd);
+sealed class Drench1(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Drench1, new AOEShapeCone(15.29f, 45f.Degrees()));
+sealed class Drench2(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Drench2, new AOEShapeCone(13.45f, 45f.Degrees()));
 
-class MandragoraAOEs(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.PluckAndPrune, (uint)AID.TearyTwirl,
+sealed class MandragoraAOEs(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.PluckAndPrune, (uint)AID.TearyTwirl,
 (uint)AID.HeirloomScream, (uint)AID.PungentPirouette, (uint)AID.Pollen], 6.84f);
 
-class Spin(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spin, 11f);
-class Mash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Mash, new AOEShapeRect(13f, 2f));
-class Scoop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Scoop, new AOEShapeCone(15f, 60f.Degrees()));
+sealed class Spin(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spin, 11f);
+sealed class Mash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Mash, new AOEShapeRect(13f, 2f));
+sealed class Scoop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Scoop, new AOEShapeCone(15f, 60f.Degrees()));
 
-class SecretSerpentStates : StateMachineBuilder
+sealed class SecretSerpentStates : StateMachineBuilder
 {
     public SecretSerpentStates(BossModule module) : base(module)
     {
         TrivialPhase()
-            .ActivateOnEnter<Douse>()
+            .ActivateOnEnter<DouseScaleRipple>()
             .ActivateOnEnter<DouseVoidzone>()
             .ActivateOnEnter<FangsEnd>()
             .ActivateOnEnter<Drench1>()
             .ActivateOnEnter<Drench2>()
-            .ActivateOnEnter<ScaleRipple>()
             .ActivateOnEnter<MandragoraAOEs>()
             .ActivateOnEnter<Spin>()
             .ActivateOnEnter<Mash>()
@@ -89,17 +87,39 @@ class SecretSerpentStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "Malediktus", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 745, NameID = 9776)]
-public class SecretSerpent(WorldState ws, Actor primary) : THTemplate(ws, primary)
+[ModuleInfo(BossModuleInfo.Maturity.Verified,
+StatesType = typeof(SecretSerpentStates),
+ConfigType = null,
+ObjectIDType = typeof(OID),
+ActionIDType = typeof(AID),
+StatusIDType = null,
+TetherIDType = null,
+IconIDType = null,
+PrimaryActorOID = (uint)OID.SecretSerpent,
+Contributors = "The Combat Reborn Team (Malediktus)",
+Expansion = BossModuleInfo.Expansion.Shadowbringers,
+Category = BossModuleInfo.Category.TreasureHunt,
+GroupType = BossModuleInfo.GroupType.CFC,
+GroupID = 745u,
+NameID = 9776u,
+SortOrder = 10,
+PlanLevel = 0)]
+public sealed class SecretSerpent : THTemplate
 {
+    public SecretSerpent(WorldState ws, Actor primary) : base(ws, primary)
+    {
+        hatchlings = Enemies((uint)OID.SerpentHatchling);
+    }
+    private readonly List<Actor> hatchlings;
+
     private static readonly uint[] bonusAdds = [(uint)OID.SecretEgg, (uint)OID.SecretGarlic, (uint)OID.SecretOnion, (uint)OID.SecretTomato,
     (uint)OID.SecretQueen, (uint)OID.KeeperOfKeys];
-    public static readonly uint[] All = [(uint)OID.Boss, (uint)OID.SerpentHatchling, .. bonusAdds];
+    public static readonly uint[] All = [(uint)OID.SecretSerpent, (uint)OID.SerpentHatchling, .. bonusAdds];
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         Arena.Actor(PrimaryActor);
-        Arena.Actors(Enemies((uint)OID.SerpentHatchling));
+        Arena.Actors(hatchlings);
         Arena.Actors(this, bonusAdds, Colors.Vulnerable);
     }
 

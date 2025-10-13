@@ -69,7 +69,7 @@ class DarkMatter(BossModule module) : Components.GenericBaitAway(module, centerA
     }
 }
 
-class ForkedLightningDarkBeckons(BossModule module) : Components.UniformStackSpread(module, 6f, 5f, 4, alwaysShowSpreads: true)
+class ForkedLightningDarkBeckons(BossModule module) : Components.UniformStackSpread(module, 6f, 5f, 4, 4)
 {
     public override void OnStatusGain(Actor actor, ActorStatus status)
     {
@@ -86,7 +86,7 @@ class ForkedLightningDarkBeckons(BossModule module) : Components.UniformStackSpr
                 break;
             case (uint)IconID.DarkMatter:
                 foreach (ref var s in Stacks.AsSpan())
-                    s.ForbiddenPlayers[Raid.FindSlot(actor.InstanceID)] = true;
+                    s.ForbiddenPlayers.Set(Raid.FindSlot(actor.InstanceID));
                 break;
         }
     }

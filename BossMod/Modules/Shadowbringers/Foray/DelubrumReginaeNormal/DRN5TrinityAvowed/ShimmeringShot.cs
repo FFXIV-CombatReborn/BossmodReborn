@@ -68,7 +68,7 @@ sealed class ShimmeringShot(BossModule module) : Components.GenericAOEs(module)
             Array.Clear(_safezone);
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         _pattern = (index, state) switch
         {

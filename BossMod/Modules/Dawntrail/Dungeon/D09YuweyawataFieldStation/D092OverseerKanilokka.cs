@@ -56,7 +56,7 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
         void AddAOE(AOEShape shape) => _aoe = [new(shape, Arena.Center.Quantized(), default, Module.CastFinishAt(spell))];
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index != 0x07)
         {
@@ -156,7 +156,7 @@ sealed class LostHope(BossModule module) : Components.TemporaryMisdirection(modu
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index != 0x07)
         {
@@ -171,7 +171,7 @@ sealed class LostHope(BossModule module) : Components.TemporaryMisdirection(modu
         base.AddAIHints(slot, actor, assignment, hints);
         if (prepare)
         {
-            hints.GoalZones.Add(hints.GoalSingleTarget(Arena.Center, 1f, 9f));
+            hints.GoalZones.Add(AIHints.GoalSingleTarget(Arena.Center, 1f, 9f));
         }
     }
 }

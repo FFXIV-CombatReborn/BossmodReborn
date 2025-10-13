@@ -50,13 +50,15 @@ sealed class M05SDancingGreenStates : StateMachineBuilder
     {
         ComponentCondition<FlipToABSide>(id, delay, comp => comp.NumCasts != 0, "Select stack kind")
             .ActivateOnEnter<TwoThreeFourSnapTwistDropTheNeedle>()
-            .ActivateOnEnter<FlipToABSide>();
+            .ActivateOnEnter<FlipToABSide>()
+            .ExecOnExit<FlipToABSide>(comp => comp.SetActivation(16.2d));
         ComponentCondition<TwoThreeFourSnapTwistDropTheNeedle>(id + 0x10u, 11f, comp => comp.NumCasts != 0, "Half room cleave 1");
         ComponentCondition<TwoThreeFourSnapTwistDropTheNeedle>(id + 0x20u, 3.5f, comp => comp.NumCasts == 3, "Half room cleave 2");
         ComponentCondition<FlipToABSide>(id + 0x30u, 1.7f, comp => comp.Source == null, "Stack resolves")
             .ResetComp<TwoThreeFourSnapTwistDropTheNeedle>()
             .ResetComp<FlipToABSide>();
-        ComponentCondition<FlipToABSide>(id + 0x40u, 2.9f, comp => comp.NumCasts != 0, "Store opposite stack kind");
+        ComponentCondition<FlipToABSide>(id + 0x40u, 2.9f, comp => comp.NumCasts != 0, "Store opposite stack kind")
+            .ExecOnExit<FlipToABSide>(comp => comp.SetActivation(16.2d));
         ComponentCondition<TwoThreeFourSnapTwistDropTheNeedle>(id + 0x50u, 11f, comp => comp.NumCasts != 0, "Half room cleave 1");
         ComponentCondition<TwoThreeFourSnapTwistDropTheNeedle>(id + 0x60u, 3.5f, comp => comp.NumCasts == 3, "Half room cleave 2");
         ComponentCondition<FlipToABSide>(id + 0x70u, 1.7f, comp => comp.Source == null, "Stack resolves")
@@ -80,7 +82,8 @@ sealed class M05SDancingGreenStates : StateMachineBuilder
         ComponentCondition<FunkyFloor>(id + 0x60u, 1.6f, comp => comp.NumCasts == 4, "Checkerboard 4");
         ComponentCondition<FlipToABSide>(id + 0x70u, 0.9f, comp => comp.NumCasts != 0, "Select stack kind")
             .ActivateOnEnter<TwoThreeFourSnapTwistDropTheNeedle>()
-            .ActivateOnEnter<FlipToABSide>();
+            .ActivateOnEnter<FlipToABSide>()
+            .ExecOnExit<FlipToABSide>(comp => comp.SetActivation(26.3d));
         ComponentCondition<FunkyFloor>(id + 0x80u, 3f, comp => comp.NumCasts == 5, "Checkerboard 5");
         ComponentCondition<Spotlights1>(id + 0x90u, 2.5f, comp => comp.FinishedCount > 0, "Spotlights resolve 1");
         ComponentCondition<FunkyFloor>(id + 0xA0u, 1.4f, comp => comp.NumCasts == 6, "Checkerboard 6");
@@ -143,7 +146,8 @@ sealed class M05SDancingGreenStates : StateMachineBuilder
         ComponentCondition<FlipToABSide>(id, delay, comp => comp.NumCasts != 0, "Select stack kind")
             .ActivateOnEnter<TwoThreeFourSnapTwistDropTheNeedle>()
             .ActivateOnEnter<RideTheWaves>()
-            .ActivateOnEnter<FlipToABSide>();
+            .ActivateOnEnter<FlipToABSide>()
+            .ExecOnExit<FlipToABSide>(comp => comp.SetActivation(53.4d));
         ComponentCondition<RideTheWaves>(id + 0x10u, 10.5f, comp => comp.AOEs.Count != 0, "Exaflare appears");
         ComponentCondition<RideTheWaves>(id + 0x20u, 3.1f, comp => comp.NumCasts != 0, "Exaflare starts");
         Condition(id + 0x30u, 1.1f, () => Module.FindComponent<QuarterBeats>()?.Stacks.Count != 0 || Module.FindComponent<EighthBeats>()?.Spreads.Count != 0, "Spreads OR stacks 1")
@@ -191,7 +195,8 @@ sealed class M05SDancingGreenStates : StateMachineBuilder
         ComponentCondition<BackUpDance>(id + 0x20u, 1.8f, comp => comp.NumCasts != 0, "Baits 1 resolve");
         ComponentCondition<FlipToABSide>(id + 0x30u, 5.5f, comp => comp.NumCasts != 0, "Select stack kind")
             .ActivateOnEnter<TwoThreeFourSnapTwistDropTheNeedle>()
-            .ActivateOnEnter<FlipToABSide>();
+            .ActivateOnEnter<FlipToABSide>()
+            .ExecOnExit<FlipToABSide>(comp => comp.SetActivation(16.2d));
         ComponentCondition<Spotlights2>(id + 0x40u, 2.7f, comp => comp.FinishedCount > 4, "Spotlights resolve 2");
         ComponentCondition<BackUpDance>(id + 0x50u, 1.9f, comp => comp.NumCasts > 4, "Baits 2 resolve")
             .DeactivateOnExit<BackUpDance>()

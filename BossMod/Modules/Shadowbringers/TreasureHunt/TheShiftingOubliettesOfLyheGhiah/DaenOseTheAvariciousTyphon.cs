@@ -2,7 +2,7 @@ namespace BossMod.Shadowbringers.TreasureHunt.ShiftingOubliettesOfLyheGhiah.Daen
 
 public enum OID : uint
 {
-    Boss = 0x301A, // R0.75-4.5
+    DaenOseTheAvariciousTyphon = 0x301A, // R0.75-4.5
     WrigglingMenace = 0x3024, // R1.8
     LingeringSnort = 0x301B, // R0.8
     DaenOseTheAvaricious1 = 0x3082, // R1.0, TODO: rotation ccw?
@@ -18,21 +18,21 @@ public enum OID : uint
 
 public enum AID : uint
 {
-    AutoAttack1 = 870, // Boss/WrigglingMenace->player, no cast, single-target
+    AutoAttack1 = 870, // DaenOseTheAvariciousTyphon/WrigglingMenace->player, no cast, single-target
     AutoAttack2 = 872, // Mandragoras->player, no cast, single-target
 
-    AChoo = 21689, // Boss->self, 3.0s cast, range 12 90-degree cone
+    AChoo = 21689, // DaenOseTheAvariciousTyphon->self, 3.0s cast, range 12 90-degree cone
 
-    UnpleasantBreezeVisual = 21696, // Boss->self, 3.0s cast, single-target
+    UnpleasantBreezeVisual = 21696, // DaenOseTheAvariciousTyphon->self, 3.0s cast, single-target
     UnpleasantBreeze = 21697, // Helper->location, 3.0s cast, range 6 circle
-    StoutSnort = 21687, // Boss->self, 4.0s cast, range 40 circle, raidwide
+    StoutSnort = 21687, // DaenOseTheAvariciousTyphon->self, 4.0s cast, range 40 circle, raidwide
 
-    VisualLingeringSnort = 21694, // Boss->self, 3.0s cast, single-target
+    VisualLingeringSnort = 21694, // DaenOseTheAvariciousTyphon->self, 3.0s cast, single-target
     LingeringSnort = 21695, // Helper->self, 6.5s cast, range 50 circle, damage fall off aoe
-    SnortsaultKB = 21690, // Boss->self, 6.5s cast, range 40 circle, knockback 20, away from source
-    SnortsaultCircle = 21782, // Boss->self, no cast, range 5 circle
+    SnortsaultKB = 21690, // DaenOseTheAvariciousTyphon->self, 6.5s cast, range 40 circle, knockback 20, away from source
+    SnortsaultCircle = 21782, // DaenOseTheAvariciousTyphon->self, no cast, range 5 circle
     SnortsaultCone = 21781, // Helper->self, no cast, range 20 45-degree cone
-    SnortAssaultEnd = 21691, // Boss->self, no cast, range 40 circle
+    SnortAssaultEnd = 21691, // DaenOseTheAvariciousTyphon->self, no cast, range 40 circle
 
     FellSwipe = 21771, // WrigglingMenace->self, 3.0s cast, range 8 120-degree cone
     WindShot = 21772, // LingeringSnort->self, 3.0s cast, range 40 width 6 rect
@@ -46,34 +46,31 @@ public enum AID : uint
     Telega = 9630 // Mandragoras->self, no cast, single-target, bonus adds disappear
 }
 
-class AChoo(BossModule module) : Components.SimpleAOEs(module, (uint)AID.AChoo, new AOEShapeCone(12f, 45f.Degrees()));
-class FellSwipe(BossModule module) : Components.SimpleAOEs(module, (uint)AID.FellSwipe, new AOEShapeCone(8f, 60f.Degrees()));
-class WindShot(BossModule module) : Components.SimpleAOEs(module, (uint)AID.WindShot, new AOEShapeRect(40f, 3f));
-class LingeringSnort(BossModule module) : Components.SimpleAOEs(module, (uint)AID.LingeringSnort, 20f);
-class UnpleasantBreeze(BossModule module) : Components.SimpleAOEs(module, (uint)AID.UnpleasantBreeze, 6f);
-class Fireball(BossModule module) : Components.StackWithCastTargets(module, (uint)AID.Fireball, 6f, 8, 8);
+sealed class AChoo(BossModule module) : Components.SimpleAOEs(module, (uint)AID.AChoo, new AOEShapeCone(12f, 45f.Degrees()));
+sealed class FellSwipe(BossModule module) : Components.SimpleAOEs(module, (uint)AID.FellSwipe, new AOEShapeCone(8f, 60f.Degrees()));
+sealed class WindShot(BossModule module) : Components.SimpleAOEs(module, (uint)AID.WindShot, new AOEShapeRect(40f, 3f));
+sealed class LingeringSnort(BossModule module) : Components.SimpleAOEs(module, (uint)AID.LingeringSnort, 20f);
+sealed class UnpleasantBreeze(BossModule module) : Components.SimpleAOEs(module, (uint)AID.UnpleasantBreeze, 6f);
+sealed class Fireball(BossModule module) : Components.StackWithCastTargets(module, (uint)AID.Fireball, 6f, 8, 8);
 
-class SnortsaultKB(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.SnortsaultKB, 20f, stopAtWall: true);
-class SnortsaultCircle(BossModule module) : Components.GenericAOEs(module)
+sealed class SnortsaultKB(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.SnortsaultKB, 20f, stopAtWall: true);
+sealed class SnortsaultCircle(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly LingeringSnort _aoes = module.FindComponent<LingeringSnort>()!;
-    private static readonly AOEShapeCircle circle = new(5f);
+    private readonly AOEShapeCircle circle = new(5f);
     private AOEInstance[] _aoe = [];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        if (_aoes.ActiveCasters.Length == 0)
-        {
-            return _aoe;
-        }
-        return [];
+        return _aoes.ActiveCasters.Length == 0 ? _aoe : [];
     }
 
     public override void OnActorCreated(Actor actor)
     {
         if (actor.OID == (uint)OID.DaenOseTheAvaricious2)
         {
-            _aoe = [new(circle, Arena.Center.Quantized(), default, WorldState.FutureTime(14.3d))];
+            var pos = Arena.Center.Quantized();
+            _aoe = [new(circle, pos, default, WorldState.FutureTime(14.3d), shapeDistance: circle.Distance(pos, default))];
         }
     }
 
@@ -86,11 +83,10 @@ class SnortsaultCircle(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
-class Snortsault(BossModule module) : Components.GenericRotatingAOE(module)
+sealed class Snortsault(BossModule module) : Components.GenericRotatingAOE(module)
 {
     private readonly LingeringSnort _aoe = module.FindComponent<LingeringSnort>()!;
-    private static readonly Angle increment = 6f.Degrees();
-    private static readonly AOEShapeCone cone = new(20f, 22.5f.Degrees());
+    private readonly AOEShapeCone cone = new(20f, 22.5f.Degrees());
 
     public override void OnActorCreated(Actor actor)
     {
@@ -105,7 +101,8 @@ class Snortsault(BossModule module) : Components.GenericRotatingAOE(module)
         }
         void AddSequences(bool isClockwise)
         {
-            var rotationIncrement = isClockwise ? increment : -increment;
+            var inc = 6f.Degrees();
+            var rotationIncrement = isClockwise ? inc : -inc;
             AddSequence(default);
             AddSequence(180f.Degrees());
             void AddSequence(Angle offset) => Sequences.Add(new(cone, Arena.Center.Quantized(), actor.Rotation + offset, rotationIncrement, WorldState.FutureTime(14.5d), 1.1d, 31, 9));
@@ -115,32 +112,40 @@ class Snortsault(BossModule module) : Components.GenericRotatingAOE(module)
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         if (spell.Action.ID == (uint)AID.SnortsaultCone)
+        {
             AdvanceSequence(caster.Position, caster.Rotation, WorldState.CurrentTime);
+        }
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         if (_aoe.ActiveCasters.Length == 0)
+        {
             base.AddHints(slot, actor, hints);
+        }
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (_aoe.ActiveCasters.Length == 0)
+        {
             base.AddAIHints(slot, actor, assignment, hints);
+        }
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
         if (_aoe.ActiveCasters.Length == 0)
+        {
             base.DrawArenaBackground(pcSlot, pc);
+        }
     }
 }
 
-class MandragoraAOEs(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.PluckAndPrune, (uint)AID.TearyTwirl,
+sealed class MandragoraAOEs(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.PluckAndPrune, (uint)AID.TearyTwirl,
 (uint)AID.HeirloomScream, (uint)AID.PungentPirouette, (uint)AID.Pollen], 6.84f);
 
-class DaenOseTheAvariciousTyphonStates : StateMachineBuilder
+sealed class DaenOseTheAvariciousTyphonStates : StateMachineBuilder
 {
     public DaenOseTheAvariciousTyphonStates(BossModule module) : base(module)
     {
@@ -159,17 +164,38 @@ class DaenOseTheAvariciousTyphonStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 745, NameID = 9808, SortOrder = 1)]
-public class DaenOseTheAvariciousTyphon(WorldState ws, Actor primary) : THTemplate(ws, primary)
+[ModuleInfo(BossModuleInfo.Maturity.Verified,
+StatesType = typeof(DaenOseTheAvariciousTyphonStates),
+ConfigType = null,
+ObjectIDType = typeof(OID),
+ActionIDType = typeof(AID),
+StatusIDType = null,
+TetherIDType = null,
+IconIDType = null,
+PrimaryActorOID = (uint)OID.DaenOseTheAvariciousTyphon,
+Contributors = "The Combat Reborn Team (Malediktus)",
+Expansion = BossModuleInfo.Expansion.Shadowbringers,
+Category = BossModuleInfo.Category.TreasureHunt,
+GroupType = BossModuleInfo.GroupType.CFC,
+GroupID = 745u,
+NameID = 9808u,
+SortOrder = 14,
+PlanLevel = 0)]
+public sealed class DaenOseTheAvariciousTyphon : THTemplate
 {
+    public DaenOseTheAvariciousTyphon(WorldState ws, Actor primary) : base(ws, primary)
+    {
+        menaces = Enemies((uint)OID.WrigglingMenace);
+    }
+    private readonly List<Actor> menaces;
     private static readonly uint[] bonusAdds = [(uint)OID.SecretEgg, (uint)OID.SecretGarlic, (uint)OID.SecretOnion, (uint)OID.SecretTomato,
     (uint)OID.SecretQueen];
-    public static readonly uint[] All = [(uint)OID.Boss, (uint)OID.WrigglingMenace, .. bonusAdds];
+    public static readonly uint[] All = [(uint)OID.DaenOseTheAvariciousTyphon, (uint)OID.WrigglingMenace, .. bonusAdds];
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         Arena.Actor(PrimaryActor);
-        Arena.Actors(Enemies((uint)OID.WrigglingMenace));
+        Arena.Actors(menaces);
         Arena.Actors(this, bonusAdds, Colors.Vulnerable);
     }
 

@@ -79,13 +79,13 @@ sealed class ArenaBounds
                 var points = ConcaveHull.GenerateConcaveHull(playerPoints, 0.5f, 0.2f);
                 var center = CalculateCentroid(points);
                 var sb = new StringBuilder("private static readonly WPos[] vertices = [");
-
+                var inv = CultureInfo.InvariantCulture;
                 for (var i = 0; i < points.Count; ++i)
                 {
                     if (i % 5 == 0 && i != 0)
                         sb.Append("\n  ");
                     var p = points[i];
-                    sb.Append($"new({p.X.ToString("F2", CultureInfo.InvariantCulture)}f, {p.Z.ToString("F2", CultureInfo.InvariantCulture)}f)");
+                    sb.Append($"new({p.X.ToString("F2", inv)}f, {p.Z.ToString("F2", inv)}f)");
                     if (i != points.Count - 1)
                     {
                         sb.Append(',');
@@ -95,7 +95,7 @@ sealed class ArenaBounds
                 }
 
                 sb.Append("];");
-                sb.Append($"\n// Centroid of the polygon is at: ({center.X.ToString("F3", CultureInfo.InvariantCulture)}f, {center.Z.ToString("F3", CultureInfo.InvariantCulture)}f)");
+                sb.Append($"\n// Centroid of the polygon is at: ({center.X.ToString("F3", inv)}f, {center.Z.ToString("F3", inv)}f)");
                 ImGui.SetClipboardText(sb.ToString());
             });
         }
@@ -133,7 +133,7 @@ public static class ConcaveHull
 {
     private static double Distance(WPos a, WPos b) => (b - a).Length();
 
-    private static List<WPos> FilterClosePoints(IEnumerable<WPos> points, double epsilon)
+    private static List<WPos> FilterClosePoints(List<WPos> points, double epsilon)
     {
         List<WPos> filteredPoints = [];
         foreach (var point in points)

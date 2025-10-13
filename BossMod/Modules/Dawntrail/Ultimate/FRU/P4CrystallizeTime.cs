@@ -134,7 +134,7 @@ sealed class P4CrystallizeTimeDragonHead(BossModule module) : BossComponent(modu
                     if (p.soaker != pcAssignment)
                         hints.AddForbiddenZone(new SDCircle(p.puddle.Position, 2f));
                     else if (_numMaelstroms >= 6)
-                        hints.GoalZones.Add(hints.GoalProximity(p.puddle.Position, 15f, 0.25f));
+                        hints.GoalZones.Add(AIHints.GoalProximity(p.puddle.Position, 15f, 0.25f));
                 }
             }
         }
@@ -547,7 +547,7 @@ sealed class P4CrystallizeTimeHints(BossModule module) : BossComponent(module)
                 }
                 // stay on correct side
                 var dest = Arena.Center + new WDir(default, hint.offset.Z > 0f ? 18f : -18f);
-                hints.GoalZones.Add(hints.GoalSingleTarget(dest, 2f, 0.5f));
+                hints.GoalZones.Add(AIHints.GoalSingleTarget(dest, 2f, 0.5f));
             }
         }
     }
@@ -710,9 +710,9 @@ sealed class P4CrystallizeTimeRewind(BossModule module) : Components.GenericKnoc
         if (!RewindDone && _ct != null && _exalines != null && _ct.Cleansed[slot])
         {
             var midpoint = SafeCorner();
-            hints.GoalZones.Add(hints.GoalProximity(midpoint, 15f, 0.5f));
+            hints.GoalZones.Add(AIHints.GoalProximity(midpoint, 15f, 0.5f));
             var destPoint = midpoint + AssignedPositionOffset(actor, assignment);
-            hints.GoalZones.Add(hints.GoalProximity(destPoint, 1f, 1f));
+            hints.GoalZones.Add(AIHints.GoalProximity(destPoint, 1f, 1f));
         }
     }
 

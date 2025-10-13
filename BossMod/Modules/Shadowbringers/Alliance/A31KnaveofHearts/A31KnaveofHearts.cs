@@ -19,7 +19,7 @@ sealed class ColossalImpact(BossModule module) : Components.SimpleAOEGroups(modu
         var index = 0;
         while (index < count)
         {
-            ref readonly var aoe = ref aoes[index];
+            ref var aoe = ref aoes[index];
             if (aoe.Rotation.AlmostEqual(rot, Angle.DegToRad))
             {
                 break;

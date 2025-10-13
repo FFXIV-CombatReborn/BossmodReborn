@@ -47,14 +47,20 @@ public class ConcentricAOEs(BossModule module, AOEShape[] shapes, bool showall =
                 }
                 if (!showall)
                 {
-                    _aoes.Add(new(Shapes[s.NumCastsDone], s.Origin, s.Rotation, act, risky: risky));
+                    var shape = Shapes[s.NumCastsDone];
+                    var origin = s.Origin;
+                    var rotation = s.Rotation;
+                    _aoes.Add(new(shape, origin, rotation, act, risky: risky, shapeDistance: shape.Distance(origin, rotation)));
                 }
                 else
                 {
                     var len = Shapes.Length;
                     for (var j = s.NumCastsDone; j < len; ++j)
                     {
-                        _aoes.Add(new(Shapes[j], s.Origin, s.Rotation, act, risky: risky));
+                        var shape = Shapes[j];
+                        var origin = s.Origin;
+                        var rotation = s.Rotation;
+                        _aoes.Add(new(Shapes[j], s.Origin, s.Rotation, act, risky: risky, shapeDistance: shape.Distance(origin, rotation)));
                     }
                 }
             }

@@ -3,12 +3,12 @@ namespace BossMod.Endwalker.VariantCriterion.V1SildihnSubterrane.V14ZelessGah;
 sealed class InfernGale(BossModule module) : Components.GenericKnockback(module)
 {
     private Knockback[] _kb = [];
-    private bool kbInit;
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor) => _kb;
 
     public override void OnStatusGain(Actor actor, ActorStatus status)
     {
+        base.OnStatusGain(actor, status);
         if (status.ID == (uint)SID.MechanicStatus && status.Extra == 0x1CA)
         {
             _kb = [new(actor.Position.Quantized(), 20f, WorldState.FutureTime(5.6d))];
@@ -19,14 +19,13 @@ sealed class InfernGale(BossModule module) : Components.GenericKnockback(module)
     {
         if (spell.Action.ID == (uint)AID.InfernGale)
         {
-            kbInit = false;
             _kb = [];
         }
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (kbInit)
+        if (_kb.Length != 0)
         {
             ref var kb = ref _kb[0];
             var act = kb.Activation;

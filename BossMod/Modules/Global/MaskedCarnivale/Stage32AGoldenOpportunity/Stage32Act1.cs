@@ -45,10 +45,8 @@ sealed class GoldorFireIII(BossModule module) : Components.SimpleAOEGroups(modul
 sealed class GoldorBlast(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GoldorBlast, new AOEShapeRect(60f, 5f));
 sealed class Rupture(BossModule module) : Components.CastHint(module, (uint)AID.Rupture, "Kill slime ASAP! (The Ram's Voice + Ultravibration)", true);
 
-sealed class GoldorQuake(BossModule module) : Components.ConcentricAOEs(module, _shapes)
+sealed class GoldorQuake(BossModule module) : Components.ConcentricAOEs(module, [new AOEShapeCircle(10f), new AOEShapeDonut(10f, 20f), new AOEShapeDonut(20f, 30f)])
 {
-    private static readonly AOEShape[] _shapes = [new AOEShapeCircle(10f), new AOEShapeDonut(10f, 20f), new AOEShapeDonut(20f, 30f)];
-
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.GoldorQuake1)
@@ -79,12 +77,11 @@ sealed class GoldorAeroIII(BossModule module) : Components.SimpleKnockbacks(modu
 
     public override bool DestinationUnsafe(int slot, Actor actor, WPos pos)
     {
-        var aoes = _aoe.ActiveAOEs(slot, actor);
+        var aoes = CollectionsMarshal.AsSpan(_aoe.Casters);
         var len = aoes.Length;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var aoe = ref aoes[i];
-            if (aoe.Check(pos))
+            if (aoes[i].Check(pos))
             {
                 return true;
             }

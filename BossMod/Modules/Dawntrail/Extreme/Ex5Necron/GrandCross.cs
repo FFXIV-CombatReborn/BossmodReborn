@@ -7,7 +7,7 @@ sealed class NeutronRing(BossModule module) : Components.RaidwideCastDelay(modul
 sealed class GrandCrossArenaChange(BossModule module) : Components.GenericAOEs(module)
 {
     private AOEInstance[] _aoe = [];
-    private static readonly AOEShapeDonut donut = new(9f, 60f);
+    private readonly AOEShapeDonut donut = new(9f, 60f);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
 
@@ -62,8 +62,7 @@ sealed class Shock(BossModule module) : Components.GenericTowers(module)
             var towers = CollectionsMarshal.AsSpan(Towers);
             for (var i = 0; i < count; ++i)
             {
-                ref var t = ref towers[i];
-                t.ForbiddenSoakers = forbidden;
+                towers[i].ForbiddenSoakers = forbidden;
             }
         }
     }
@@ -106,8 +105,7 @@ sealed class GrandCrossRect(BossModule module) : Components.GenericAOEs(module)
     {
         if (_aoes.Count != 0 && spell.Action.ID == (uint)AID.GrandCrossRect) // replace prediction with actual AOE
         {
-            ref var aoe = ref _aoes.Ref(0);
-            aoe = new(rect, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell));
+            _aoes.Ref(0) = new(rect, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell));
         }
     }
 

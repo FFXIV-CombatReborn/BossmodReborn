@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Endwalker.Ultimate.TOP;
 
-sealed class P6CosmoDive(BossModule module) : Components.UniformStackSpread(module, 6f, 8f, 6, 6, true)
+sealed class P6CosmoDive(BossModule module) : Components.UniformStackSpread(module, 6f, 8f, 6, 6)
 {
     private Actor? _source;
     private DateTime _activation;

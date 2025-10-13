@@ -25,6 +25,13 @@ public sealed class ZoneModuleWindow : UIWindow
         }
     }
 
+    public override void PostDraw()
+    {
+        // user closed window
+        if (_zmm.ActiveModule?.WantDrawExtra() == true && !IsOpen)
+            _zmm.ActiveModule?.OnWindowClose();
+    }
+
     public override void Draw()
     {
         _zmm.ActiveModule?.DrawExtra();

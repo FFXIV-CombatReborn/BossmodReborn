@@ -50,7 +50,7 @@ sealed class P2MirrorMirrorReflectedScytheKickBlue : Components.GenericAOEs
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index is >= 0x01 and <= 0x08 && state == 0x00020001u)
         {
@@ -132,7 +132,7 @@ sealed class P2MirrorMirrorHouseOfLight(BossModule module) : Components.GenericB
         hints.AddForbiddenZone(new SDInvertedCone(origin.Actor.Position, 4f, dir, 15f.Degrees()), origin.Activation);
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index is >= 0x01 and <= 0x08 && state == 0x00020001u)
         {

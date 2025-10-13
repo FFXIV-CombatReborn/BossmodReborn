@@ -60,7 +60,7 @@ class FunambulistsFantasia(BossModule module) : BossComponent(module)
         if (Arena.Bounds == D033AencThon.ChasmArena && Module.Enemies((uint)OID.LiarsLyre) is var lyre && lyre.Count != 0)
         {
             hints.ActionsToExecute.Push(ActionID.MakeSpell(ClassShared.AID.Sprint), actor, ActionQueue.Priority.High);
-            hints.GoalZones.Add(hints.GoalSingleTarget(lyre[0], 1f, 5f));
+            hints.GoalZones.Add(AIHints.GoalSingleTarget(lyre[0], 1f, 5f));
         }
     }
 }

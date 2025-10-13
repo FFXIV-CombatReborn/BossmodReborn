@@ -44,6 +44,7 @@ sealed class WorldStateGameSync : IDisposable
     private readonly EventSubscriptions _subscriptions;
 
     private unsafe delegate void ProcessPacketActorCastDelegate(uint casterId, Network.ServerIPC.ActorCast* packet);
+
     private readonly Hook<ProcessPacketActorCastDelegate> _processPacketActorCastHook;
 
     private unsafe delegate void ProcessPacketEffectResultDelegate(uint targetID, byte* packet, byte replaying);
@@ -56,8 +57,16 @@ sealed class WorldStateGameSync : IDisposable
     private unsafe delegate void ProcessPacketNpcYellDelegate(Network.ServerIPC.NpcYell* packet);
     private readonly Hook<ProcessPacketNpcYellDelegate> _processPacketNpcYellHook;
 
-    private unsafe delegate void ProcessEnvControlDelegate(void* self, uint index, ushort s1, ushort s2);
-    private readonly Hook<ProcessEnvControlDelegate> _processEnvControlHook;
+    public unsafe delegate void ProcessMapEffectDelegate(void* self, uint index, ushort s1, ushort s2);
+    private readonly Hook<ProcessMapEffectDelegate> _processMapEffectHook;
+
+    private unsafe delegate void ProcessMapEffectNDelegate(ContentDirector* director, byte* packet);
+    private readonly Hook<ProcessMapEffectNDelegate> _processMapEffect1Hook;
+    private readonly Hook<ProcessMapEffectNDelegate> _processMapEffect2Hook;
+    private readonly Hook<ProcessMapEffectNDelegate> _processMapEffect3Hook;
+
+    public unsafe delegate byte ProcessLegacyMapEffectDelegate(EventFramework* fwk, EventId eventId, byte seq, byte unk, void* data, ulong length);
+    private readonly Hook<ProcessLegacyMapEffectDelegate> _processLegacyMapEffectHook;
 
     private unsafe delegate void ProcessPacketRSVDataDelegate(byte* packet);
     private readonly Hook<ProcessPacketRSVDataDelegate> _processPacketRSVDataHook;
@@ -72,12 +81,6 @@ sealed class WorldStateGameSync : IDisposable
     private readonly Hook<ProcessPacketFateInfoDelegate> _processPacketFateInfoHook;
 
     private readonly unsafe delegate* unmanaged<ContainerInterface*, float> _calculateMoveSpeedMulti;
-
-    private unsafe delegate void ProcessMapEffectDelegate(ContentDirector* director, byte* packet);
-
-    private readonly Hook<ProcessMapEffectDelegate> _processMapEffect1Hook;
-    private readonly Hook<ProcessMapEffectDelegate> _processMapEffect2Hook;
-    private readonly Hook<ProcessMapEffectDelegate> _processMapEffect3Hook;
 
     public unsafe WorldStateGameSync(WorldState ws, ActionManagerEx amex)
     {
@@ -120,9 +123,21 @@ sealed class WorldStateGameSync : IDisposable
         _processPacketNpcYellHook.Enable();
         Service.Log($"[WSG] ProcessPacketNpcYell address = 0x{_processPacketNpcYellHook.Address:X}");
 
-        _processEnvControlHook = Service.Hook.HookFromSignature<ProcessEnvControlDelegate>("48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 48 83 EC 20 8B FA 41 0F B7 E8", ProcessEnvControlDetour);
-        _processEnvControlHook.Enable();
-        Service.Log($"[WSG] ProcessEnvControl address = 0x{_processEnvControlHook.Address:X}");
+        _processMapEffectHook = Service.Hook.HookFromSignature<ProcessMapEffectDelegate>("48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 48 83 EC 20 8B FA 41 0F B7 E8", ProcessMapEffectDetour);
+        _processMapEffectHook.Enable();
+        Service.Log($"[WSG] ProcessMapEffect address = 0x{_processMapEffectHook.Address:X}");
+
+        var mapEffectAddrs = Service.SigScanner.ScanAllText("40 55 41 57 48 83 EC ?? 48 83 B9");
+        if (mapEffectAddrs.Length != 3)
+            throw new InvalidOperationException($"expected 3 matches for multi-MapEffect handlers, but got {mapEffectAddrs.Length}");
+
+        _processMapEffect1Hook = Service.Hook.HookFromAddress<ProcessMapEffectNDelegate>(mapEffectAddrs[0], ProcessMapEffect1Detour);
+        _processMapEffect1Hook.Enable();
+        _processMapEffect2Hook = Service.Hook.HookFromAddress<ProcessMapEffectNDelegate>(mapEffectAddrs[1], ProcessMapEffect2Detour);
+        _processMapEffect2Hook.Enable();
+        _processMapEffect3Hook = Service.Hook.HookFromAddress<ProcessMapEffectNDelegate>(mapEffectAddrs[2], ProcessMapEffect3Detour);
+        _processMapEffect3Hook.Enable();
+        Service.Log($"[WSG] ProcessMapEffectN addresses = 0x{_processMapEffect1Hook.Address:X}, 0x{_processMapEffect2Hook.Address:X}, 0x{_processMapEffect3Hook.Address:X}");
 
         _processPacketRSVDataHook = Service.Hook.HookFromSignature<ProcessPacketRSVDataDelegate>("44 8B 09 4C 8D 41 34", ProcessPacketRSVDataDetour);
         _processPacketRSVDataHook.Enable();
@@ -143,17 +158,9 @@ sealed class WorldStateGameSync : IDisposable
         _calculateMoveSpeedMulti = (delegate* unmanaged<ContainerInterface*, float>)Service.SigScanner.ScanText("E8 ?? ?? ?? ?? 44 0F 28 D8 45 0F 57 D2");
         Service.Log($"[WSG] CalculateMovementSpeedMultiplier address = 0x{(nint)_calculateMoveSpeedMulti:X}");
 
-        var mapEffectAddrs = Service.SigScanner.ScanAllText("40 55 41 57 48 83 EC ?? 48 83 B9");
-        if (mapEffectAddrs.Length != 3)
-            throw new InvalidOperationException($"expected 3 matches for multi-MapEffect handlers, but got {mapEffectAddrs.Length}");
-
-        _processMapEffect1Hook = Service.Hook.HookFromAddress<ProcessMapEffectDelegate>(mapEffectAddrs[0], ProcessMapEffect1Detour);
-        _processMapEffect1Hook.Enable();
-        _processMapEffect2Hook = Service.Hook.HookFromAddress<ProcessMapEffectDelegate>(mapEffectAddrs[1], ProcessMapEffect2Detour);
-        _processMapEffect2Hook.Enable();
-        _processMapEffect3Hook = Service.Hook.HookFromAddress<ProcessMapEffectDelegate>(mapEffectAddrs[2], ProcessMapEffect3Detour);
-        _processMapEffect3Hook.Enable();
-        Service.Log($"[WSG] MapEffect addresses = 0x{_processMapEffect1Hook.Address:X}, 0x{_processMapEffect2Hook.Address:X}, 0x{_processMapEffect3Hook.Address:X}");
+        _processLegacyMapEffectHook = Service.Hook.HookFromSignature<ProcessLegacyMapEffectDelegate>("89 54 24 10 48 89 4C 24 ?? 53 56 57 41 55 41 57 48 83 EC 30 48 8B 99 ?? ?? ?? ??", ProcessLegacyMapEffectDetour);
+        _processLegacyMapEffectHook.Enable();
+        Service.Log($"[WSG] LegacyMapEffect address = {_processLegacyMapEffectHook.Address:X}");
     }
 
     public void Dispose()
@@ -166,7 +173,7 @@ sealed class WorldStateGameSync : IDisposable
         _processPacketEffectResultHook.Dispose();
         _processPacketActorControlHook.Dispose();
         _processPacketNpcYellHook.Dispose();
-        _processEnvControlHook.Dispose();
+        _processMapEffectHook.Dispose();
         _processPacketRSVDataHook.Dispose();
         _processSystemLogMessageHook.Dispose();
         _processPacketOpenTreasureHook.Dispose();
@@ -399,7 +406,7 @@ sealed class WorldStateGameSync : IDisposable
                 ref var s = ref sm->Status[i];
                 if (s.StatusId != default)
                 {
-                    var dur = Math.Min(Math.Abs(s.RemainingTime), 100000);
+                    var dur = Math.Min(MathF.Abs(s.RemainingTime), 100000f);
                     ActorStatus curStatus = new(s.StatusId, s.Param, _ws.CurrentTime.AddSeconds(dur), SanitizedObjectID(s.SourceObject));
                     UpdateActorStatus(act, i, ref curStatus);
                 }
@@ -963,6 +970,9 @@ sealed class WorldStateGameSync : IDisposable
             case Network.ServerIPC.ActorControlCategory.TargetIcon:
                 _actorOps.GetOrAdd(actorID).Add(new ActorState.OpIcon(actorID, p1 - Network.IDScramble.Delta, p2));
                 break;
+            case Network.ServerIPC.ActorControlCategory.TargetVFX:
+                _actorOps.GetOrAdd(actorID).Add(new ActorState.OpVFX(actorID, p1, p2));
+                break;
             case Network.ServerIPC.ActorControlCategory.Tether:
                 _actorOps.GetOrAdd(actorID).Add(new ActorState.OpTether(actorID, new(p2, p3)));
                 break;
@@ -995,11 +1005,11 @@ sealed class WorldStateGameSync : IDisposable
         _actorOps.GetOrAdd(packet->SourceID).Add(new ActorState.OpEventNpcYell(packet->SourceID, packet->Message));
     }
 
-    private unsafe void ProcessEnvControlDetour(void* self, uint index, ushort s1, ushort s2)
+    private unsafe void ProcessMapEffectDetour(void* self, uint index, ushort s1, ushort s2)
     {
         // note: this function is only executed for incoming packets that pass some checks (validation that currently active director is what is expected) - don't think it's a big deal?
-        _processEnvControlHook.Original(self, index, s1, s2);
-        _globalOps.Add(new WorldState.OpEnvControl((byte)index, s1 | ((uint)s2 << 16)));
+        _processMapEffectHook.Original(self, index, s1, s2);
+        _globalOps.Add(new WorldState.OpMapEffect((byte)index, s1 | ((uint)s2 << 16)));
     }
 
     private unsafe void ProcessPacketRSVDataDetour(byte* packet)
@@ -1055,7 +1065,16 @@ sealed class WorldStateGameSync : IDisposable
             var low = *(ushort*)(data + 2 * i + offLow);
             var high = *(ushort*)(data + 2 * i + 2);
             var index = data[i + offIndex];
-            _globalOps.Add(new WorldState.OpEnvControl(index, low | ((uint)high << 16)));
+            _globalOps.Add(new WorldState.OpMapEffect(index, low | ((uint)high << 16)));
         }
+    }
+
+    private unsafe byte ProcessLegacyMapEffectDetour(EventFramework* fwk, EventId eventId, byte seq, byte unk, void* data, ulong length)
+    {
+        var res = _processLegacyMapEffectHook.Original(fwk, eventId, seq, unk, data, length);
+
+        _globalOps.Add(new WorldState.OpLegacyMapEffect(seq, unk, new Span<byte>(data, (int)length).ToArray()));
+
+        return res;
     }
 }

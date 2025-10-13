@@ -111,7 +111,7 @@ public sealed class RDM(RotationModuleManager manager, Actor player) : Castxan<A
 
         (BestAOETarget, NumAOETargets) = SelectTarget(strategy, primaryTarget, 25, IsSplashTarget);
         (BestLineTarget, NumLineTargets) = SelectTarget(strategy, primaryTarget, 25, Is25yRectTarget);
-        (BestConeTarget, NumConeTargets) = SelectTarget(strategy, primaryTarget, 8, (primary, other) => Hints.TargetInAOECone(other, Player.Position, 8, Player.DirectionTo(primary), 60.Degrees()));
+        (BestConeTarget, NumConeTargets) = SelectTarget(strategy, primaryTarget, 8, (primary, other) => TargetInAOECone(other, Player.Position, 8, Player.DirectionTo(primary), 60f.Degrees()));
 
         if (CountdownRemaining > 0)
         {
@@ -126,7 +126,7 @@ public sealed class RDM(RotationModuleManager manager, Actor player) : Castxan<A
             : 20;
 
         if (primaryTarget is { } tar && (Swordplay > 0 || LowestMana >= comboMana || InCombo))
-            Hints.GoalZones.Add(Hints.GoalSingleTarget(tar.Actor, 3));
+            Hints.GoalZones.Add(GoalSingleTarget(tar.Actor, 3));
 
         GoalZoneSingle(25);
 

@@ -2,7 +2,7 @@ namespace BossMod.Shadowbringers.TreasureHunt.ShiftingOubliettesOfLyheGhiah.Gree
 
 public enum OID : uint
 {
-    Boss = 0x3018, //R=1.6
+    GreedyPixie = 0x3018, //R=1.6
     SecretMorpho = 0x3019, //R=1.8
     PixieDouble1 = 0x304C, //R=1.6
     PixieDouble2 = 0x304D, //R=1.6
@@ -18,16 +18,16 @@ public enum OID : uint
 
 public enum AID : uint
 {
-    AutoAttack1 = 23185, // Boss/Mandragoras->player, no cast, single-target
+    AutoAttack1 = 23185, // GreedyPixie/Mandragoras->player, no cast, single-target
     AutoAttack2 = 872, // KeeperOfKeys/SecretMorpho->player, no cast, single-target
 
-    WindRune = 21686, // Boss->self, 3.0s cast, range 40 width 8 rect
-    SongRune = 21684, // Boss->location, 3.0s cast, range 6 circle
-    StormRune = 21682, // Boss->self, 4.0s cast, range 40 circle
+    WindRune = 21686, // GreedyPixie->self, 3.0s cast, range 40 width 8 rect
+    SongRune = 21684, // GreedyPixie->location, 3.0s cast, range 6 circle
+    StormRune = 21682, // GreedyPixie->self, 4.0s cast, range 40 circle
     BushBash1 = 22779, // PixieDouble2->self, 7.0s cast, range 12 circle
-    BushBash2 = 21683, // Boss->self, 5.0s cast, range 12 circle
+    BushBash2 = 21683, // GreedyPixie->self, 5.0s cast, range 12 circle
     NatureCall1 = 22780, // PixieDouble1->self, 7.0s cast, range 30 120-degree cone, turns player into a plant
-    NatureCall2 = 21685, // Boss->self, 5.0s cast, range 30 120-degree cone, turns player into a plant
+    NatureCall2 = 21685, // GreedyPixie->self, 5.0s cast, range 30 120-degree cone, turns player into a plant
 
     Pollen = 6452, // SecretQueen->self, 3.5s cast, range 6+R circle
     TearyTwirl = 6448, // SecretOnion->self, 3.5s cast, range 6+R circle
@@ -41,30 +41,21 @@ public enum AID : uint
     Telega = 9630 // BonusAdds->self, no cast, single-target, bonus adds disappear
 }
 
-class Windrune(BossModule module) : Components.SimpleAOEs(module, (uint)AID.WindRune, new AOEShapeRect(40f, 4f));
-class SongRune(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SongRune, 6f);
-class StormRune(BossModule module) : Components.RaidwideCast(module, (uint)AID.StormRune);
+sealed class Windrune(BossModule module) : Components.SimpleAOEs(module, (uint)AID.WindRune, new AOEShapeRect(40f, 4f));
+sealed class SongRune(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SongRune, 6f);
+sealed class StormRune(BossModule module) : Components.RaidwideCast(module, (uint)AID.StormRune);
 
-abstract class BushBash(BossModule module, uint aid) : Components.SimpleAOEs(module, aid, 12f);
-class BushBash1(BossModule module) : BushBash(module, (uint)AID.BushBash1);
-class BushBash2(BossModule module) : BushBash(module, (uint)AID.BushBash2);
+sealed class BushBash(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.BushBash1, (uint)AID.BushBash2], 12f);
+sealed class NatureCall(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.NatureCall1, (uint)AID.NatureCall2], new AOEShapeCone(30f, 60f.Degrees()));
 
-abstract class NatureCall(BossModule module, uint aid) : Components.SimpleAOEs(module, aid, new AOEShapeCone(30f, 60f.Degrees()));
-class NatureCall1(BossModule module) : NatureCall(module, (uint)AID.NatureCall1);
-class NatureCall2(BossModule module) : NatureCall(module, (uint)AID.NatureCall2);
+sealed class MandragoraAOEs(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.PluckAndPrune, (uint)AID.TearyTwirl,
+(uint)AID.HeirloomScream, (uint)AID.PungentPirouette, (uint)AID.Pollen], 6.84f);
 
-abstract class Mandragoras(BossModule module, uint aid) : Components.SimpleAOEs(module, aid, 6.84f);
-class PluckAndPrune(BossModule module) : Mandragoras(module, (uint)AID.PluckAndPrune);
-class TearyTwirl(BossModule module) : Mandragoras(module, (uint)AID.TearyTwirl);
-class HeirloomScream(BossModule module) : Mandragoras(module, (uint)AID.HeirloomScream);
-class PungentPirouette(BossModule module) : Mandragoras(module, (uint)AID.PungentPirouette);
-class Pollen(BossModule module) : Mandragoras(module, (uint)AID.Pollen);
+sealed class Spin(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spin, 11f);
+sealed class Mash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Mash, new AOEShapeRect(13f, 2f));
+sealed class Scoop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Scoop, new AOEShapeCone(15f, 60f.Degrees()));
 
-class Spin(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spin, 11f);
-class Mash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Mash, new AOEShapeRect(13f, 2f));
-class Scoop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Scoop, new AOEShapeCone(15f, 60f.Degrees()));
-
-class GreedyPixieStates : StateMachineBuilder
+sealed class GreedyPixieStates : StateMachineBuilder
 {
     public GreedyPixieStates(BossModule module) : base(module)
     {
@@ -72,15 +63,9 @@ class GreedyPixieStates : StateMachineBuilder
             .ActivateOnEnter<Windrune>()
             .ActivateOnEnter<StormRune>()
             .ActivateOnEnter<SongRune>()
-            .ActivateOnEnter<BushBash1>()
-            .ActivateOnEnter<BushBash2>()
-            .ActivateOnEnter<NatureCall1>()
-            .ActivateOnEnter<NatureCall2>()
-            .ActivateOnEnter<PluckAndPrune>()
-            .ActivateOnEnter<TearyTwirl>()
-            .ActivateOnEnter<HeirloomScream>()
-            .ActivateOnEnter<PungentPirouette>()
-            .ActivateOnEnter<Pollen>()
+            .ActivateOnEnter<BushBash>()
+            .ActivateOnEnter<NatureCall>()
+            .ActivateOnEnter<MandragoraAOEs>()
             .ActivateOnEnter<Spin>()
             .ActivateOnEnter<Mash>()
             .ActivateOnEnter<Scoop>()
@@ -88,17 +73,38 @@ class GreedyPixieStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "Malediktus", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 745, NameID = 9797)]
-public class GreedyPixie(WorldState ws, Actor primary) : THTemplate(ws, primary)
+[ModuleInfo(BossModuleInfo.Maturity.Verified,
+StatesType = typeof(GreedyPixieStates),
+ConfigType = null,
+ObjectIDType = typeof(OID),
+ActionIDType = typeof(AID),
+StatusIDType = null,
+TetherIDType = null,
+IconIDType = null,
+PrimaryActorOID = (uint)OID.GreedyPixie,
+Contributors = "The Combat Reborn Team (Malediktus)",
+Expansion = BossModuleInfo.Expansion.Shadowbringers,
+Category = BossModuleInfo.Category.TreasureHunt,
+GroupType = BossModuleInfo.GroupType.CFC,
+GroupID = 745u,
+NameID = 9797u,
+SortOrder = 2,
+PlanLevel = 0)]
+public sealed class GreedyPixie : THTemplate
 {
+    public GreedyPixie(WorldState ws, Actor primary) : base(ws, primary)
+    {
+        morphos = Enemies((uint)OID.SecretMorpho);
+    }
+    private readonly List<Actor> morphos;
     private static readonly uint[] bonusAdds = [(uint)OID.SecretEgg, (uint)OID.SecretGarlic, (uint)OID.SecretOnion, (uint)OID.SecretTomato,
     (uint)OID.SecretQueen, (uint)OID.FuathTrickster, (uint)OID.KeeperOfKeys];
-    public static readonly uint[] All = [(uint)OID.Boss, (uint)OID.SecretMorpho, .. bonusAdds];
+    public static readonly uint[] All = [(uint)OID.GreedyPixie, (uint)OID.SecretMorpho, .. bonusAdds];
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         Arena.Actor(PrimaryActor);
-        Arena.Actors(Enemies((uint)OID.SecretMorpho));
+        Arena.Actors(morphos);
         Arena.Actors(this, bonusAdds, Colors.Vulnerable);
     }
 

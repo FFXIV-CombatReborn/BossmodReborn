@@ -2,37 +2,8 @@ namespace BossMod.Dawntrail.Savage.M08SHowlingBlade;
 
 sealed class ProwlingGaleLast(BossModule module) : Components.GenericTowers(module, (uint)AID.ProwlingGaleLast1)
 {
-    public override void AddGlobalHints(GlobalHints hints)
-    {
-        var count = Towers.Count;
-        if (count > 0)
-        {
-            var sb = new StringBuilder(45);
-            var towers = CollectionsMarshal.AsSpan(Towers);
-
-            for (var j = 0; j < 5; ++j)
-            {
-                var center = ArenaChanges.EndArenaPlatforms[j].Center;
-
-                for (var i = 0; i < count; ++i)
-                {
-                    ref readonly var t = ref towers[i];
-
-                    if (t.Position.InCircle(center, 8f))
-                    {
-                        sb.Append($"P{j + 1}: {t.NumInside(Module)}/{t.MinSoakers}");
-                        sb.Append(", ");
-                        break;
-                    }
-                }
-            }
-
-            if (sb.Length >= 2)
-                sb.Length -= 2;
-
-            hints.Add(sb.ToString());
-        }
-    }
+    private readonly LamentOfTheCloseDistant _tethers = module.FindComponent<LamentOfTheCloseDistant>()!;
+    private readonly M08SHowlingBladeConfig _config = Service.Config.Get<M08SHowlingBladeConfig>();
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
@@ -45,27 +16,72 @@ sealed class ProwlingGaleLast(BossModule module) : Components.GenericTowers(modu
         };
         if (soakers != default)
         {
-            Towers.Add(new(spell.LocXZ, 2f, soakers, soakers, default, Module.CastFinishAt(spell)));
+            BitMask allowed = default;
+            if (_config.LoneWolfsLamentHints)
+            {
+                var party = Raid.WithSlot(true, true, true);
+                var len = party.Length;
+                var pos = caster.PosRot;
+                for (var i = 0; i < len; ++i)
+                {
+                    ref var p = ref party[i];
+                    var slot = p.Item1;
+                    ref var tether = ref _tethers.Partners[slot];
+                    var partnerRole = tether.Item1.Role;
+                    var playerRole = p.Item2.Role;
+                    switch (soakers)
+                    {
+                        case 2:
+                            allowed[slot] = (playerRole == Role.Tank || partnerRole == Role.Tank) && tether.close;
+                            break;
+                        case 3:
+                            allowed[slot] = playerRole == Role.Healer || partnerRole == Role.Healer && tether.close;
+                            break;
+                        case 1:
+                            allowed[slot] = pos.X > 100f ? partnerRole == Role.Tank && !tether.close
+                                : pos.Z < 100f ? partnerRole == Role.Healer && !tether.close : playerRole == Role.Tank && !tether.close;
+                            break;
+
+                    }
+                }
+            }
+            Towers.Add(new(spell.LocXZ, 2f, soakers, soakers, allowed == default ? allowed : ~allowed, Module.CastFinishAt(spell)));
         }
     }
 }
 
 sealed class LamentOfTheCloseDistant(BossModule module) : BossComponent(module)
 {
-    private readonly (Actor, bool close)[] _partner = new (Actor, bool)[PartyState.MaxPartySize];
+    private readonly M08SHowlingBladeConfig _config = Service.Config.Get<M08SHowlingBladeConfig>();
+    public readonly (Actor, bool close)[] Partners = new (Actor, bool)[PartyState.MaxPartySize];
     public bool TethersAssigned;
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (_partner[slot] != default)
+        if (Partners[slot] != default)
         {
-            hints.Add(_partner[slot].close ? "Stay close to partner!" : "Stay away from partner!");
+            hints.Add(Partners[slot].close ? "Stay close to partner!" : "Stay away from partner!");
+        }
+        else if (_config.LoneWolfsLamentHints && !TethersAssigned)
+        {
+            switch (actor.Role)
+            {
+                case Role.Tank:
+                    hints.Add("Preposition on platform 3 (NW)!");
+                    break;
+                case Role.Healer:
+                    hints.Add("Preposition on platform 1 (S)!");
+                    break;
+                default:
+                    hints.Add("Preposition on platform 5 (E)!");
+                    break;
+            }
         }
     }
 
     public override PlayerPriority CalcPriority(int pcSlot, Actor pc, int playerSlot, Actor player, ref uint customColor)
     {
-        return _partner[pcSlot].Item1 == player ? PlayerPriority.Danger : PlayerPriority.Irrelevant;
+        return Partners[pcSlot].Item1 == player ? PlayerPriority.Danger : PlayerPriority.Irrelevant;
     }
 
     public override void OnTethered(Actor source, ActorTetherInfo tether)
@@ -85,7 +101,7 @@ sealed class LamentOfTheCloseDistant(BossModule module) : BossComponent(module)
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
-        if (_partner[pcSlot].Item1 is var partner && partner != default)
+        if (Partners[pcSlot].Item1 is var partner && partner != default)
         {
             Arena.AddLine(pc.Position, partner.Position);
         }
@@ -105,7 +121,7 @@ sealed class LamentOfTheCloseDistant(BossModule module) : BossComponent(module)
         var slot = Raid.FindSlot(source);
         if (slot >= 0)
         {
-            _partner[slot] = target;
+            Partners[slot] = target;
         }
     }
 }

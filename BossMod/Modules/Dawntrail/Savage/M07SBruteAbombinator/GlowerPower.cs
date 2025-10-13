@@ -40,7 +40,7 @@ sealed class GlowerPower(BossModule module) : Components.GenericAOEs(module)
     private void AddAOE(ActorCastInfo spell, double delay = default) => AOE = [new(rect, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell, delay))];
 }
 
-sealed class ElectrogeneticForce(BossModule module) : Components.GenericStackSpread(module, true, raidwideOnResolve: false)
+sealed class ElectrogeneticForce(BossModule module) : Components.GenericStackSpread(module, false)
 {
     public int NumCasts;
 
@@ -50,7 +50,7 @@ sealed class ElectrogeneticForce(BossModule module) : Components.GenericStackSpr
         {
             case (uint)AID.BrutishSwingCone1:
             case (uint)AID.BrutishSwingDonutSegment2:
-                AddSpreads(Module.CastFinishAt(spell, 2.9f));
+                AddSpreads(Module.CastFinishAt(spell, 2.9d));
                 break;
         }
     }

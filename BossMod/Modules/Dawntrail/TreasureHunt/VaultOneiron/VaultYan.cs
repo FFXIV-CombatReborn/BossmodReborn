@@ -93,7 +93,7 @@ sealed class CollectSacks(BossModule module) : Components.GenericTowers(module)
 
         if (closest != null)
         {
-            hints.GoalZones.Add(hints.GoalSingleTarget(closest, 0.5f, 10f));
+            hints.GoalZones.Add(AIHints.GoalSingleTarget(closest, 0.5f, 10f));
         }
     }
 }

@@ -2,7 +2,7 @@ namespace BossMod.Dawntrail.Extreme.Ex5Necron;
 
 sealed class Shockwave(BossModule module) : Components.GenericBaitStack(module)
 {
-    private static readonly AOEShapeCone cone = new(100f, 10f.Degrees());
+    private readonly AOEShapeCone cone = new(100f, 10f.Degrees());
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {

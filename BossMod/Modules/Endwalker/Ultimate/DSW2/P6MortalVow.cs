@@ -9,7 +9,7 @@ sealed class P6MortalVow : Components.UniformStackSpread
     private DateTime _vowExpiration;
     private readonly DateTime[] _atonementExpiration = new DateTime[PartyState.MaxPartySize];
 
-    public P6MortalVow(BossModule module) : base(module, 5f, 5f, 2, 2, true, false)
+    public P6MortalVow(BossModule module) : base(module, 5f, 5f, 2, 2, false)
     {
         // prepare for initial application on random DD
         AddSpreads(Raid.WithoutSlot(true, true, true).Where(p => p.Class.IsDD())); // TODO: activation

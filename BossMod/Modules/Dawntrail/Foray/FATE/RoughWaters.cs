@@ -32,7 +32,7 @@ public enum AID : uint
     NearTide2 = 41775 // Helper->location, 7.0s cast, range 10 circle
 }
 
-class Tideline(BossModule module) : Components.GenericAOEs(module)
+sealed class Tideline(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = new(9);
     private static readonly AOEShapeRect rect1 = new(50f, 5f);
@@ -94,7 +94,7 @@ class Tideline(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
-class TwinTentacle(BossModule module) : Components.GenericAOEs(module)
+sealed class TwinTentacle(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = new(2);
     private static readonly AOEShapeCone cone = new(60f, 90f.Degrees());

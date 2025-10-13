@@ -113,7 +113,7 @@ public sealed class RPR(RotationModuleManager manager, Actor player) : Attackxan
         {
             case AOEStrategy.AOE:
             case AOEStrategy.ForceAOE:
-                var nearbyDD = Hints.PriorityTargets.Where(x => Hints.TargetInAOECircle(x.Actor, Player.Position, 5)).Select(DDLeft);
+                var nearbyDD = Hints.PriorityTargets.Where(x => TargetInAOECircle(x.Actor, Player.Position, 5f)).Select(DDLeft);
                 var minNeeded = strategy.AOE() == AOEStrategy.ForceAOE ? 1 : 3;
                 if (MinIfEnoughElements(nearbyDD.Where(x => x < 30), minNeeded) is float m)
                     ShortestNearbyDDLeft = m;
@@ -121,8 +121,8 @@ public sealed class RPR(RotationModuleManager manager, Actor player) : Attackxan
         }
 
         NumAOETargets = NumMeleeAOETargets(strategy);
-        (BestLineTarget, NumLineTargets) = SelectTarget(strategy, primaryTarget, 15, (primary, other) => Hints.TargetInAOERect(other, Player.Position, Player.DirectionTo(primary), 15, 2));
-        (BestConeTarget, NumConeTargets) = SelectTarget(strategy, primaryTarget, 8, (primary, other) => Hints.TargetInAOECone(other, Player.Position, 8, Player.DirectionTo(primary), 90.Degrees()));
+        (BestLineTarget, NumLineTargets) = SelectTarget(strategy, primaryTarget, 15, (primary, other) => TargetInAOERect(other, Player.Position, Player.DirectionTo(primary), 15f, 2f));
+        (BestConeTarget, NumConeTargets) = SelectTarget(strategy, primaryTarget, 8, (primary, other) => TargetInAOECone(other, Player.Position, 8, Player.DirectionTo(primary), 90f.Degrees()));
         (BestRangedAOETarget, NumRangedAOETargets) = SelectTarget(strategy, primaryTarget, 25, IsSplashTarget);
 
         var pos = GetNextPositional(primaryTarget?.Actor);

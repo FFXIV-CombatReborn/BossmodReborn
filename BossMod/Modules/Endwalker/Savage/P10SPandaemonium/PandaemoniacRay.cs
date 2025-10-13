@@ -6,7 +6,7 @@ class JadePassage(BossModule module) : Components.GenericAOEs(module, (uint)AID.
 {
     private readonly DateTime _activation = module.WorldState.FutureTime(3.6d);
 
-    private static readonly AOEShapeRect _shape = new(40f, 1f, 40f);
+    private readonly AOEShapeRect _shape = new(40f, 1f, 40f);
 
     private static Actor[] GetSpheres(BossModule module)
     {

@@ -38,7 +38,7 @@ sealed class EngravementOfSouls3Shock(BossModule module) : Components.CastTowers
     }
 }
 
-sealed class EngravementOfSouls3Spread(BossModule module) : Components.UniformStackSpread(module, default, 3f, alwaysShowSpreads: true, raidwideOnResolve: false)
+sealed class EngravementOfSouls3Spread(BossModule module) : Components.UniformStackSpread(module, default, 3f, raidwideOnResolve: false)
 {
     private readonly EngravementOfSoulsTethers? _tethers = module.FindComponent<EngravementOfSoulsTethers>();
     private EngravementOfSoulsTethers.TetherType _soakers;

@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Endwalker.Savage.P12S1Athena;
 
-sealed class Dialogos(BossModule module) : Components.UniformStackSpread(module, 6f, 6f, 7, alwaysShowSpreads: true)
+sealed class Dialogos(BossModule module) : Components.UniformStackSpread(module, 6f, 6f, 7, 7)
 {
     public enum Type { None, TankOutPartyIn, TankInPartyOut }
 

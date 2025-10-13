@@ -47,7 +47,7 @@ public sealed class SDPrecisePosition : ShapeDistance
         normalZ = normal.Z;
     }
 
-    public override float Distance(WPos p)
+    public override float Distance(in WPos p)
     {
         var px = p.X - originX;
         var pz = p.Z - originZ;
@@ -69,7 +69,7 @@ public sealed class SDPrecisePosition : ShapeDistance
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override bool Contains(WPos p)
+    public override bool Contains(in WPos p)
     {
         var px = p.X - originX;
         var pz = p.Z - originZ;

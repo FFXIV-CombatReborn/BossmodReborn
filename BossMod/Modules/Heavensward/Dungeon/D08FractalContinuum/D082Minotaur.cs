@@ -70,7 +70,7 @@ class OneOneOneOneTonzeSwing(BossModule module) : BossComponent(module)
             var incubator = _incubators[i];
             if (incubator.IsTargetable)
             {
-                hints.GoalZones.Add(hints.GoalSingleTarget(incubator, 2f, 5f));
+                hints.GoalZones.Add(AIHints.GoalSingleTarget(incubator, 2f, 5f));
                 var distSq = (actor.Position - incubator.Position).LengthSq();
                 if (distSq < minDistSq)
                 {

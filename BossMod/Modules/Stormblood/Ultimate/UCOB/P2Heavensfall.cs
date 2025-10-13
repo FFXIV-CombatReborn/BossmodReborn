@@ -43,7 +43,7 @@ class P2MeteorStream : Components.UniformStackSpread
 {
     public int NumCasts;
 
-    public P2MeteorStream(BossModule module) : base(module, default, 4f, alwaysShowSpreads: true)
+    public P2MeteorStream(BossModule module) : base(module, default, 4f)
     {
         AddSpreads(Raid.WithoutSlot(true, true, true), WorldState.FutureTime(5.6d));
     }
