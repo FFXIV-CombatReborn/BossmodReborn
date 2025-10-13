@@ -279,12 +279,19 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
 
         var boss = Module.PrimaryActor;
         var bossPos = boss.Position;
-        var positions = AssignElectricExcessSpreadPositions(activeRoles, spreadRadius);
+
+        var relativePositions = GenericSpreadAroundBoss(activeRoles, spreadRadius, false, 180.Degrees());
+        var positions = new Dictionary<PartyRolesConfig.Assignment, WPos>();
+        foreach (var kvp in relativePositions)
+        {
+            positions[kvp.Key] = bossPos + kvp.Value;
+        }
+
         if (actor.InstanceID == Raid.Player()?.InstanceID)
         {
             if (positions.TryGetValue(assignment, out var assignedPos))
             {
-                AddGenericGoalDestination(hints, bossPos + assignedPos);
+                AddGenericGoalDestination(hints, assignedPos);
             }
         }
 
@@ -292,129 +299,8 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
         partyElectricExcessHintPos.Clear();
         foreach (var kvp in positions)
         {
-            if (partyElectricExcessHintPos.ContainsKey(kvp.Key))
-            {
-                partyElectricExcessHintPos[kvp.Key] = bossPos + kvp.Value;
-            }
-            else
-            {
-                partyElectricExcessHintPos.Add(kvp.Key, bossPos + kvp.Value);
-            }
+            partyElectricExcessHintPos[kvp.Key] = kvp.Value;
         }
-    }
-
-    private Dictionary<PartyRolesConfig.Assignment, WDir> AssignElectricExcessSpreadPositions(List<PartyRolesConfig.Assignment> activeRoles, float baseRadius)
-    {
-        var positions = new Dictionary<PartyRolesConfig.Assignment, WDir>();
-        float rangedDistance = baseRadius * 1.5f;
-
-        if (activeRoles.Count == 0)
-        {
-            Service.Log("No roles??");
-            return positions;
-        }
-
-        foreach (var role in activeRoles)
-        {
-            if (positions.ContainsKey(role))
-            {
-                Service.Log("Duplicate party assignment! Fix this!!");
-            }
-            else
-            {
-                positions.Add(role, new());
-            }
-        }
-
-        var tanks = activeRoles.Where(r => r is PartyRolesConfig.Assignment.MT or PartyRolesConfig.Assignment.OT).OrderBy(r => (int)r).ToList();
-        var melees = activeRoles.Where(r => r is PartyRolesConfig.Assignment.M1 or PartyRolesConfig.Assignment.M2).OrderBy(r => (int)r).ToList();
-        var ranged = activeRoles.Where(r => r is PartyRolesConfig.Assignment.R1 or PartyRolesConfig.Assignment.R2 or PartyRolesConfig.Assignment.H1 or PartyRolesConfig.Assignment.H2).OrderBy(r => (int)r).ToList();
-        var meleeCount = tanks.Count + melees.Count;
-        var rangedCount = ranged.Count;
-
-        // MT is always north if present
-        if (tanks.Contains(PartyRolesConfig.Assignment.MT))
-        {
-            positions[PartyRolesConfig.Assignment.MT] = baseRadius * Cardinal.North.ToDirection();
-        }
-
-        if (meleeCount == 4) // All melee comp (ex: MT/OT/M1/M2)
-        {
-            // MT north, OT under boss, M1/M2 at SW/SE for positionals
-            if (tanks.Contains(PartyRolesConfig.Assignment.OT))
-                positions[PartyRolesConfig.Assignment.OT] = new WDir(0, 0); // Under boss
-            if (melees.Contains(PartyRolesConfig.Assignment.M1))
-                positions[PartyRolesConfig.Assignment.M1] = baseRadius * Cardinal.SouthWest.ToDirection();
-            if (melees.Contains(PartyRolesConfig.Assignment.M2))
-                positions[PartyRolesConfig.Assignment.M2] = baseRadius * Cardinal.SouthEast.ToDirection();
-        }
-        else if (meleeCount == 3 && rangedCount == 1) // 3 melee + 1 ranged
-        {
-            // the single ranged under the boss
-            if (ranged.Count > 0)
-                positions[ranged[0]] = new WDir(0, 0); // Under boss
-
-            // melees at SW/SE
-            var meleesToPlace = new List<PartyRolesConfig.Assignment>();
-            if (tanks.Contains(PartyRolesConfig.Assignment.OT))
-                meleesToPlace.Add(PartyRolesConfig.Assignment.OT);
-            meleesToPlace.AddRange(melees);
-
-            if (meleesToPlace.Count >= 1)
-                positions[meleesToPlace[0]] = baseRadius * Cardinal.SouthWest.ToDirection();
-            if (meleesToPlace.Count >= 2)
-                positions[meleesToPlace[1]] = baseRadius * Cardinal.SouthEast.ToDirection();
-        }
-        else if (meleeCount == 2 && rangedCount == 2) // Standard comp (2 melee, 2 ranged)
-        {
-            // non-MT melee at south
-            if (tanks.Contains(PartyRolesConfig.Assignment.OT))
-                positions[PartyRolesConfig.Assignment.OT] = baseRadius * Cardinal.South.ToDirection();
-            else if (melees.Count > 0)
-                positions[melees[0]] = baseRadius * Cardinal.South.ToDirection();
-
-            // ranged at Northern intercardinals
-            if (ranged.Count >= 1)
-            {
-                var r1 = ranged.FirstOrDefault(r => r is PartyRolesConfig.Assignment.R1 or PartyRolesConfig.Assignment.H1);
-                if (r1 != default)
-                    positions[r1] = rangedDistance * Cardinal.NorthWest.ToDirection();
-                else
-                    positions[ranged[0]] = rangedDistance * Cardinal.NorthWest.ToDirection();
-            }
-            if (ranged.Count >= 2)
-            {
-                var r2 = ranged.FirstOrDefault(r => r is PartyRolesConfig.Assignment.R2 or PartyRolesConfig.Assignment.H2);
-                if (r2 != default)
-                    positions[r2] = rangedDistance * Cardinal.NorthEast.ToDirection();
-                else if (positions.Values.Any(p => p == rangedDistance * Cardinal.NorthWest.ToDirection()))
-                    positions[ranged[1]] = rangedDistance * Cardinal.NorthEast.ToDirection();
-                else
-                    positions[ranged[0]] = rangedDistance * Cardinal.NorthEast.ToDirection();
-            }
-        }
-        else // 1 melee, 3 ranged or anything else - cardinals
-        {
-            // melee north, 
-            if (tanks.Contains(PartyRolesConfig.Assignment.OT))
-                positions[PartyRolesConfig.Assignment.OT] = baseRadius * Cardinal.North.ToDirection();
-            else if (melees.Count > 0)
-                positions[melees[0]] = baseRadius * Cardinal.North.ToDirection();
-
-            // ranged at other cardinals
-            var cardinals = new[] { Cardinal.South, Cardinal.West, Cardinal.East };
-            for (int index = 0; index < Math.Min(ranged.Count, 3); index++)
-            {
-                positions[ranged[index]] = baseRadius * cardinals[index].ToDirection();
-            }
-        }
-
-        foreach (var kvp in positions)
-        {
-            positions[kvp.Key] = -kvp.Value;
-        }
-
-        return positions;
     }
 
     private void AddOrderedFireHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)

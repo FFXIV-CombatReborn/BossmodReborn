@@ -534,8 +534,8 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
         }
 
         safeOffsets.AddRange([
-            1.5f * spreadRadius * (boss.Rotation + 135.Degrees()).ToDirection(),
-            1.5f * spreadRadius * (boss.Rotation - 135.Degrees()).ToDirection(),
+            1.5f * spreadRadius * (boss.Rotation + Cardinal.SouthEast).ToDirection(),
+            1.5f * spreadRadius * (boss.Rotation + Cardinal.SouthWest).ToDirection(),
             2.5f * spreadRadius * (boss.Rotation + Cardinal.South).ToDirection()
         ]);
 

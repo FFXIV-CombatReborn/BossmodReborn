@@ -84,7 +84,6 @@ sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
     private readonly SedimentaryDebris _sedimentaryDebris = module.FindComponent<SedimentaryDebris>()!;
     private readonly AerialAmbush _aerialAmbush = module.FindComponent<AerialAmbush>()!;
 
-
     private enum MechanicState { None, SedimentaryDebris, AerialAmbush }
     private MechanicState _currentMechanic;
     private DateTime _sedimentaryDebrisActivation;
