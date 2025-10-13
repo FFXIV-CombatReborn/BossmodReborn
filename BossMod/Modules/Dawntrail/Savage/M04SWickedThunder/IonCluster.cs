@@ -32,7 +32,7 @@ sealed class StampedingThunder(BossModule module) : Components.GenericAOEs(modul
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x00 && state is 0x00400004u or 0x00800004u)
         {

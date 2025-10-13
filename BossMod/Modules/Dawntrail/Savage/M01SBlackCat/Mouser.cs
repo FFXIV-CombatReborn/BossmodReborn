@@ -20,7 +20,7 @@ sealed class ArenaChanges(BossModule module) : BossComponent(module)
         return squares;
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index > 0x0F)
         {
@@ -137,7 +137,7 @@ sealed class Mouser(BossModule module) : Components.GenericAOEs(module)
             enrage = true;
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index <= 0x0F && state is 0x00020001u or 0x00200010u && _aoes.Count != 0)
             _aoes.RemoveAt(0);

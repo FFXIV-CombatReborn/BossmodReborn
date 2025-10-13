@@ -1,6 +1,6 @@
 namespace BossMod.Dawntrail.Savage.M04SWickedThunder;
 
-sealed class MustardBomb(BossModule module) : Components.UniformStackSpread(module, default, 6f, alwaysShowSpreads: true)
+sealed class MustardBomb(BossModule module) : Components.UniformStackSpread(module, default, 6f)
 {
     public enum Mechanic { None, Tethers, Nisi, Done }
 

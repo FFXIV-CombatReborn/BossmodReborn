@@ -53,7 +53,7 @@ class P2BahamutsFavorFireball(BossModule module) : Components.UniformStackSpread
 }
 
 // note: if player dies immediately after chain lightning cast, he won't get a status or have aoe cast; if he dies after status application, aoe will be triggered immediately
-class P2BahamutsFavorChainLightning(BossModule module) : Components.UniformStackSpread(module, 0, 5, alwaysShowSpreads: true)
+class P2BahamutsFavorChainLightning(BossModule module) : Components.UniformStackSpread(module, default, 5f)
 {
     private BitMask _pendingTargets;
     private DateTime _expectedStatuses;

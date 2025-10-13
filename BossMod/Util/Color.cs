@@ -131,4 +131,8 @@ public static class Colors
     public static uint PathfindingColor2 => _config.PathfindingColors[1].ABGR;
     public static uint PathfindingColor3 => _config.PathfindingColors[2].ABGR;
     public static uint PathfindingColor4 => _config.PathfindingColors[3].ABGR;
+    public static uint PathfindingColor5 => _config.PathfindingColors5.ABGR;
+    public static uint PathfindingColor6 => _config.PathfindingColors6.ABGR;
+    public static uint PathfindingColor7 => _config.PathfindingColors7.ABGR;
+    public static uint PathfindingColor8 => _config.PathfindingColors8.ABGR;
 }

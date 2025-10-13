@@ -12,7 +12,7 @@ abstract class BoundlessScarletRest(BossModule module, uint aid) : Components.Si
 sealed class NBoundlessScarletRest(BossModule module) : BoundlessScarletRest(module, (uint)AID.NBoundlessScarletExplosion);
 sealed class SBoundlessScarletRest(BossModule module) : BoundlessScarletRest(module, (uint)AID.SBoundlessScarletExplosion);
 
-sealed class InvocationOfVengeance(BossModule module) : Components.UniformStackSpread(module, 3, 3, alwaysShowSpreads: true)
+sealed class InvocationOfVengeance(BossModule module) : Components.UniformStackSpread(module, 3, 3)
 {
     public int NumMechanics;
     private readonly List<Actor> _spreadTargets = [];

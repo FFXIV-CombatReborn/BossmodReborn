@@ -6,7 +6,9 @@ sealed class MultiMissileBig(BossModule module) : Components.SimpleAOEs(module, 
 sealed class CitadelSiege(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = new(2);
-    private static readonly AOEShapeRect rect = new(48f, 5f);
+    private readonly AOEShapeRect rect = new(48f, 5f);
+    private ArenaBoundsRect currentArena1Bounds;
+    private WPos currentArena1Center;
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
 
@@ -18,7 +20,7 @@ sealed class CitadelSiege(BossModule module) : Components.GenericAOEs(module)
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         switch (index)
         {
@@ -54,14 +56,33 @@ sealed class CitadelSiege(BossModule module) : Components.GenericAOEs(module)
         }
         void GenerateArenaBounds(int stage)
         {
-            var arena = new ArenaBoundsCustom([new Rectangle(A22UltimaOmega.ArenaCenter1, 20f, 23.5f), new Rectangle(A22UltimaOmega.ArenaCenter2, 20f, 23.5f)],
-            stage == 0 ? null : [new Rectangle(A22UltimaOmega.ArenaCenter1 + new WDir(20f, default), stage * 10f, 23.5f)]);
-            Arena.Bounds = arena;
-            Arena.Center = arena.Center;
+            Arena.Bounds = currentArena1Bounds = new ArenaBoundsRect(20f - 5f * stage, 23.5f);
+            Arena.Center = currentArena1Center = A22UltimaOmega.ArenaCenter1 - new WDir(5f * stage, default);
             if (_aoes.Count != 0)
             {
                 _aoes.RemoveAt(0);
             }
+        }
+    }
+
+    public override void DrawArenaBackground(int pcSlot, Actor pc)
+    {
+        base.DrawArenaBackground(pcSlot, pc);
+        if (currentArena1Bounds == default)
+        {
+            return;
+        }
+        var posX = pc.PosRot.X;
+        var curBounds = Arena.Bounds == currentArena1Bounds;
+        if (posX > 780f && !curBounds)
+        {
+            Arena.Bounds = currentArena1Bounds;
+            Arena.Center = currentArena1Center;
+        }
+        else if (posX < 780f && curBounds)
+        {
+            Arena.Bounds = new ArenaBoundsRect(20f, 23.5f);
+            Arena.Center = A22UltimaOmega.ArenaCenter2;
         }
     }
 
@@ -71,12 +92,12 @@ sealed class CitadelSiege(BossModule module) : Components.GenericAOEs(module)
 sealed class CitadelSiegeHint(BossModule module) : Components.GenericAOEs(module)
 {
     private AOEInstance[] _hint = [];
-    private static readonly AOEShapeRect rect = new(47f, 2f);
+    private readonly AOEShapeRect rect = new(47f, 2f);
     private bool active;
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => active && actor.PosRot.X > 780f ? _hint : [];
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x19)
         {
@@ -106,7 +127,7 @@ sealed class CitadelSiegeHint(BossModule module) : Components.GenericAOEs(module
     {
         if (active && actor.PosRot.X > 780f)
         {
-            hints.GoalZones.Add(hints.GoalRectangle(new(782f, 800f), new(default, 1f), 2f, 23.5f, 99f));
+            hints.GoalZones.Add(AIHints.GoalRectangle(new(782f, 800f), new(default, 1f), 2f, 23.5f, 99f));
         }
     }
 }

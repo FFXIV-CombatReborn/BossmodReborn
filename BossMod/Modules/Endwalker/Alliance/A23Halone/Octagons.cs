@@ -23,7 +23,7 @@ class Octagons(BossModule module) : Components.GenericAOEs(module)
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         //x07 = south, x06 = east, x05 = west x00020001 walls activate, x00200004 disappear
         // telegraph - 0x00100008

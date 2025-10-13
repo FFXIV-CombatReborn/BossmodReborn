@@ -2,15 +2,15 @@ namespace BossMod.Dawntrail.Raid.M05NDancingGreen;
 
 sealed class RideTheWaves(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeRect rect = new(15f, 2.5f);
+    private readonly AOEShapeRect rect = new(15f, 2.5f);
     private readonly List<AOEInstance> _aoes = new(14);
     private int exaflaresStarted;
     private int? safespot;
-    private static readonly WDir dir = new(default, 1f);
+    private readonly WDir dir = new(default, 1f);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x04)
         {

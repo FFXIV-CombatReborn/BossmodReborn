@@ -25,7 +25,7 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
         }
     }
 
-    public override void OnActorRenderflagsChanged(Actor actor, int renderflags)
+    public override void OnActorRenderflagsChange(Actor actor, int renderflags)
     {
         if (renderflags == 256 && actor.OID == (uint)OID.ProvingGroundVoidzone)
         {
@@ -33,7 +33,7 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         switch (index)
         {

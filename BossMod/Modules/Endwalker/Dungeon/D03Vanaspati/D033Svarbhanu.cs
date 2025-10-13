@@ -41,7 +41,7 @@ class ArenaChange(BossModule module) : Components.GenericAOEs(module)
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x07 && state == 0x00020001u)
         {
@@ -61,7 +61,7 @@ sealed class ChaoticUndercurrent(BossModule module) : Components.GenericAOEs(mod
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(AOEs);
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         // index 0x08
         // red blue blue red => 0x00400020, red (-142, -172), blue (-152, -162)
@@ -161,7 +161,7 @@ sealed class CosmicKissRect(BossModule module) : Components.GenericAOEs(module)
         return CollectionsMarshal.AsSpan(_aoes)[..max];
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00020001u && _aoes.Count == 0)
         {

@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Endwalker.Savage.P12S1Athena;
 
-class EngravementOfSouls1Spread(BossModule module) : Components.UniformStackSpread(module, default, 3f, alwaysShowSpreads: true, raidwideOnResolve: false, includeDeadTargets: true)
+class EngravementOfSouls1Spread(BossModule module) : Components.UniformStackSpread(module, default, 3f, raidwideOnResolve: false, includeDeadTargets: true)
 {
     public enum DebuffType { None, Light, Dark }
 

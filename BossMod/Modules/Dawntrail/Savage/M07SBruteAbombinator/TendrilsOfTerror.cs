@@ -106,7 +106,7 @@ sealed class TendrilsOfTerror(BossModule module) : Components.GenericAOEs(module
     }
 }
 
-sealed class Impact(BossModule module) : Components.GenericStackSpread(module, true, raidwideOnResolve: false)
+sealed class Impact(BossModule module) : Components.GenericStackSpread(module, false)
 {
     public int NumCasts;
 

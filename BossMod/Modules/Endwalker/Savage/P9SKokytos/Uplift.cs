@@ -4,7 +4,7 @@ class Uplift(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Uplift
 
 class ArenaChanges(BossModule module) : BossComponent(module)
 {
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00080004 && index is 2 or 3)
             Module.Arena.Bounds = P9SKokytos.arena;

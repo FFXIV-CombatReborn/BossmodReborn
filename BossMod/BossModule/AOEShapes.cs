@@ -117,7 +117,7 @@ public sealed class AOEShapeRect(float lengthFront, float halfWidth, float lengt
     public readonly Angle DirectionOffset = directionOffset;
 
     public override string ToString() => $"Rect: l={LengthFront:f3}+{LengthBack:f3}, w={HalfWidth * 2f}, off={DirectionOffset}, ifz={InvertForbiddenZone}";
-    public override bool Check(WPos position, WPos origin, Angle rotation) => position.InRect(origin, rotation + DirectionOffset, LengthFront, LengthBack, HalfWidth);
+    public override bool Check(WPos position, WPos origin, Angle rotation) => position.InRect(origin, rotation, LengthFront, LengthBack, HalfWidth);
     public override void Draw(MiniArena arena, WPos origin, Angle rotation, uint color = default) => arena.ZoneRect(origin, rotation + DirectionOffset, LengthFront, LengthBack, HalfWidth, color);
     public override void Outline(MiniArena arena, WPos origin, Angle rotation, uint color = default, float thickness = 1f) => arena.AddRect(origin, (rotation + DirectionOffset).ToDirection(), LengthFront, LengthBack, HalfWidth, color, thickness);
     public override ShapeDistance Distance(WPos origin, Angle rotation)
@@ -139,7 +139,7 @@ public sealed class AOEShapeCross(float length, float halfWidth, Angle direction
 
     public override string ToString() => $"Cross: l={Length:f3}, w={HalfWidth * 2f}, off={DirectionOffset}, ifz={InvertForbiddenZone}";
     public override bool Check(WPos position, WPos origin, Angle rotation) => position.InCross(origin, rotation + DirectionOffset, Length, HalfWidth);
-    public override void Draw(MiniArena arena, WPos origin, Angle rotation, uint color = default) => arena.ZonePoly((123u, origin, rotation + DirectionOffset, Length, HalfWidth), ContourPoints(origin, rotation), color);
+    public override void Draw(MiniArena arena, WPos origin, Angle rotation, uint color = default) => arena.ZoneCross(origin, rotation + DirectionOffset, Length, HalfWidth, ContourPoints(origin, rotation), color);
     public override void Outline(MiniArena arena, WPos origin, Angle rotation, uint color = default, float thickness = 1f)
     {
         var points = ContourPoints(origin, rotation);
@@ -410,37 +410,7 @@ public sealed class AOEShapeCustom : AOEShape
     public override void Outline(MiniArena arena, WPos origin, Angle rotation, uint color = default, float thickness = 1f)
     {
         var combinedPolygon = Polygon ?? GetCombinedPolygon(origin);
-        var parts = combinedPolygon.Parts;
-        var count = parts.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var part = parts[i];
-            var exteriorEdges = part.ExteriorEdges;
-            var exteriorLen = exteriorEdges.Length;
-            for (var j = 0; j < exteriorLen; ++j)
-            {
-                var (start, end) = exteriorEdges[j];
-                arena.PathLineTo(origin + start);
-                if (j != exteriorLen - 1)
-                    arena.PathLineTo(origin + end);
-            }
-            MiniArena.PathStroke(true, color, thickness);
-            var holes = part.Holes;
-            var lenHoles = holes.Length;
-            for (var k = 0; k < lenHoles; ++k)
-            {
-                var interiorEdges = part.InteriorEdges(holes[k]);
-                var interiorLen = interiorEdges.Length;
-                for (var j = 0; j < interiorLen; ++j)
-                {
-                    var (start, end) = interiorEdges[j];
-                    arena.PathLineTo(origin + start);
-                    if (j != interiorLen - 1)
-                        arena.PathLineTo(origin + end);
-                }
-                MiniArena.PathStroke(true, color, thickness);
-            }
-        }
+        arena.AddComplexPolygon(origin, combinedPolygon, color, thickness);
     }
 
     public override ShapeDistance Distance(WPos origin, Angle rotation)

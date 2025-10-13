@@ -425,13 +425,13 @@ public sealed class VeynBRD(RotationModuleManager manager, Actor player) : Rotat
         }
 
         // ai hints for positioning - ladonsbite is the most restrictive generally
-        var goalST = primaryTarget != null ? Hints.GoalSingleTarget(primaryTarget, 3) : null;
+        var goalST = primaryTarget != null ? AIHints.GoalSingleTarget(primaryTarget, 3) : null;
         var goalAOE = primaryTarget != null ? Hints.GoalAOECone(primaryTarget, 12, 45.Degrees()) : null;
         var goal = aoeStrategy switch
         {
             AOEStrategy.SingleTarget => goalST,
             AOEStrategy.ForceAOE => goalAOE,
-            _ => goalST != null && goalAOE != null ? Hints.GoalCombined(goalST, goalAOE, 2) : goalAOE
+            _ => goalST != null && goalAOE != null ? AIHints.GoalCombined(goalST, goalAOE, 2) : goalAOE
         };
         if (goal != null)
             Hints.GoalZones.Add(goal);
@@ -462,9 +462,9 @@ public sealed class VeynBRD(RotationModuleManager manager, Actor player) : Rotat
     private int NumTargetsHitByLadonsbite(Actor primary) => Hints.NumPriorityTargetsInAOECone(Player.Position, 12, (primary.Position - Player.Position).Normalized(), 45.Degrees());
     private int NumTargetsHitByShadowbite(Actor primary) => Hints.NumPriorityTargetsInAOECircle(primary.Position, 4);
     private int NumTargetsHitByRainOfDeath(Actor primary) => Hints.NumPriorityTargetsInAOECircle(primary.Position, 8);
-    private bool IsHitByLadonsbite(Actor primary, Actor check) => Hints.TargetInAOECone(check, Player.Position, 12, (primary.Position - Player.Position).Normalized(), 45.Degrees());
-    private bool IsHitByShadowbite(Actor primary, Actor check) => Hints.TargetInAOECircle(check, primary.Position, 5);
-    private bool IsHitByRainOfDeath(Actor primary, Actor check) => Hints.TargetInAOECircle(check, primary.Position, 8);
+    private bool IsHitByLadonsbite(Actor primary, Actor check) => AIHints.TargetInAOECone(check, Player.Position, 12, (primary.Position - Player.Position).Normalized(), 45.Degrees());
+    private bool IsHitByShadowbite(Actor primary, Actor check) => AIHints.TargetInAOECircle(check, primary.Position, 5);
+    private bool IsHitByRainOfDeath(Actor primary, Actor check) => AIHints.TargetInAOECircle(check, primary.Position, 8);
 
     private (Actor?, int) CheckAOETargeting(AOEStrategy strategy, Actor? primaryTarget, float range, Func<Actor, int> numTargets, Func<Actor, Actor, bool> check) => strategy switch
     {

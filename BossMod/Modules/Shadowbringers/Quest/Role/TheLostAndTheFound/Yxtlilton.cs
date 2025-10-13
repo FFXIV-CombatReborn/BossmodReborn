@@ -38,8 +38,10 @@ class LamittAI(WorldState ws) : QuestBattle.UnmanagedRotation(ws, 25f)
             for (var i = 0; i < party.Length; ++i)
             {
                 var act = party[i];
-                if (act.Position.InCircle(p, 15 + Player.HitboxRadius + act.HitboxRadius))
-                    count++;
+                if (act.Position.InCircle(p, 15 + 0.5f + act.HitboxRadius))
+                {
+                    ++count;
+                }
             }
             return count;
         });

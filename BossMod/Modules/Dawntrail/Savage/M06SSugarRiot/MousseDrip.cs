@@ -55,7 +55,7 @@ sealed class MousseDripVoidzone(BossModule module) : Components.VoidzoneAtCastTa
 
 sealed class MousseDripTowers(BossModule module) : Components.GenericTowers(module)
 {
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state != 0x00020001u)
             return;

@@ -44,7 +44,6 @@ class SanctifiedBlizzardChain(BossModule module) : Components.GenericRotatingAOE
 {
     private Angle _rot1;
     public static readonly AOEShapeCone Cone = new(40f, 22.5f.Degrees());
-    private readonly List<AOEInstance> _aoes = new(3);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
@@ -53,49 +52,72 @@ class SanctifiedBlizzardChain(BossModule module) : Components.GenericRotatingAOE
         {
             var count = _aoes.Count;
             if (count == 0)
+            {
                 return [];
-            var act0 = _aoes[0].Activation;
-            var aoes = new AOEInstance[count];
+            }
+
+            var aoes = CollectionsMarshal.AsSpan(_aoes);
+            var act0 = aoes[0].Activation;
             var color = Colors.Danger;
             for (var i = 0; i < count; ++i)
             {
-                var aoe = _aoes[i];
-                aoes[i] = (aoe.Activation - act0).TotalSeconds < 1d ? aoe with { Color = color } : aoe;
+                ref var aoe = ref aoes[i];
+                if ((aoe.Activation - act0).TotalSeconds < 1d)
+                {
+                    aoes[i].Color = color;
+                }
             }
             return aoes;
         }
         else
+        {
             return base.ActiveAOEs(slot, actor);
+        }
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        void AddAOE(Angle offset, float delay = 1.3f) => _aoes.Add(new(Cone, spell.LocXZ, spell.Rotation + offset, Module.CastFinishAt(spell, delay)));
-        if (spell.Action.ID == (uint)AID.SanctifiedBlizzardChain)
+        void AddAOE(Angle offset, double delay = 1.3d)
         {
-            _rot1 = spell.Rotation;
-            AddAOE(default, 0f);
-            AddAOE(45f.Degrees());
-            AddAOE(-45f.Degrees());
+            var rot = spell.Rotation + offset;
+            var pos = spell.LocXZ;
+            _aoes.Add(new(Cone, pos, rot, Module.CastFinishAt(spell, delay), shapeDistance: Cone.Distance(pos, rot)));
         }
-        else if (Sequences.Count == 0 && spell.Action.ID is (uint)AID.SanctifiedBlizzardChain2 or (uint)AID.SanctifiedBlizzardChain3)
+        switch (spell.Action.ID)
         {
-            var rot2 = spell.Rotation;
-            var inc = ((_rot1 - rot2).Normalized().Rad > 0 ? -1 : 1) * 45f.Degrees();
-            if (Sequences.Count == 0)
-            {
-                Sequences.Add(new(Cone, spell.LocXZ, rot2, inc, Module.CastFinishAt(spell), 1.3f, 7));
-                _aoes.Clear();
-            }
+            case (uint)AID.SanctifiedBlizzardChain:
+                _rot1 = spell.Rotation;
+                AddAOE(default, default);
+                AddAOE(45f.Degrees());
+                AddAOE(-45f.Degrees());
+                break;
+            case (uint)AID.SanctifiedBlizzardChain2:
+            case (uint)AID.SanctifiedBlizzardChain3:
+                if (Sequences.Count == 0)
+                {
+                    var rot2 = spell.Rotation;
+                    var inc = ((_rot1 - rot2).Normalized().Rad > 0 ? -1 : 1) * 45f.Degrees();
+                    Sequences.Add(new(Cone, spell.LocXZ, rot2, inc, Module.CastFinishAt(spell), 1.3d, 7));
+                }
+                break;
         }
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        if (_aoes.Count != 0 && spell.Action.ID == (uint)AID.SanctifiedBlizzardChain)
-            _aoes.RemoveAt(0);
-        else if (spell.Action.ID is (uint)AID.SanctifiedBlizzardChain2 or (uint)AID.SanctifiedBlizzardChain3)
-            AdvanceSequence(0, WorldState.CurrentTime);
+        switch (spell.Action.ID)
+        {
+            case (uint)AID.SanctifiedBlizzardChain:
+                if (_aoes.Count != 0)
+                {
+                    _aoes.RemoveAt(0);
+                }
+                break;
+            case (uint)AID.SanctifiedBlizzardChain2:
+            case (uint)AID.SanctifiedBlizzardChain3:
+                AdvanceSequence(0, WorldState.CurrentTime);
+                break;
+        }
     }
 }
 
@@ -106,7 +128,7 @@ class HeavenlyCyclone(BossModule module) : Components.GenericRotatingAOE(module)
     private Angle _increment;
     private Angle _rotation;
     private DateTime _activation;
-    private static readonly AOEShapeCone _shape = new(28f, 90f.Degrees());
+    private readonly AOEShapeCone _shape = new(28f, 90f.Degrees());
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
@@ -128,7 +150,7 @@ class HeavenlyCyclone(BossModule module) : Components.GenericRotatingAOE(module)
         if (spell.Action.ID is (uint)AID.RotateCW or (uint)AID.RotateCCW)
         {
             _rotation = spell.Rotation;
-            _activation = Module.CastFinishAt(spell, 5.2f);
+            _activation = Module.CastFinishAt(spell, 5.2d);
             InitIfReady(caster);
         }
     }
@@ -143,7 +165,7 @@ class HeavenlyCyclone(BossModule module) : Components.GenericRotatingAOE(module)
     {
         if (_rotation != default && _increment != default)
         {
-            Sequences.Add(new(_shape, source.Position.Quantized(), _rotation, _increment, _activation, 1.7f, 6));
+            Sequences.Add(new(_shape, source.Position.Quantized(), _rotation, _increment, _activation, 1.7d, 6));
             _rotation = default;
             _increment = default;
         }
@@ -163,11 +185,7 @@ class MindJack(BossModule module) : Components.StatusDrivenForcedMarch(module, 2
 
     public override bool DestinationUnsafe(int slot, Actor actor, WPos pos)
     {
-        if (_aoe1.Casters.Count != 0 && _aoe1.Casters[0].Check(pos))
-            return true;
-        if (_aoe2.Casters.Count != 0 && _aoe2.Casters[0].Check(pos))
-            return true;
-        return false;
+        return _aoe1.Casters.Count != 0 && _aoe1.Casters.Ref(0).Check(pos) || _aoe2.Casters.Count != 0 && _aoe2.Casters.Ref(0).Check(pos);
     }
 }
 

@@ -2,7 +2,7 @@ namespace BossMod.Shadowbringers.TreasureHunt.ShiftingOubliettesOfLyheGhiah.Secr
 
 public enum OID : uint
 {
-    Boss = 0x3014, //R=1.2
+    SecretPorxie = 0x3014, //R=1.2
     MagickedBroomHelper = 0x310A, // R=0.5
     MagickedBroom1 = 0x30F3, // R=3.125
     MagickedBroom2 = 0x30F2, // R=3.125
@@ -22,12 +22,12 @@ public enum OID : uint
 
 public enum AID : uint
 {
-    AutoAttack = 872, // Boss/KeeperOfKeys/Mandragoras->player, no cast, single-target
+    AutoAttack = 872, // SecretPorxie/KeeperOfKeys/Mandragoras->player, no cast, single-target
 
-    BrewingStorm = 21670, // Boss->self, 2.5s cast, range 5 60-degree cone, knockback 10 away from source
-    HarrowingDream = 21671, // Boss->self, 3.0s cast, range 6 circle, applies sleep
-    BecloudingDustVisual = 22935, // Boss->self, 3.0s cast, single-target
-    BecloudingDust = 22936, // BossHelper->location, 3.0s cast, range 6 circle
+    BrewingStorm = 21670, // SecretPorxie->self, 2.5s cast, range 5 60-degree cone, knockback 10 away from source
+    HarrowingDream = 21671, // SecretPorxie->self, 3.0s cast, range 6 circle, applies sleep
+    BecloudingDustVisual = 22935, // SecretPorxie->self, 3.0s cast, single-target
+    BecloudingDust = 22936, // MagickedBroomHelper->location, 3.0s cast, range 6 circle
     SweepStart = 22937, // Brooms>self, 4.0s cast, range 6 circle
     SweepRest = 21672, // Brooms->self, no cast, range 6 circle
     SweepVisual = 22508, // Brooms->self, no cast, single-target, visual
@@ -45,16 +45,18 @@ public enum AID : uint
     PungentPirouette = 6450 // SecretGarlic->self, 3.5s cast, range 6+R circle
 }
 
-class BrewingStorm(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BrewingStorm, new AOEShapeCone(5f, 30f.Degrees()));
-class HarrowingDream(BossModule module) : Components.SimpleAOEs(module, (uint)AID.HarrowingDream, 6f);
-class BecloudingDust(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BecloudingDust, 6f);
+sealed class BrewingStorm(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BrewingStorm, new AOEShapeCone(5f, 30f.Degrees()));
+sealed class HarrowingDream(BossModule module) : Components.SimpleAOEs(module, (uint)AID.HarrowingDream, 6f);
+sealed class BecloudingDust(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BecloudingDust, 6f);
 
-class Sweep(BossModule module) : Components.Exaflare(module, 6f)
+sealed class Sweep(BossModule module) : Components.Exaflare(module, 6f)
 {
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.SweepStart)
+        {
             Lines.Add(new(caster.Position, 12f * spell.Rotation.ToDirection(), Module.CastFinishAt(spell, 0.9d), 4.5d, 4, 3));
+        }
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
@@ -70,7 +72,9 @@ class Sweep(BossModule module) : Components.Exaflare(module, 6f)
                 {
                     AdvanceLine(line, pos);
                     if (line.ExplosionsLeft == 0)
+                    {
                         Lines.RemoveAt(i);
+                    }
                     return;
                 }
             }
@@ -78,14 +82,14 @@ class Sweep(BossModule module) : Components.Exaflare(module, 6f)
     }
 }
 
-class Spin(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spin, 11f);
-class Mash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Mash, new AOEShapeRect(13f, 2f));
-class Scoop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Scoop, new AOEShapeCone(15f, 60f.Degrees()));
+sealed class Spin(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spin, 11f);
+sealed class Mash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Mash, new AOEShapeRect(13f, 2f));
+sealed class Scoop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Scoop, new AOEShapeCone(15f, 60f.Degrees()));
 
-class MandragoraAOEs(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.PluckAndPrune, (uint)AID.TearyTwirl,
+sealed class MandragoraAOEs(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.PluckAndPrune, (uint)AID.TearyTwirl,
 (uint)AID.HeirloomScream, (uint)AID.PungentPirouette, (uint)AID.Pollen], 6.84f);
 
-class SecretPorxieStates : StateMachineBuilder
+sealed class SecretPorxieStates : StateMachineBuilder
 {
     public SecretPorxieStates(BossModule module) : base(module)
     {
@@ -102,12 +106,28 @@ class SecretPorxieStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "Malediktus", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 745, NameID = 9795)]
-public class SecretPorxie(WorldState ws, Actor primary) : THTemplate(ws, primary)
+[ModuleInfo(BossModuleInfo.Maturity.Verified,
+StatesType = typeof(SecretPorxieStates),
+ConfigType = null,
+ObjectIDType = typeof(OID),
+ActionIDType = typeof(AID),
+StatusIDType = null,
+TetherIDType = null,
+IconIDType = null,
+PrimaryActorOID = (uint)OID.SecretPorxie,
+Contributors = "The Combat Reborn Team (Malediktus)",
+Expansion = BossModuleInfo.Expansion.Shadowbringers,
+Category = BossModuleInfo.Category.TreasureHunt,
+GroupType = BossModuleInfo.GroupType.CFC,
+GroupID = 745u,
+NameID = 9795u,
+SortOrder = 9,
+PlanLevel = 0)]
+public sealed class SecretPorxie(WorldState ws, Actor primary) : THTemplate(ws, primary)
 {
     private static readonly uint[] bonusAdds = [(uint)OID.SecretEgg, (uint)OID.SecretGarlic, (uint)OID.SecretOnion, (uint)OID.SecretTomato,
     (uint)OID.SecretQueen, (uint)OID.KeeperOfKeys];
-    public static readonly uint[] All = [(uint)OID.Boss, .. bonusAdds];
+    public static readonly uint[] All = [(uint)OID.SecretPorxie, .. bonusAdds];
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

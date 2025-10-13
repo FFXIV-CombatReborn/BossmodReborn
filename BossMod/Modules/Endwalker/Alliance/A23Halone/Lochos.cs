@@ -17,7 +17,7 @@ abstract class Lochos(BossModule module, double activationDelay) : Components.Ge
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00200010u)
         {

@@ -3,7 +3,7 @@ namespace BossMod.Dawntrail.Raid.M05NDancingGreen;
 sealed class TwoFourSnapTwist(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = new(2);
-    private static readonly AOEShapeRect rect = new(20f, 20f);
+    private readonly AOEShapeRect rect = new(20f, 20f);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
@@ -44,7 +44,9 @@ sealed class TwoFourSnapTwist(BossModule module) : Components.GenericAOEs(module
         {
             var loc = spell.LocXZ;
             var rot = spell.Rotation;
-            _aoes.Add(new(rect, delay != default ? loc - 1.5f * rot.ToDirection() : loc, spell.Rotation + offset, Module.CastFinishAt(spell, delay)));
+            var pos = delay != default ? loc - 5f * rot.ToDirection() : loc;
+            var rot2 = rot + offset;
+            _aoes.Add(new(rect, pos, rot2, Module.CastFinishAt(spell, delay), shapeDistance: rect.Distance(pos, rot2)));
         }
     }
 
@@ -63,7 +65,9 @@ sealed class TwoFourSnapTwist(BossModule module) : Components.GenericAOEs(module
                     if (count == 2)
                     {
                         ref var aoe2 = ref _aoes.Ref(0);
-                        aoe2.Origin -= 1.5f * aoe2.Rotation.ToDirection();
+                        var rot = aoe2.Rotation;
+                        aoe2.Origin -= 5f * rot.ToDirection();
+                        aoe2.ShapeDistance = rect.Distance(aoe2.Origin, rot);
                     }
                     break;
             }

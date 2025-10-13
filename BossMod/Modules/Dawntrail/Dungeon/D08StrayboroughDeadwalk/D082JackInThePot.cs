@@ -106,7 +106,7 @@ sealed class TeaAwhirl : Components.GenericAOEs
             _cups.Add(source);
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index is 0x23 or 0x01)
         {

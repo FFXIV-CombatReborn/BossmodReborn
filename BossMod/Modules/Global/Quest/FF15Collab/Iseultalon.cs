@@ -34,7 +34,7 @@ public enum IconID : uint
     Spreadmarker = 129 // player/2650
 }
 
-class Thunderbolt(BossModule module) : Components.UniformStackSpread(module, 0, 5, alwaysShowSpreads: true)
+class Thunderbolt(BossModule module) : Components.UniformStackSpread(module, default, 5f)
 {
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
@@ -110,7 +110,7 @@ class DeathRay2(BossModule module) : Components.GenericAOEs(module)
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID is (uint)AID.DeathRay)
-            _activation = WorldState.FutureTime(6.1f);
+            _activation = WorldState.FutureTime(6.1d);
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)

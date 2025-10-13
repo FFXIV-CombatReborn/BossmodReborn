@@ -2,16 +2,18 @@ namespace BossMod.Dawntrail.Savage.M05SDancingGreen;
 
 sealed class FunkyFloor(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeRect square = new(2.5f, 2.5f, 2.5f);
+    private readonly AOEShapeRect square = new(2.5f, 2.5f, 2.5f);
     private readonly List<AOEInstance> _aoes = new(64);
-    private static readonly WPos[] ENVC20001 = GenerateCheckerboard(0); // 03.20001 top left active
-    private static readonly WPos[] ENVC200010 = GenerateCheckerboard(1); // 03.200010 top left inactive
+    private readonly WPos[] ENVC20001 = GenerateCheckerboard(0); // 03.20001 top left active
+    private readonly WPos[] ENVC200010 = GenerateCheckerboard(1); // 03.200010 top left inactive
     private bool? _activeSet;
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_activeSet is bool set)
+        {
             return CollectionsMarshal.AsSpan(_aoes)[set ? ..32 : 32..];
+        }
         return [];
     }
 
@@ -25,13 +27,13 @@ sealed class FunkyFloor(BossModule module) : Components.GenericAOEs(module)
             var start = (i + offset) & 1;
             for (var j = start; j < 8; j += 2)
             {
-                centers[index++] = new(82.5f + j * 5, 82.5f + z);
+                centers[index++] = new(82.5f + j * 5f, 82.5f + z);
             }
         }
         return centers;
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index != 0x03 || _activeSet != null)
             return;
@@ -50,7 +52,8 @@ sealed class FunkyFloor(BossModule module) : Components.GenericAOEs(module)
         {
             for (var i = 0; i < 32; ++i)
             {
-                _aoes.Add(new(square, positions[i], default, activation));
+                var pos = positions[i];
+                _aoes.Add(new(square, positions[i], default, activation, shapeDistance: square.Distance(pos, default)));
             }
         }
     }
@@ -58,7 +61,9 @@ sealed class FunkyFloor(BossModule module) : Components.GenericAOEs(module)
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         if (spell.Action.ID != (uint)AID.FunkyFloor)
+        {
             return;
+        }
 
         _activeSet = !_activeSet;
         var act = WorldState.FutureTime(4d);
@@ -66,7 +71,9 @@ sealed class FunkyFloor(BossModule module) : Components.GenericAOEs(module)
 
         var start = _activeSet == true ? 0 : 32;
         for (var i = 0; i < 32; ++i)
+        {
             aoes[start + i].Activation = act;
+        }
 
         ++NumCasts;
     }

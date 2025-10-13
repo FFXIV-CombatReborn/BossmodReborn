@@ -106,7 +106,7 @@ public sealed class SGE(RotationModuleManager manager, Actor player) : Castxan<A
         if (ShouldPhlegma(strategy))
         {
             if (ReadyIn(AID.Phlegma) <= GCD && primaryTarget is { } t)
-                Hints.GoalZones.Add(Hints.GoalSingleTarget(t.Actor, 6));
+                Hints.GoalZones.Add(AIHints.GoalSingleTarget(t.Actor, 6));
 
             PushGCD(AID.Phlegma, BestPhlegmaTarget);
         }

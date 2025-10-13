@@ -120,7 +120,7 @@ sealed class CellShock(BossModule module) : Components.GenericAOEs(module)
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoes.AOEs.Count == 0 ? _aoe : [];
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state is 0x00020001u or 0x00200010u)
         {

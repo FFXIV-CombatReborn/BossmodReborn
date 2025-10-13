@@ -445,7 +445,7 @@ public sealed class ActorState : IEnumerable<Actor>
         public override void Write(ReplayRecorder.Output output) => output.EmitFourCC(Value ? "ATG+"u8 : "ATG-"u8).EmitActor(InstanceID);
     }
 
-    public Event<Actor, int> RenderflagsChanged = new();
+    public Event<Actor> RenderflagsChanged = new();
     public sealed class OpRenderflags(ulong instanceID, int value) : Operation(instanceID)
     {
         public readonly int Value = value;
@@ -453,7 +453,7 @@ public sealed class ActorState : IEnumerable<Actor>
         protected override void ExecActor(WorldState ws, Actor actor)
         {
             actor.Renderflags = Value;
-            ws.Actors.RenderflagsChanged.Fire(actor, Value);
+            ws.Actors.RenderflagsChanged.Fire(actor);
         }
         public override void Write(ReplayRecorder.Output output) => output.EmitFourCC("RFLG"u8).EmitActor(InstanceID).Emit(Value);
     }
@@ -733,7 +733,7 @@ public sealed class ActorState : IEnumerable<Actor>
             var len = statuses.Length;
             for (var i = 0; i < len; ++i)
             {
-                ref var s = ref statuses[i];
+                ref readonly var s = ref statuses[i];
                 if (s.StatusId == v.ID && s.Effect.SourceInstanceID == v.SourceID)
                 {
                     actor.PendingStatuses.RemoveAt(i);
@@ -833,7 +833,7 @@ public sealed class ActorState : IEnumerable<Actor>
         }
     }
 
-    // TODO: this should really be an actor field, but I have no idea what triggers icon clear...
+    // icons are stored in actor's VfxContainer and expire after a fixed delay
     public Event<Actor, uint, ulong> IconAppeared = new();
     public sealed class OpIcon(ulong instanceID, uint iconID, ulong targetID) : Operation(instanceID)
     {
@@ -842,6 +842,17 @@ public sealed class ActorState : IEnumerable<Actor>
 
         protected override void ExecActor(WorldState ws, Actor actor) => ws.Actors.IconAppeared.Fire(actor, IconID, TargetID);
         public override void Write(ReplayRecorder.Output output) => output.EmitFourCC("ICON"u8).EmitActor(InstanceID).Emit(IconID).EmitActor(TargetID);
+    }
+
+    // same as above, but only used in old content before Lockon replaced it
+    public Event<Actor, uint, ulong> VFXAppeared = new();
+    public sealed class OpVFX(ulong instanceID, uint vfxID, ulong targetID) : Operation(instanceID)
+    {
+        public readonly uint VfxID = vfxID;
+        public readonly ulong TargetID = targetID;
+
+        protected override void ExecActor(WorldState ws, Actor actor) => ws.Actors.VFXAppeared.Fire(actor, VfxID, TargetID);
+        public override void Write(ReplayRecorder.Output output) => output.EmitFourCC("VFX "u8).EmitActor(InstanceID).Emit(VfxID).EmitActor(TargetID);
     }
 
     // TODO: this should be an actor field (?)

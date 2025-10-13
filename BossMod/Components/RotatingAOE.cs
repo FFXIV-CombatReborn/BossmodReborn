@@ -18,48 +18,59 @@ public class GenericRotatingAOE(BossModule module) : GenericAOEs(module)
     }
 
     public readonly List<Sequence> Sequences = [];
-    public virtual uint ImminentColor { get; set; } = Colors.Danger;
+    public uint ImminentColor = Colors.Danger;
     public uint FutureColor = Colors.AOE;
+    protected readonly List<AOEInstance> _aoes = [];
+    protected int lastVersion, lastCount;
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
+
+    public override void Update()
     {
         var count = Sequences.Count;
-        if (count == 0)
-            return [];
-
-        var aoes = new List<AOEInstance>();
-        var curTime = WorldState.CurrentTime;
-        var sequences = CollectionsMarshal.AsSpan(Sequences);
-        for (var j = 0; j < count; ++j)
+        if (lastCount != count || lastVersion != NumCasts)
         {
-            ref readonly var s = ref sequences[j];
-            var remaining = s.NumRemainingCasts;
-            var num = Math.Min(remaining, s.MaxShownAOEs);
-            var rot = s.Rotation;
-            var nextAct = s.NextActivation;
-            var time = nextAct > curTime ? nextAct : curTime;
-            var shape = s.Shape;
-            var origin = s.Origin;
-            // future AOEs
-            if (num > 0)
+            lastCount = count;
+            lastVersion = NumCasts;
+            _aoes.Clear();
+            if (count == 0)
             {
-                var timeBetween = s.SecondsBetweenActivations;
-                var inc = s.Increment;
+                return;
+            }
 
-                for (var i = 1; i < num; ++i)
+            var curTime = WorldState.CurrentTime;
+            var sequences = CollectionsMarshal.AsSpan(Sequences);
+            for (var j = 0; j < count; ++j)
+            {
+                ref readonly var s = ref sequences[j];
+                var remaining = s.NumRemainingCasts;
+                var num = Math.Min(remaining, s.MaxShownAOEs);
+                var rot = s.Rotation;
+                var nextAct = s.NextActivation;
+                var time = nextAct > curTime ? nextAct : curTime;
+                var shape = s.Shape;
+                var origin = s.Origin;
+                // future AOEs
+                if (num > 0)
                 {
-                    rot += inc;
-                    time = time.AddSeconds(timeBetween);
-                    aoes.Add(new(shape, origin, rot, time, FutureColor));
+                    var timeBetween = s.SecondsBetweenActivations;
+                    var inc = s.Increment;
+
+                    for (var i = 1; i < num; ++i)
+                    {
+                        rot += inc;
+                        time = time.AddSeconds(timeBetween);
+                        _aoes.Add(new(shape, origin, rot, time, FutureColor, shapeDistance: shape.Distance(origin, rot)));
+                    }
+                }
+                // imminent AOEs
+                if (remaining != 0)
+                {
+                    var rot2 = s.Rotation;
+                    _aoes.Add(new(shape, origin, rot2, nextAct, remaining > 1 ? ImminentColor : FutureColor, shapeDistance: shape.Distance(origin, rot2)));
                 }
             }
-            // imminent AOEs
-            if (remaining != 0)
-            {
-                aoes.Add(new(shape, origin, s.Rotation, nextAct, remaining > 1 ? ImminentColor : FutureColor));
-            }
         }
-        return CollectionsMarshal.AsSpan(aoes);
     }
 
     public void AdvanceSequence(int index, DateTime currentTime, bool removeWhenFinished = true)

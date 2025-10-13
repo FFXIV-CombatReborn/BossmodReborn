@@ -3,14 +3,26 @@ using Dalamud.Bindings.ImGui;
 
 namespace BossMod.Pathfinding;
 
+public static class MapVizPrefs
+{
+    public static bool ShowTeleEntrances = true;
+    public static bool ShowTeleShadow = false;
+    public static bool ShowTeleConnections = true;
+}
+
 public sealed class MapVisualizer
 {
     public Map Map;
     public WPos StartPos;
-    public float ScreenPixelSize = 12;
+    public float ScreenPixelSize = 12f;
     public List<(WPos center, float ir, float or, Angle dir, Angle halfWidth)> Sectors = [];
     public List<(WPos origin, float lenF, float lenB, float halfWidth, Angle dir)> Rects = [];
     public List<(WPos origin, WPos dest)> Lines = [];
+
+    // Teleporter overlay toggles
+    public bool ShowTeleEntrances = true;
+    public bool ShowTeleShadow = true;
+    public bool ShowTeleConnections = true;
 
     private ThetaStar _pathfind;
     private float _lastExecTime;
@@ -19,6 +31,9 @@ public sealed class MapVisualizer
     {
         Map = map;
         StartPos = startPos;
+        ShowTeleEntrances = MapVizPrefs.ShowTeleEntrances;
+        ShowTeleShadow = MapVizPrefs.ShowTeleShadow;
+        ShowTeleConnections = MapVizPrefs.ShowTeleConnections;
         _pathfind = BuildPathfind();
         ExecTimed(() => _pathfind.Execute());
     }
@@ -110,26 +125,36 @@ public sealed class MapVisualizer
             dl.AddLine(tl + off, tr + off, Colors.Border, 1f);
         }
 
+        // teleporters overlay
+        DrawTeleporters(dl, tl);
+
+        // path
         DrawPath(dl, tl, hoverNode >= 0 ? hoverNode : _pathfind.BestIndex());
 
         // shapes
         foreach (var c in Sectors)
-        {
             DrawSector(dl, tl, c.center, c.ir, c.or, c.dir, c.halfWidth);
-        }
+
         foreach (var r in Rects)
         {
             var direction = r.dir.ToDirection();
             var side = r.halfWidth * direction.OrthoR();
             var front = r.origin + r.lenF * direction;
             var back = r.origin - r.lenB * direction;
-            dl.AddQuad(tl + Map.WorldToGridFrac(front + side) * ScreenPixelSize, tl + Map.WorldToGridFrac(front - side) * ScreenPixelSize, tl + Map.WorldToGridFrac(back - side) * ScreenPixelSize, tl + Map.WorldToGridFrac(back + side) * ScreenPixelSize, Colors.PathfindingColor3);
+            dl.AddQuad(
+                tl + Map.WorldToGridFrac(front + side) * ScreenPixelSize,
+                tl + Map.WorldToGridFrac(front - side) * ScreenPixelSize,
+                tl + Map.WorldToGridFrac(back - side) * ScreenPixelSize,
+                tl + Map.WorldToGridFrac(back + side) * ScreenPixelSize,
+                Colors.PathfindingColor3
+            );
         }
         foreach (var l in Lines)
         {
             dl.AddLine(tl + Map.WorldToGridFrac(l.origin) * ScreenPixelSize, tl + Map.WorldToGridFrac(l.dest) * ScreenPixelSize, Colors.PathfindingColor3);
         }
 
+        // right column
         ImGui.TableNextColumn();
 
         if (hoverNode >= 0)
@@ -142,13 +167,35 @@ public sealed class MapVisualizer
             {
                 ImGui.TextUnformatted($"Pixel at {x}x{y} ({wpos}): blocked, g={pixMaxG:f3}, prio={pixPriority}");
             }
-            else if (pixPriority != 0)
+            else if (pixPriority != default)
             {
                 ImGui.TextUnformatted($"Pixel at {x}x{y} ({wpos}): goal, prio={pixPriority}");
             }
             else
             {
-                ImGui.TextUnformatted($"Pixel at {x}x{y} ({wpos}): normal, prio={pixPriority}");
+                ImGui.TextUnformatted($"Pixel at {x}x{y} ({wpos}): normal");
+            }
+
+            // teleporter hover info
+            if (Map.HasTeleporters)
+            {
+                if (Map.IsTeleShadow(hoverNode))
+                {
+                    ImGui.TextUnformatted("Tele: shadow");
+                }
+                if (Map.HasTeleEdges(hoverNode))
+                {
+                    var edges = Map.TeleEdgesForIndex(hoverNode);
+                    ImGui.TextUnformatted($"Tele: entrance, edges={edges.Length}");
+                    var len = edges.Length;
+                    for (var i = 0; i < len; ++i)
+                    {
+                        ref readonly var e = ref edges[i];
+                        var d = e.DestIndex;
+                        var (dx, dy) = Map.IndexToGrid(d);
+                        ImGui.TextUnformatted($"  → {dx}x{dy}  (Use={edges[i].UseTime:F2}, NB={edges[i].NotBeforeG:F2})");
+                    }
+                }
             }
 
             ref var pfNode = ref _pathfind.NodeByIndex(hoverNode);
@@ -156,7 +203,6 @@ public sealed class MapVisualizer
             {
                 var (parentX, parentY) = Map.IndexToGrid(pfNode.ParentIndex);
                 ImGui.TextUnformatted($"PF: g={pfNode.GScore:f3}, h={pfNode.HScore:f3}, g+h={pfNode.FScore:f3}, score={pfNode.Score}, parent={parentX}x{parentY}, index={pfNode.OpenHeapIndex}, leeway={pfNode.PathLeeway}");
-
                 //if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                 //{
                 //    var res = _pathfind.IsLeftBetter(ref _pathfind.NodeByIndex(hoverNode), ref Map.Pixels[hoverNode], ref _pathfind.NodeByIndex(_pathfind.BestIndex), ref Map.Pixels[_pathfind.BestIndex]);
@@ -167,12 +213,11 @@ public sealed class MapVisualizer
                 var gpGScore = _pathfind.NodeByIndex(pfParent.ParentIndex).GScore;
 
                 var canSee = _pathfind.LineOfSight(grandParentX, grandParentY, x, y, gpGScore, out var gpLineOfSightLeeway, out var gpLineOfSightDist, out var gpLineOfSightMinG);
-                ImGui.TextUnformatted($"PF: grandparent={grandParentX}x{grandParentY}, " + $"canSee={canSee}, " + $"dist={gpLineOfSightDist:F2}, " + $"leeway={gpLineOfSightLeeway:F2}, " + $"minG={gpLineOfSightMinG:F2}"
-                );
+                ImGui.TextUnformatted($"PF: grandparent={grandParentX}x{grandParentY}, canSee={canSee}, dist={gpLineOfSightDist:F2}, leeway={gpLineOfSightLeeway:F2}, minG={gpLineOfSightMinG:F2}");
             }
         }
 
-        // pathfinding
+        // pathfinding controls
         if (ImGui.Button("Reset pf"))
             ExecTimed(() => _pathfind = BuildPathfind());
         ImGui.SameLine();
@@ -216,9 +261,42 @@ public sealed class MapVisualizer
             ImGui.TextUnformatted($"Path length: {node.GScore:f3} to {_pathfind.CellCenter(pfRes)}, leeway={node.PathLeeway}");
         }
 
-        using (var n = ImRaii.TreeNode("Waypoints"))
-            if (n)
-                DrawWaypoints(hoverNode >= 0 ? hoverNode : _pathfind.BestIndex());
+        // teleporter UI
+        if (Map.HasTeleporters)
+        {
+            ImGui.Separator();
+            ImGui.TextUnformatted("Teleporters");
+
+            var showShadow = MapVizPrefs.ShowTeleShadow;
+            var showEntrances = MapVizPrefs.ShowTeleEntrances;
+            var showConnections = MapVizPrefs.ShowTeleConnections;
+
+            if (ImGui.Checkbox("Show shadow###tele_shadow", ref showShadow))
+            {
+                MapVizPrefs.ShowTeleShadow = showShadow;
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Checkbox("Show entrances###tele_entr", ref showEntrances))
+            {
+                MapVizPrefs.ShowTeleEntrances = showEntrances;
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Checkbox("Show connections###tele_conn", ref showConnections))
+            {
+                MapVizPrefs.ShowTeleConnections = showConnections;
+            }
+
+            CountTele(out var cntShadow, out var cntEntrances, out var cntEdges);
+            ImGui.TextUnformatted($"Shadow cells: {cntShadow}, Entrances: {cntEntrances}, Edges: {cntEdges}");
+        }
+
+        using var n = ImRaii.TreeNode("Waypoints");
+        if (n)
+        {
+            DrawWaypoints(hoverNode >= 0 ? hoverNode : _pathfind.BestIndex());
+        }
     }
 
     private void ExecTimed(Action action)
@@ -245,7 +323,7 @@ public sealed class MapVisualizer
             var sDir = Angle.HalfPi - dir.Rad;
             dl.PathArcTo(sCenter, ir / Map.Resolution * ScreenPixelSize, sDir + halfWidth.Rad, sDir - halfWidth.Rad);
             dl.PathArcTo(sCenter, or / Map.Resolution * ScreenPixelSize, sDir - halfWidth.Rad, sDir + halfWidth.Rad);
-            dl.PathStroke(Colors.PathfindingColor3, ImDrawFlags.Closed, 1);
+            dl.PathStroke(Colors.PathfindingColor3, ImDrawFlags.Closed, 1f);
         }
     }
 
@@ -269,32 +347,35 @@ public sealed class MapVisualizer
         while ((x1 != x2 || y1 != y2) && iterations <= maxIterations)
         {
             dl.AddLine(tl + new Vector2(x1 + 0.5f, y1 + 0.5f) * ScreenPixelSize,
-                    tl + new Vector2(x2 + 0.5f, y2 + 0.5f) * ScreenPixelSize,
-                    color, 2);
+                    tl + new Vector2(x2 + 0.5f, y2 + 0.5f) * ScreenPixelSize, color, 2f);
             color = Colors.Vulnerable;
             startingIndex = nextIndex;
             nextIndex = _pathfind.NodeByIndex(startingIndex).ParentIndex;
             (x1, y1) = (x2, y2);
             (x2, y2) = Map.IndexToGrid(nextIndex);
-            iterations++;
+            ++iterations;
         }
     }
 
     private void DrawWaypoints(int startingIndex)
     {
         if (startingIndex < 0)
+        {
             return;
+        }
 
         ref var startingNode = ref _pathfind.NodeByIndex(startingIndex);
         if (startingNode.OpenHeapIndex == 0)
+        {
             return;
+        }
 
         var nextIndex = startingNode.ParentIndex;
         var (x1, y1) = Map.IndexToGrid(startingIndex);
         var (x2, y2) = Map.IndexToGrid(nextIndex);
         var futureCenter = _pathfind.CellCenter(startingIndex);
-        int maxIterations = Map.Width * Map.Height;
-        int iterations = 0;
+        var maxIterations = Map.Width * Map.Height;
+        var iterations = 0;
 
         while ((x1 != x2 || y1 != y2) && iterations <= maxIterations)
         {
@@ -308,14 +389,123 @@ public sealed class MapVisualizer
             (x1, y1) = (x2, y2);
             (x2, y2) = Map.IndexToGrid(nextIndex);
             futureCenter = curCenter;
-            iterations++;
+            ++iterations;
         }
     }
 
     private ThetaStar BuildPathfind()
     {
         var res = new ThetaStar();
-        res.Start(Map, StartPos, 1.0f / 6);
+        res.Start(Map, StartPos, 1.0f / 6f);
         return res;
     }
+
+    private void DrawTeleporters(ImDrawListPtr dl, Vector2 tl)
+    {
+        if (!Map.HasTeleporters)
+        {
+            return;
+        }
+
+        var sp = ScreenPixelSize;
+        var h = Map.Height;
+        var w = Map.Width;
+        if (MapVizPrefs.ShowTeleShadow)
+        {
+            var idx = 0;
+            for (var y = 0; y < h; ++y)
+            {
+                for (var x = 0; x < w; ++x, ++idx)
+                {
+                    if (!Map.IsTeleShadow(idx))
+                    {
+                        continue;
+                    }
+                    var p0 = tl + new Vector2(x, y) * sp;
+                    dl.AddRectFilled(p0, p0 + new Vector2(sp, sp), Colors.PathfindingColor8);
+                }
+            }
+        }
+
+        if (MapVizPrefs.ShowTeleEntrances)
+        {
+            var idx = 0;
+            for (var y = 0; y < h; ++y)
+            {
+                for (var x = 0; x < w; ++x, ++idx)
+                {
+                    if (!Map.HasTeleEdges(idx))
+                    {
+                        continue;
+                    }
+                    var p0 = tl + new Vector2(x, y) * sp;
+                    dl.AddRect(p0, p0 + new Vector2(sp, sp), Colors.PathfindingColor7, default, ImDrawFlags.None, 2f);
+                }
+            }
+        }
+
+        if (MapVizPrefs.ShowTeleConnections && Map.HasTeleporters)
+        {
+            var idx = 0;
+            for (var y = 0; y < h; ++y)
+            {
+                for (var x = 0; x < w; ++x, ++idx)
+                {
+                    if (!Map.HasTeleEdges(idx))
+                    {
+                        continue;
+                    }
+                    var edges = Map.TeleEdgesForIndex(idx);
+                    var ec = CellCenterScreen(tl, x, y);
+                    var len = edges.Length;
+                    for (var i = 0; i < len; ++i)
+                    {
+                        ref readonly var e = ref edges[i];
+                        var d = e.DestIndex;
+                        var dx = d % w;
+                        var dy = d / w;
+                        var dc = CellCenterScreen(tl, dx, dy);
+                        dl.AddLine(ec, dc, Colors.PathfindingColor5, 2f);
+                        dl.AddCircle(dc, sp * 0.3f, Colors.PathfindingColor6, 12, 2f);
+                    }
+                }
+            }
+        }
+    }
+
+    private void CountTele(out int cntShadow, out int cntEntrances, out int cntEdges)
+    {
+        cntShadow = 0;
+        cntEntrances = 0;
+        cntEdges = 0;
+
+        var idx = 0;
+        var h = Map.Height;
+        var w = Map.Width;
+        for (var y = 0; y < h; ++y)
+        {
+            for (var x = 0; x < w; ++x, ++idx)
+            {
+                if (Map.IsTeleShadow(idx))
+                {
+                    ++cntShadow;
+                }
+            }
+        }
+
+        idx = 0;
+        for (var y = 0; y < Map.Height; ++y)
+        {
+            for (var x = 0; x < Map.Width; ++x, ++idx)
+            {
+                if (!Map.HasTeleEdges(idx))
+                {
+                    continue;
+                }
+                ++cntEntrances;
+                cntEdges += Map.TeleEdgesForIndex(idx).Length;
+            }
+        }
+    }
+    private Vector2 CellCenterScreen(Vector2 tl, int x, int y) => tl + new Vector2(x + 0.5f, y + 0.5f) * ScreenPixelSize;
 }

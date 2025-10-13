@@ -15,7 +15,7 @@ class DemolishStructureArenaChange(BossModule module) : Components.GenericAOEs(m
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x0B && state == 0x00020001u)
         {

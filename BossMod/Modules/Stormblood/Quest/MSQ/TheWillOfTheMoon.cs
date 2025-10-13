@@ -87,7 +87,7 @@ class AutoYshtola(BossModule module, WorldState ws) : QuestBattle.UnmanagedRotat
         }
 
         if (Hien.CastInfo?.Action.ID == 13234)
-            Hints.GoalZones.Add(Hints.GoalSingleTarget(Hien.Position, 2f, 5f));
+            Hints.GoalZones.Add(AIHints.GoalSingleTarget(Hien.Position, 2f, 5f));
 
         var aero = StatusDetails(Magnai, (uint)WHM.SID.AeroII, Player.InstanceID);
         if (aero.Left < 4.6f)

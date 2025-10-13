@@ -154,7 +154,7 @@ sealed class P2PartySynergyDoubleAOEs(BossModule module) : Components.GenericAOE
 
 sealed class P2PartySynergyOptimizedFire : Components.UniformStackSpread
 {
-    public P2PartySynergyOptimizedFire(BossModule module) : base(module, default, 7f, alwaysShowSpreads: true)
+    public P2PartySynergyOptimizedFire(BossModule module) : base(module, default, 7f)
     {
         AddSpreads(Raid.WithoutSlot(true, true, true));
     }

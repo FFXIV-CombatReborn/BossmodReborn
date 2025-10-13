@@ -1,4 +1,5 @@
-﻿namespace BossMod.Pathfinding;
+﻿using System.Buffers;
+namespace BossMod.Pathfinding;
 
 // 'map' used for running pathfinding algorithms
 // this is essentially a square grid representing an arena (or immediate neighbourhood of the player) where we rasterize forbidden/desired zones
@@ -12,6 +13,18 @@
 [SkipLocalsInit]
 public sealed class Map
 {
+    public readonly struct TeleEdge(int destIndex, float useTime, float notBeforeG)
+    {
+        public readonly int DestIndex = destIndex;
+        public readonly float UseTime = useTime;
+        public readonly float NotBeforeG = notBeforeG;
+    }
+
+    private int[] _teleEdgeOffsets = [];
+    private TeleEdge[] _teleEdges = [];
+    private bool[] _teleShadow = []; // cells that partially intersect a teleporter
+    public bool HasTeleporters;
+
     public float Resolution; // pixel size, in world units
     public int Width; // always even
     public int Height; // always even
@@ -65,6 +78,8 @@ public sealed class Map
         MinX = MinY = 0;
         MaxX = Width - 1;
         MaxY = Height - 1;
+
+        HasTeleporters = false;
     }
 
     public void Init(Map source, WPos center)
@@ -75,10 +90,14 @@ public sealed class Map
 
         var numPixels = Width * Height;
         if (PixelMaxG.Length < numPixels)
+        {
             PixelMaxG = new float[numPixels];
+        }
         Array.Copy(source.PixelMaxG, PixelMaxG, numPixels);
         if (PixelPriority.Length < numPixels)
+        {
             PixelPriority = new float[numPixels];
+        }
         Array.Copy(source.PixelPriority, PixelPriority, numPixels);
 
         Center = center;
@@ -92,6 +111,8 @@ public sealed class Map
         MinY = source.MinY;
         MaxX = source.MaxX;
         MaxY = source.MaxY;
+
+        HasTeleporters = false;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -157,29 +178,6 @@ public sealed class Map
         }
     }
 
-    public (int x, int y, WPos center)[] EnumeratePixels()
-    {
-        var width = Width;
-        var height = Height;
-        var result = new (int x, int y, WPos center)[(width * height)];
-        var rsq = Resolution * Resolution; // since we then multiply by _localZDivRes, end result is same as * res * rotation.ToDir()
-        var dx = LocalZDivRes.OrthoL() * rsq;
-        var dy = LocalZDivRes * rsq;
-        var cy = Center + (-(width >> 1) + 0.5f) * dx + (-(height >> 1) + 0.5f) * dy;
-        var index = 0;
-        for (var y = 0; y < height; ++y)
-        {
-            var cx = cy;
-            for (var x = 0; x < width; ++x)
-            {
-                result[index++] = (x, y, cx);
-                cx += dx;
-            }
-            cy += dy;
-        }
-        return result;
-    }
-
     // enumerate pixels along line starting from (x1, y1) to (x2, y2); first is not returned, last is returned
     public (int x, int y)[] EnumeratePixelsInLine(int x1, int y1, int x2, int y2)
     {
@@ -211,5 +209,307 @@ public sealed class Map
         }
 
         return result;
+    }
+
+    public void BuildTeleporterEdges(Teleporter[] teleporters)
+    {
+        var w = Width;
+        var h = Height;
+        var cellCount = w * h;
+
+        _teleEdgeOffsets = cellCount > 0 ? new int[cellCount + 1] : [];
+        _teleEdges = [];
+        if (_teleShadow.Length < cellCount)
+        {
+            _teleShadow = new bool[cellCount];
+        }
+        else
+        {
+            Array.Clear(_teleShadow, 0, cellCount);
+        }
+
+        var pxMaxG = PixelMaxG;
+        var len = teleporters.Length;
+        var resolution = Resolution;
+
+        var radToPix = 1f / resolution;
+        var dy = LocalZDivRes * resolution * resolution;
+        var dx = dy.OrthoL();
+        var topLeft = Center - (w >> 1) * dx - (h >> 1) * dy;
+
+        var counts = ArrayPool<int>.Shared.Rent(cellCount);
+        var cursors = ArrayPool<int>.Shared.Rent(cellCount);
+        Array.Clear(counts, 0, cellCount);
+
+        var exitIdx = ArrayPool<int>.Shared.Rent(len);
+        var backIdx = ArrayPool<int>.Shared.Rent(len);
+        var radPixArr = ArrayPool<int>.Shared.Rent(len);
+
+        try
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            void CellCorners(int x, int y, out WPos tl, out WPos tr, out WPos bl, out WPos br)
+            {
+                var cellTopLeft = topLeft + y * dy + x * dx;
+                tl = cellTopLeft;
+                tr = cellTopLeft + dx;
+                bl = cellTopLeft + dy;
+                br = cellTopLeft + dx + dy;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static float Dist2ToSegment(in WPos p, in WPos a, in WPos b)
+            {
+                var ab = b - a;
+                var ap = p - a;
+                var denom = ab.Dot(ab);
+                var t = denom > 1e-12f ? Math.Max(0f, Math.Min(1f, ap.Dot(ab) / denom)) : 0f;
+                var q = a + t * ab;
+                var d = p - q;
+                return d.LengthSq();
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            void ClassifyCell(int x, int y, in WPos center, float r2, out bool fullyInside, out bool intersects)
+            {
+                CellCorners(x, y, out var tl, out var tr, out var bl, out var br);
+
+                var itl = (tl - center).LengthSq() <= r2;
+                var itr = (tr - center).LengthSq() <= r2;
+                var ibl = (bl - center).LengthSq() <= r2;
+                var ibr = (br - center).LengthSq() <= r2;
+
+                fullyInside = itl && itr && ibl && ibr;
+                if (fullyInside)
+                {
+                    intersects = true;
+                    return;
+                }
+
+                var edgeHit =
+                    Dist2ToSegment(center, tl, tr) <= r2 ||
+                    Dist2ToSegment(center, tr, br) <= r2 ||
+                    Dist2ToSegment(center, br, bl) <= r2 ||
+                    Dist2ToSegment(center, bl, tl) <= r2;
+
+                intersects = itl || itr || ibl || ibr || edgeHit;
+            }
+
+            int SnapToPassableIndex(WPos p, int searchRadPix)
+            {
+                var (gx0, gy0) = ClampToGrid(WorldToGrid(p));
+                var bestIdx = GridToIndex(gx0, gy0);
+                if (pxMaxG[bestIdx] >= 0f)
+                {
+                    return bestIdx;
+                }
+                for (var r = 1; r <= searchRadPix; ++r)
+                {
+                    var x1 = Math.Max(0, gx0 - r);
+                    var y1 = Math.Max(0, gy0 - r);
+                    var x2 = Math.Min(w - 1, gx0 + r);
+                    var y2 = Math.Min(h - 1, gy0 + r);
+
+                    for (var x = x1; x <= x2; ++x)
+                    {
+                        var ti = GridToIndex(x, y1);
+                        if (pxMaxG[ti] >= 0f)
+                        {
+                            return ti;
+                        }
+                        ti = GridToIndex(x, y2);
+                        if (pxMaxG[ti] >= 0f)
+                        {
+                            return ti;
+                        }
+                    }
+                    for (var y = y1 + 1; y <= y2 - 1; ++y)
+                    {
+                        var ti = GridToIndex(x1, y);
+                        if (pxMaxG[ti] >= 0f)
+                        {
+                            return ti;
+                        }
+                        ti = GridToIndex(x2, y);
+                        if (pxMaxG[ti] >= 0f)
+                        {
+                            return ti;
+                        }
+                    }
+                }
+                return -1;
+            }
+
+            // Count + shadow for true entrance disks.
+            void CountAndShadowForEntrance(WPos entrance, float radius)
+            {
+                // Use fractional grid center to avoid missing rows/cols when center is off the lattice.
+                var cFrac = WorldToGridFrac(entrance);
+                var radG = radius / Resolution;
+
+                // Conservative AABB in grid space (+1 margin avoids FP/tangency drops)
+                var xMin = Math.Max(0, (int)MathF.Floor(cFrac.X - radG) - 1);
+                var xMax = Math.Min(w - 1, (int)MathF.Ceiling(cFrac.X + radG) + 1);
+                var yMin = Math.Max(0, (int)MathF.Floor(cFrac.Y - radG) - 1);
+                var yMax = Math.Min(h - 1, (int)MathF.Ceiling(cFrac.Y + radG) + 1);
+
+                var r2 = radius * radius;
+
+                for (var y = yMin; y <= yMax; ++y)
+                {
+                    var rowBase = y * w;
+                    for (var x = xMin; x <= xMax; ++x)
+                    {
+                        var idx = rowBase + x;
+                        if (pxMaxG[idx] < 0f) // blocked terrain → skip
+                        {
+                            continue;
+                        }
+
+                        // Exact world-space classification of the rotated cell.
+                        ClassifyCell(x, y, entrance, r2, out var fullyInside, out var intersects);
+
+                        if (intersects && !fullyInside)
+                        {
+                            _teleShadow[idx] = true;
+                        }
+                        if (fullyInside)
+                        {
+                            ++counts[idx]; // actual entrance seats
+                        }
+                    }
+                }
+            }
+
+            void EmitEdgesForEntrance(WPos entrance, int destIndex, float useTime, float notBeforeG, float radius)
+            {
+                var cFrac = WorldToGridFrac(entrance);
+                var radG = radius / Resolution;
+
+                var xMin = Math.Max(0, (int)MathF.Floor(cFrac.X - radG) - 1);
+                var xMax = Math.Min(w - 1, (int)MathF.Ceiling(cFrac.X + radG) + 1);
+                var yMin = Math.Max(0, (int)MathF.Floor(cFrac.Y - radG) - 1);
+                var yMax = Math.Min(h - 1, (int)MathF.Ceiling(cFrac.Y + radG) + 1);
+
+                var r2 = radius * radius;
+
+                for (var y = yMin; y <= yMax; ++y)
+                {
+                    var rowBase = y * w;
+                    for (var x = xMin; x <= xMax; ++x)
+                    {
+                        var idx = rowBase + x;
+                        if (pxMaxG[idx] < 0f)
+                        {
+                            continue;
+                        }
+
+                        ClassifyCell(x, y, entrance, r2, out var fullyInside, out _);
+                        if (!fullyInside)
+                        {
+                            continue;
+                        }
+
+                        _teleEdges[cursors[idx]++] = new TeleEdge(destIndex, useTime, notBeforeG);
+                    }
+                }
+            }
+
+            // PASS 0: precompute per teleporter (counts + shadow marking)
+            for (var i = 0; i < len; ++i)
+            {
+                ref readonly var tp = ref teleporters[i];
+                var rp = Math.Max(1, (int)MathF.Ceiling(tp.Radius * radToPix));
+                radPixArr[i] = rp;
+
+                exitIdx[i] = SnapToPassableIndex(tp.Exit, rp);
+                backIdx[i] = tp.Bidirectional ? SnapToPassableIndex(tp.Entrance, rp) : -1;
+
+                // Always shadow entrance + exit
+                CountAndShadowForEntrance(tp.Entrance, tp.Radius);
+                if (tp.Bidirectional)
+                {
+                    CountAndShadowForEntrance(tp.Exit, tp.Radius); // counts + shadow (exit acts as entrance)
+                }
+            }
+
+            // CSR prefix sums
+            var total = 0;
+            var offs = _teleEdgeOffsets;
+            for (var i = 0; i < cellCount; ++i)
+            {
+                offs[i] = total;
+                total += counts[i];
+            }
+            offs[cellCount] = total;
+
+            _teleEdges = total > 0 ? new TeleEdge[total] : [];
+            HasTeleporters = total > 0;
+            if (total == 0)
+            {
+                return;
+            }
+
+            Array.Copy(offs, 0, cursors, 0, cellCount);
+
+            // PASS 1: emit edges for true entrances
+            for (var i = 0; i < len; ++i)
+            {
+                ref readonly var tp = ref teleporters[i];
+                var rp = radPixArr[i];
+
+                var ex = exitIdx[i];
+                if (ex >= 0)
+                {
+                    EmitEdgesForEntrance(tp.Entrance, ex, tp.UseTime, tp.NotBeforeG, tp.Radius);
+                }
+
+                if (tp.Bidirectional)
+                {
+                    var bi = backIdx[i];
+                    if (bi >= 0)
+                    {
+                        EmitEdgesForEntrance(tp.Exit, bi, tp.UseTime, tp.NotBeforeG, tp.Radius);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            ArrayPool<int>.Shared.Return(counts, false);
+            ArrayPool<int>.Shared.Return(cursors, false);
+            ArrayPool<int>.Shared.Return(exitIdx, false);
+            ArrayPool<int>.Shared.Return(backIdx, false);
+            ArrayPool<int>.Shared.Return(radPixArr, false);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool HasTeleEdges(int index)
+    {
+        // fast "is entrance cell?" check, avoids per-step range work
+        var offs = _teleEdgeOffsets;
+        // offs length is cellCount+1; entrance if range size > 0
+        return offs.Length > 1 && (uint)index < (uint)(offs.Length - 1) && offs[index] != offs[index + 1];
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ReadOnlySpan<TeleEdge> TeleEdgesForIndex(int index)
+    {
+        var off = _teleEdgeOffsets;
+        if ((uint)index >= (uint)off.Length - 1)
+        {
+            return [];
+        }
+        var start = off[index];
+        var count = off[index + 1] - start;
+        return new(_teleEdges, start, count);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsTeleShadow(int index)
+    {
+        var s = _teleShadow;
+        return (uint)index < (uint)s.Length && s[index];
     }
 }

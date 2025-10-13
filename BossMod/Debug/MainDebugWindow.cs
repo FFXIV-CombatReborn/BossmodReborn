@@ -16,7 +16,7 @@ sealed class MainDebugWindow(WorldState ws, RotationModuleManager autorot, ZoneM
     private readonly DebugObstacles _debugObstacles = new(hintBuilder.Obstacles, dalamud);
     private readonly DebugObjects _debugObjects = new();
     private readonly DebugParty _debugParty = new();
-    private readonly DebugEnvControl _debugEnvControl = new();
+    private readonly DebugMapEffect _debugMapEffect = new(ws);
     private readonly DebugGraphics _debugGraphics = new();
     private readonly DebugAction _debugAction = new(ws, amex);
     private readonly DebugHate _debugHate = new(ws);
@@ -33,6 +33,7 @@ sealed class MainDebugWindow(WorldState ws, RotationModuleManager autorot, ZoneM
         _debugAction.Dispose();
         _debugInput.Dispose();
         _debugAddon.Dispose();
+        _debugMapEffect.Dispose();
         _debugCollision.Dispose();
         base.Dispose(disposing);
     }
@@ -87,9 +88,9 @@ sealed class MainDebugWindow(WorldState ws, RotationModuleManager autorot, ZoneM
         {
             DrawEffects();
         }
-        if (ImGui.CollapsingHeader("EnvControl"))
+        if (ImGui.CollapsingHeader("Map effects"))
         {
-            _debugEnvControl.Draw();
+            _debugMapEffect.Draw();
         }
         if (ImGui.CollapsingHeader("Autorotation"))
         {

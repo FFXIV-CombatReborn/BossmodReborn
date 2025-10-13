@@ -1,7 +1,7 @@
 ﻿namespace BossMod.Shadowbringers.Foray.DelubrumReginae.DRS7StygimolochLord;
 
 // TODO: generalize to 'baited puddles' component
-sealed class RapidBoltsBait(BossModule module) : Components.UniformStackSpread(module, 0, 5, alwaysShowSpreads: true)
+sealed class RapidBoltsBait(BossModule module) : Components.UniformStackSpread(module, default, 5f)
 {
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {

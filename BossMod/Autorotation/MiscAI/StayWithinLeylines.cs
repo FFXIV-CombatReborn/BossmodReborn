@@ -60,7 +60,7 @@ public sealed class StayWithinLeylines(RotationModuleManager manager, Actor play
                 else if (retraceStrat == RetraceDefinition.Yes && ActionUnlocked(retrace) && retraceCd.HasValue && World.Client.Cooldowns[retraceCd.Value].Elapsed <= 2f && !isMoving)
                     Hints.ActionsToExecute.Push(retrace, null, ActionQueue.Priority.Low, targetPos: Player.PosRot.XYZ());
                 else
-                    Hints.GoalZones.Add(Hints.GoalSingleTarget(zone.Position, 1f));
+                    Hints.GoalZones.Add(AIHints.GoalSingleTarget(zone.Position, 1f));
             }
         }
     }

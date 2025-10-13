@@ -94,6 +94,6 @@ abstract class HauntingCryVermilionAura(BossModule module, uint aid) : Component
 class NHauntingCryVermilionAura(BossModule module) : HauntingCryVermilionAura(module, (uint)AID.NVermilionAura);
 class SHauntingCryVermilionAura(BossModule module) : HauntingCryVermilionAura(module, (uint)AID.SVermilionAura);
 
-abstract class HauntingCryStygianAura(BossModule module, uint aid) : Components.SpreadFromCastTargets(module, aid, 15f, true);
+abstract class HauntingCryStygianAura(BossModule module, uint aid) : Components.SpreadFromCastTargets(module, aid, 15f);
 class NHauntingCryStygianAura(BossModule module) : HauntingCryStygianAura(module, (uint)AID.NStygianAura);
 class SHauntingCryStygianAura(BossModule module) : HauntingCryStygianAura(module, (uint)AID.SStygianAura);

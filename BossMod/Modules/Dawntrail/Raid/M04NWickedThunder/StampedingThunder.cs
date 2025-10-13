@@ -21,7 +21,7 @@ sealed class StampedingThunder(BossModule module) : Components.GenericAOEs(modul
         void AddAOE(WPos position) => _aoe = [new(rect, position.Quantized(), caster.Rotation, WorldState.FutureTime(9.4d))];
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x00 && state is 0x00200010u or 0x00020001u)
         {
@@ -38,7 +38,7 @@ sealed class ArenaChanges(BossModule module) : BossComponent(module)
     public static readonly WPos EastremovedCenter = new(85f, 100f);
     private static readonly ArenaBoundsRect damagedPlatform = new(5f, 20f);
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         // index 0x00
         // 0x00200010 - west 3/4 disappears

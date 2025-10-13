@@ -107,7 +107,7 @@ sealed class P6AkhMornVoidzone(BossModule module) : Components.Voidzone(module, 
     }
 }
 
-sealed class P6SpreadingEntangledFlames(BossModule module) : Components.UniformStackSpread(module, 4f, 5f, 2, alwaysShowSpreads: true)
+sealed class P6SpreadingEntangledFlames(BossModule module) : Components.UniformStackSpread(module, 4f, 5f, 2)
 {
     private readonly P6HotWingTail? _wingTail = module.FindComponent<P6HotWingTail>();
     private readonly bool _voidzonesNorth = module.Enemies((uint)OID.VoidzoneAhkMorn).Sum(z => z.PosRot.Z - module.Center.Z) < 0;

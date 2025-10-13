@@ -82,7 +82,7 @@ internal class InFromTheCold(WorldState ws) : QuestBattle(ws)
         new QuestObjective(ws)
             .Named("Wounded Imperial")
             .Hints((player, hints) => {
-                hints.GoalZones.Add(hints.GoalSingleTarget(new WPos(105, -259), 3));
+                hints.GoalZones.Add(AIHints.GoalSingleTarget(new WPos(105, -259), 3));
                 if (player.Position.AlmostEqual(new WPos(111.218f, -257.802f), 2))
                     hints.WantJump = true;
             })
@@ -124,8 +124,8 @@ internal class InFromTheCold(WorldState ws) : QuestBattle(ws)
             .Named("Help the townspeople")
             .Hints((player, hints) => {
                 hints.WantDismount = true;
-                hints.GoalZones.Add(hints.GoalSingleTarget(new WPos(12f, -148f), 5f, 0.5f));
-                hints.GoalZones.Add(hints.GoalSingleTarget(new WPos(-81f, -180f), 5f, 0.75f));
+                hints.GoalZones.Add(AIHints.GoalSingleTarget(new WPos(12f, -148f), 5f, 0.5f));
+                hints.GoalZones.Add(AIHints.GoalSingleTarget(new WPos(-81f, -180f), 5f, 0.75f));
             })
             .With(obj => {
                 obj.OnStatusGain += (act, st) => obj.CompleteIf(act.OID == default && st.ID == 2737u);

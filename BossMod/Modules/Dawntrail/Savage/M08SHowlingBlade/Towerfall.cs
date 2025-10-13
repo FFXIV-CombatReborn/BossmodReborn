@@ -2,25 +2,29 @@ namespace BossMod.Dawntrail.Savage.M08SHowlingBlade;
 
 sealed class Towerfall(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeRect rect = new(30f, 5f);
+    private readonly AOEShapeRect rect = new(30f, 5f);
     private readonly List<AOEInstance> _aoes = new(4);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.TerrestrialTitans)
+        switch (spell.Action.ID)
         {
-            AddAOE();
-            AddAOE(180f.Degrees());
+            case (uint)AID.TerrestrialTitans:
+                AddAOE();
+                AddAOE(180f.Degrees());
+                break;
+            case (uint)AID.Towerfall:
+                if (_aoes.Count == 4)
+                {
+                    _aoes.Clear();
+                }
+                AddAOE(delay: 0f);
+                break;
         }
-        else if (spell.Action.ID == (uint)AID.Towerfall)
-        {
-            if (_aoes.Count == 4)
-                _aoes.Clear();
-            AddAOE(delay: 0f);
-        }
-        void AddAOE(Angle offset = default, float delay = 14.7f)
+
+        void AddAOE(Angle offset = default, double delay = 14.7d)
         => _aoes.Add(new(rect, spell.LocXZ, spell.Rotation + offset, Module.CastFinishAt(spell, delay)));
     }
 
@@ -35,7 +39,7 @@ sealed class Towerfall(BossModule module) : Components.GenericAOEs(module)
 
 sealed class FangedCrossing(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeCross cross = new(21f, 3.5f);
+    private readonly AOEShapeCross cross = new(21f, 3.5f);
     private readonly List<AOEInstance> _aoes = new(2);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);

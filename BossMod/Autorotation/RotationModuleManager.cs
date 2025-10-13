@@ -42,6 +42,9 @@ public sealed class RotationModuleManager : IDisposable
     public DateTime CombatStart; // default value when player is not in combat, otherwise timestamp when player entered combat
     public (DateTime Time, ActorCastEvent? Data) LastCast;
 
+    public double LastRasterizeMs;
+    public double LastPathfindMs;
+
     // list of status effects that disable the player's default action set, but do not disable *all* actions
     // in these cases, we want to prevent active rotation modules from queueing any actions, because they might affect positioning or rotation, or interfere with player's attempt to manually use an action
     // TODO can this be sourced entirely from sheet data? i can't find a field that uniquely identifies these statuses while excluding "stuns" and transformations that do not inhibit the use of actions
@@ -61,6 +64,8 @@ public sealed class RotationModuleManager : IDisposable
         404u, // "Transporting", not a transformation but prevents actions
         4235u, // "Rage" status from Phantom Berserker, prevents all actions and movement
         4376u, // "Transporting", variant in Occult Crescent
+        4586u, // "Away with the Fae", PT
+        4708u, // "Transfiguration", PT
     ];
 
     public static bool IsTransformStatus(ActorStatus st) => TransformationStatuses.Contains(st.ID);
@@ -235,6 +240,7 @@ public sealed class RotationModuleManager : IDisposable
         {
             return;
         }
+
         var count = ActiveModules.Count;
         for (var i = 0; i < count; ++i)
         {

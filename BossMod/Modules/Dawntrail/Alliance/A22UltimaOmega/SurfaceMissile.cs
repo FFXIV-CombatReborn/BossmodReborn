@@ -3,7 +3,7 @@ namespace BossMod.Dawntrail.Alliance.A22UltimaOmega;
 sealed class SurfaceMissile(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = new(12);
-    private static readonly AOEShapeRect rect = new(12f, 10f);
+    private readonly AOEShapeRect rect = new(12f, 10f);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {

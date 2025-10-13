@@ -30,11 +30,11 @@ public enum AID : uint
     FinalSting = 2482 // OrnHornet->player, 4.0s cast, single-target
 }
 
-class WallRemoval(BossModule module) : BossComponent(module)
+sealed class WallRemoval(BossModule module) : BossComponent(module)
 {
     public override void OnActorEAnim(Actor actor, uint state)
     {
-        if (state == 0x00040008)
+        if (state == 0x00040008u)
         {
             if (actor.OID == (uint)OID.WallController1)
             {
@@ -47,16 +47,21 @@ class WallRemoval(BossModule module) : BossComponent(module)
         }
     }
 
-    public override void Update()
+    public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
-        var pos = Module.Raid.Player()!.Position;
+        var pos = pc.PosRot;
         if (pos.X > -127f)
         {
             var pZ = pos.Z;
-            if (Arena.Bounds == D090VelveteenAnt.Arena1B && pZ < -186f)
+            var bounds = Arena.Bounds;
+            if (bounds == D090VelveteenAnt.Arena1B && pZ < -186f)
+            {
                 SetArena(D090VelveteenAnt.Arena2);
-            else if (Arena.Bounds == D090VelveteenAnt.Arena2 && pZ > -186f)
+            }
+            else if (bounds == D090VelveteenAnt.Arena2 && pZ > -186f)
+            {
                 SetArena(D090VelveteenAnt.Arena1B);
+            }
         }
     }
 
@@ -67,12 +72,12 @@ class WallRemoval(BossModule module) : BossComponent(module)
     }
 }
 
-class PoisonBreathStickyThread(BossModule module) : Components.Cleave(module, (uint)AID.PoisonBreath, new AOEShapeCone(7.5f, 60f.Degrees()), [(uint)OID.ArboretumCrawler]);
-class TortoiseStomp(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TortoiseStomp, 11f);
-class UnfinalSting(BossModule module) : Components.SimpleAOEs(module, (uint)AID.UnfinalSting, new AOEShapeRect(9.08f, 1.5f));
-class FinalSting(BossModule module) : Components.SingleTargetCast(module, (uint)AID.FinalSting);
+sealed class PoisonBreathStickyThread(BossModule module) : Components.Cleave(module, (uint)AID.PoisonBreath, new AOEShapeCone(7.5f, 60f.Degrees()), [(uint)OID.ArboretumCrawler]);
+sealed class TortoiseStomp(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TortoiseStomp, 11f);
+sealed class UnfinalSting(BossModule module) : Components.SimpleAOEs(module, (uint)AID.UnfinalSting, new AOEShapeRect(9.08f, 1.5f));
+sealed class FinalSting(BossModule module) : Components.SingleTargetCast(module, (uint)AID.FinalSting);
 
-class D090VelveteenAntStates : StateMachineBuilder
+sealed class D090VelveteenAntStates : StateMachineBuilder
 {
     public D090VelveteenAntStates(BossModule module) : base(module)
     {
@@ -87,7 +92,7 @@ class D090VelveteenAntStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 41, NameID = 4641, SortOrder = 3)]
-public class D090VelveteenAnt(WorldState ws, Actor primary) : BossModule(ws, primary, Arena1.Center, Arena1)
+public sealed class D090VelveteenAnt(WorldState ws, Actor primary) : BossModule(ws, primary, Arena1.Center, Arena1)
 {
     private static readonly WPos[] vertices1 = [new(-123.8f, -191.08f), new(-117.35f, -190.85f), new(-116.85f, -190.4f), new(-115.74f, -188.76f), new(-113.76f, -186.84f),
     new(-113.28f, -186.35f), new(-109.9f, -181.68f), new(-107.49f, -177.8f), new(-107.27f, -177.15f), new(-107.7f, -175.92f),

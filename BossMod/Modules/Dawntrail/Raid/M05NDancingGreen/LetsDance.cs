@@ -3,7 +3,7 @@ namespace BossMod.Dawntrail.Raid.M05NDancingGreen;
 sealed class LetsDance(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = new(8);
-    private static readonly AOEShapeRect rect = new(25f, 45f);
+    private readonly AOEShapeRect rect = new(25f, 45f);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
@@ -22,11 +22,14 @@ sealed class LetsDance(BossModule module) : Components.GenericAOEs(module)
         {
             var count = _aoes.Count;
             var act = count != 0 ? _aoes.Ref(0).Activation.AddSeconds(count * 2d) : WorldState.FutureTime(18.2d);
-            _aoes.Add(new(rect, Arena.Center.Quantized(), modelState == 5 ? Angle.AnglesCardinals[3] : Angle.AnglesCardinals[0], act));
-            if (_aoes.Count == 2)
+            var pos = Arena.Center.Quantized();
+            var rot = modelState == 5 ? Angle.AnglesCardinals[3] : Angle.AnglesCardinals[0];
+            _aoes.Add(new(rect, pos, rot, act, shapeDistance: count == 0 ? rect.Distance(pos, rot) : null));
+            if (count == 1)
             {
                 ref var aoe2 = ref _aoes.Ref(1);
-                aoe2.Origin += 5f * aoe2.Rotation.ToDirection();
+                aoe2.Origin += 5f * rot.ToDirection();
+                aoe2.ShapeDistance = rect.Distance(aoe2.Origin, rot);
             }
         }
     }
@@ -42,11 +45,15 @@ sealed class LetsDance(BossModule module) : Components.GenericAOEs(module)
             {
                 var aoes = CollectionsMarshal.AsSpan(_aoes);
                 ref var aoe1 = ref aoes[0];
-                aoe1.Origin -= 5f * aoe1.Rotation.ToDirection();
+                var rot1 = aoe1.Rotation;
+                aoe1.Origin -= 5f * rot1.ToDirection();
+                aoe1.ShapeDistance = rect.Distance(aoe1.Origin, rot1);
                 if (count > 2)
                 {
                     ref var aoe2 = ref aoes[1];
-                    aoe2.Origin += 1.5f * aoe2.Rotation.ToDirection();
+                    var rot2 = aoe2.Rotation;
+                    aoe2.Origin += 5f * rot2.ToDirection();
+                    aoe2.ShapeDistance = rect.Distance(aoe2.Origin, rot2);
                 }
             }
         }

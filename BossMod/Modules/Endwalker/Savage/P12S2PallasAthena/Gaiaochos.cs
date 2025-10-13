@@ -74,7 +74,7 @@ class GaiaochosEnd(BossModule module) : BossComponent(module)
 {
     public bool Finished;
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         // note: there are 3 env controls happening at the same time, not sure which is the actual trigger: .9=02000001, .11=00800001, .12=00080004
         if (index == 9 && state == 0x02000001)

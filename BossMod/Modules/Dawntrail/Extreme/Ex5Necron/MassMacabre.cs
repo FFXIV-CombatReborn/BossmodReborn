@@ -33,7 +33,7 @@ sealed class MassMacabre(BossModule module) : Components.GenericTowers(module)
 
     private void AddTower(WPos pos, int soakers, ulong index, double delay) => Towers.Add(new(pos.Quantized(), 3f, soakers, soakers, activation: WorldState.FutureTime(delay), actorID: index));
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00020001u && numAdded < 8) // if players leave a tower state 20001 triggers again, so we need a counter
         {
@@ -62,8 +62,7 @@ sealed class MassMacabre(BossModule module) : Components.GenericTowers(module)
             var id = (ulong)index;
             for (var i = 0; i < count; ++i)
             {
-                ref var tower = ref towers[i];
-                if (tower.ActorID == id)
+                if (towers[i].ActorID == id)
                 {
                     Towers.RemoveAt(i);
                     return;
@@ -81,7 +80,7 @@ sealed class MassMacabre(BossModule module) : Components.GenericTowers(module)
 
             for (var i = 0; i < len; ++i)
             {
-                ref var t = ref targets[i];
+                ref readonly var t = ref targets[i];
                 forbidden.Set(Raid.FindSlot(t.ID));
             }
 
@@ -92,8 +91,7 @@ sealed class MassMacabre(BossModule module) : Components.GenericTowers(module)
             var pos = caster.Position;
             for (var i = 0; i < count; ++i)
             {
-                ref var tower = ref towers[i];
-                if (tower.Position.AlmostEqual(pos, 1f))
+                if (towers[i].Position.AlmostEqual(pos, 1f))
                 {
                     Towers.RemoveAt(i);
                     return;

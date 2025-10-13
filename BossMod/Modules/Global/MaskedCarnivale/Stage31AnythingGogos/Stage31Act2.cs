@@ -76,7 +76,7 @@ sealed class ThunderIII(BossModule module) : Components.VoidzoneAtCastTarget(mod
 
 sealed class GogoBlizzardIII(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeCircle circle = new(8f);
+    private readonly AOEShapeCircle circle = new(8f);
     private AOEInstance[] _aoe = [];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;

@@ -1,6 +1,6 @@
 namespace BossMod.Dawntrail.Savage.M08SHowlingBlade;
 
-sealed class HeavensearthSuspendedStone(BossModule module) : Components.IconStackSpread(module, (uint)IconID.Heavensearth, (uint)IconID.SuspendedStone, (uint)AID.Heavensearth, (uint)AID.SuspendedStone, 6f, 6f, 5.1d, 4, 4, true)
+sealed class HeavensearthSuspendedStone(BossModule module) : Components.IconStackSpread(module, (uint)IconID.Heavensearth, (uint)IconID.SuspendedStone, (uint)AID.Heavensearth, (uint)AID.SuspendedStone, 6f, 6f, 5.1d, 4, 4)
 {
     private BitMask forbidden;
 
@@ -48,7 +48,7 @@ sealed class FangedCharge(BossModule module) : Components.GenericAOEs(module)
         var index = 0;
         while (index < count)
         {
-            ref readonly var aoe = ref aoes[index];
+            ref var aoe = ref aoes[index];
             if (aoe.Activation >= deadline)
             {
                 break;

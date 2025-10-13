@@ -11,10 +11,11 @@ class LimitlessDesolation : Components.UniformStackSpread
     private readonly int[] _towerSlots = Utils.MakeArray(_towerOffsets.Length, -1); // [tower index] = slot
     private readonly bool _thRight = Service.Config.Get<P8S2Config>().LimitlessDesolationTHRight;
 
-    private const float _towerRadius = 4;
-    private static readonly WDir[] _towerOffsets = [new(-15, -15), new(-15, -5), new(-15, 5), new(-5, -15), new(-5, -5), new(-5, 5), new(5, -15), new(5, -5), new(5, 5), new(15, -15), new(15, -5), new(15, 5)];
+    private const float _towerRadius = 4f;
+    private static readonly WDir[] _towerOffsets = [new(-15f, -15f), new(-15f, -5f), new(-15f, 5f), new(-5f, -15f),
+        new(-5f, -5f), new(-5f, 5f), new(5f, -15f), new(5f, -5f), new(5f, 5f), new(15f, -15f), new(15f, -5f), new(15f, 5f)];
 
-    public LimitlessDesolation(BossModule module) : base(module, 0, 6, alwaysShowSpreads: true, raidwideOnResolve: false)
+    public LimitlessDesolation(BossModule module) : base(module, default, 6f, raidwideOnResolve: false)
     {
         AddSpreads(Raid.WithoutSlot(false, true, true));
     }
@@ -34,25 +35,25 @@ class LimitlessDesolation : Components.UniformStackSpread
 
         var towerIndex = _towerAssignments[pcSlot];
         if (towerIndex >= 0)
-            Arena.AddCircle(Arena.Center + _towerOffsets[towerIndex], _towerRadius, Colors.Safe, 2);
+            Arena.AddCircle(Arena.Center + _towerOffsets[towerIndex], _towerRadius, Colors.Safe, 2f);
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        switch ((AID)spell.Action.ID)
+        switch (spell.Action.ID)
         {
-            case AID.TyrantsFire:
+            case (uint)AID.TyrantsFire:
                 Spreads.RemoveAll(s => s.Target.InstanceID == spell.MainTargetID);
                 _waitingForTowers.Set(Raid.FindSlot(spell.MainTargetID));
                 ++NumAOEs;
                 break;
-            case AID.Burst:
+            case (uint)AID.Burst:
                 ++NumBursts;
                 break;
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         var towerIndex = index switch
         {
@@ -79,7 +80,7 @@ class LimitlessDesolation : Components.UniformStackSpread
         // 00080004 = explode
         switch (state)
         {
-            case 0x00020001: // appear
+            case 0x00020001u: // appear
                 _activeTowers.Set(towerIndex);
                 var towerForTH = _thRight == towerIndex >= 6;
                 var (slot, player) = Raid.WithSlot(true, true, true).FirstOrDefault(ia => _waitingForTowers[ia.Item1] && ia.Item2.Class.IsSupport() == towerForTH);
@@ -91,7 +92,7 @@ class LimitlessDesolation : Components.UniformStackSpread
                 }
                 ++NumTowers;
                 break;
-            case 0x00040004: // disappear
+            case 0x00040004u: // disappear
                 _activeTowers.Clear(towerIndex);
                 var assignedSlot = _towerSlots[towerIndex];
                 if (assignedSlot >= 0)
@@ -106,4 +107,4 @@ class LimitlessDesolation : Components.UniformStackSpread
     }
 }
 
-class LimitlessDesolationTyrantsFlare(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TyrantsFlareLimitless, 8);
+class LimitlessDesolationTyrantsFlare(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TyrantsFlareLimitless, 8f);

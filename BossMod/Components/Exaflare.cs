@@ -42,13 +42,17 @@ public class Exaflare(BossModule module, AOEShape shape, uint aid = default) : G
             for (var i = 0; i < futureLen; ++i)
             {
                 ref var aoe = ref futureAOEs[i];
-                _aoes[i] = new(Shape, aoe.Item1, aoe.Item3, aoe.Item2, FutureColor);
+                var origin = aoe.Item1;
+                var rotation = aoe.Item3;
+                _aoes[i] = new(Shape, origin, rotation, aoe.Item2, FutureColor, shapeDistance: Shape.Distance(origin, rotation));
             }
 
             for (var i = 0; i < imminentLen; ++i)
             {
                 ref var aoe = ref imminentAOEs[i];
-                _aoes[futureLen + i] = new(Shape, aoe.Item1, aoe.Item3, aoe.Item2, ImminentColor);
+                var origin = aoe.Item1;
+                var rotation = aoe.Item3;
+                _aoes[futureLen + i] = new(Shape, origin, rotation, aoe.Item2, ImminentColor, shapeDistance: Shape.Distance(origin, rotation));
             }
             lastCount = linesCount;
             lastVersion = currentVersion;

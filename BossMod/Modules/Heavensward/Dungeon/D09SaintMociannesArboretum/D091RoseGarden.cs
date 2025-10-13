@@ -27,7 +27,7 @@ public enum AID : uint
     ExplosiveDehiscence = 5234 // RoseHip->self, no cast, range 40 circle, rose hips if not killed fast enough
 }
 
-class VineProbe(BossModule module) : Components.Cleave(module, (uint)AID.VineProbe, new AOEShapeRect(11.775f, 3.5f), activeWhileCasting: false)
+sealed class VineProbe(BossModule module) : Components.Cleave(module, (uint)AID.VineProbe, new AOEShapeRect(11.775f, 3.5f), activeWhileCasting: false)
 {
     private readonly ExtremelyBadBreathRotation _rot = module.FindComponent<ExtremelyBadBreathRotation>()!;
     private bool RotationInactive => _rot.Sequences.Count == 0;
@@ -35,29 +35,34 @@ class VineProbe(BossModule module) : Components.Cleave(module, (uint)AID.VinePro
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         if (RotationInactive)
+        {
             base.AddHints(slot, actor, hints);
+        }
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (RotationInactive)
+        {
             base.AddAIHints(slot, actor, assignment, hints);
+        }
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
         if (RotationInactive)
+        {
             base.DrawArenaForeground(pcSlot, pc);
+        }
     }
 }
 
-class ExtremelyBadBreath(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ExtremelyBadBreath, ExtremelyBadBreathRotation.Cone);
+sealed class ExtremelyBadBreath(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ExtremelyBadBreath, ExtremelyBadBreathRotation.Cone);
 
-class ExtremelyBadBreathRotation(BossModule module) : Components.GenericRotatingAOE(module)
+sealed class ExtremelyBadBreathRotation(BossModule module) : Components.GenericRotatingAOE(module)
 {
     private Angle _rot1;
     public static readonly AOEShapeCone Cone = new(24.775f, 45f.Degrees());
-    private readonly List<AOEInstance> _aoes = new(3);
     private bool first = true;
     private int correctSteps;
 
@@ -68,29 +73,43 @@ class ExtremelyBadBreathRotation(BossModule module) : Components.GenericRotating
         {
             var count = _aoes.Count;
             if (count == 0)
+            {
                 return [];
-            var act0 = _aoes[0].Activation;
-            var aoes = new AOEInstance[count];
+            }
+
+            var aoes = CollectionsMarshal.AsSpan(_aoes);
+            var act0 = aoes[0].Activation;
             var color = Colors.Danger;
             for (var i = 0; i < count; ++i)
             {
-                var aoe = _aoes[i];
-                aoes[i] = (aoe.Activation - act0).TotalSeconds < 1d ? aoe with { Color = color } : aoe;
+                ref var aoe = ref aoes[i];
+                if ((aoe.Activation - act0).TotalSeconds < 1d)
+                {
+                    aoes[i].Color = color;
+                }
             }
             return aoes;
         }
         else
+        {
             return base.ActiveAOEs(slot, actor);
+        }
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         // rotation direction seems to be unknown until 2nd repeat, so we predict start into both directions
-        void AddAOE(Angle offset, float delay = 1) => _aoes.Add(new(Cone, spell.LocXZ, spell.Rotation + offset, Module.CastFinishAt(spell, delay)));
+        void AddAOE(Angle offset, double delay = 1d)
+        {
+            var rot = spell.Rotation + offset;
+            var pos = spell.LocXZ;
+            _aoes.Add(new(Cone, pos, rot, Module.CastFinishAt(spell, delay), shapeDistance: Cone.Distance(pos, rot)));
+        }
+
         if (spell.Action.ID == (uint)AID.ExtremelyBadBreathFirst)
         {
             _rot1 = spell.Rotation;
-            AddAOE(default, 0f);
+            AddAOE(default, default);
             AddAOE(45f.Degrees());
             AddAOE(-45f.Degrees());
         }
@@ -98,46 +117,58 @@ class ExtremelyBadBreathRotation(BossModule module) : Components.GenericRotating
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (_aoes.Count != 0 && spell.Action.ID == (uint)AID.ExtremelyBadBreathFirst)
-            _aoes.RemoveAt(0);
-        else if (spell.Action.ID == (uint)AID.ExtremelyBadBreathRepeat)
+        switch (spell.Action.ID)
         {
-            var count = Sequences.Count;
-            if (count == 0)
-            {
-                var rot2 = spell.Rotation;
-                var rotDelta = (_rot1 - rot2).Normalized().Rad;
-                if (Math.Abs(rotDelta) < 1e-3f) // rotation usually starts after 1 or 2 repeats, also checking for small delta since there are miniscule errors that causes _rot1 != rot2
+            case (uint)AID.ExtremelyBadBreathFirst:
+                if (_aoes.Count != 0)
                 {
-                    ++correctSteps;
-                    return;
+                    _aoes.RemoveAt(0);
                 }
-                _aoes.Clear();
-                var inc = (rotDelta > 0 ? -1 : 1) * 11.6f.Degrees(); // last hit is only about 7.4°, but shouldnt matter for us, let's consider it extra safety margin
-                Sequences.Add(new(Cone, Module.PrimaryActor.Position.Quantized(), rot2, inc, WorldState.FutureTime(1d), 1f, (first ? 13 : 25) - correctSteps, 8));
-                first = false;
-            }
-            else
-            {
-                AdvanceSequence(0, WorldState.CurrentTime);
-                if (Sequences.Count == 0)
-                    correctSteps = 0;
-            }
+                break;
+            case (uint)AID.ExtremelyBadBreathRepeat:
+                var count = Sequences.Count;
+                if (count == 0)
+                {
+                    var rot2 = spell.Rotation;
+                    var rotDelta = (_rot1 - rot2).Normalized().Rad;
+                    if (Math.Abs(rotDelta) < 1e-3f) // rotation usually starts after 1 or 2 repeats, also checking for small delta since there are miniscule errors that causes _rot1 != rot2
+                    {
+                        ++correctSteps;
+                        return;
+                    }
+                    var inc = (rotDelta > 0f ? -1 : 1) * 11.6f.Degrees(); // last hit is only about 7.4°, but shouldnt matter for us, let's consider it extra safety margin
+                    Sequences.Add(new(Cone, Module.PrimaryActor.Position.Quantized(), rot2, inc, WorldState.FutureTime(1d), 1d, (first ? 13 : 25) - correctSteps, 8));
+                    first = false;
+                }
+                else
+                {
+                    AdvanceSequence(0, WorldState.CurrentTime);
+                    if (Sequences.Count == 0)
+                    {
+                        correctSteps = 0;
+                    }
+                }
+                break;
         }
     }
 }
 
-class EarthyBreath(BossModule module) : Components.GenericAOEs(module)
+sealed class EarthyBreath(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeCone cone = new(7.5f, 15f.Degrees());
-    private static readonly AOEShapeRect rect = new(7.5f, 1.5f);
+    private readonly AOEShapeCone cone = new(7.5f, 15f.Degrees());
+    private readonly AOEShapeRect rect = new(7.5f, 1.5f);
     private readonly List<AOEInstance> _aoes = new(10);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        void AddAOE(AOEShape shape) => _aoes.Add(new(shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell), actorID: caster.InstanceID));
+        void AddAOE(AOEShape shape)
+        {
+            var rot = spell.Rotation;
+            var pos = spell.LocXZ;
+            _aoes.Add(new(shape, pos, rot, Module.CastFinishAt(spell), actorID: caster.InstanceID, shapeDistance: shape.Distance(pos, rot)));
+        }
         if (spell.Action.ID == (uint)AID.EarthyBreathFirst)
         {
             AddAOE(cone);
@@ -151,12 +182,13 @@ class EarthyBreath(BossModule module) : Components.GenericAOEs(module)
         {
             var count = _aoes.Count;
             var id = caster.InstanceID;
+            var aoes = CollectionsMarshal.AsSpan(_aoes);
             for (var i = 0; i < count; ++i)
             {
-                if (_aoes[i].ActorID == id)
+                if (aoes[i].ActorID == id)
                 {
                     _aoes.RemoveAt(i);
-                    break;
+                    return;
                 }
             }
         }
@@ -165,11 +197,13 @@ class EarthyBreath(BossModule module) : Components.GenericAOEs(module)
     public override void OnActorModelStateChange(Actor actor, byte modelState, byte animState1, byte animState2)
     {
         if (_aoes.Count != 0 && modelState == 0)
+        {
             _aoes.Clear();
+        }
     }
 }
 
-class ResinVoidzone(BossModule module) : Components.Voidzone(module, 5f, GetVoidzones)
+sealed class ResinVoidzone(BossModule module) : Components.Voidzone(module, 5f, GetVoidzones)
 {
     private static Actor[] GetVoidzones(BossModule module)
     {
@@ -190,9 +224,9 @@ class ResinVoidzone(BossModule module) : Components.Voidzone(module, 5f, GetVoid
     }
 }
 
-class BurrFester(BossModule module) : Components.RaidwideCast(module, (uint)AID.BurrFester);
+sealed class BurrFester(BossModule module) : Components.RaidwideCast(module, (uint)AID.BurrFester);
 
-class D091RoseGardenStates : StateMachineBuilder
+sealed class D091RoseGardenStates : StateMachineBuilder
 {
     public D091RoseGardenStates(BossModule module) : base(module)
     {
@@ -207,7 +241,7 @@ class D091RoseGardenStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 41, NameID = 4653, SortOrder = 2)]
-public class D091RoseGarden(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
+public sealed class D091RoseGarden(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly ArenaBoundsCustom arena = new([new Polygon(new(default, -82.146f), 19.5f, 48)], [new Rectangle(new(18.221f, -90.993f), 20f, 1.25f, -65f.Degrees()),
     new Rectangle(new(-20.214f, -82.492f), 20f, 1.25f, -88.9f.Degrees())]);

@@ -7,7 +7,7 @@ sealed class P5ParadiseRegainedTowers(BossModule module) : Components.GenericTow
         // TODO: implement hints for non-tanks here...
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index is >= 51 and <= 53 && state == 0x00020001u)
         {

@@ -129,7 +129,7 @@ sealed class PalladionStack : Components.UniformStackSpread
     private int _numCasts;
     private readonly Palladion? _palladion;
 
-    public PalladionStack(BossModule module) : base(module, 6, 0, raidwideOnResolve: false)
+    public PalladionStack(BossModule module) : base(module, 6f, default, raidwideOnResolve: false)
     {
         _palladion = module.FindComponent<Palladion>();
         UpdateStack(Module.CastFinishAt(Module.PrimaryActor.CastInfo, 0.3f));

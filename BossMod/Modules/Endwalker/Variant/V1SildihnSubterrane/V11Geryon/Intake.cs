@@ -8,7 +8,7 @@ sealed class Intake(BossModule module) : Components.GenericKnockback(module, sto
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor) => _aoe.AOEs.Count != 0 ? _kbs : [];
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x09)
         {

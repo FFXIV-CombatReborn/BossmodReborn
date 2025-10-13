@@ -21,7 +21,7 @@ sealed class P2EarthMissileIce(BossModule module) : Components.VoidzoneAtCastTar
 
 // note: we use a single spread/stack component for both enumerations and ice missile spreads, since they happen at the same time
 // TODO: add hint for spread target to stay close to tornado...
-sealed class P2Enumeration(BossModule module) : Components.UniformStackSpread(module, 5, 6, 3, 3, true, false) // TODO: verify enumeration radius
+sealed class P2Enumeration(BossModule module) : Components.UniformStackSpread(module, 5f, 6f, 3, 3, true, false) // TODO: verify enumeration radius
 {
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {

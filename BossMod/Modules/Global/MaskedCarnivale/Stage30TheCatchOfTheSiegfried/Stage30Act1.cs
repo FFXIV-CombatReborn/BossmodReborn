@@ -42,8 +42,7 @@ sealed class RubberBullet(BossModule module) : Components.GenericKnockback(modul
         var len = aoes.Length;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var aoe = ref aoes[i];
-            if (aoe.Check(pos))
+            if (aoes[i].Check(pos))
             {
                 return true;
             }
@@ -72,7 +71,7 @@ sealed class RubberBullet(BossModule module) : Components.GenericKnockback(modul
 
 sealed class Explosion(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeCircle circle = new(8);
+    private readonly AOEShapeCircle circle = new(8);
     private readonly List<AOEInstance> _aoes = [];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
@@ -81,7 +80,8 @@ sealed class Explosion(BossModule module) : Components.GenericAOEs(module)
     {
         if (actor.OID == (uint)OID.Bomb)
         {
-            _aoes.Add(new(circle, actor.Position.Quantized(), default, WorldState.FutureTime(8.4d)));
+            var pos = actor.Position.Quantized();
+            _aoes.Add(new(circle, pos, default, WorldState.FutureTime(8.4d), shapeDistance: circle.Distance(pos, default)));
         }
     }
 

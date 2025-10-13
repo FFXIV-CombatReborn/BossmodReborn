@@ -34,18 +34,7 @@ sealed class Stage22Act1States : StateMachineBuilder
         TrivialPhase()
             .ActivateOnEnter<Hints2>()
             .DeactivateOnEnter<Hints>()
-            .Raw.Update = () =>
-            {
-                var enemies = module.Enemies((uint)OID.Boss);
-                var count = enemies.Count;
-                for (var i = 0; i < count; ++i)
-                {
-                    var enemy = enemies[i];
-                    if (!enemy.IsDeadOrDestroyed)
-                        return false;
-                }
-                return true;
-            };
+            .Raw.Update = () => AllDeadOrDestroyed((uint)OID.Boss);
     }
 }
 
@@ -64,14 +53,6 @@ public sealed class Stage22Act1 : BossModule
 
     protected override bool CheckPull()
     {
-        var enemies = Enemies((uint)OID.BossAct2);
-        var count = enemies.Count;
-        for (var i = 0; i < count; ++i)
-        {
-            var enemy = enemies[i];
-            if (enemy.IsTargetable)
-                return false;
-        }
-        return base.CheckPull();
+        return !IsAnyActorTargetable((uint)OID.BossAct2) && Raid.Player()!.LastFrameMovement != default && IsAnyActorTargetable((uint)OID.Boss); // they die in one hit
     }
 }

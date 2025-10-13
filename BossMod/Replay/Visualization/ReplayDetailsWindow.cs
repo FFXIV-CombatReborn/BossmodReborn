@@ -508,8 +508,8 @@ sealed class ReplayDetailsWindow : UIWindow
         _pfVisu.Draw(_pfTree);
 
         bool rebuild = false;
-        rebuild |= ImGui.SliderFloat("Zone cushion", ref _pfCushion, 0, 5);
-        rebuild |= ImGui.SliderFloat("Ability range", ref _pfTargetRadius, 3, 25);
+        rebuild |= ImGui.SliderFloat("Zone cushion", ref _pfCushion, 0f, 5f);
+        rebuild |= ImGui.SliderFloat("Ability range", ref _pfTargetRadius, 3f, 25f);
         rebuild |= UICombo.Enum("Ability positional", ref _pfPositional);
         if (rebuild)
             ResetPF();

@@ -10,7 +10,7 @@ sealed class HotCharge(BossModule module) : Components.ChargeAOEs(module, (uint)
         {
             return;
         }
-        hints.GoalZones.Add(hints.GoalSingleTarget(Module.PrimaryActor.CastInfo?.LocXZ ?? Arena.Center, 6f, 5f)); // follow the charge
+        hints.GoalZones.Add(AIHints.GoalSingleTarget(Module.PrimaryActor.CastInfo?.LocXZ ?? Arena.Center, 6f, 5f)); // follow the charge
     }
 }
 

@@ -18,29 +18,43 @@ public enum AID : uint
     AutumnWreath = 17498 // Boss->self, 4.0s cast, range 10-20 donut
 }
 
-class SpringBreeze(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SpringBreeze, new AOEShapeRect(80f, 5f));
-class SummerHeat(BossModule module) : Components.RaidwideCast(module, (uint)AID.SummerHeat);
+sealed class SpringBreeze(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SpringBreeze, new AOEShapeRect(80f, 5f));
+sealed class SummerHeat(BossModule module) : Components.RaidwideCast(module, (uint)AID.SummerHeat);
 
-class Combos(BossModule module) : Components.GenericAOEs(module)
+sealed class Combos(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeDonut donut = new(10f, 20f);
-    private static readonly AOEShapeCircle circle = new(6f);
-    private static readonly AOEShapeRect rect = new(15f, 5f);
-    private static readonly AOEShapeRect rect2 = new(40f, 5f, 40f);
+    private readonly AOEShapeDonut donut = new(10f, 20f);
+    private readonly AOEShapeCircle circle = new(6f);
+    private readonly AOEShapeRect rect = new(15f, 5f);
+    private readonly AOEShapeRect rect2 = new(80f, 5f);
     private readonly List<AOEInstance> _aoes = new(2);
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
+
+    public override void Update()
     {
         var count = _aoes.Count;
         if (count == 0)
-            return [];
+        {
+            return;
+        }
         var aoes = CollectionsMarshal.AsSpan(_aoes);
-        aoes[0].Risky = true;
+        ref var aoe0 = ref aoes[0];
         if (count > 1)
         {
-            aoes[0].Color = Colors.Danger;
+            aoe0.Color = Colors.Danger;
+            ref var aoe1 = ref aoes[1];
+            if (aoe0.Shape == circle) // unfortunately the circle is targeting a location and the boss can still slightly move after cast started 
+            {
+                var prim = Module.PrimaryActor;
+                var rot = prim.Rotation;
+                var pos = prim.Position;
+                var origin = (pos - 40f * rot.ToDirection()).Quantized();
+                aoe1.Origin = origin;
+                aoe1.Rotation = rot;
+                aoe1.ShapeDistance = aoe1.Shape.Distance(origin, rot);
+            }
         }
-        return aoes;
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
@@ -54,10 +68,15 @@ class Combos(BossModule module) : Components.GenericAOEs(module)
         };
         if (shape != null)
         {
-            AddAOE(shape);
-            AddAOE(rect2, 180f.Degrees(), 3.1d);
+            var pos = spell.LocXZ;
+            var rot = spell.Rotation;
+            AddAOE(shape, pos, rot);
+            var primary = Module.PrimaryActor;
+            var check = shape == circle;
+            var pos2 = check ? primary.Position : pos;
+            AddAOE(rect2, pos2 - 40f * rot.ToDirection(), check ? primary.Rotation : rot, 3.1d);
         }
-        void AddAOE(AOEShape shape, Angle offset = default, double delay = default) => _aoes.Add(new(shape, spell.LocXZ, spell.Rotation + offset, Module.CastFinishAt(spell, delay), risky: false));
+        void AddAOE(AOEShape shape, WPos origin, Angle rotation, double delay = default) => _aoes.Add(new(shape, origin, rotation, Module.CastFinishAt(spell, delay), shapeDistance: shape.Distance(origin, rotation)));
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
@@ -69,7 +88,7 @@ class Combos(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
-class HuracanStates : StateMachineBuilder
+sealed class HuracanStates : StateMachineBuilder
 {
     public HuracanStates(BossModule module) : base(module)
     {
@@ -81,4 +100,4 @@ class HuracanStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "Malediktus", GroupType = BossModuleInfo.GroupType.Hunt, GroupID = (uint)BossModuleInfo.HuntRank.A, NameID = 8912)]
-public class Huracan(WorldState ws, Actor primary) : SimpleBossModule(ws, primary);
+public sealed class Huracan(WorldState ws, Actor primary) : SimpleBossModule(ws, primary);

@@ -22,7 +22,7 @@ sealed class ElectropeEdgeSpark2(BossModule module) : Components.SimpleAOEs(modu
 
 sealed class ElectropeEdgeSidewiseSpark(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.ElectropeEdgeSidewiseSparkR, (uint)AID.ElectropeEdgeSidewiseSparkL], new AOEShapeCone(60f, 90f.Degrees()));
 
-sealed class ElectropeEdgeStar(BossModule module) : Components.UniformStackSpread(module, 6f, 6f, alwaysShowSpreads: true)
+sealed class ElectropeEdgeStar(BossModule module) : Components.UniformStackSpread(module, 6f, 6f)
 {
     public override void OnStatusGain(Actor actor, ActorStatus status)
     {

@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Endwalker.Ultimate.DSW2;
 
-sealed class P5WrathOfTheHeavensSkywardLeap(BossModule module) : Components.UniformStackSpread(module, default, 24f, alwaysShowSpreads: true, raidwideOnResolve: false)
+sealed class P5WrathOfTheHeavensSkywardLeap(BossModule module) : Components.UniformStackSpread(module, default, 24f, raidwideOnResolve: false)
 {
     public override void AddMovementHints(int slot, Actor actor, MovementHints movementHints)
     {
@@ -68,7 +68,7 @@ sealed class P5WrathOfTheHeavensSpiralPierce(BossModule module) : Components.Bai
     }
 }
 
-sealed class P5WrathOfTheHeavensChainLightning(BossModule module) : Components.UniformStackSpread(module, default, 5f, alwaysShowSpreads: true)
+sealed class P5WrathOfTheHeavensChainLightning(BossModule module) : Components.UniformStackSpread(module, default, 5f)
 {
     public BitMask Targets;
 

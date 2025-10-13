@@ -277,11 +277,7 @@ public sealed class ReplayManagementWindow : UIWindow
 
     private bool IsImportantDuty(uint cfcId)
     {
-        if (StaticDutyImportance.TryGetValue(cfcId, out var isImportant))
-        {
-            return isImportant;
-        }
-        return true;
+        return !StaticDutyImportance.TryGetValue(cfcId, out var isImportant) || isImportant;
     }
 
     private void OnModuleActivation(BossModule m)

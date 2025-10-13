@@ -17,7 +17,7 @@ abstract class P6Wyrmsbreath(BossModule module, bool allowIntersect) : Component
         Bait? b = bait.Count != 0 ? bait[0] : null;
         if (b != null && b.Value.Source == null)
         {
-            if (ActiveBaits.Any(b => IsClippedBy(actor, b)))
+            if (ActiveBaits.Any(b => IsClippedBy(actor, ref b)))
                 hints.Add("GTFO from baits!");
         }
         else
@@ -28,7 +28,7 @@ abstract class P6Wyrmsbreath(BossModule module, bool allowIntersect) : Component
             var partner = IgnoredPartner(slot, actor);
             if (ActiveBaitsOn(actor).Any(b => PlayersClippedBy(ref b).Any(p => p != partner)))
                 hints.Add("Bait away from raid!");
-            if (ActiveBaitsNotOn(actor).Any(b => b.Target != partner && IsClippedBy(actor, b)))
+            if (ActiveBaitsNotOn(actor).Any(b => b.Target != partner && IsClippedBy(actor, ref b)))
                 hints.Add("GTFO from baited aoe!");
         }
     }

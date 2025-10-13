@@ -65,7 +65,7 @@ sealed class HuntersHarvest(BossModule module) : Components.SimpleAOEs(module, (
 
 sealed class GeotemporalBlast(BossModule module) : Components.GenericBaitAway(module, (uint)AID.GeotemporalBlast, tankbuster: true, damageType: AIHints.PredictedDamageType.Tankbuster, centerAtTarget: true)
 {
-    private static readonly AOEShapeCircle circle = new(16f);
+    private readonly AOEShapeCircle circle = new(16f);
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
@@ -78,7 +78,7 @@ sealed class GeotemporalBlast(BossModule module) : Components.GenericBaitAway(mo
 
 sealed class AerotemporalBlast(BossModule module) : Components.GenericBaitStack(module, (uint)AID.AerotemporalBlast)
 {
-    private static readonly AOEShapeCircle circle = new(6f);
+    private readonly AOEShapeCircle circle = new(6f);
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
@@ -91,7 +91,7 @@ sealed class AerotemporalBlast(BossModule module) : Components.GenericBaitStack(
                 BitMask forbidden = default;
                 for (var i = 0; i < len; ++i)
                 {
-                    ref readonly var p = ref party[i];
+                    ref var p = ref party[i];
                     if (p.Item2.Role == Role.Tank)
                     {
                         forbidden.Set(p.Item1);

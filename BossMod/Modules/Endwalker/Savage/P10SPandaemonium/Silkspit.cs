@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Endwalker.Savage.P10SPandaemonium;
 
-class Silkspit(BossModule module) : Components.UniformStackSpread(module, 0, 7)
+class Silkspit(BossModule module) : Components.UniformStackSpread(module, default, 7f)
 {
     private readonly List<Actor> _pillars = module.Enemies((uint)OID.Pillar);
 
@@ -19,7 +19,7 @@ class Silkspit(BossModule module) : Components.UniformStackSpread(module, 0, 7)
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if ((AID)spell.Action.ID == AID.SilkspitAOE)
+        if (spell.Action.ID == (uint)AID.SilkspitAOE)
             Spreads.Clear();
     }
 

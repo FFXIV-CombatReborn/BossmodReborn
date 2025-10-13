@@ -4,8 +4,7 @@ sealed class BackUpDance(BossModule module) : Components.GenericBaitAway(module,
 {
     private DateTime _activation;
     private readonly List<Actor> sources = new(4);
-
-    private static readonly AOEShapeCone cone = new(60f, 22.5f.Degrees());
+    private readonly AOEShapeCone cone = new(60f, 22.5f.Degrees());
 
     public override void Update()
     {
@@ -33,7 +32,9 @@ sealed class BackUpDance(BossModule module) : Components.GenericBaitAway(module,
                 }
 
                 if (closest != null)
+                {
                     CurrentBaits.Add(new(source, closest, cone, _activation));
+                }
             }
         }
     }

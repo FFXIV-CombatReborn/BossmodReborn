@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Endwalker.VariantCriterion.C03AAI.C033Statice;
 
-class Fireworks(BossModule module) : Components.UniformStackSpread(module, 3f, 20f, 2, 2, true)
+class Fireworks(BossModule module) : Components.UniformStackSpread(module, 3f, 20f, 2, 2)
 {
     public Actor?[] TetheredAdds = new Actor?[4];
 

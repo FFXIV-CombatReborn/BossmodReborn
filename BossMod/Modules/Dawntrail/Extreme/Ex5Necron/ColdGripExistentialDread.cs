@@ -3,7 +3,7 @@ namespace BossMod.Dawntrail.Extreme.Ex5Necron;
 sealed class ColdGripExistentialDread(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = new(3);
-    private static readonly AOEShapeRect rect1 = new(100f, 6f), rect2 = new(100f, 12f);
+    private readonly AOEShapeRect rect1 = new(100f, 6f), rect2 = new(100f, 12f);
     private float offset;
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);

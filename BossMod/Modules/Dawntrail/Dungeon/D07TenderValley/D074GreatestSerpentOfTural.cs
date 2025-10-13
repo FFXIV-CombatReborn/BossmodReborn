@@ -68,7 +68,7 @@ sealed class DubiousTulidisasterArenaChange(BossModule module) : Components.Gene
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x00 && state == 0x00020001u)
         {
@@ -126,7 +126,7 @@ sealed class GreatestLabyrinth(BossModule module) : Components.GenericAOEs(modul
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index != 0x01)
         {

@@ -52,7 +52,7 @@ sealed class GoldenCross(BossModule module) : Components.SimpleAOEs(module, (uin
 
 sealed class GoldenBeam(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeCone cone = new(40f, 60f.Degrees());
+    private readonly AOEShapeCone cone = new(40f, 60f.Degrees());
     private AOEInstance[] _aoe = [];
     private readonly List<ConeV> cones = [];
 
@@ -64,7 +64,9 @@ sealed class GoldenBeam(BossModule module) : Components.GenericAOEs(module)
         {
             if (Module.Enemies((uint)OID.GildedMarionette).Count == 1)
             {
-                _aoe = [new(cone, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell))];
+                var pos = spell.LocXZ;
+                var rot = spell.Rotation;
+                _aoe = [new(cone, pos, rot, Module.CastFinishAt(spell), shapeDistance: cone.Distance(pos, rot))];
             }
             else
             {
@@ -85,7 +87,7 @@ sealed class GoldenBeam(BossModule module) : Components.GenericAOEs(module)
                     var combinedShapes = clipper.Union(new PolygonClipper.Operand(intersect.GetCombinedPolygon(center)),
                     new PolygonClipper.Operand(xor.GetCombinedPolygon(center)));
                     intersect.Polygon = combinedShapes;
-                    _aoe = [new(intersect, center, default, Module.CastFinishAt(spell))];
+                    _aoe = [new(intersect, center, default, Module.CastFinishAt(spell), shapeDistance: intersect.Distance(center, default))];
                 }
             }
         }
@@ -112,10 +114,8 @@ sealed class GoldenBeam(BossModule module) : Components.GenericAOEs(module)
 
 sealed class TwentyFourCaratSwing(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TwentyFourCaratSwing, 12f);
 
-sealed class GoldorQuake(BossModule module) : Components.ConcentricAOEs(module, _shapes)
+sealed class GoldorQuake(BossModule module) : Components.ConcentricAOEs(module, [new AOEShapeCircle(10f), new AOEShapeDonut(10f, 20f), new AOEShapeDonut(20f, 30f)])
 {
-    private static readonly AOEShape[] _shapes = [new AOEShapeCircle(10f), new AOEShapeDonut(10f, 20f), new AOEShapeDonut(20f, 30f)];
-
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.GoldorQuake1)
@@ -146,12 +146,11 @@ sealed class GoldorAeroIII(BossModule module) : Components.SimpleKnockbacks(modu
 
     public override bool DestinationUnsafe(int slot, Actor actor, WPos pos)
     {
-        var aoes = _aoe.ActiveAOEs(slot, actor);
+        var aoes = CollectionsMarshal.AsSpan(_aoe.Casters);
         var len = aoes.Length;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var aoe = ref aoes[i];
-            if (aoe.Check(pos))
+            if (aoes[i].Check(pos))
             {
                 return true;
             }

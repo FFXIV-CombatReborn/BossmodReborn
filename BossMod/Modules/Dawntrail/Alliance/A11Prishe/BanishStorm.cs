@@ -40,7 +40,7 @@ sealed class BanishStorm(BossModule module) : Components.Exaflare(module, 6f)
         { 0x04, (5, [3, 5, 4], [13, 9, 9]) }
     };
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (LineConfigs.TryGetValue(index, out var config))
         {

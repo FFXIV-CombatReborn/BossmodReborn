@@ -26,7 +26,7 @@ class Quintessence(BossModule module) : Components.GenericAOEs(module)
         return aoes[..max];
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state != 0x00020001u || index is < 0x4C or > 0x57)
         {

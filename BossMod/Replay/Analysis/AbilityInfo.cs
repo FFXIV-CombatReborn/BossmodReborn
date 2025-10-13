@@ -462,6 +462,30 @@ sealed class AbilityInfo : CommonEnumInfo
             }
             foreach (var n in tree.Node("Casts", data.Casts.Count == 0))
             {
+                if (ImGui.BeginPopupContextItem("casts-ctx"))
+                {
+                    if (ImGui.MenuItem("Copy (WPos, Angle) array"))
+                    {
+                        data.Casts.Sort(static (a, b) => a.Item3.Time.Start.CompareTo(b.Item3.Time.Start));
+                        var inv = CultureInfo.InvariantCulture;
+                        var sb = new StringBuilder();
+                        sb.AppendLine("private readonly (WPos pos, Angle rot)[] aoes =");
+                        sb.AppendLine("[");
+                        for (var i = 0; i < data.Casts.Count; ++i)
+                        {
+                            var c = data.Casts[i].Item3;
+                            var loc = c.Location;
+                            sb.Append("    (new(")
+                              .Append(loc.X.ToString("F3", inv)).Append("f, ")
+                              .Append(loc.Z.ToString("F3", inv)).Append("f), ")
+                              .Append(c.Rotation.ToString()).Append("f.Degrees()),")
+                              .AppendLine();
+                        }
+                        sb.Append("];");
+                        ImGui.SetClipboardText(sb.ToString());
+                    }
+                    ImGui.EndPopup();
+                }
                 tree.LeafNodes(data.Casts, c => $"{c.Item1.Path} @ {c.Item3.Time.Start:O} + {c.Item3.Time.Duration:f3}/{c.Item3.ExpectedCastTime:f3}: {ReplayUtils.ParticipantString(c.Item2, c.Item3.Time.Start)} / {c.Item3.Rotation} -> {ReplayUtils.ParticipantPosRotString(c.Item3.Target, c.Item3.Time.Start)} / {Utils.Vec3String(c.Item3.Location)}");
             }
             foreach (var an in tree.Node("Source position analysis"))

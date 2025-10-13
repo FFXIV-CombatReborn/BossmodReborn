@@ -65,7 +65,7 @@ sealed class TrismegistosArenaChange(BossModule module) : Components.GenericAOEs
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x08 && state == 0x00020001u)
         {
@@ -148,7 +148,7 @@ sealed class TrueAeroIVLOS(BossModule module) : Components.CastLineOfSightAOE(mo
 
         if (countBroken == 3 && meteor is Actor met && _aoe.Casters.Count == 0) // force AI to move closer to the meteor as soon as they become visible
         {
-            hints.GoalZones.Add(hints.GoalSingleTarget(met, 5f, 5f));
+            hints.GoalZones.Add(AIHints.GoalSingleTarget(met, 5f, 5f));
         }
     }
 }

@@ -163,14 +163,25 @@ public sealed class WorldState
         public override void Write(ReplayRecorder.Output output) => output.EmitFourCC("DIRU"u8).Emit(DirectorID, "X8").Emit(UpdateID, "X8").Emit(Param1, "X8").Emit(Param2, "X8").Emit(Param3, "X8").Emit(Param4, "X8");
     }
 
-    public Event<OpEnvControl> EnvControl = new();
-    public sealed class OpEnvControl(byte index, uint state) : Operation
+    public Event<OpMapEffect> MapEffect = new();
+    public sealed class OpMapEffect(byte index, uint state) : Operation
     {
         public readonly byte Index = index;
         public readonly uint State = state;
 
-        protected override void Exec(WorldState ws) => ws.EnvControl.Fire(this);
+        protected override void Exec(WorldState ws) => ws.MapEffect.Fire(this);
         public override void Write(ReplayRecorder.Output output) => output.EmitFourCC("ENVC"u8).Emit(Index, "X2").Emit(State, "X8");
+    }
+
+    public Event<OpLegacyMapEffect> LegacyMapEffect = new();
+    public sealed class OpLegacyMapEffect(byte sequence, byte param, byte[] data) : Operation
+    {
+        public readonly byte Sequence = sequence;
+        public readonly byte Param = param;
+        public readonly byte[] Data = data;
+
+        protected override void Exec(WorldState ws) => ws.LegacyMapEffect.Fire(this);
+        public override void Write(ReplayRecorder.Output output) => output.EmitFourCC("LEME"u8).Emit(Sequence, "X2").Emit(Param, "X2").Emit(Data);
     }
 
     public Event<OpSystemLogMessage> SystemLogMessage = new();

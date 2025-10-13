@@ -88,7 +88,7 @@ abstract class P6HallowedPlume(BossModule module) : Components.GenericBaitAway(m
             }
             else
             {
-                if (ActiveBaitsNotOn(actor).Any(b => IsClippedBy(actor, b)))
+                if (ActiveBaitsNotOn(actor).Any(b => IsClippedBy(actor, ref b)))
                     hints.Add("GTFO from baited aoe!");
             }
         }

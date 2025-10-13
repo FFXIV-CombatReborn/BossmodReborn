@@ -23,11 +23,14 @@ sealed class LetsDance(BossModule module) : Components.GenericAOEs(module)
         {
             var count = _aoes.Count;
             var act = count != 0 ? _aoes.Ref(0).Activation.AddSeconds(count * 2.4d) : WorldState.FutureTime(26.1d);
-            _aoes.Add(new(Rect, Arena.Center.Quantized(), modelState == 5 ? Angle.AnglesCardinals[3] : Angle.AnglesCardinals[0], act));
-            if (_aoes.Count == 2)
+            var pos = Arena.Center.Quantized();
+            var rot = modelState == 5 ? Angle.AnglesCardinals[3] : Angle.AnglesCardinals[0];
+            _aoes.Add(new(Rect, pos, rot, act, shapeDistance: count == 0 ? Rect.Distance(pos, rot) : null));
+            if (count == 1)
             {
                 ref var aoe2 = ref _aoes.Ref(1);
-                aoe2.Origin += 5f * aoe2.Rotation.ToDirection();
+                aoe2.Origin += 5f * rot.ToDirection();
+                aoe2.ShapeDistance = Rect.Distance(aoe2.Origin, rot);
             }
         }
     }
@@ -45,11 +48,15 @@ sealed class LetsDance(BossModule module) : Components.GenericAOEs(module)
                 {
                     var aoes = CollectionsMarshal.AsSpan(_aoes);
                     ref var aoe1 = ref aoes[0];
-                    aoe1.Origin -= 5f * aoe1.Rotation.ToDirection();
+                    var rot1 = aoe1.Rotation;
+                    aoe1.Origin -= 5f * rot1.ToDirection();
+                    aoe1.ShapeDistance = Rect.Distance(aoe1.Origin, rot1);
                     if (count > 2)
                     {
                         ref var aoe2 = ref aoes[1];
-                        aoe2.Origin += 5f * aoe2.Rotation.ToDirection();
+                        var rot2 = aoe2.Rotation;
+                        aoe2.Origin += 5f * rot2.ToDirection();
+                        aoe2.ShapeDistance = Rect.Distance(aoe2.Origin, rot2);
                     }
                 }
             }
@@ -67,7 +74,9 @@ sealed class LetsDanceRemix(BossModule module) : Components.GenericAOEs(module)
     {
         var count = _aoes.Count;
         if (count == 0 || _bait.CurrentBaits.Count != 0)
+        {
             return [];
+        }
         var max = count > 2 ? 2 : count;
         var aoes = CollectionsMarshal.AsSpan(_aoes);
         if (count > 1)
@@ -116,12 +125,15 @@ sealed class LetsDanceRemix(BossModule module) : Components.GenericAOEs(module)
             var count = _aoes.Count;
             var act = count != 0 ? _aoes.Ref(0).Activation.AddSeconds(count * 1.5d) : WorldState.FutureTime(26d);
             var rot = modelState == 5 ? Angle.AnglesCardinals[3] : modelState == 31 ? Angle.AnglesCardinals[1] : modelState == 32 ? a180 : Angle.AnglesCardinals[0];
-            _aoes.Add(new(LetsDance.Rect, Arena.Center.Quantized(), rot, act));
-            ref var aoe0 = ref _aoes.Ref(0);
-            if (_aoes.Count == 2 && aoe0.Rotation.AlmostEqual(rot + a180, Angle.DegToRad))
+            var pos = Arena.Center.Quantized();
+            var rect = LetsDance.Rect;
+            var check = count != 0 && _aoes.Ref(0).Rotation.AlmostEqual(rot + a180, Angle.DegToRad);
+            _aoes.Add(new(rect, pos, rot, act, shapeDistance: count == 0 || !check ? rect.Distance(pos, rot) : null));
+            if (count == 1 && check)
             {
                 ref var aoe2 = ref _aoes.Ref(1);
-                aoe2.Origin += 5f * aoe2.Rotation.ToDirection();
+                aoe2.Origin += 5f * rot.ToDirection();
+                aoe2.ShapeDistance = rect.Distance(aoe2.Origin, rot);
             }
         }
     }
@@ -143,6 +155,7 @@ sealed class LetsDanceRemix(BossModule module) : Components.GenericAOEs(module)
                     if (aoe1.Origin != Arena.Center.Quantized())
                     {
                         aoe1.Origin -= 5f * rot1.ToDirection();
+                        aoe1.ShapeDistance = LetsDance.Rect.Distance(aoe1.Origin, rot1);
                     }
                     if (count > 2)
                     {
@@ -151,6 +164,7 @@ sealed class LetsDanceRemix(BossModule module) : Components.GenericAOEs(module)
                         if (rot1.AlmostEqual(rot2 + a180, Angle.DegToRad))
                         {
                             aoe2.Origin += 5f * rot2.ToDirection();
+                            aoe2.ShapeDistance = LetsDance.Rect.Distance(aoe2.Origin, rot2);
                         }
                     }
                 }

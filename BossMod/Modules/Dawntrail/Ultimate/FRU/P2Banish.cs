@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Dawntrail.Ultimate.FRU;
 
-abstract class P2Banish(BossModule module) : Components.UniformStackSpread(module, 5f, 5f, 2, 2, true)
+abstract class P2Banish(BossModule module) : Components.UniformStackSpread(module, 5f, 5f, 2, 2)
 {
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {

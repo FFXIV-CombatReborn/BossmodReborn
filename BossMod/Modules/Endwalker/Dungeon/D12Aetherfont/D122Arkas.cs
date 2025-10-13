@@ -48,7 +48,7 @@ sealed class ArenaChange(BossModule module) : Components.GenericAOEs(module)
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x00)
         {
@@ -144,7 +144,7 @@ sealed class ForkedFissures(BossModule module) : Components.GenericAOEs(module)
         return CollectionsMarshal.AsSpan(_aoes)[..max];
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state is 0x00200010u or 0x00020001u)
         {

@@ -251,7 +251,9 @@ sealed class Ex4ZeleniaStates : StateMachineBuilder
             var casts = i * 4;
             var cond = ComponentCondition<EscelonsFall>(offset, time, comp => comp.NumCasts == casts, desc);
             if (i == 4)
+            {
                 cond.DeactivateOnExit<EscelonsFall>();
+            }
         }
         return true;
     }

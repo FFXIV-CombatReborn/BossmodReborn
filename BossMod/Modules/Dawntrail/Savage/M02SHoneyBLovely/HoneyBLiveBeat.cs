@@ -128,7 +128,7 @@ abstract class Heartsick(BossModule module, bool roles) : Components.StackWithIc
 sealed class Heartsick1(BossModule module) : Heartsick(module, false);
 sealed class Heartsick2(BossModule module) : Heartsick(module, true);
 
-sealed class HoneyBLiveBeat3BigBurst(BossModule module) : Components.UniformStackSpread(module, default, 14f, alwaysShowSpreads: true)
+sealed class HoneyBLiveBeat3BigBurst(BossModule module) : Components.UniformStackSpread(module, default, 14f)
 {
     public int NumCasts;
     public int[] Order = new int[PartyState.MaxPartySize];

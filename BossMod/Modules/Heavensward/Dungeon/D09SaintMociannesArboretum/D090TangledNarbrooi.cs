@@ -24,24 +24,31 @@ public enum AID : uint
     Hurl = 5352 // Biloko->location, 3.0s cast, range 6 circle
 }
 
-class WallRemoval(BossModule module) : BossComponent(module)
+sealed class WallRemoval(BossModule module) : BossComponent(module)
 {
     public override void OnActorEAnim(Actor actor, uint state)
     {
-        if (state == 0x00040008 && actor.OID == (uint)OID.WallController)
+        if (state == 0x00040008u && actor.OID == (uint)OID.WallController)
+        {
             SetArena(D090TangledNarbrooi.Arena1B);
+        }
     }
 
-    public override void Update()
+    public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
-        var pos = Module.Raid.Player()!.Position;
+        var pos = pc.PosRot;
         if (pos.Z > 12f)
         {
+            var bounds = Arena.Bounds;
             var pX = pos.X;
-            if (Arena.Bounds == D090TangledNarbrooi.Arena1B && pX > -101f)
+            if (bounds == D090TangledNarbrooi.Arena1B && pX > -101f)
+            {
                 SetArena(D090TangledNarbrooi.Arena2);
-            else if (Arena.Bounds == D090TangledNarbrooi.Arena2 && pX < -101f)
+            }
+            else if (bounds == D090TangledNarbrooi.Arena2 && pX < -101f)
+            {
                 SetArena(D090TangledNarbrooi.Arena1B);
+            }
         }
     }
 
@@ -52,12 +59,12 @@ class WallRemoval(BossModule module) : BossComponent(module)
     }
 }
 
-class TheWoodRemembers(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TheWoodRemembers, new AOEShapeCone(7.85f, 60f.Degrees()));
-class MindOfItsOwn(BossModule module) : Components.SimpleAOEs(module, (uint)AID.MindOfItsOwn, new AOEShapeCone(9f, 60f.Degrees()));
-class Canopy(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Canopy, new AOEShapeCone(7.7f, 60f.Degrees()));
-class Hurl(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Hurl, 6f);
+sealed class TheWoodRemembers(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TheWoodRemembers, new AOEShapeCone(7.85f, 60f.Degrees()));
+sealed class MindOfItsOwn(BossModule module) : Components.SimpleAOEs(module, (uint)AID.MindOfItsOwn, new AOEShapeCone(9f, 60f.Degrees()));
+sealed class Canopy(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Canopy, new AOEShapeCone(7.7f, 60f.Degrees()));
+sealed class Hurl(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Hurl, 6f);
 
-class D090TangledNarbrooiStates : StateMachineBuilder
+sealed class D090TangledNarbrooiStates : StateMachineBuilder
 {
     public D090TangledNarbrooiStates(BossModule module) : base(module)
     {
@@ -72,7 +79,7 @@ class D090TangledNarbrooiStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 41, NameID = 4647, SortOrder = 5)]
-public class D090TangledNarbrooi(WorldState ws, Actor primary) : BossModule(ws, primary, Arena1.Center, Arena1)
+public sealed class D090TangledNarbrooi(WorldState ws, Actor primary) : BossModule(ws, primary, Arena1.Center, Arena1)
 {
     private static readonly WPos[] vertices1 = [new(-124.78f, -10.09f), new(-123.51f, -8.38f), new(-123.01f, -8.12f), new(-122.39f, -7.85f), new(-121.80f, -7.73f),
     new(-121.15f, -7.65f), new(-120.56f, -7.70f), new(-119.91f, -7.84f), new(-119.39f, -7.43f), new(-119.41f, -6.74f),

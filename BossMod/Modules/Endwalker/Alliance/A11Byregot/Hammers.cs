@@ -39,7 +39,7 @@ class HammersCells(BossModule module) : Components.GenericAOEs(module, (uint)AID
             Arena.Bounds = A11Byregot.StartingHammerBounds;
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index is >= 0x07 and <= 0x0B)
         {
@@ -160,11 +160,11 @@ class HammersSpire(BossModule module) : Components.SimpleAOEs(module, (uint)AID.
         base.AddAIHints(slot, actor, assignment, hints);
         if (_safespot is WPos pos)
         {
-            hints.GoalZones.Add(hints.GoalRectangle(pos, new WDir(default, 1f), 5f, 5f, 10f));
+            hints.GoalZones.Add(AIHints.GoalRectangle(pos, new WDir(default, 1f), 5f, 5f, 10f));
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         _safespot = null;
     }

@@ -120,6 +120,7 @@ public sealed class ClientState
         public readonly bool Equals(DutyAction other) => this == other;
         public override readonly bool Equals(object? obj) => obj is DutyAction other && Equals(other);
         public override readonly int GetHashCode() => (Action, CurCharges, MaxCharges).GetHashCode();
+        public override string ToString() => $"ID: {Action.ID}, Charges: {CurCharges}/{MaxCharges}";
     }
 
     public readonly struct HateInfo(ulong instanceID, Hate[] targets)
@@ -506,16 +507,22 @@ public sealed class ClientState
             Array.Fill(ws.Client.DutyActions, default);
             var len = Slots.Length;
             for (var i = 0; i < len; ++i)
+            {
                 ws.Client.DutyActions[i] = Slots[i];
+            }
             ws.Client.DutyActionsChanged.Fire(this);
         }
 
         public override void Write(ReplayRecorder.Output output)
         {
             output.EmitFourCC("CLDA"u8);
-            output.Emit((byte)Slots.Length);
-            foreach (var s in Slots)
+            var len = Slots.Length;
+            output.Emit((byte)len);
+            for (var i = 0; i < len; ++i)
+            {
+                ref readonly var s = ref Slots[i];
                 output.Emit(s.Action).Emit(s.CurCharges).Emit(s.MaxCharges);
+            }
         }
     }
 

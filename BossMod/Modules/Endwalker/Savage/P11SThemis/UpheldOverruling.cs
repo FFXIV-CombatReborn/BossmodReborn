@@ -1,44 +1,44 @@
 ﻿namespace BossMod.Endwalker.Savage.P11SThemis;
 
-class UpheldOverruling(BossModule module) : Components.UniformStackSpread(module, 6, 13, 7, alwaysShowSpreads: true)
+class UpheldOverruling(BossModule module) : Components.UniformStackSpread(module, 6f, 13f, 7, 7)
 {
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        switch ((AID)spell.Action.ID)
+        switch (spell.Action.ID)
         {
-            case AID.UpheldOverrulingLight:
-            case AID.UpheldRulingLight:
+            case (uint)AID.UpheldOverrulingLight:
+            case (uint)AID.UpheldRulingLight:
                 if (WorldState.Actors.Find(caster.Tether.Target) is var stackTarget && stackTarget != null)
-                    AddStack(stackTarget, Module.CastFinishAt(spell, 0.3f));
+                    AddStack(stackTarget, Module.CastFinishAt(spell, 0.3d));
                 break;
-            case AID.UpheldOverrulingDark:
-            case AID.UpheldRulingDark:
+            case (uint)AID.UpheldOverrulingDark:
+            case (uint)AID.UpheldRulingDark:
                 if (WorldState.Actors.Find(caster.Tether.Target) is var spreadTarget && spreadTarget != null)
-                    AddSpread(spreadTarget, Module.CastFinishAt(spell, 0.3f));
+                    AddSpread(spreadTarget, Module.CastFinishAt(spell, 0.3d));
                 break;
         }
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        switch ((AID)spell.Action.ID)
+        switch (spell.Action.ID)
         {
-            case AID.UpheldOverrulingAOELight:
-            case AID.UpheldRulingAOELight:
+            case (uint)AID.UpheldOverrulingAOELight:
+            case (uint)AID.UpheldRulingAOELight:
                 Stacks.Clear();
                 break;
-            case AID.UpheldOverrulingAOEDark:
-            case AID.UpheldRulingAOEDark:
+            case (uint)AID.UpheldOverrulingAOEDark:
+            case (uint)AID.UpheldRulingAOEDark:
                 Spreads.Clear();
                 break;
         }
     }
 }
 
-abstract class Lightburst(BossModule module, uint aid) : Components.SimpleAOEs(module, aid, 13);
+abstract class Lightburst(BossModule module, uint aid) : Components.SimpleAOEs(module, aid, 13f);
 class LightburstBoss(BossModule module) : Lightburst(module, (uint)AID.LightburstBoss);
 class LightburstClone(BossModule module) : Lightburst(module, (uint)AID.LightburstClone);
 
-abstract class DarkPerimeter(BossModule module, uint aid) : Components.SimpleAOEs(module, aid, new AOEShapeDonut(8, 50));
+abstract class DarkPerimeter(BossModule module, uint aid) : Components.SimpleAOEs(module, aid, new AOEShapeDonut(8f, 50f));
 class DarkPerimeterBoss(BossModule module) : DarkPerimeter(module, (uint)AID.DarkPerimeterBoss);
 class DarkPerimeterClone(BossModule module) : DarkPerimeter(module, (uint)AID.DarkPerimeterClone);

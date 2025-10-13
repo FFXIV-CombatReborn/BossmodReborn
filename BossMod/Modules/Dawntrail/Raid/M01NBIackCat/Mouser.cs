@@ -17,7 +17,7 @@ sealed class ArenaChanges(BossModule module) : BossComponent(module)
         return squares;
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         // index per tile, starting north
         // 0x00, 0x01, 0x02, 0x03
@@ -113,7 +113,7 @@ sealed class Mouser(BossModule module) : Components.GenericAOEs(module)
             _aoes.Add(new(rect, spell.LocXZ, spell.Rotation, WorldState.FutureTime(9.7d)));
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index <= 0x0F && state is 0x00020001u or 0x00200010u && _aoes.Count != 0)
             _aoes.RemoveAt(0);

@@ -69,7 +69,7 @@ class Spotlights1(BossModule module) : Components.GenericTowers(module)
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index != 0x03 || patternENVC200010 != null)
         {

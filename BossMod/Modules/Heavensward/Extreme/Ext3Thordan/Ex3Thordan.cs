@@ -45,7 +45,7 @@ sealed class LightOfAscalon(BossModule module) : Components.GenericKnockback(mod
     {
         if (_sources.Count != 0)
         {
-            hints.GoalZones.Add(hints.GoalSingleTarget(new WPos(default, -15f), 2f, 2f));
+            hints.GoalZones.Add(AIHints.GoalSingleTarget(new WPos(default, -15f), 2f, 2f));
         }
     }
 }

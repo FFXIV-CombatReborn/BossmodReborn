@@ -2,8 +2,8 @@ namespace BossMod.Dawntrail.Savage.M05SDancingGreen;
 
 sealed class InsideOutOutsideIn(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeCircle circle = new(7f);
-    private static readonly AOEShapeDonut donut = new(5f, 40f);
+    private readonly AOEShapeCircle circle = new(7f);
+    private readonly AOEShapeDonut donut = new(5f, 40f);
     public readonly List<AOEInstance> AOEs = new(2);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => AOEs.Count != 0 ? CollectionsMarshal.AsSpan(AOEs)[..1] : [];
@@ -42,16 +42,17 @@ sealed class InsideOutOutsideIn(BossModule module) : Components.GenericAOEs(modu
         };
         if (shapes.Length != 0)
         {
-            AddAOE(shapes[0], 0.1f);
-            AddAOE(shapes[1], 2.6f);
+            AddAOE(shapes[0], 0.1d);
+            AddAOE(shapes[1], 2.6d);
         }
-        void AddAOE(AOEShape shape, float delay)
+        void AddAOE(AOEShape shape, double delay)
         => AOEs.Add(new(shape, spell.LocXZ, default, Module.CastFinishAt(spell, delay)));
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         if (AOEs.Count != 0)
+        {
             switch (spell.Action.ID)
             {
                 case (uint)AID.InsideOuDonut:
@@ -61,5 +62,6 @@ sealed class InsideOutOutsideIn(BossModule module) : Components.GenericAOEs(modu
                     AOEs.RemoveAt(0);
                     break;
             }
+        }
     }
 }

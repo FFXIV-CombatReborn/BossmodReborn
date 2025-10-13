@@ -146,7 +146,7 @@ class BondsOfDarkness(BossModule module) : BossComponent(module)
     }
 }
 
-class DarkDivides(BossModule module) : Components.UniformStackSpread(module, 0, 5)
+class DarkDivides(BossModule module) : Components.UniformStackSpread(module, default, 5f)
 {
     public override void OnStatusGain(Actor actor, ActorStatus status)
     {

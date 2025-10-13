@@ -81,8 +81,7 @@ sealed class Lunge(BossModule module) : Components.GenericKnockback(module, (uin
                     var blocked = false;
                     for (var j = 0; j < count; ++j)
                     {
-                        ref readonly var aoe = ref aoes[j];
-                        if (aoe.Check(midpoint))
+                        if (aoes[j].Check(midpoint))
                         {
                             blocked = true;
                             break;

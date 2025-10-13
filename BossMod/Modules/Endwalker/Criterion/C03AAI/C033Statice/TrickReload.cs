@@ -32,7 +32,7 @@ class TrickReload(BossModule module) : BossComponent(module)
     }
 }
 
-class Trapshooting(BossModule module) : Components.UniformStackSpread(module, 6f, 6, 4, alwaysShowSpreads: true)
+class Trapshooting(BossModule module) : Components.UniformStackSpread(module, 6f, 6, 4)
 {
     public int NumResolves;
     private readonly TrickReload? _reload = module.FindComponent<TrickReload>();

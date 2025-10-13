@@ -2,7 +2,7 @@ namespace BossMod.Shadowbringers.TreasureHunt.ShiftingOubliettesOfLyheGhiah.Secr
 
 public enum OID : uint
 {
-    Boss = 0x302D, //R=2.34
+    SecretBasket = 0x302D, //R=2.34
     SecretEchivore = 0x302E, //R=1.05
     SecretQueen = 0x3021, // R0.84, icon 5, needs to be killed in order from 1 to 5 for maximum rewards
     SecretGarlic = 0x301F, // R0.84, icon 3, needs to be killed in order from 1 to 5 for maximum rewards
@@ -16,21 +16,21 @@ public enum OID : uint
 
 public enum AID : uint
 {
-    AutoAttack = 872, // Boss/SecretEchivore/Mandragoras/KeeperOfKeys->player, no cast, single-target
+    AutoAttack = 872, // SecretBasket/SecretEchivore/Mandragoras/KeeperOfKeys->player, no cast, single-target
 
-    HeavyStrikeVisual1 = 21698, // Boss->self, no cast, single-target
-    HeavyStrikeVisual2 = 21723, // Boss->self, no cast, single-target
+    HeavyStrikeVisual1 = 21698, // SecretBasket->self, no cast, single-target
+    HeavyStrikeVisual2 = 21723, // SecretBasket->self, no cast, single-target
     HeavyStrike1 = 21724, // Helper->self, 4.0s cast, range 6+R 270-degree cone
     HeavyStrike2 = 21725, // Helper->self, 4.0s cast, range 12+R 270-degree donut segment
     HeavyStrike3 = 21726, // Helper->self, 4.9s cast, range 18+R 270-degree donut segment
 
-    PollenCorona = 21722, // Boss->self, 3.0s cast, range 8 circle
-    StraightPunch = 21721, // Boss->player, 4.0s cast, single-target
+    PollenCorona = 21722, // SecretBasket->self, 3.0s cast, range 8 circle
+    StraightPunch = 21721, // SecretBasket->player, 4.0s cast, single-target
     Leafcutter = 21732, // SecretEchivore->self, 3.0s cast, range 15 width 4 rect
-    EarthCrusher = 21727, // Boss->self, 3.0s cast, single-target
+    EarthCrusher = 21727, // SecretBasket->self, 3.0s cast, single-target
     EarthCrusher2 = 21728, // Helper->self, 4.0s cast, range 10-20 donut
     SomersaultSlash = 21731, // SecretEchivore->player, no cast, single-target
-    EarthquakeVisual = 21729, // Boss->self, 4.0s cast, single-target
+    EarthquakeVisual = 21729, // SecretBasket->self, 4.0s cast, single-target
     Earthquake = 21730, // Helper->self, no cast, range 20 circle
 
     Pollen = 6452, // SecretQueen->self, 3.5s cast, range 6+R circle
@@ -45,17 +45,18 @@ public enum AID : uint
     Telega = 9630 // Mandragoras->self, no cast, single-target, bonus adds disappear
 }
 
-class Earthquake(BossModule module) : Components.RaidwideCastDelay(module, (uint)AID.EarthquakeVisual, (uint)AID.Earthquake, 1.2f);
+sealed class Earthquake(BossModule module) : Components.RaidwideCastDelay(module, (uint)AID.EarthquakeVisual, (uint)AID.Earthquake, 1.2d);
 
-class HeavyStrike(BossModule module) : Components.ConcentricAOEs(module, _shapes)
+sealed class HeavyStrike(BossModule module) : Components.ConcentricAOEs(module, [new AOEShapeCone(6.5f, a135), new AOEShapeDonutSector(6.5f, 12.5f, a135), new AOEShapeDonutSector(12.5f, 18.5f, a135)])
 {
     private static readonly Angle a135 = 135f.Degrees();
-    private static readonly AOEShape[] _shapes = [new AOEShapeCone(6.5f, a135), new AOEShapeDonutSector(6.5f, 12.5f, a135), new AOEShapeDonutSector(12.5f, 18.5f, a135)];
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.HeavyStrike1)
+        {
             AddSequence(spell.LocXZ, Module.CastFinishAt(spell), spell.Rotation);
+        }
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
@@ -74,21 +75,17 @@ class HeavyStrike(BossModule module) : Components.ConcentricAOEs(module, _shapes
     }
 }
 
-class PollenCorona(BossModule module) : Components.SimpleAOEs(module, (uint)AID.PollenCorona, 8f);
-class StraightPunch(BossModule module) : Components.SingleTargetCast(module, (uint)AID.StraightPunch);
-class Leafcutter(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Leafcutter, new AOEShapeRect(15f, 2f));
-class EarthCrusher(BossModule module) : Components.SimpleAOEs(module, (uint)AID.EarthCrusher2, new AOEShapeDonut(10f, 20f));
+sealed class PollenCorona(BossModule module) : Components.SimpleAOEs(module, (uint)AID.PollenCorona, 8f);
+sealed class StraightPunch(BossModule module) : Components.SingleTargetCast(module, (uint)AID.StraightPunch);
+sealed class Leafcutter(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Leafcutter, new AOEShapeRect(15f, 2f));
+sealed class EarthCrusher(BossModule module) : Components.SimpleAOEs(module, (uint)AID.EarthCrusher2, new AOEShapeDonut(10f, 20f));
 
-abstract class Mandragoras(BossModule module, uint aid) : Components.SimpleAOEs(module, aid, 6.84f);
-class PluckAndPrune(BossModule module) : Mandragoras(module, (uint)AID.PluckAndPrune);
-class TearyTwirl(BossModule module) : Mandragoras(module, (uint)AID.TearyTwirl);
-class HeirloomScream(BossModule module) : Mandragoras(module, (uint)AID.HeirloomScream);
-class PungentPirouette(BossModule module) : Mandragoras(module, (uint)AID.PungentPirouette);
-class Pollen(BossModule module) : Mandragoras(module, (uint)AID.Pollen);
+sealed class MandragoraAOEs(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.PluckAndPrune, (uint)AID.TearyTwirl,
+(uint)AID.HeirloomScream, (uint)AID.PungentPirouette, (uint)AID.Pollen], 6.84f);
 
-class Spin(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spin, 11f);
-class Mash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Mash, new AOEShapeRect(13f, 2f));
-class Scoop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Scoop, new AOEShapeCone(15f, 60f.Degrees()));
+sealed class Spin(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Spin, 11f);
+sealed class Mash(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Mash, new AOEShapeRect(13f, 2f));
+sealed class Scoop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Scoop, new AOEShapeCone(15f, 60f.Degrees()));
 
 class SecretBasketStates : StateMachineBuilder
 {
@@ -101,11 +98,7 @@ class SecretBasketStates : StateMachineBuilder
             .ActivateOnEnter<StraightPunch>()
             .ActivateOnEnter<Leafcutter>()
             .ActivateOnEnter<EarthCrusher>()
-            .ActivateOnEnter<PluckAndPrune>()
-            .ActivateOnEnter<TearyTwirl>()
-            .ActivateOnEnter<HeirloomScream>()
-            .ActivateOnEnter<PungentPirouette>()
-            .ActivateOnEnter<Pollen>()
+            .ActivateOnEnter<MandragoraAOEs>()
             .ActivateOnEnter<Spin>()
             .ActivateOnEnter<Mash>()
             .ActivateOnEnter<Scoop>()
@@ -113,17 +106,39 @@ class SecretBasketStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "Malediktus", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 745, NameID = 9784)]
-public class SecretBasket(WorldState ws, Actor primary) : THTemplate(ws, primary)
+[ModuleInfo(BossModuleInfo.Maturity.Verified,
+StatesType = typeof(SecretBasketStates),
+ConfigType = null,
+ObjectIDType = typeof(OID),
+ActionIDType = typeof(AID),
+StatusIDType = null,
+TetherIDType = null,
+IconIDType = null,
+PrimaryActorOID = (uint)OID.SecretBasket,
+Contributors = "The Combat Reborn Team (Malediktus)",
+Expansion = BossModuleInfo.Expansion.Shadowbringers,
+Category = BossModuleInfo.Category.TreasureHunt,
+GroupType = BossModuleInfo.GroupType.CFC,
+GroupID = 745u,
+NameID = 9784u,
+SortOrder = 3,
+PlanLevel = 0)]
+public sealed class SecretBasket : THTemplate
 {
+    public SecretBasket(WorldState ws, Actor primary) : base(ws, primary)
+    {
+        echivore = Enemies((uint)OID.SecretEchivore);
+    }
+    private readonly List<Actor> echivore;
+
     private static readonly uint[] bonusAdds = [(uint)OID.SecretEgg, (uint)OID.SecretGarlic, (uint)OID.SecretOnion, (uint)OID.SecretTomato,
     (uint)OID.SecretQueen, (uint)OID.FuathTrickster, (uint)OID.KeeperOfKeys];
-    public static readonly uint[] All = [(uint)OID.Boss, (uint)OID.SecretEchivore, .. bonusAdds];
+    public static readonly uint[] All = [(uint)OID.SecretBasket, (uint)OID.SecretEchivore, .. bonusAdds];
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         Arena.Actor(PrimaryActor);
-        Arena.Actors(Enemies((uint)OID.SecretEchivore));
+        Arena.Actors(echivore);
         Arena.Actors(this, bonusAdds, Colors.Vulnerable);
     }
 

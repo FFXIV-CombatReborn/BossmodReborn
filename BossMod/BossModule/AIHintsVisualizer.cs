@@ -1,6 +1,7 @@
 ﻿using BossMod.Autorotation.xan;
 using BossMod.Pathfinding;
 using Dalamud.Bindings.ImGui;
+using System.Diagnostics;
 
 namespace BossMod;
 
@@ -11,8 +12,21 @@ public sealed class AIHintsVisualizer(AIHints hints, WorldState ws, Actor player
     private MapVisualizer? _pathfindVisualizer;
     private readonly NavigationDecision.Context _naviCtx = new();
     private NavigationDecision _navi;
-    private float _naviTime;
+    private double _naviTimeTotal, _naviTimePathfinding, _naviTimeRaster;
     private readonly TrackPartyHealth _partyHealth = new(ws);
+
+    // ---- Benchmark state ----
+    private struct BenchmarkResult
+    {
+        public int Iterations;
+        public double WallMs;
+        public double AvgTotalMs;
+        public double AvgPathMs;
+        public double AvgRasterMs;
+        public double MinTotalMs;
+        public double MaxTotalMs;
+    }
+    private BenchmarkResult? _lastBenchmark;
 
     public void Draw(UITree tree)
     {
@@ -63,9 +77,82 @@ public sealed class AIHintsVisualizer(AIHints hints, WorldState ws, Actor player
             ImGui.TextUnformatted($"Obstacles={hints.PathfindMapObstacles}");
             _pathfindVisualizer ??= BuildPathfindingVisualizer();
             _pathfindVisualizer!.Draw();
-            ImGui.TextUnformatted($"Pathfinding time={_naviTime:f3}ms");
+            ImGui.TextUnformatted($"Time: Total: {_naviTimeTotal:f3}ms, Raster: {_naviTimeRaster:f3}ms, Pathfinding: {_naviTimePathfinding:f3}ms");
             ImGui.TextUnformatted($"Leeway={_navi.LeewaySeconds:f3}, ttg={_navi.TimeToGoal:f3}, dist={(_navi.Destination != null ? $"{(_navi.Destination.Value - player.Position).Length():f3}" : "---")}");
         }
+        if (ImGui.Button("Run pathfinding benchmark (x10000)"))
+        {
+            RunBenchmark(10000);
+        }
+        if (_lastBenchmark is { } br)
+        {
+            ImGui.TextUnformatted(
+                $"Benchmark {br.Iterations}x -> Wall: {br.WallMs:f2}ms | Avg/iter wall: {br.WallMs / br.Iterations:f3}ms");
+            ImGui.TextUnformatted(
+                $"Reported (avg): total {br.AvgTotalMs:f3}ms | path {br.AvgPathMs:f3}ms | raster {br.AvgRasterMs:f3}ms");
+            ImGui.TextUnformatted(
+                $"Reported (per-iter total): min {br.MinTotalMs:f3}ms | max {br.MaxTotalMs:f3}ms");
+        }
+    }
+
+    private void RunBenchmark(int iterations)
+    {
+        // Avoid skew from an accidental retained added goal zone; restore after run.
+        var originalGoalZones = hints.GoalZones.ToList();
+        double sumPath = 0d, sumRaster = 0d, sumTotal = 0d;
+        double minTotal = double.MaxValue, maxTotal = 0d;
+
+        // GC here reduces noise in tiny runs
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            for (var i = 0; i < iterations; ++i)
+            {
+                if (hints.GoalZones.Count == 0 && ws.Actors.Find(player.TargetID) is var target && target != null)
+                {
+                    hints.GoalZones.Add(AIHints.GoalSingleTarget(target, preferredDistance));
+                }
+
+                _navi = NavigationDecision.Build(_naviCtx, ws.CurrentTime, hints, player, forbiddenZoneCushion: cushionSize);
+
+                _naviTimePathfinding = _navi.PathfindTime.TotalMilliseconds;
+                _naviTimeRaster = _navi.RasterizeTime.TotalMilliseconds;
+                _naviTimeTotal = _naviTimePathfinding + _naviTimeRaster;
+
+                sumPath += _naviTimePathfinding;
+                sumRaster += _naviTimeRaster;
+                sumTotal += _naviTimeTotal;
+                if (_naviTimeTotal < minTotal)
+                {
+                    minTotal = _naviTimeTotal;
+                }
+                if (_naviTimeTotal > maxTotal)
+                {
+                    maxTotal = _naviTimeTotal;
+                }
+            }
+        }
+        finally
+        {
+            hints.GoalZones.Clear();
+            hints.GoalZones.AddRange(originalGoalZones);
+            sw.Stop();
+        }
+
+        _lastBenchmark = new BenchmarkResult
+        {
+            Iterations = iterations,
+            WallMs = sw.Elapsed.TotalMilliseconds,
+            AvgPathMs = sumPath / iterations,
+            AvgRasterMs = sumRaster / iterations,
+            AvgTotalMs = sumTotal / iterations,
+            MinTotalMs = minTotal,
+            MaxTotalMs = maxTotal
+        };
     }
 
     private MapVisualizer BuildZoneVisualizer(ShapeDistance shape)
@@ -78,14 +165,14 @@ public sealed class AIHintsVisualizer(AIHints hints, WorldState ws, Actor player
 
     private MapVisualizer BuildPathfindingVisualizer()
     {
-        // TODO: remove once the similar thing in AIBehaviour.BuildNavigationDecision is removed
         if (hints.GoalZones.Count == 0 && ws.Actors.Find(player.TargetID) is var target && target != null)
-            hints.GoalZones.Add(hints.GoalSingleTarget(target, preferredDistance));
+            hints.GoalZones.Add(AIHints.GoalSingleTarget(target, preferredDistance));
 
-        var now = DateTime.Now;
-        _navi = NavigationDecision.Build(_naviCtx, ws, hints, player, forbiddenZoneCushion: cushionSize);
-        _naviTime = (float)(DateTime.Now - now).TotalMilliseconds;
+        _navi = NavigationDecision.Build(_naviCtx, ws.CurrentTime, hints, player, forbiddenZoneCushion: cushionSize);
 
+        _naviTimePathfinding = _navi.PathfindTime.TotalMilliseconds;
+        _naviTimeRaster = _navi.RasterizeTime.TotalMilliseconds;
+        _naviTimeTotal = _naviTimePathfinding + _naviTimeRaster;
         return new MapVisualizer(_naviCtx.Map, player.Position);
     }
 }

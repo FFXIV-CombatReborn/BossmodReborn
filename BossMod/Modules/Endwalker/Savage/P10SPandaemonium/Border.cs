@@ -5,14 +5,14 @@ class Border(BossModule module) : BossComponent(module)
     public bool LBridgeActive;
     public bool RBridgeActive;
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
-        if (state is 0x00020001 or 0x00080004)
+        if (state is 0x00020001u or 0x00080004u)
         {
             switch (index)
             {
-                case 2: RBridgeActive = state == 0x00020001; break;
-                case 3: LBridgeActive = state == 0x00020001; break;
+                case 2: RBridgeActive = state == 0x00020001u; break;
+                case 3: LBridgeActive = state == 0x00020001u; break;
             }
         }
         if (!LBridgeActive && !RBridgeActive)

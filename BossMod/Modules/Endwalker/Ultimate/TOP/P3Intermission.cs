@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Endwalker.Ultimate.TOP;
 
-sealed class P3SniperCannon(BossModule module) : Components.UniformStackSpread(module, 6f, 6f, alwaysShowSpreads: true)
+sealed class P3SniperCannon(BossModule module) : Components.UniformStackSpread(module, 6f, 6f)
 {
     enum PlayerRole { None, Stack, Spread }
 

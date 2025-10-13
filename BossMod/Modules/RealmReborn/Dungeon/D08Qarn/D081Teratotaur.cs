@@ -28,21 +28,22 @@ public enum SID : uint
 
 sealed class Triclip(BossModule module) : Components.SingleTargetCast(module, (uint)AID.Triclip);
 sealed class Mow(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Mow, new AOEShapeCone(8.25f, 60f.Degrees()));
-sealed class FrightfulRoar(BossModule module) : Components.SimpleAOEs(module, (uint)AID.FrightfulRoar, 6.0f);
+sealed class FrightfulRoar(BossModule module) : Components.SimpleAOEs(module, (uint)AID.FrightfulRoar, 6f);
 
 sealed class MortalRay(BossModule module) : Components.GenericAOEs(module)
 {
     private BitMask doomed;
     private AOEInstance[] _platform = [];
-    private static readonly AOEShapeRect square = new(1.75f, 1.75f, 1.75f, invertForbiddenZone: true);
+    private readonly AOEShapeRect square = new(1.75f, 1.75f, 1.75f);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => doomed[slot] ? _platform : [];
 
-    public override void OnActorRenderflagsChanged(Actor actor, int renderflags)
+    public override void OnActorRenderflagsChange(Actor actor, int renderflags)
     {
         if (renderflags == 0 && actor.OID is (uint)OID.Platform1 or (uint)OID.Platform2 or (uint)OID.Platform3)
         {
-            _platform = [new(square, actor.Position, default, WorldState.FutureTime(10d), Colors.SafeFromAOE)];
+            var pos = actor.Position;
+            _platform = [new(square, actor.Position, default, WorldState.FutureTime(10d), Colors.SafeFromAOE, shapeDistance: square.InvertedDistance(pos, default))];
         }
     }
 

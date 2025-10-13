@@ -7,14 +7,14 @@ public sealed class SDDeepDungeonLOS(Bitmap Map, WPos Origin) : ShapeDistance
     private readonly WPos origin = Origin;
     private readonly float pixelSize = Map.PixelSize;
 
-    public override float Distance(WPos p)
+    public override float Distance(in WPos p)
     {
         var offset = (p - origin) / pixelSize;
         return map[(int)offset.X, (int)offset.Z] ? -10f : 10f;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override bool Contains(WPos p)
+    public override bool Contains(in WPos p)
     {
         return Distance(p) <= 0f;
     }
@@ -32,7 +32,7 @@ public sealed class SDBlockedAreaT01Caduceus(ShapeDistance[] platformShapes, (in
     private readonly float _actorY = actorY;
     private readonly float[] _platformHeights = platformHeights;
 
-    public override float Distance(WPos p)
+    public override float Distance(in WPos p)
     {
         var res = float.MaxValue;
 
@@ -57,7 +57,7 @@ public sealed class SDBlockedAreaT01Caduceus(ShapeDistance[] platformShapes, (in
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override bool Contains(WPos p)
+    public override bool Contains(in WPos p)
     {
         return Distance(p) <= 0f;
     }

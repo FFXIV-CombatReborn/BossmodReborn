@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Endwalker.Extreme.Ex4Barbariccia;
 
-class BoldBoulderTrample(BossModule module) : Components.UniformStackSpread(module, 6f, 20f, 6)
+class BoldBoulderTrample(BossModule module) : Components.UniformStackSpread(module, 6f, 20f, 6, 6)
 {
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {

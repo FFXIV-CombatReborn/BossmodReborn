@@ -188,6 +188,9 @@ public sealed class ActionDefinitions : IDisposable
     public static readonly ActionID IDPotionSuper = new(ActionType.Item, 1023167u);
     public static readonly ActionID IDPotionOrthos = new(ActionType.Item, 38944u);
     public static readonly ActionID IDPotionHyper = new(ActionType.Item, 1038956u);
+    public static readonly ActionID IDPotionPilgrim = new(ActionType.Item, 47102u);
+    public static readonly ActionID IDPotionUltra = new(ActionType.Item, 1047701u);
+
     public static readonly ActionID IDPotionEureka = new(ActionType.Item, 22306u);
 
     // special general actions that we support
@@ -243,6 +246,8 @@ public sealed class ActionDefinitions : IDisposable
         RegisterPotion(IDPotionOrthos, 1.1f);
         RegisterPotion(IDPotionHyper, 1.1f);
         RegisterPotion(IDPotionEureka, 1.1f);
+        RegisterPotion(IDPotionUltra, 1.1f);
+        RegisterPotion(IDPotionPilgrim, 1.1f);
 
         // special content actions - bozja, deep dungeons, etc
         for (var i = BozjaHolsterID.None + 1; i < BozjaHolsterID.Count; ++i)

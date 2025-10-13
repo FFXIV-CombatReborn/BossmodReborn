@@ -91,7 +91,7 @@ sealed class ManaExplosion(BossModule module) : Components.GenericAOEs(module)
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (state == 0x00020001u)
         {
@@ -129,7 +129,7 @@ sealed class SpikeTraps(BossModule module) : Components.GenericAOEs(module)
         }
     }
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index == 0x01 && state is 0x00400004u or 0x00800004u or 0x00080004u)
         {

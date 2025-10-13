@@ -47,6 +47,6 @@ public sealed class GoToPositional(RotationModuleManager manager, Actor player) 
         };
 
         Hints.RecommendedPositional = (primaryTarget, positional, true, correct);
-        Hints.GoalZones.Add(Hints.GoalSingleTarget(primaryTarget, positional));
+        Hints.GoalZones.Add(AIHints.GoalSingleTarget(primaryTarget, positional));
     }
 }

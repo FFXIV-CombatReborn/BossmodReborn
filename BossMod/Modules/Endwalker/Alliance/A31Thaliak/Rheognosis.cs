@@ -28,7 +28,7 @@ sealed class RheognosisCrash : Components.Exaflare
 {
     public RheognosisCrash(BossModule module) : base(module, new AOEShapeRect(10f, 12f)) => ImminentColor = Colors.AOE;
 
-    public override void OnEventEnvControl(byte index, uint state)
+    public override void OnMapEffect(byte index, uint state)
     {
         if (index <= 0x01 && state is 0x01000001u or 0x02000001u)
         {

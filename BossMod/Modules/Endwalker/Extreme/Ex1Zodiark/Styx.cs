@@ -1,12 +1,12 @@
 ﻿namespace BossMod.Endwalker.Extreme.Ex1Zodiark;
 
-class Styx(BossModule module) : Components.UniformStackSpread(module, 5, 0, 8)
+class Styx(BossModule module) : Components.UniformStackSpread(module, 5f, default, 8, 8)
 {
-    public int NumCasts { get; private set; }
+    public int NumCasts;
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if ((AID)spell.Action.ID == AID.StyxAOE)
+        if (spell.Action.ID == (uint)AID.StyxAOE)
             ++NumCasts;
     }
 

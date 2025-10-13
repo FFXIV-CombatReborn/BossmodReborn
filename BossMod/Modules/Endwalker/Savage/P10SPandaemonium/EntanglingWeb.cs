@@ -34,7 +34,7 @@ class EntanglingWebHints(BossModule module) : BossComponent(module)
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if ((AID)spell.Action.ID == AID.EntanglingWebAOE && _targets.Count > 0)
+        if (spell.Action.ID == (uint)AID.EntanglingWebAOE && _targets.Count > 0)
             _targets.RemoveAt(0);
     }
 

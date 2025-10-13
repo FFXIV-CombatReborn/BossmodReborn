@@ -56,18 +56,7 @@ sealed class Stage14Act2States : StateMachineBuilder
             .DeactivateOnEnter<Hints>()
             .ActivateOnEnter<LastSong>()
             .ActivateOnEnter<LastSongHint>()
-            .Raw.Update = () =>
-            {
-                var enemies = module.Enemies((uint)OID.Boss);
-                var count = enemies.Count;
-                for (var i = 0; i < count; ++i)
-                {
-                    var enemy = enemies[i];
-                    if (!enemy.IsDeadOrDestroyed)
-                        return false;
-                }
-                return !module.FindComponent<LastSongHint>()!.Casting;
-            };
+            .Raw.Update = () => AllDeadOrDestroyed((uint)OID.Boss) && !module.FindComponent<LastSongHint>()!.Casting;
     }
 }
 
@@ -83,4 +72,6 @@ public sealed class Stage14Act2 : BossModule
     {
         Arena.Actors(Enemies((uint)OID.Boss));
     }
+
+    protected override bool CheckPull() => IsAnyActorInCombat((uint)OID.Boss);
 }

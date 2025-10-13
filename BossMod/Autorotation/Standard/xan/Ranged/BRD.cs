@@ -88,7 +88,7 @@ public sealed class BRD(RotationModuleManager manager, Actor player) : Attackxan
 
         (BestCircleTarget, NumCircleTargets) = SelectTarget(strategy, primaryTarget, 25, IsSplashTarget);
         (BestConeTarget, NumConeTargets) = SelectTarget(strategy, primaryTarget, 12,
-            (primary, other) => Hints.TargetInAOECone(other, Player.Position, 12, Player.DirectionTo(primary), 45.Degrees()));
+            (primary, other) => TargetInAOECone(other, Player.Position, 12, Player.DirectionTo(primary), 45f.Degrees()));
         (BestLineTarget, NumLineTargets) = SelectTarget(strategy, primaryTarget, 25, Is25yRectTarget);
 
         OGCD(strategy, primaryTarget);
@@ -102,7 +102,7 @@ public sealed class BRD(RotationModuleManager manager, Actor player) : Attackxan
         }
 
         if (primaryTarget != null)
-            GoalZoneCombined(strategy, 25, Hints.GoalAOECone(primaryTarget.Actor, 12, 45.Degrees()), AID.QuickNock, minAoe: 2);
+            GoalZoneCombined(strategy, 25, Hints.GoalAOECone(primaryTarget.Actor, 12f, 45f.Degrees()), AID.QuickNock, minAoe: 2);
 
         var ijDelay = EffectApplicationDelay(AID.IronJaws);
 

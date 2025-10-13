@@ -33,22 +33,20 @@ sealed class SwiftsteelKB(BossModule module) : Components.SimpleKnockbacks(modul
 
     public override bool DestinationUnsafe(int slot, Actor actor, WPos pos)
     {
-        var aoes1 = _aoe1.ActiveAOEs(slot, actor);
+        var aoes1 = CollectionsMarshal.AsSpan(_aoe1.Casters);
         var len1 = aoes1.Length;
         for (var i = 0; i < len1; ++i)
         {
-            ref readonly var aoe = ref aoes1[i];
-            if (aoe.Check(pos))
+            if (aoes1[i].Check(pos))
             {
                 return true;
             }
         }
-        var aoes2 = _aoe2.ActiveAOEs(slot, actor);
+        var aoes2 = CollectionsMarshal.AsSpan(_aoe2.Casters);
         var len2 = aoes2.Length;
         for (var i = 0; i < len2; ++i)
         {
-            ref readonly var aoe = ref aoes2[i];
-            if (aoe.Check(pos))
+            if (aoes2[i].Check(pos))
             {
                 return true;
             }
@@ -93,7 +91,7 @@ sealed class SparksteelAOE : Components.SimpleAOEGroupsByTimewindow
 sealed class Shattersteel(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Shattersteel, 5f);
 sealed class SphereShatter(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeCircle circle = new(10f);
+    private readonly AOEShapeCircle circle = new(10f);
     private readonly List<AOEInstance> _aoes = new(7);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
@@ -102,7 +100,8 @@ sealed class SphereShatter(BossModule module) : Components.GenericAOEs(module)
     {
         if (actor.OID == (uint)OID.IceBoulder)
         {
-            _aoes.Add(new(circle, actor.Position.Quantized(), default, WorldState.FutureTime(8.4d)));
+            var pos = actor.Position.Quantized();
+            _aoes.Add(new(circle, pos, default, WorldState.FutureTime(8.4d), shapeDistance: circle.Distance(pos, default)));
         }
     }
 

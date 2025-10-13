@@ -1,6 +1,6 @@
 namespace BossMod.Shadowbringers.Foray.TheDalriada.DAL1Gauntlet;
 
-sealed class Turbine(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.Turbine, 15f)
+sealed class Turbine(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.Turbine, 15f, maxCasts: 1)
 {
     private readonly FlamingCyclone _aoe = module.FindComponent<FlamingCyclone>()!;
 

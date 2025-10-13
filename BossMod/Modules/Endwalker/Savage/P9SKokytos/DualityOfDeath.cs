@@ -15,7 +15,7 @@ class DualityOfDeath(BossModule module) : Components.GenericBaitAway(module, (ui
             if (Module.PrimaryActor.TargetID == _firstFireTarget)
                 hints.Add(actor.InstanceID != _firstFireTarget ? "Taunt!" : "Pass aggro!");
         }
-        else if (ActiveBaits.Any(b => IsClippedBy(actor, b)))
+        else if (ActiveBaits.Any(b => IsClippedBy(actor, ref b)))
         {
             hints.Add("GTFO from tanks!");
         }

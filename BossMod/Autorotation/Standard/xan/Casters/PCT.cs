@@ -250,7 +250,7 @@ public sealed class PCT(RotationModuleManager manager, Actor player) : Castxan<A
         if (!Player.InCombat)
             return true;
 
-        if (Utils.IsNonBossFate(World.Client.ActiveFate.ID))
+        if (Utils.IsNonBossFate(World.Client.ActiveFate.ID) || World.DeepDungeon.DungeonId > 0 && !World.DeepDungeon.IsBossFloor)
             return !Player.InCombat;
 
         // spend buffs instead of casting motifs
@@ -378,6 +378,6 @@ public sealed class PCT(RotationModuleManager manager, Actor player) : Castxan<A
 
     private bool ShouldCreaturePortrait(StrategyValues strategy)
     {
-        return StarryMuseLeft > AnimLock;
+        return StarryMuseLeft > AnimLock || ReadyIn(AID.StarryMuse) > 20;
     }
 }

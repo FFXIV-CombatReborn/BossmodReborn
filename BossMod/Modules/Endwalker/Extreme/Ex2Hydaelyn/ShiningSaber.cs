@@ -1,7 +1,7 @@
 ﻿namespace BossMod.Endwalker.Extreme.Ex2Hydaelyn;
 
 // state related to shining saber mechanic (shared damage)
-class ShiningSaber(BossModule module) : Components.UniformStackSpread(module, 6, 0, 8)
+class ShiningSaber(BossModule module) : Components.UniformStackSpread(module, 6, 0, 8, 8)
 {
     public override void Update()
     {

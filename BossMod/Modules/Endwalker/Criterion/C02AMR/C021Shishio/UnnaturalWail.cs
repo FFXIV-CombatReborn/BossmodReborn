@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Endwalker.VariantCriterion.C02AMR.C021Shishio;
 
-class UnnaturalWail(BossModule module) : Components.UniformStackSpread(module, 6f, 6f, 2, 2, alwaysShowSpreads: true)
+class UnnaturalWail(BossModule module) : Components.UniformStackSpread(module, 6f, 6f, 2, 2)
 {
     public int NumMechanics;
     private readonly List<Actor> _spreadTargets = [];

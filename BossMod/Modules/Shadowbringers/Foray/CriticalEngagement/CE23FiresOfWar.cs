@@ -107,7 +107,7 @@ sealed class CantTouchThis(BossModule module) : Components.GenericStackSpread(mo
             if (stack.IsInside(stackPos))
             {
                 var stackRot = stack.Target.Rotation;
-                void AddGoalzone() => hints.GoalZones.Add(hints.GoalSingleTarget(stackPos + 0.5f * stackRot.ToDirection(), 0.7f, 5f));
+                void AddGoalzone() => hints.GoalZones.Add(AIHints.GoalSingleTarget(stackPos + 0.5f * stackRot.ToDirection(), 0.7f, 5f));
                 if (actor.HPMP.CurHP > 30000u) // can take stack solo
                 {
                     AddGoalzone();

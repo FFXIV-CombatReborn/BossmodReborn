@@ -1,8 +1,8 @@
 ﻿namespace BossMod.Endwalker.Savage.P10SPandaemonium;
 
-class DaemoniacBonds(BossModule module) : Components.UniformStackSpread(module, 4, 6, alwaysShowSpreads: true)
+class DaemoniacBonds(BossModule module) : Components.UniformStackSpread(module, 4f, 6f)
 {
-    public int NumMechanics { get; private set; }
+    public int NumMechanics;
     private readonly List<Actor> _spreadTargets = [];
     private readonly List<Actor> _stackTargets = [];
     private DateTime _spreadResolve;
@@ -27,15 +27,15 @@ class DaemoniacBonds(BossModule module) : Components.UniformStackSpread(module, 
 
     public override void OnStatusGain(Actor actor, ActorStatus status)
     {
-        switch ((SID)status.ID)
+        switch (status.ID)
         {
-            case SID.DaemoniacBonds:
+            case (uint)SID.DaemoniacBonds:
                 _spreadTargets.Add(actor);
                 _spreadResolve = status.ExpireAt;
                 break;
-            case SID.DuodaemoniacBonds:
-            case SID.TetradaemoniacBonds:
-                MinStackSize = (SID)status.ID == SID.TetradaemoniacBonds ? 4 : 2;
+            case (uint)SID.DuodaemoniacBonds:
+            case (uint)SID.TetradaemoniacBonds:
+                MinStackSize = MaxStackSize = status.ID == (uint)SID.TetradaemoniacBonds ? 4 : 2;
                 _stackTargets.Add(actor);
                 _stackResolve = status.ExpireAt;
                 break;
@@ -44,16 +44,16 @@ class DaemoniacBonds(BossModule module) : Components.UniformStackSpread(module, 
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        switch ((AID)spell.Action.ID)
+        switch (spell.Action.ID)
         {
-            case AID.DaemoniacBondsAOE:
+            case (uint)AID.DaemoniacBondsAOE:
                 Spreads.Clear();
                 NumMechanics = _spreadResolve < _stackResolve ? 1 : 2;
                 if (NumMechanics == 1 && Stacks.Count == 0)
                     AddStacks(_stackTargets, _stackResolve);
                 break;
-            case AID.DuodaemoniacBonds:
-            case AID.TetradaemoniacBonds:
+            case (uint)AID.DuodaemoniacBonds:
+            case (uint)AID.TetradaemoniacBonds:
                 Stacks.Clear();
                 NumMechanics = _stackResolve < _spreadResolve ? 1 : 2;
                 if (NumMechanics == 1 && Spreads.Count == 0)
