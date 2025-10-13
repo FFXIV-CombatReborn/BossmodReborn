@@ -19,22 +19,16 @@ public class MultiboxComponent(BossModule module) : BossComponent(module)
         public static readonly Angle NorthWest = 315.Degrees();
     }
 
-    public float GenericMaxDistance()
-    {
-        return 0.75f + (2 * Arena.Bounds.MapResolution); // TODO: Arena.Bounds.MapResolution is sometimes too small, but how big is big enough??
-    }
+    public float GenericMaxDistance() => 0.75f + (2 * Arena.Bounds.MapResolution); // TODO: Arena.Bounds.MapResolution is sometimes too small, but how big is big enough??
 
-    public void AddGenericGoalDestination(AIHints hints, WPos destination, float maxWeight = 100)
-    {
-        hints.GoalZones.Add(hints.GoalProximity(destination, GenericMaxDistance(), maxWeight));
-    }
+    public void AddGenericGoalDestination(AIHints hints, WPos destination, float maxWeight = 100) => hints.GoalZones.Add(AIHints.GoalProximity(destination, GenericMaxDistance(), maxWeight));
 
     public void AddGenericMTNorthHint(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (assignment == PartyRolesConfig.Assignment.MT && actor.InstanceID == Raid.Player()?.InstanceID)
         {
             var pos = Module.PrimaryActor.Position + (Module.PrimaryActor.HitboxRadius * 180.Degrees().ToDirection());
-            hints.GoalZones.Add(hints.GoalProximity(pos, GenericMaxDistance(), 1));
+            hints.GoalZones.Add(AIHints.GoalProximity(pos, GenericMaxDistance(), 1));
         }
     }
 
