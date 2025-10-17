@@ -1,4 +1,6 @@
-﻿namespace BossMod.Dawntrail.Dungeon.D03SkydeepCenote.D031FeatherRay;
+﻿using BossMod.AI;
+
+namespace BossMod.Dawntrail.Dungeon.D03SkydeepCenote.D031FeatherRay;
 
 public enum OID : uint
 {
@@ -66,7 +68,9 @@ sealed class AiryBubble(BossModule module) : Components.GenericAOEs(module)
 {
     private const float Radius = 1.1f;
     private const float Length = 3f;
+    private const float LengthMultiBox = 2.2f;
     private static readonly AOEShapeCapsule capsule = new(Radius, Length);
+    private static readonly AOEShapeCapsule capsuleMultiBox = new(Radius, LengthMultiBox);
     private readonly List<Actor> _aoes = new(36);
     private bool active;
 
@@ -78,10 +82,11 @@ sealed class AiryBubble(BossModule module) : Components.GenericAOEs(module)
             return [];
         }
         var aoes = new AOEInstance[count];
+        var shape = Service.Config.Get<AIConfig>().MultiboxMode ? capsuleMultiBox : capsule;
         for (var i = 0; i < count; ++i)
         {
             var o = _aoes[i];
-            aoes[i] = new(capsule, o.Position, o.Rotation);
+            aoes[i] = new(shape, o.Position, o.Rotation);
         }
         return aoes;
     }
@@ -130,10 +135,11 @@ sealed class AiryBubble(BossModule module) : Components.GenericAOEs(module)
         }
 
         var act = WorldState.FutureTime(1.5d);
+        var length = Service.Config.Get<AIConfig>().MultiboxMode ? LengthMultiBox : Length;
         for (var i = 0; i < count; ++i)
         {
             var o = _aoes[i];
-            hints.AddForbiddenZone(new SDCapsule(o.Position, o.Rotation, Length, Radius), act);
+            hints.AddForbiddenZone(new SDCapsule(o.Position, o.Rotation, length, Radius), act);
             hints.TemporaryObstacles.Add(new SDCircle(o.Position, Radius));
         }
     }
@@ -238,6 +244,201 @@ sealed class WorrisomeWavePlayer(BossModule module) : Components.GenericBaitAway
     }
 }
 
+sealed class MultiboxSupport(BossModule module) : Components.MultiboxComponent(module)
+{
+    private readonly AiryBubble _airyBubble = module.FindComponent<AiryBubble>()!;
+
+    private enum MechanicState { None, WorrisomeWave, TroubleBubbles }
+    private MechanicState _currentMechanic;
+    private DateTime _worrisomeWaveActivation;
+    private readonly Dictionary<PartyRolesConfig.Assignment, WPos> partyWorrisomeWaveHintPos = [];
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        switch ((AID)spell.Action.ID)
+        {
+            case AID.WorrisomeWave1:
+                _currentMechanic = MechanicState.WorrisomeWave;
+                _worrisomeWaveActivation = Module.CastFinishAt(spell, 6.3f);
+                break;
+            case AID.TroubleBubbles:
+                _currentMechanic = MechanicState.TroubleBubbles;
+                break;
+        }
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID is (uint)AID.WorrisomeWave2 or (uint)AID.TroubleBubbles)
+            _currentMechanic = MechanicState.None;
+    }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        if (!_config.MultiboxMode || assignment == PartyRolesConfig.Assignment.Unassigned)
+            return;
+
+        AddGenericMTNorthHint(slot, actor, assignment, hints);
+
+        if (WorldState.CurrentTime > _worrisomeWaveActivation)
+            partyWorrisomeWaveHintPos.Clear();
+
+        switch (_currentMechanic)
+        {
+            case MechanicState.WorrisomeWave:
+                AddWorrisomeWaveHints(slot, actor, assignment, hints);
+                break;
+            case MechanicState.TroubleBubbles:
+                AddTroubleBubblesHints(slot, actor, assignment, hints); // pre-spread
+                break;
+        }
+    }
+
+    public override void DrawArenaBackground(int pcSlot, Actor pc)
+    {
+        if (!_config.MultiboxMode)
+            return;
+
+        foreach (var kvp in partyWorrisomeWaveHintPos)
+        {
+            uint color = kvp.Key switch
+            {
+                PartyRolesConfig.Assignment.MT or PartyRolesConfig.Assignment.OT => Colors.Tank,
+                PartyRolesConfig.Assignment.M1 or PartyRolesConfig.Assignment.M2 => Colors.Melee,
+                PartyRolesConfig.Assignment.R1 or PartyRolesConfig.Assignment.R2 => Colors.Caster,
+                PartyRolesConfig.Assignment.H1 or PartyRolesConfig.Assignment.H2 => Colors.Healer,
+                _ => 0
+            };
+
+            if (color != 0)
+            {
+                Arena.ZoneCircle(kvp.Value.Quantized(), 0.5f, color);
+            }
+        }
+    }
+
+    private void AddTroubleBubblesHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        var boss = Module.PrimaryActor;
+        var bossPos = boss.Position;
+
+        var activeRoles = new List<PartyRolesConfig.Assignment>();
+        for (var index = 0; index < Raid.Members.Count(); ++index)
+        {
+            var role = _prc[Raid.Members[index].ContentId];
+            if (Raid.Members[index].IsValid() && role != PartyRolesConfig.Assignment.Unassigned)
+            {
+                activeRoles.Add(role);
+            }
+        }
+
+        var relativePositions = GenericSpreadAroundBoss(activeRoles, 4, true);
+        var positions = new Dictionary<PartyRolesConfig.Assignment, WPos>();
+        foreach (var kvp in relativePositions)
+        {
+            positions[kvp.Key] = bossPos + kvp.Value;
+        }
+
+        if (actor.InstanceID == Raid.Player()?.InstanceID)
+        {
+            if (positions.TryGetValue(assignment, out var assignedPos))
+            {
+                AddGenericGoalDestination(hints, assignedPos);
+            }
+        }
+
+        // debug visualization
+        partyWorrisomeWaveHintPos.Clear();
+        foreach (var kvp in positions)
+        {
+            partyWorrisomeWaveHintPos[kvp.Key] = kvp.Value;
+        }
+    }
+
+    private void AddWorrisomeWaveHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        var boss = Module.PrimaryActor;
+        var bossPos = boss.Position;
+
+        var activeRoles = new List<PartyRolesConfig.Assignment>();
+        for (var index = 0; index < Raid.Members.Count(); ++index)
+        {
+            var role = _prc[Raid.Members[index].ContentId];
+            if (Raid.Members[index].IsValid() && role != PartyRolesConfig.Assignment.Unassigned)
+            {
+                activeRoles.Add(role);
+            }
+        }
+
+        var positions = AssignWorrisomeWavePositions(activeRoles, bossPos);
+        if (actor.InstanceID == Raid.Player()?.InstanceID)
+        {
+            if (positions.TryGetValue(assignment, out var assignedPos))
+            {
+                AddGenericGoalDestination(hints, assignedPos);
+                if ((_worrisomeWaveActivation - WorldState.CurrentTime).TotalSeconds < 3)
+                {
+                    var arenaCenter = Module.Center;
+                    var angleToFace = Angle.FromDirection(assignedPos - arenaCenter);
+                    hints.ForbiddenDirections.Add((angleToFace + 180.Degrees(), 180.Degrees(), _worrisomeWaveActivation));
+                }
+            }
+        }
+
+        // debug visualization
+        partyWorrisomeWaveHintPos.Clear();
+        foreach (var kvp in positions)
+        {
+            partyWorrisomeWaveHintPos[kvp.Key] = kvp.Value;
+        }
+    }
+
+    private Dictionary<PartyRolesConfig.Assignment, WPos> AssignWorrisomeWavePositions(List<PartyRolesConfig.Assignment> activeRoles, WPos bossPos)
+    {
+        var positions = new Dictionary<PartyRolesConfig.Assignment, WPos>();
+
+        if (activeRoles.Count == 0)
+            return positions;
+
+        activeRoles = [.. activeRoles.OrderBy(r => (int)r)];
+
+        float distance = Module.PrimaryActor.HitboxRadius;
+        WDir[] safeOffsets =
+        [
+            distance * Cardinal.North.ToDirection(),
+            distance * Cardinal.SouthEast.ToDirection(),
+            distance * Cardinal.SouthWest.ToDirection(),
+            distance * Cardinal.East.ToDirection()
+        ];
+
+        int positionIndex = 0;
+
+        // MT priority: front corner closest to boss facing
+        if (activeRoles.Contains(PartyRolesConfig.Assignment.MT))
+        {
+            positions[PartyRolesConfig.Assignment.MT] = bossPos + safeOffsets[positionIndex++];
+        }
+
+        // melee priority: rear and rear-corner
+        var melees = activeRoles.Where(r => r is PartyRolesConfig.Assignment.M1 or PartyRolesConfig.Assignment.M2 or PartyRolesConfig.Assignment.OT).OrderBy(r => (int)r).ToList();
+        foreach (var melee in melees)
+        {
+            if (positionIndex < safeOffsets.Length)
+                positions[melee] = bossPos + safeOffsets[positionIndex++];
+        }
+
+        // ranged/healers: opposite flank
+        var ranged = activeRoles.Where(r => r is PartyRolesConfig.Assignment.R1 or PartyRolesConfig.Assignment.R2 or PartyRolesConfig.Assignment.H1 or PartyRolesConfig.Assignment.H2).OrderBy(r => (int)r).ToList();
+        foreach (var role in ranged)
+        {
+            if (positionIndex < safeOffsets.Length)
+                positions[role] = bossPos + safeOffsets[positionIndex++];
+        }
+
+        return positions;
+    }
+}
+
 sealed class D031FeatherRayStates : StateMachineBuilder
 {
     public D031FeatherRayStates(BossModule module) : base(module)
@@ -248,11 +449,12 @@ sealed class D031FeatherRayStates : StateMachineBuilder
             .ActivateOnEnter<Burst>()
             .ActivateOnEnter<HydroRing>()
             .ActivateOnEnter<WorrisomeWaveBoss>()
-            .ActivateOnEnter<WorrisomeWavePlayer>();
+            .ActivateOnEnter<WorrisomeWavePlayer>()
+            .ActivateOnEnter<MultiboxSupport>();
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 829, NameID = 12755)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 829, NameID = 12755, MultiboxSupport = true)]
 public sealed class D031FeatherRay(WorldState ws, Actor primary) : BossModule(ws, primary, arenaCenter, NormalBounds)
 {
     private static readonly WPos arenaCenter = new(-105f, -160f);
