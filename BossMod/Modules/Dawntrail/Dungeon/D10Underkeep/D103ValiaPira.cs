@@ -1,3 +1,5 @@
+using BossMod.Components;
+
 namespace BossMod.Dawntrail.Dungeon.D10Underkeep.D103ValiaPira;
 
 public enum OID : uint
@@ -176,6 +178,390 @@ sealed class EnforcementRay(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
+sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
+{
+    private readonly ConcurrentField _concurrentField = module.FindComponent<ConcurrentField>()!;
+    private readonly ElectricField _electricField = module.FindComponent<ElectricField>()!;
+    private readonly HyperchargedLight _hyperchargedLight = module.FindComponent<HyperchargedLight>()!;
+    private readonly NeutralizeFrontLines _neutralizeFrontLines = module.FindComponent<NeutralizeFrontLines>()!;
+
+    private enum MechanicState { None, ConcurrentField, HyperchargedLight }
+    private MechanicState _currentMechanic;
+    private DateTime _concurrentFieldActivation;
+    private DateTime _hyperchargedLightActivation;
+    private readonly Dictionary<PartyRolesConfig.Assignment, WPos> partyConcurrentFieldHintPos = [];
+    private readonly Dictionary<PartyRolesConfig.Assignment, WPos> partyHyperchargedLightHintPos = [];
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        switch ((AID)spell.Action.ID)
+        {
+            case AID.ConcurrentField:
+                _currentMechanic = MechanicState.ConcurrentField;
+                _concurrentFieldActivation = Module.CastFinishAt(spell, 7.8f);
+                break;
+            case AID.HyperchargedLight:
+                _currentMechanic = MechanicState.HyperchargedLight;
+                _hyperchargedLightActivation = Module.CastFinishAt(spell);
+                break;
+        }
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID is ((uint)AID.ElectricField) or ((uint)AID.HyperchargedLight))
+            _currentMechanic = MechanicState.None;
+    }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        if (!_config.MultiboxMode || assignment == PartyRolesConfig.Assignment.Unassigned)
+            return;
+
+        AddGenericMTNorthHint(slot, actor, assignment, hints);
+
+        if (WorldState.CurrentTime > _concurrentFieldActivation)
+            partyConcurrentFieldHintPos.Clear();
+
+        if (WorldState.CurrentTime > _hyperchargedLightActivation)
+            partyHyperchargedLightHintPos.Clear();
+
+        switch (_currentMechanic)
+        {
+            case MechanicState.ConcurrentField:
+                AddConcurrentFieldHints(slot, actor, assignment, hints);
+                break;
+            case MechanicState.HyperchargedLight:
+                AddHyperchargedLightHints(slot, actor, assignment, hints);
+                break;
+        }
+    }
+
+    public override void DrawArenaBackground(int pcSlot, Actor pc)
+    {
+        if (!_config.MultiboxMode)
+            return;
+
+        foreach (var kvp in partyConcurrentFieldHintPos)
+        {
+            uint color = kvp.Key switch
+            {
+                PartyRolesConfig.Assignment.MT or PartyRolesConfig.Assignment.OT => Colors.Tank,
+                PartyRolesConfig.Assignment.M1 or PartyRolesConfig.Assignment.M2 => Colors.Melee,
+                PartyRolesConfig.Assignment.R1 or PartyRolesConfig.Assignment.R2 => Colors.Caster,
+                PartyRolesConfig.Assignment.H1 or PartyRolesConfig.Assignment.H2 => Colors.Healer,
+                _ => 0
+            };
+
+            if (color != 0)
+            {
+                Arena.ZoneCircle(kvp.Value.Quantized(), 0.5f, color);
+            }
+        }
+
+        foreach (var kvp in partyHyperchargedLightHintPos)
+        {
+            uint color = kvp.Key switch
+            {
+                PartyRolesConfig.Assignment.MT or PartyRolesConfig.Assignment.OT => Colors.Tank,
+                PartyRolesConfig.Assignment.M1 or PartyRolesConfig.Assignment.M2 => Colors.Melee,
+                PartyRolesConfig.Assignment.R1 or PartyRolesConfig.Assignment.R2 => Colors.Caster,
+                PartyRolesConfig.Assignment.H1 or PartyRolesConfig.Assignment.H2 => Colors.Healer,
+                _ => 0
+            };
+
+            if (color != 0)
+            {
+                Arena.ZoneCircle(kvp.Value.Quantized(), _hyperchargedLight.SpreadRadius, Colors.SafeFromAOE);
+                Arena.ZoneCircle(kvp.Value.Quantized(), 0.5f, color);
+            }
+        }
+    }
+
+    private void AddConcurrentFieldHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        var activeRoles = new List<PartyRolesConfig.Assignment>();
+        for (var index = 0; index < Raid.Members.Count(); ++index)
+        {
+            var role = _prc[Raid.Members[index].ContentId];
+            if (Raid.Members[index].IsValid() && role != PartyRolesConfig.Assignment.Unassigned)
+            {
+                activeRoles.Add(role);
+            }
+        }
+
+        var positions = AssignConcurrentFieldPositions(activeRoles);
+        if (actor.InstanceID == Raid.Player()?.InstanceID)
+        {
+            if (positions.TryGetValue(assignment, out var assignedPos))
+            {
+                AddGenericGoalDestination(hints, assignedPos); // Bug?: AI will sometimes not move to safe spot?
+            }
+        }
+
+        // debug visualization
+        partyConcurrentFieldHintPos.Clear();
+        foreach (var kvp in positions)
+        {
+            if (partyConcurrentFieldHintPos.ContainsKey(kvp.Key))
+            {
+                partyConcurrentFieldHintPos[kvp.Key] = kvp.Value;
+            }
+            else
+            {
+                partyConcurrentFieldHintPos.Add(kvp.Key, kvp.Value);
+            }
+        }
+    }
+
+    private struct SimpleCone(Angle center, Angle left, Angle right)
+    {
+        public Angle Center = center;
+        public Angle Left = left;
+        public Angle Right = right;
+    }
+
+    private Dictionary<PartyRolesConfig.Assignment, WPos> AssignConcurrentFieldPositions(List<PartyRolesConfig.Assignment> activeRoles)
+    {
+        var positions = new Dictionary<PartyRolesConfig.Assignment, WPos>();
+        var arenaCenter = Module.Center;
+
+        if (activeRoles.Count == 0 || _concurrentField.Casters.Count == 0)
+            return positions;
+
+        activeRoles = [.. activeRoles.OrderBy(r => (int)r)];
+
+        List<SimpleCone> cones = [];
+        List<SimpleCone> conesNoOverlap = [];
+        for (int index = 0; index < _concurrentField.Casters.Count; index++)
+        {
+            var reference = _concurrentField.Casters[index];
+            var halfAngle = 25f.Degrees();
+            cones.Add(new SimpleCone(reference.Rotation, reference.Rotation - halfAngle, reference.Rotation + halfAngle));
+        }
+        cones = [.. cones.OrderBy(c => c.Center.Rad)];
+
+        // merge overlapping cones
+        for (int index = 0; index < cones.Count; index++)
+        {
+            var currentCone = cones[index];
+            var mergedLeft = currentCone.Left;
+            var mergedRight = currentCone.Right;
+
+            while (index + 1 < cones.Count)
+            {
+                var nextCone = cones[index + 1];
+
+                bool overlaps = false;
+                if (mergedRight.Rad > mergedLeft.Rad)
+                {
+                    overlaps = nextCone.Left.Rad <= mergedRight.Rad;
+                }
+                else // wraparound
+                {
+                    overlaps = nextCone.Left.Rad <= mergedRight.Rad || nextCone.Left.Rad >= mergedLeft.Rad;
+                }
+
+                if (overlaps)
+                {
+                    if (nextCone.Right.Rad > mergedRight.Rad || nextCone.Right.Rad < mergedLeft.Rad)
+                        mergedRight = nextCone.Right;
+                    index++;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            Angle mergedCenter;
+            if (mergedRight.Rad > mergedLeft.Rad)
+                mergedCenter = mergedLeft + (mergedRight - mergedLeft) / 2;
+            else // Wraparound
+                mergedCenter = mergedLeft + (mergedRight + 360.Degrees() - mergedLeft) / 2;
+
+            conesNoOverlap.Add(new SimpleCone(mergedCenter, mergedLeft, mergedRight));
+        }
+
+        List<SimpleCone> safeAreas = [];
+        for (int index = 0; index < conesNoOverlap.Count; index++)
+        {
+            var currentCone = conesNoOverlap[index];
+            var nextCone = conesNoOverlap[(index + 1) % conesNoOverlap.Count];
+
+            var safeLeft = currentCone.Right;
+            var safeRight = nextCone.Left;
+
+            float width;
+            if (safeRight.Rad > safeLeft.Rad)
+                width = (safeRight - safeLeft).Rad;
+            else // wraparound
+                width = (360.Degrees() - safeLeft).Rad + safeRight.Rad;
+
+            if (width > 0)
+            {
+                Angle safeCenter;
+                if (safeRight.Rad > safeLeft.Rad)
+                    safeCenter = safeLeft + (safeRight - safeLeft) / 2;
+                else // wraparound
+                    safeCenter = safeLeft + (safeRight + 360.Degrees() - safeLeft) / 2;
+
+                safeAreas.Add(new SimpleCone(safeCenter, safeLeft, safeRight));
+            }
+        }
+
+        List<WPos> safeSpots = [];
+        float safeDistance = 6f;
+
+        foreach (var area in safeAreas)
+        {
+            float width;
+            if (area.Right.Rad > area.Left.Rad)
+                width = (area.Right - area.Left).Rad;
+            else
+                width = (360.Degrees() - area.Left).Rad + area.Right.Rad;
+
+            if (width > 50.Degrees().Rad) // large area = 3 spots
+            {
+                safeSpots.Add(arenaCenter + safeDistance * (area.Left + 1.0f.Degrees()).ToDirection());
+                safeSpots.Add(arenaCenter + safeDistance * area.Center.ToDirection());
+                safeSpots.Add(arenaCenter + safeDistance * (area.Right - 1.0f.Degrees()).ToDirection());
+            }
+            else if (width > 25.Degrees().Rad) // medium area = 2 spots
+            {
+                safeSpots.Add(arenaCenter + safeDistance * (area.Left + 1.0f.Degrees()).ToDirection());
+                safeSpots.Add(arenaCenter + safeDistance * (area.Right - 1.0f.Degrees()).ToDirection());
+            }
+            else if (width > 0) // small area = 1 spot
+            {
+                safeSpots.Add(arenaCenter + safeDistance * area.Center.ToDirection());
+            }
+        }
+
+        // sort safe spots by angle
+        safeSpots = [.. safeSpots.OrderBy(spot =>
+        {
+            var angle = Angle.FromDirection(spot - arenaCenter).Rad;
+            if (angle < 0) angle += 2 * MathF.PI;
+            return angle;
+        })];
+
+        for (int index = 0; index < Math.Min(activeRoles.Count, safeSpots.Count); index++)
+        {
+            positions[activeRoles[index]] = safeSpots[index];
+        }
+
+        return positions;
+    }
+
+    private void AddHyperchargedLightHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        var boss = Module.PrimaryActor;
+        var bossPos = boss.Position;
+
+        var activeRoles = new List<PartyRolesConfig.Assignment>();
+        for (var index = 0; index < Raid.Members.Count(); ++index)
+        {
+            var role = _prc[Raid.Members[index].ContentId];
+            if (Raid.Members[index].IsValid() && role != PartyRolesConfig.Assignment.Unassigned)
+            {
+                activeRoles.Add(role);
+            }
+        }
+
+        var positions = AssignHyperchargedLightPositions(activeRoles, _hyperchargedLight.SpreadRadius);
+        if (actor.InstanceID == Raid.Player()?.InstanceID)
+        {
+            if (positions.TryGetValue(assignment, out var assignedPos))
+            {
+                AddGenericGoalDestination(hints, assignedPos);
+            }
+        }
+
+        // debug visualization
+        partyHyperchargedLightHintPos.Clear();
+        foreach (var kvp in positions)
+        {
+            partyHyperchargedLightHintPos[kvp.Key] = kvp.Value;
+        }
+    }
+
+    private Dictionary<PartyRolesConfig.Assignment, WPos> AssignHyperchargedLightPositions(List<PartyRolesConfig.Assignment> activeRoles, float spreadRadius)
+    {
+        var boss = Module.PrimaryActor;
+        var bossPos = boss.Position;
+        var positions = new Dictionary<PartyRolesConfig.Assignment, WPos>();
+
+        if (activeRoles.Count == 0)
+            return positions;
+
+        activeRoles = [.. activeRoles.OrderBy(r => (int)r)];
+
+        var melees = activeRoles.Where(r => r is PartyRolesConfig.Assignment.M1 or PartyRolesConfig.Assignment.M2 or PartyRolesConfig.Assignment.OT).OrderBy(r => (int)r).ToList();
+        var ranged = activeRoles.Where(r => r is PartyRolesConfig.Assignment.R1 or PartyRolesConfig.Assignment.R2 or PartyRolesConfig.Assignment.H1 or PartyRolesConfig.Assignment.H2).OrderBy(r => (int)r).ToList();
+
+        List<WDir> safeOffsets;
+
+        if (activeRoles.Contains(PartyRolesConfig.Assignment.MT) && melees.Count == 2)
+        {
+            // 3 melee party: pack melees in triangle formation
+            safeOffsets =
+            [
+                spreadRadius * (boss.Rotation + Cardinal.South).ToDirection(),
+                spreadRadius * (boss.Rotation + Cardinal.East + 2.Degrees()).ToDirection(),
+                spreadRadius * (boss.Rotation + Cardinal.West - 2.Degrees()).ToDirection()
+            ];
+        }
+        else if (activeRoles.Contains(PartyRolesConfig.Assignment.MT) && melees.Count == 3)
+        {
+            // all melee party: MT will tank the frontlines damage to allow for more overall melee uptime
+            safeOffsets =
+            [
+                spreadRadius * (boss.Rotation + Cardinal.North).ToDirection(),
+                spreadRadius * (boss.Rotation + Cardinal.East + 2.Degrees()).ToDirection(),
+                spreadRadius * (boss.Rotation + Cardinal.West - 2.Degrees()).ToDirection(),
+                spreadRadius * (boss.Rotation + Cardinal.South).ToDirection()
+            ];
+        }
+        else
+        {
+            // otherwise pack party in trapezoid formation
+            safeOffsets =
+            [
+                (0.1f + spreadRadius / 2) * (boss.Rotation + Cardinal.East + 2.Degrees()).ToDirection(),
+                (0.1f + spreadRadius / 2) * (boss.Rotation + Cardinal.West - 2.Degrees()).ToDirection()
+            ];
+        }
+
+        safeOffsets.AddRange([
+            1.5f * spreadRadius * (boss.Rotation + Cardinal.SouthEast).ToDirection(),
+            1.5f * spreadRadius * (boss.Rotation + Cardinal.SouthWest).ToDirection(),
+            2.5f * spreadRadius * (boss.Rotation + Cardinal.South).ToDirection()
+        ]);
+
+        int positionIndex = 0;
+
+        if (activeRoles.Contains(PartyRolesConfig.Assignment.MT))
+        {
+            positions[PartyRolesConfig.Assignment.MT] = bossPos + safeOffsets[positionIndex++];
+        }
+
+        foreach (var role in melees)
+        {
+            if (positionIndex < safeOffsets.Count)
+                positions[role] = bossPos + safeOffsets[positionIndex++];
+        }
+
+        foreach (var role in ranged)
+        {
+            if (positionIndex < safeOffsets.Count)
+                positions[role] = bossPos + safeOffsets[positionIndex++];
+        }
+
+        return positions;
+    }
+}
+
 sealed class D103ValiaPiraStates : StateMachineBuilder
 {
     public D103ValiaPiraStates(BossModule module) : base(module)
@@ -188,9 +574,10 @@ sealed class D103ValiaPiraStates : StateMachineBuilder
             .ActivateOnEnter<NeutralizeFrontLines>()
             .ActivateOnEnter<HyperchargedLight>()
             .ActivateOnEnter<DeterrentPulse>()
-            .ActivateOnEnter<EnforcementRay>();
+            .ActivateOnEnter<EnforcementRay>()
+            .ActivateOnEnter<MultiboxSupport>();
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1027, NameID = 13749)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1027, NameID = 13749, MultiboxSupport = true)]
 public sealed class D103ValiaPira(WorldState ws, Actor primary) : BossModule(ws, primary, new(default, -331f), new ArenaBoundsSquare(17.5f));
