@@ -4,7 +4,13 @@ namespace BossMod;
 
 public sealed class RotationSolverRebornModule(IDalamudPluginInterface pluginInterface)
 {
-    private readonly ICallGateSubscriber<SpecialCommandType, object> _changeOperationMode = pluginInterface.GetIpcSubscriber<SpecialCommandType, object>("RotationSolverReborn.TriggerSpecialState");
+    // IPC subscribers to RSR endpoints
+    private readonly ICallGateSubscriber<SpecialCommandType, object> _triggerSpecialState = pluginInterface.GetIpcSubscriber<SpecialCommandType, object>("RotationSolverReborn.TriggerSpecialState");
+    private readonly ICallGateSubscriber<StateCommandType, object> _changeOperatingMode = pluginInterface.GetIpcSubscriber<StateCommandType, object>("RotationSolverReborn.ChangeOperatingMode");
+    private readonly ICallGateSubscriber<StateCommandType, TargetingType, object> _autodutyChangeOperatingMode = pluginInterface.GetIpcSubscriber<StateCommandType, TargetingType, object>("RotationSolverReborn.AutodutyChangeOperatingMode");
+    private readonly ICallGateSubscriber<OtherCommandType, string, object> _otherCommand = pluginInterface.GetIpcSubscriber<OtherCommandType, string, object>("RotationSolverReborn.OtherCommand");
+    private readonly ICallGateSubscriber<string, float, object> _actionCommand = pluginInterface.GetIpcSubscriber<string, float, object>("RotationSolverReborn.ActionCommand");
+
     private const string rsr = "Rotation Solver Reborn";
 
     public bool IsInstalled
@@ -23,16 +29,16 @@ public sealed class RotationSolverRebornModule(IDalamudPluginInterface pluginInt
         }
     }
 
-    public void PauseRSR()
-    {
-        _changeOperationMode.InvokeAction(SpecialCommandType.NoCasting);
-    }
+    // Convenience wrappers
+    public void TriggerSpecialState(SpecialCommandType cmd) => _triggerSpecialState.InvokeAction(cmd);
+    public void PauseRSR() => TriggerSpecialState(SpecialCommandType.NoCasting);
+    public void UnPauseRSR() => TriggerSpecialState(SpecialCommandType.EndSpecial);
+    public void ChangeOperatingMode(StateCommandType mode) => _changeOperatingMode.InvokeAction(mode);
+    public void AutodutyChangeOperatingMode(StateCommandType mode, TargetingType targeting) => _autodutyChangeOperatingMode.InvokeAction(mode, targeting);
+    public void OtherCommand(OtherCommandType type, string arg) => _otherCommand.InvokeAction(type, arg);
+    public void ActionCommand(string action, float timeWindowSeconds) => _actionCommand.InvokeAction(action, timeWindowSeconds);
 
-    public void UnPauseRSR()
-    {
-        _changeOperationMode.InvokeAction(SpecialCommandType.EndSpecial);
-    }
-
+    // Mirror RSR enums for IPC signatures
     public enum SpecialCommandType : byte
     {
         EndSpecial,
@@ -49,5 +55,41 @@ public sealed class RotationSolverRebornModule(IDalamudPluginInterface pluginInt
         Speed,
         LimitBreak,
         NoCasting,
+    }
+
+    public enum StateCommandType : byte
+    {
+        Off,
+        Auto,
+        Manual,
+        AutoDuty,
+    }
+
+    public enum TargetingType : byte
+    {
+        Big,
+        Small,
+        HighHP,
+        LowHP,
+        HighHPPercent,
+        LowHPPercent,
+        HighMaxHP,
+        LowMaxHP,
+        Nearest,
+        Farthest,
+        PvPHealers,
+        PvPTanks,
+        PvPDPS
+    }
+
+    public enum OtherCommandType : byte
+    {
+        Settings,
+        Rotations,
+        DutyRotations,
+        DoActions,
+        ToggleActions,
+        NextAction,
+        Cycle,
     }
 }
