@@ -1,4 +1,7 @@
-﻿namespace BossMod.Dawntrail.Dungeon.D03SkydeepCenote.D033Maulskull;
+﻿using BossMod.AI;
+using BossMod.Components;
+
+namespace BossMod.Dawntrail.Dungeon.D03SkydeepCenote.D033Maulskull;
 
 public enum OID : uint
 {
@@ -242,6 +245,9 @@ sealed class DestructiveHeat(BossModule module) : Components.SpreadFromCastTarge
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
+        if (Service.Config.Get<AIConfig>().MultiboxMode)
+            return;
+
         if (Spreads.Count != 0)
         {
             if (_kb1.Casters.Count != 0)
@@ -277,6 +283,207 @@ sealed class WroughtFire(BossModule module) : Components.BaitAwayCast(module, (u
 sealed class BuildingHeat(BossModule module) : Components.StackWithCastTargets(module, (uint)AID.BuildingHeat, 6f, 4, 4);
 sealed class Ashlayer(BossModule module) : Components.RaidwideCastDelay(module, (uint)AID.AshlayerVisual, (uint)AID.Ashlayer, 2.2d);
 
+sealed class MultiboxSupport(BossModule module) : MultiboxComponent(module)
+{
+    private readonly DestructiveHeat _destructiveHeat = module.FindComponent<DestructiveHeat>()!;
+    private readonly Impact1 _kb1 = module.FindComponent<Impact1>()!;
+    private readonly Impact2 _kb2 = module.FindComponent<Impact2>()!;
+    private readonly Impact3 _kb3 = module.FindComponent<Impact3>()!;
+    private readonly WroughtFire _wroughtFire = module.FindComponent<WroughtFire>()!;
+
+    private enum MechanicState { None, DestructiveHeat, WroughtFire }
+    private MechanicState _currentMechanic;
+    private DateTime _destructiveHeatActivation;
+    private DateTime _wroughtFireActivation;
+    private readonly Dictionary<PartyRolesConfig.Assignment, WPos> partyDestructiveHeatHintPos = [];
+    private WPos _lastKnockbackOrigin;
+    private Angle _knockbackCornerAngle;
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        switch ((AID)spell.Action.ID)
+        {
+            case AID.Impact1:
+                _lastKnockbackOrigin = _kb1.Casters.Ref(0).Origin;
+                break;
+            case AID.Impact2:
+                _lastKnockbackOrigin = _kb2.Casters.Ref(0).Origin;
+                break;
+            case AID.Impact3:
+                _lastKnockbackOrigin = _kb3.Casters.Ref(0).Origin;
+                break;
+            case AID.DestructiveHeat:
+                _currentMechanic = MechanicState.DestructiveHeat;
+                _destructiveHeatActivation = Module.CastFinishAt(spell);
+                break;
+            case AID.WroughtFire:
+                _currentMechanic = MechanicState.WroughtFire;
+                _wroughtFireActivation = Module.CastFinishAt(spell);
+                break;
+        }
+
+        var arenaCenter = Module.Center;
+        var knockbackDir = _lastKnockbackOrigin - arenaCenter;
+        _knockbackCornerAngle = Angle.FromDirection(-knockbackDir);
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID == (uint)AID.DestructiveHeat)
+            _currentMechanic = MechanicState.None;
+        else if (spell.Action.ID == (uint)AID.WroughtFire)
+            _currentMechanic = MechanicState.None;
+    }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        if (!_config.MultiboxMode || assignment == PartyRolesConfig.Assignment.Unassigned)
+            return;
+
+        if (WorldState.CurrentTime > _destructiveHeatActivation)
+            partyDestructiveHeatHintPos.Clear();
+
+        switch (_currentMechanic)
+        {
+            case MechanicState.DestructiveHeat:
+                AddDestructiveHeatHints(slot, actor, assignment, hints);
+                break;
+            case MechanicState.WroughtFire:
+                AddWroughtFireHints(slot, actor, assignment, hints);
+                break;
+            case MechanicState.None:
+                AddGenericMTNorthHint(slot, actor, assignment, hints);
+                break;
+        }
+
+        if (_currentMechanic is not MechanicState.WroughtFire)
+            AddGenericMTNorthHint(slot, actor, assignment, hints);
+    }
+
+    private void AddWroughtFireHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        if (assignment == PartyRolesConfig.Assignment.MT && actor.InstanceID == Raid.Player()?.InstanceID)
+        {
+            var boss = Module.PrimaryActor;
+            var bossPos = boss.Position;
+            var bossRotation = boss.Rotation;
+            var mtPosition = bossPos + 3f * bossRotation.ToDirection();
+            AddGenericGoalDestination(hints, mtPosition);
+        }
+    }
+
+    public override void DrawArenaBackground(int pcSlot, Actor pc)
+    {
+        if (!_config.MultiboxMode)
+            return;
+
+        foreach (var kvp in partyDestructiveHeatHintPos)
+        {
+            uint color = kvp.Key switch
+            {
+                PartyRolesConfig.Assignment.MT or PartyRolesConfig.Assignment.OT => Colors.Tank,
+                PartyRolesConfig.Assignment.M1 or PartyRolesConfig.Assignment.M2 => Colors.Melee,
+                PartyRolesConfig.Assignment.R1 or PartyRolesConfig.Assignment.R2 => Colors.Caster,
+                PartyRolesConfig.Assignment.H1 or PartyRolesConfig.Assignment.H2 => Colors.Healer,
+                _ => 0
+            };
+
+            if (color != 0)
+            {
+                Arena.ZoneCircle(kvp.Value.Quantized(), _destructiveHeat.SpreadRadius, Colors.Safe);
+                Arena.ZoneCircle(kvp.Value.Quantized(), 0.5f, color);
+            }
+        }
+    }
+
+    private void AddDestructiveHeatHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        var spreadRadius = _destructiveHeat.SpreadRadius;
+
+        var activeRoles = new List<PartyRolesConfig.Assignment>();
+        for (var index = 0; index < Raid.Members.Count(); ++index)
+        {
+            var role = _prc[Raid.Members[index].ContentId];
+            if (Raid.Members[index].IsValid() && role != PartyRolesConfig.Assignment.Unassigned)
+            {
+                activeRoles.Add(role);
+            }
+        }
+
+        var positions = AssignDestructiveHeatPositions(activeRoles, spreadRadius);
+        if (actor.InstanceID == Raid.Player()?.InstanceID)
+        {
+            if (positions.TryGetValue(assignment, out var assignedPos))
+            {
+                AddGenericGoalDestination(hints, assignedPos);
+                partyDestructiveHeatHintPos.Clear();
+                partyDestructiveHeatHintPos[assignment] = assignedPos;
+            }
+        }
+
+        // debug visualization
+        partyDestructiveHeatHintPos.Clear();
+        foreach (var kvp in positions)
+        {
+            if (partyDestructiveHeatHintPos.ContainsKey(kvp.Key))
+            {
+                partyDestructiveHeatHintPos[kvp.Key] = kvp.Value;
+            }
+            else
+            {
+                partyDestructiveHeatHintPos.Add(kvp.Key, kvp.Value);
+            }
+        }
+    }
+
+    private Dictionary<PartyRolesConfig.Assignment, WPos> AssignDestructiveHeatPositions(List<PartyRolesConfig.Assignment> activeRoles, float spreadRadius)
+    {
+        var boss = Module.PrimaryActor;
+        var bossPos = boss.Position;
+        var positions = new Dictionary<PartyRolesConfig.Assignment, WPos>();
+
+        if (activeRoles.Count == 0)
+            return positions;
+
+        var melees = activeRoles.Where(r => r is PartyRolesConfig.Assignment.MT or PartyRolesConfig.Assignment.OT or PartyRolesConfig.Assignment.M1 or PartyRolesConfig.Assignment.M2).OrderBy(r => (int)r).ToList();
+        var ranged = activeRoles.Where(r => r is PartyRolesConfig.Assignment.R1 or PartyRolesConfig.Assignment.R2 or PartyRolesConfig.Assignment.H1 or PartyRolesConfig.Assignment.H2).OrderBy(r => (int)r).ToList();
+
+        var arenaCenter = Module.Center;
+        float lateralOffset = spreadRadius * 1.1f;
+        spreadRadius *= 1.1f;
+
+        var cornerDirection = _knockbackCornerAngle.ToDirection();
+        float distanceToCorner = 20f * 1.414f; // sqrt(2) * arena radius for diagonal distance
+        var cornerPos = arenaCenter + distanceToCorner * cornerDirection;
+        var safeOffsets = new List<WPos>();
+        for (int row = 0; row < 2; row++)
+        {
+            float distanceFromCorner = (2.0f * spreadRadius) + (row * spreadRadius);
+            var basePos = cornerPos - distanceFromCorner * cornerDirection;
+            var leftLateralOffset = lateralOffset * (_knockbackCornerAngle + 90.Degrees()).ToDirection();
+            var rightLateralOffset = lateralOffset * (_knockbackCornerAngle - 90.Degrees()).ToDirection();
+
+            safeOffsets.Add(basePos + leftLateralOffset);
+            safeOffsets.Add(basePos + rightLateralOffset);
+        }
+
+        int positionIndex = 0;
+        foreach (var melee in melees)
+        {
+            if (positionIndex < safeOffsets.Count)
+                positions[melee] = safeOffsets[positionIndex++];
+        }
+
+        foreach (var role in ranged)
+        {
+            if (positionIndex < safeOffsets.Count)
+                positions[role] = safeOffsets[positionIndex++];
+        }
+
+        return positions;
+    }
+}
+
 sealed class D033MaulskullStates : StateMachineBuilder
 {
     public D033MaulskullStates(BossModule module) : base(module)
@@ -294,9 +501,10 @@ sealed class D033MaulskullStates : StateMachineBuilder
             .ActivateOnEnter<DeepThunder2>()
             .ActivateOnEnter<WroughtFire>()
             .ActivateOnEnter<BuildingHeat>()
-            .ActivateOnEnter<Ashlayer>();
+            .ActivateOnEnter<Ashlayer>()
+            .ActivateOnEnter<MultiboxSupport>();
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 829, NameID = 12728)]
+[ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 829, NameID = 12728, MultiboxSupport = true)]
 public sealed class D033Maulskull(WorldState ws, Actor primary) : BossModule(ws, primary, new(100f, -430f), new ArenaBoundsSquare(20f));
