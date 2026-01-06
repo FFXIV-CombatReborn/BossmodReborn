@@ -120,8 +120,13 @@ public enum IconID : uint
 {
     LightningBurst = 343, // player->self
     _Gen_Icon_m0969_mrt_sht_se_c0k2 = 639, // Doomtrain1->self
-    _Gen_Icon_tank_laser_7sec_lockon01p = 412, // player->self
-    _Gen_Icon_m0969_mrt_sht_c1k2 = 638, // Doomtrain1->self
-    _Gen_Icon_m0969_mrt_sht_c0k2 = 637, // Doomtrain1->self
+    AetherialRay = 412, // player->self
+    Aetherochar = 638, // Doomtrain1->self
+    Aetherosote = 637, // Doomtrain1->self
     _Gen_Icon_loc08sp_05a_se_c2 = 499, // player->self
+}
+
+public enum LogMessageID : uint
+{
+    RunawayTrain = 11285,
 }

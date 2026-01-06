@@ -11,6 +11,27 @@ sealed class ElectrayShort(BossModule module) : Components.SimpleAOEs(module, (u
 [SkipLocalsInit]
 sealed class LightningBurst(BossModule module) : Components.BaitAwayIcon(module, 5f, (uint)IconID.LightningBurst, (uint)AID.LightningBurst, 5.6f, tankbuster: true, damageType: AIHints.PredictedDamageType.Tankbuster);
 
+[SkipLocalsInit]
+sealed class Shockwave(BossModule module) : Components.RaidwideAfterMapEffect(module, aid=(uint)AID.Shockwave, mapEffectIndex=0x30, mapEffectState=0x00080004u, delay=16d);
+
+[SkipLocalsInit]
+sealed class ThirdRail(BossModule module) : Components.CastTwister(module, radius=4f, oid=(uint)OID.Doomtrain, aid=(uint)AID.ThirdRail, activationDelay=3d);
+
+[SkipLocalsInit]
+sealed class Intermission(BossModule module) : BossComponent(module)
+{
+    public bool Started;
+
+    public override void OnEventDirectorUpdate(uint updateID, uint param1, uint param2, uint param3, uint param4)
+    {
+        // This *seems* to be how we detect intermission starts, it does a bit of setup before it triggers this.
+        if (updateID == 0x8000000C && param1 == 0x59 && param2 == 0x0 && param3 == 0x0 && param4 == 0x0)
+        {
+            Started = true;
+        }
+    }
+}
+
 [ModuleInfo(BossModuleInfo.Maturity.WIP,
 StatesType = typeof(Ex7DoomtrainStates),
 ConfigType = null, // replace null with typeof(DoomtrainConfig) if applicable

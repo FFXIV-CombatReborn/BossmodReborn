@@ -154,6 +154,33 @@ public class RaidwideAfterNPCYell(BossModule module, uint aid, uint npcYellID, d
     }
 }
 
+// generic unavoidable instant raidwide cast initiated by Map Effect
+[SkipLocalsInit]
+public class RaidwideAfterMapEffect(BossModule module, uint aid, byte mapEffectIndex, uint mapEffectState, double delay, string hint = "Raidwide") : RaidwideInstant(module, aid, delay, hint)
+{
+    public byte MapEffectIndex = mapEffectIndex;
+    public uint MapEffectState = mapEffectState;
+
+    public override void OnMapEffect(byte index, uint state)
+    {
+        if (index == MapEffectIndex && state == MapEffectState)
+            Activation = WorldState.FutureTime(Delay);
+    }
+}
+
+// generic unavoidable instant raidwide cast initiated by LogMessageEvent
+[SkipLocalsInit]
+public class RaidwideAfterLogMessage(BossModule module, uint aid, uint logMessageID, double delay, string hint = "Raidwide") : RaidwideInstant(module, aid, delay, hint)
+{
+    public uint LogMessageID = logMessageID;
+
+    public override void OnLogMessageEvent(Actor actor, LogMessageEvent logMessage)
+    {
+        if (logMessage.MessageID == LogMessageID)
+            Activation = WorldState.FutureTime(Delay);
+    }
+}
+
 // generic unavoidable single-target damage, started and finished by a single cast (typically tankbuster, but not necessary)
 [SkipLocalsInit]
 public class SingleTargetCast(BossModule module, uint aid, string hint = "Tankbuster", AIHints.PredictedDamageType damageType = AIHints.PredictedDamageType.Tankbuster) : CastHint(module, aid, hint)

@@ -3,10 +3,18 @@ namespace BossMod.Dawntrail.Extreme.Ex7Doomtrain;
 [SkipLocalsInit]
 sealed class Ex7DoomtrainStates : StateMachineBuilder
 {
+    bool IntermissionStarted()
+    {
+        intermission ??= module.FindComponent<Intermission>();
+        return intermission?.Started ?? false;
+    }
+
     public Ex7DoomtrainStates(BossModule module) : base(module)
     {
         DeathPhase(default, SinglePhase)
-            .ActivateOnEnter<ArenaChanges>();
+            .ActivateOnEnter<ArenaChanges>()
+            .ActivateOnEnter<Intermission>()
+            .Raw.Update = () => module.PrimaryActor.IsDead || IntermissionStarted();
     }
 
     private void SinglePhase(uint id)
@@ -90,5 +98,52 @@ sealed class Ex7DoomtrainStates : StateMachineBuilder
             .SetHint(StateMachine.StateHint.DowntimeStart);
         Targetable(id + 0xA0u, true, 5.8f, "Boss targetable")
             .SetHint(StateMachine.StateHint.DowntimeEnd);
+    }
+
+    private void Car3p1(uint id, float delay)
+    {
+        ComponentCondition<LightningBurst>(id + 0x10u, 2f, static comp => comp.NumCasts != 0, "Tankbusters")
+            .DeactivateOnExit<LightningBurst>();
+    }
+
+    private void Intermission(uint id, float delay)
+    {
+        ComponentCondition<AetherocharAethersoteStackSpread>(id + 0x10u, 5.1f, static comp => comp.NumCasts != 0, "Stack spread")
+            .ActivateOnEnter<AetherocharAethersoteStackSpread>();
+        ComponentCondition<AetherialRay>(id + 0x20u, 7.6f, static comp => comp.NumCasts != 0, "Tankbuster")
+            .ActivateOnEnter<AetherialRay>();
+        ComponentCondition<RunawayTrain>(id + 0x30u, 16f, static comp => comp.NumCasts != 0, "Raidwide")
+            .DeactivateOnEnter<AetherocharAethersoteStackSpread>()
+            .DeactivateOnEnter<AetherialRay>()
+            .ActivateOnEnter<RunawayTrain>()
+            .SetHint(StateMachine.StateHint.Raidwide)
+            .DeactivateOnExit<RunawayTrain>();
+    }
+
+    private void Car3p2(uint id, float delay)
+    {
+        ComponentCondition<Shockwave>(id + 0x10u, 16f, static comp => comp.NumCasts != 0, "Raidwide")
+            .SetHint(StateMachine.StateHint.Raidwide)
+            .DeactivateOnExit<Shockwave>();
+        ComponentCondition<LightningBurst>(id + 0x20u, 2f, static comp => comp.NumCasts != 0, "Tankbusters")
+            .DeactivateOnExit<LightningBurst>();
+        ComponentCondition<DerailmentSiege>(id + 0x30u, 16f, static comp => comp.NumCasts != 0, "Multi-hit tower")
+            .ActivateOnEnter<DerailmentSiege>();
+        // jump pad to car 4
+    }
+
+    private void Car4(uint id, float delay)
+    {
+
+    }
+
+    private void Car5(uint id, float delay)
+    {
+
+    }
+
+    private void Car6(uint id, float delay)
+    {
+
     }
 }
