@@ -27,6 +27,7 @@ public static class BossModuleRegistry
         public uint NameID;
         public int SortOrder;
         public int PlanLevel;
+        public bool MultiboxSupport;
 
         public static Info? Build(Type module)
         {
@@ -132,6 +133,7 @@ public static class BossModuleRegistry
                 NameID = nameID,
                 SortOrder = sortOrder,
                 PlanLevel = infoAttr?.PlanLevel ?? 0,
+                MultiboxSupport = infoAttr?.MultiboxSupport ?? false,
             };
         }
 
