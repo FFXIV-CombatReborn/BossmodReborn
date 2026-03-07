@@ -15,6 +15,7 @@ sealed class CarpetRide(BossModule module) : Components.GenericAOEs(module)
     // helpers may be moving between tether and untether, use untethered
     private readonly List<AOEInstance> _aoes = [];
     private WPos _nextLanding = default;
+    private DateTime _firstActivation = default;
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
 
     public override void OnUntethered(Actor source, in ActorTetherInfo tether)
@@ -31,15 +32,21 @@ sealed class CarpetRide(BossModule module) : Components.GenericAOEs(module)
             var initial = len == 0 ? Arena.Center : _nextLanding;
             _nextLanding = target.Position;
 
+            if (_firstActivation == default)
+            {
+                _firstActivation = WorldState.FutureTime(11.25d);
+            }
+
             var dist = (_nextLanding - initial).Length();
             var rot = (_nextLanding - initial).ToAngle();
+            var activation = _firstActivation.AddSeconds(2d * (len - 1));
 
-            _aoes.Add(new(new AOEShapeRect(dist, 5f), initial, rot));
+            _aoes.Add(new(new AOEShapeRect(dist, 5f), initial, rot, activation));
 
             if (_aoes.Count == 3)
             {
                 // inner slighly larger but untethered helper location not exactly where boss lands
-                _aoes.Add(new(new AOEShapeDonut(7f, 60f), _nextLanding));
+                _aoes.Add(new(new AOEShapeDonut(7.7f, 60f), _nextLanding, activation: activation.AddSeconds(2.75d)));
             }
         }
     }
@@ -56,6 +63,8 @@ sealed class CarpetRide(BossModule module) : Components.GenericAOEs(module)
         else if (spell.Action.ID == (uint)AID.SunCirclet)
         {
             _aoes.Clear();
+            _nextLanding = default;
+            _firstActivation = default;
         }
     }
 }
@@ -128,6 +137,15 @@ sealed class WheelOfFireflight(BossModule module) : Components.GenericAOEs(modul
                     _prevIcon = default;
                 }
             }
+        }
+    }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        base.AddAIHints(slot, actor, assignment, hints);
+        if (_aoes.Count > 0)
+        {
+            hints.AddForbiddenZone(new AOEShapeDonut(3f, 60f), Arena.Center);
         }
     }
 }
