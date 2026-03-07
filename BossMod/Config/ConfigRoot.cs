@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Reflection;
 using System.Text.Json;
+using System.Linq;
 
 namespace BossMod;
 
@@ -14,6 +15,12 @@ public sealed class ConfigRoot
     {
         foreach (var t in Utils.GetDerivedTypes<ConfigNode>(Assembly.GetExecutingAssembly()).Where(static t => !t.IsAbstract))
         {
+            if (t == typeof(RSRIntegrationConfig) && !IsRSRInstalled())
+            {
+                // Skip adding RSR integration settings if Rotation Solver Reborn is not installed/loaded
+                continue;
+            }
+
             if (Activator.CreateInstance(t) is not ConfigNode inst)
             {
                 Service.Log($"[Config] Failed to create an instance of {t}");
@@ -22,6 +29,25 @@ public sealed class ConfigRoot
             inst.Modified.Subscribe(Modified.Fire);
             _nodes[t] = inst;
         }
+    }
+
+    private static bool IsRSRInstalled()
+    {
+        try
+        {
+            const string rsrName = "Rotation Solver Reborn";
+            var plugins = Service.PluginInterface.InstalledPlugins;
+            foreach (var p in plugins)
+            {
+                if (p.IsLoaded && (p.Name.Equals(rsrName, StringComparison.OrdinalIgnoreCase) || p.InternalName.Equals(rsrName, StringComparison.OrdinalIgnoreCase)))
+                    return true;
+            }
+        }
+        catch
+        {
+            // ignore errors and assume not installed
+        }
+        return false;
     }
 
     public T Get<T>() where T : ConfigNode => (T)_nodes[typeof(T)];
