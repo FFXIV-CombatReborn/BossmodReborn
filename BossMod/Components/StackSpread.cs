@@ -290,7 +290,7 @@ public abstract class GenericStackSpread(BossModule module, bool raidwideOnResol
             var t = s.Target;
             if (t != actor)
             {
-                hints.AddForbiddenZone(new SDCircle(t.Position.Quantized(), s.Radius + ExtraAISpreadThreshold), s.Activation);
+                hints.AddForbiddenZoneIfNotMultibox(Module, new SDCircle(t.Position.Quantized(), s.Radius + ExtraAISpreadThreshold), s.Activation);
             }
             else
             {
@@ -312,7 +312,7 @@ public abstract class GenericStackSpread(BossModule module, bool raidwideOnResol
                         }
                     }
 
-                    hints.AddForbiddenZone(new SDCircle(p.Position.Quantized(), radius + ExtraAISpreadThreshold), act);
+                    hints.AddForbiddenZoneIfNotMultibox(Module, new SDCircle(p.Position.Quantized(), radius + ExtraAISpreadThreshold), act);
                 done:
                     ;
                 }

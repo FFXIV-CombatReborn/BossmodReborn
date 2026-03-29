@@ -1,4 +1,6 @@
-﻿namespace BossMod.Components;
+﻿using FFXIVClientStructs.FFXIV.Client.Game.Event;
+
+namespace BossMod.Components;
 
 // generic component for mechanics that require baiting some aoe (by proximity, by tether, etc) away from raid
 // some players can be marked as 'forbidden' - if any of them is baiting, they are warned
@@ -204,7 +206,7 @@ public class GenericBaitAway(BossModule module, uint aid = default, bool alwaysD
             ref var bait = ref baits[i];
             if (bait.Target != actor)
             {
-                hints.AddForbiddenZone(bait.Shape, BaitOrigin(ref bait), bait.Rotation, bait.Activation);
+                hints.AddForbiddenZoneIfNotMultibox(Module, bait.Shape, BaitOrigin(ref bait), bait.Rotation, bait.Activation);
             }
             else
             {
@@ -240,16 +242,16 @@ public class GenericBaitAway(BossModule module, uint aid = default, bool alwaysD
             {
                 case AOEShapeDonut:
                 case AOEShapeCircle:
-                    hints.AddForbiddenZone(bait.Shape, a.Position - bait.Offset, default, bait.Activation);
+                    hints.AddForbiddenZoneIfNotMultibox(Module, bait.Shape, a.Position - bait.Offset, default, bait.Activation);
                     break;
                 case AOEShapeCone cone:
-                    hints.AddForbiddenZone(new SDCone(bait.Source.Position, 100f, bait.Source.AngleTo(a), cone.HalfAngle), bait.Activation);
+                    hints.AddForbiddenZoneIfNotMultibox(Module, new SDCone(bait.Source.Position, 100f, bait.Source.AngleTo(a), cone.HalfAngle), bait.Activation);
                     break;
                 case AOEShapeRect rect:
-                    hints.AddForbiddenZone(new SDCone(bait.Source.Position, 100f, bait.Source.AngleTo(a), Angle.Asin(rect.HalfWidth / (a.Position - bait.Source.Position).Length())), bait.Activation);
+                    hints.AddForbiddenZoneIfNotMultibox(Module, new SDCone(bait.Source.Position, 100f, bait.Source.AngleTo(a), Angle.Asin(rect.HalfWidth / (a.Position - bait.Source.Position).Length())), bait.Activation);
                     break;
                 case AOEShapeCross cross:
-                    hints.AddForbiddenZone(cross, a.Position - bait.Offset, bait.Rotation, bait.Activation);
+                    hints.AddForbiddenZoneIfNotMultibox(Module, cross, a.Position - bait.Offset, bait.Rotation, bait.Activation);
                     break;
             }
         }
