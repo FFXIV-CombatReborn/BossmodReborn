@@ -9,30 +9,33 @@ using FFXIVClientStructs.FFXIV.Client.Game.Event;
 using FFXIVClientStructs.FFXIV.Client.Game.Fate;
 using System.IO;
 using System.Reflection;
+using System.Threading;
 
 namespace BossMod;
 
-public sealed class Plugin : IDalamudPlugin
+public sealed class Plugin : IAsyncDalamudPlugin
 {
     public string Name => "BossMod Reborn";
 
+    private readonly IDalamudPluginInterface _dalamud;
     private readonly ICommandManager CommandManager;
+    private readonly string _gameVersion = "unknown";
 
-    private readonly RotationDatabase _rotationDB;
-    private readonly WorldState _ws;
-    private readonly AIHints _hints;
-    private readonly BossModuleManager _bossmod;
-    private readonly ZoneModuleManager _zonemod;
-    private readonly AIHintsBuilder _hintsBuilder;
-    private readonly MovementOverride _movementOverride;
-    private readonly ActionManagerEx _amex;
-    private readonly WorldStateGameSync _wsSync;
-    private readonly RotationModuleManager _rotation;
-    private readonly AI.AIManager _ai;
-    private readonly AI.Broadcast _broadcast;
-    private readonly IPCProvider _ipc;
-    private readonly DTRProvider _dtr;
-    private readonly MultiboxManager _mbox;
+    private RotationDatabase _rotationDB = null!;
+    private WorldState _ws = null!;
+    private AIHints _hints = null!;
+    private BossModuleManager _bossmod = null!;
+    private ZoneModuleManager _zonemod = null!;
+    private AIHintsBuilder _hintsBuilder = null!;
+    private MovementOverride _movementOverride = null!;
+    private ActionManagerEx _amex = null!;
+    private WorldStateGameSync _wsSync = null!;
+    private RotationModuleManager _rotation = null!;
+    private AI.AIManager _ai = null!;
+    private AI.Broadcast _broadcast = null!;
+    private IPCProvider _ipc = null!;
+    private DTRProvider _dtr = null!;
+    private MultiboxManager _mbox = null!;
     private TimeSpan _prevUpdateTime;
     private DateTime _throttleJump;
     private DateTime _throttleInteract;
@@ -40,58 +43,76 @@ public sealed class Plugin : IDalamudPlugin
     private DateTime _throttleLeaveDuty;
 
     // windows
-    private readonly ConfigUI _configUI; // TODO: should be a proper window!
-    private readonly BossModuleMainWindow _wndBossmod;
-    private readonly BossModuleHintsWindow _wndBossmodHints;
-    private readonly ZoneModuleWindow _wndZone;
-    private readonly ReplayManagementWindow _wndReplay;
-    private readonly UIRotationWindow _wndRotation;
-    private readonly MainDebugWindow _wndDebug;
-    private readonly RotationSolverRebornModule _rsr;
+    private ConfigUI _configUI = null!; // TODO: should be a proper window!
+    private BossModuleMainWindow _wndBossmod = null!;
+    private BossModuleHintsWindow _wndBossmodHints = null!;
+    private ZoneModuleWindow _wndZone = null!;
+    private ReplayManagementWindow _wndReplay = null!;
+    private UIRotationWindow _wndRotation = null!;
+    private MainDebugWindow _wndDebug = null!;
+    private RotationSolverRebornModule _rsr = null!;
 
-    public unsafe Plugin(IDalamudPluginInterface dalamud, ICommandManager commandManager, ISigScanner sigScanner, IDataManager dataManager)
+    public Plugin(IDalamudPluginInterface dalamud, ICommandManager commandManager, ISigScanner sigScanner, IDataManager dataManager)
     {
+        _dalamud = dalamud;
+        CommandManager = commandManager;
+
         if (!dalamud.ConfigDirectory.Exists)
             dalamud.ConfigDirectory.Create();
+
         var dalamudRoot = dalamud.GetType().Assembly.
                 GetType("Dalamud.Service`1", true)!.MakeGenericType(dalamud.GetType().Assembly.GetType("Dalamud.Dalamud", true)!).
                 GetMethod("Get")!.Invoke(null, BindingFlags.Default, null, [], null);
         var dalamudStartInfo = dalamudRoot?.GetType().GetProperty("StartInfo", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(dalamudRoot) as DalamudStartInfo;
-        var gameVersion = dalamudStartInfo?.GameVersion?.ToString() ?? "unknown";
+        _gameVersion = dalamudStartInfo?.GameVersion?.ToString() ?? "unknown";
 
-        InteropGenerator.Runtime.Resolver.GetInstance.Setup(sigScanner.SearchBase, gameVersion, new(dalamud.ConfigDirectory.FullName + "/cs.json"));
+        InteropGenerator.Runtime.Resolver.GetInstance.Setup(sigScanner.SearchBase, _gameVersion, new(dalamud.ConfigDirectory.FullName + "/cs.json"));
         FFXIVClientStructs.Interop.Generated.Addresses.Register();
-        InteropGenerator.Runtime.Resolver.GetInstance.Resolve();
 
         dalamud.Create<Service>();
         Service.LogHandlerDebug = msg => Service.Logger.Debug(msg);
         Service.LogHandlerVerbose = msg => Service.Logger.Verbose(msg);
         Service.LuminaGameData = dataManager.GameData;
         Service.WindowSystem = new("bmr");
+    }
+
+    public async Task LoadAsync(CancellationToken cancellationToken)
+    {
+        await Task.Run(InteropGenerator.Runtime.Resolver.GetInstance.Resolve, cancellationToken);
+
+        await Task.Run(() =>
+        {
+            Service.Config.Initialize();
+            Service.Config.LoadFromFile(_dalamud.ConfigFile);
+
+            _rotationDB = new(new(_dalamud.ConfigDirectory.FullName + "/autorot"), new(_dalamud.AssemblyLocation.DirectoryName! + "/DefaultRotationPresets.json"));
+        }, cancellationToken);
+
+        await Service.Framework.RunOnFrameworkThread(InitOnFrameworkThread);
+    }
+
+    private unsafe void InitOnFrameworkThread()
+    {
         //Service.Device = pluginInterface.UiBuilder.Device;
         Service.Condition.ConditionChange += OnConditionChanged;
         Service.IconFont = UiBuilder.IconFont;
         MultiboxUnlock.Exec();
         Camera.Instance = new();
 
-        Service.Config.Initialize();
-        Service.Config.LoadFromFile(dalamud.ConfigFile);
-        Service.Config.Modified.Subscribe(() => Task.Run(() => Service.Config.SaveToFile(dalamud.ConfigFile)));
+        Service.Config.Modified.Subscribe(() => Task.Run(() => Service.Config.SaveToFile(_dalamud.ConfigFile)));
 
-        CommandManager = commandManager;
         CommandManager.AddHandler("/bmr", new CommandInfo(OnCommand) { HelpMessage = "Show boss mod settings UI" });
 
         ActionDefinitions.Instance.UnlockCheck = QuestUnlocked; // ensure action definitions are initialized and set unlock check functor (we don't really store the quest progress in clientstate, for now at least)
 
         var qpf = (ulong)FFXIVClientStructs.FFXIV.Client.System.Framework.Framework.Instance()->PerformanceCounterFrequency;
-        _rotationDB = new(new(dalamud.ConfigDirectory.FullName + "/autorot"), new(dalamud.AssemblyLocation.DirectoryName! + "/DefaultRotationPresets.json"));
-        _ws = new(qpf, gameVersion);
-        _rsr = new(dalamud);
+        _rsr = new(_dalamud);
+        _ws = new(qpf, _gameVersion);
         _hints = new();
         _bossmod = new(_ws);
         _zonemod = new(_ws);
         _hintsBuilder = new(_ws, _bossmod, _zonemod, _rsr);
-        _movementOverride = new(dalamud);
+        _movementOverride = new(_dalamud);
         _amex = new(_ws, _hints, _movementOverride);
         _wsSync = new(_ws, _amex);
         _rotation = new(_rotationDB, _bossmod, _hints);
@@ -104,22 +125,27 @@ public sealed class Plugin : IDalamudPlugin
         _wndBossmodHints = new(_bossmod, _zonemod);
         _wndZone = new(_zonemod);
         var config = Service.Config.Get<ReplayManagementConfig>();
-        var replayDir = string.IsNullOrEmpty(config.ReplayFolder) ? dalamud.ConfigDirectory.FullName + "/replays" : config.ReplayFolder;
+        var replayDir = string.IsNullOrEmpty(config.ReplayFolder) ? _dalamud.ConfigDirectory.FullName + "/replays" : config.ReplayFolder;
         _wndReplay = new ReplayManagementWindow(_ws, _bossmod, _rotationDB, new DirectoryInfo(replayDir));
         _configUI = new(Service.Config, _ws, new DirectoryInfo(replayDir), _rotationDB);
         config.Modified.ExecuteAndSubscribe(() => _wndReplay.UpdateLogDirectory());
         _wndRotation = new(_rotation, _amex, () => OpenConfigUI("Autorotation presets"));
-        _wndDebug = new(_ws, _rotation, _zonemod, _amex, _movementOverride, _hintsBuilder, dalamud);
+        _wndDebug = new(_ws, _rotation, _zonemod, _amex, _movementOverride, _hintsBuilder, _dalamud);
 
-        dalamud.UiBuilder.DisableAutomaticUiHide = true;
-        dalamud.UiBuilder.Draw += DrawUI;
-        dalamud.UiBuilder.OpenMainUi += () => OpenConfigUI();
-        dalamud.UiBuilder.OpenConfigUi += () => OpenConfigUI();
+        _dalamud.UiBuilder.DisableAutomaticUiHide = true;
+        _dalamud.UiBuilder.Draw += DrawUI;
+        _dalamud.UiBuilder.OpenMainUi += () => OpenConfigUI();
+        _dalamud.UiBuilder.OpenConfigUi += () => OpenConfigUI();
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        Service.Condition.ConditionChange -= OnConditionChanged;
+        await Service.Framework.RunOnFrameworkThread(() =>
+        {
+            _dalamud.UiBuilder.Draw -= DrawUI;
+            Service.Condition.ConditionChange -= OnConditionChanged;
+        });
+
         _wndDebug.Dispose();
         _wndRotation.Dispose();
         _wndReplay.Dispose();
