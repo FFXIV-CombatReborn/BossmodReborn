@@ -1,4 +1,4 @@
-﻿using BossMod.Autorotation;
+using BossMod.Autorotation;
 using BossMod.Pathfinding;
 using System.Threading;
 
@@ -31,6 +31,11 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
     private static readonly Random random = new();
 
     private bool cancel; // used to cancel autorotation AI preset during async
+
+    // AI Enhancements State
+    private WPos? _lastDestination;
+    private float _currentRandomDistanceOffset;
+    private ulong _lastTargetId;
 
     public void Dispose()
     {
@@ -78,6 +83,16 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
                 var followTarget = _config.FollowTarget;
                 _followMaster = master != player;
 
+                // 1. Calculate Random Distance Variance (Only when target changes or new movement starts)
+                var currentTargetId = target.Target?.Actor?.InstanceID ?? 0;
+                if (!hadNavi || currentTargetId != _lastTargetId)
+                {
+                    _currentRandomDistanceOffset = _config.DistanceVariance > 0 
+                        ? (float)(random.NextDouble() * 2.0 - 1.0) * _config.DistanceVariance 
+                        : 0f;
+                    _lastTargetId = currentTargetId;
+                }
+
                 // note: if there are pending knockbacks, don't update navigation decision to avoid fucking up positioning
                 if (player.PendingKnockbacks.Count == 0)
                 {
@@ -86,6 +101,32 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
                         ? await BuildNavigationDecision(player, actorTarget, target).ConfigureAwait(false)
                         : await BuildNavigationDecision(player, master, target).ConfigureAwait(false);
                     _naviDecision = naviDecision;
+
+                    // 2. Anti-Stutter Deadzone (Avoid micro-adjustments)
+                    if (_naviDecision.Destination != null)
+                    {
+                        if (hadNavi && _lastDestination != null)
+                        {
+                            var distToOldDest = (_naviDecision.Destination.Value - _lastDestination.Value).Length();
+                            if (distToOldDest < 0.25f)
+                            {
+                                // Ignore micro-adjustments to prevent stuttering
+                                _naviDecision.Destination = _lastDestination;
+                            }
+                            else
+                            {
+                                _lastDestination = _naviDecision.Destination;
+                            }
+                        }
+                        else
+                        {
+                            _lastDestination = _naviDecision.Destination;
+                        }
+                    }
+                    else
+                    {
+                        _lastDestination = null;
+                    }
 
                     // there is a difference between having a small positive leeway and having a negative one for pathfinding, prefer to keep positive
                     _naviDecision.LeewaySeconds = Math.Max(0, _naviDecision.LeewaySeconds - 0.1f);
@@ -96,7 +137,12 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
                 ForceMovementIn = moveWithMaster || gazeImminent || pyreticImminent ? default : _naviDecision.LeewaySeconds;
 
                 if (_config.MoveDelay != 0d && !hadNavi && _naviDecision.Destination != null)
-                    _navStartTime = WorldState.FutureTime(_config.MoveDelay);
+                {
+                    var varianceFactor = _config.MoveDelayVariance / 100.0;
+                    var randomFactor = 1.0 + (random.NextDouble() * 2.0 - 1.0) * varianceFactor;
+                    var randomizedDelay = _config.MoveDelay * randomFactor;
+                    _navStartTime = WorldState.FutureTime(Math.Max(0, randomizedDelay));
+                }
 
                 if (!forbidTargeting && !cancel)
                 {
@@ -199,7 +245,7 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
             else if (_config.FollowTarget && target != null && AIPreset == null)
             {
                 var positional = _config.DesiredPositional;
-                var mindist = _config.MinDistance;
+                var mindist = Math.Max(0f, _config.MinDistance + _currentRandomDistanceOffset);
                 var maxdist = _config.MaxDistanceToTarget;
                 if (positional is Positional.Rear or Positional.Flank && (target.CastInfo == null && target.NameID != 541u && target.TargetID == player.InstanceID || target.Omnidirectional)) // if player is target, rear/flank is usually impossible unless target is casting
                     positional = Positional.Any;
@@ -214,13 +260,13 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
                     autorot.Hints.GoalZones.Add(AIHints.GoalDonut(target.Position, min, max, 2f));
                 }
             }
-            return await Task.Run(() => NavigationDecision.Build(_naviCtx, WorldState.CurrentTime, autorot.Hints, player, autorot.Bossmods.WorldState.Client.MoveSpeed, forbiddenZoneCushion: _config.PreferredDistance)).ConfigureAwait(false);
+            return await Task.Run(() => NavigationDecision.Build(_naviCtx, WorldState.CurrentTime, autorot.Hints, player, autorot.Bossmods.WorldState.Client.MoveSpeed, forbiddenZoneCushion: Math.Max(0f, _config.PreferredDistance + _currentRandomDistanceOffset))).ConfigureAwait(false);
         }
 
         // TODO: remove this once all rotation modules are fixed
         if (autorot.Hints.GoalZones.Count == 0 && targeting.Target != null)
             autorot.Hints.GoalZones.Add(AIHints.GoalSingleTarget(targeting.Target.Actor, targeting.PreferredPosition, targeting.PreferredRange));
-        return await Task.Run(() => NavigationDecision.Build(_naviCtx, WorldState.CurrentTime, autorot.Hints, player, autorot.Bossmods.WorldState.Client.MoveSpeed, _config.PreferredDistance)).ConfigureAwait(false);
+        return await Task.Run(() => NavigationDecision.Build(_naviCtx, WorldState.CurrentTime, autorot.Hints, player, autorot.Bossmods.WorldState.Client.MoveSpeed, Math.Max(0f, _config.PreferredDistance + _currentRandomDistanceOffset))).ConfigureAwait(false);
     }
 
     private void FocusMaster(Actor master)
@@ -325,8 +371,11 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
             //else if (dot < 0.707107f)
             //    _ctrl.TargetRot = cameraFacing.OrthoL().Dot(_ctrl.TargetRot.Value) > 0 ? _ctrl.TargetRot.Value.OrthoR() : _ctrl.TargetRot.Value.OrthoL();
 
+            // Emergency Evasion Sprint (OmniDuty integration)
+            bool emergencyDodge = player.InCombat && _naviDecision.LeewaySeconds <= 1.5f && distSq > 9f; // Safe zone is >3 yalms away and we have <1.5s
+            
             // sprint, if not in combat and far enough away from destination
-            if (player.InCombat ? _naviDecision.LeewaySeconds <= 0f && distSq > 25f : player != master && distSq > 400f)
+            if (emergencyDodge || (player.InCombat ? _naviDecision.LeewaySeconds <= 0f && distSq > 25f : player != master && distSq > 400f))
             {
                 queueForSprint?.Push(ActionDefinitions.IDSprint, player, ActionQueue.Priority.Minimal + 100f);
             }

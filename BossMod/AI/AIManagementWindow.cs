@@ -1,4 +1,4 @@
-﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using System.Globalization;
 
@@ -207,6 +207,25 @@ sealed class AIManagementWindow : UIWindow
             ImGui.Text("Distance in yalms to keep away from forbidden zones.");
             ImGui.EndTooltip();
         }
+        ImGui.Text("Distance variance (humanize)");
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(100f);
+        var distVarStr = _config.DistanceVariance.ToString(CultureInfo.InvariantCulture);
+        if (ImGui.InputText("##DistanceVariance", ref distVarStr, 64))
+        {
+            distVarStr = distVarStr.Replace(',', '.');
+            if (float.TryParse(distVarStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var distVar))
+            {
+                _config.DistanceVariance = Math.Max(0f, distVar);
+                configModified = true;
+            }
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.Text("Adds a random +/- offset to minimum and preferred distances to look human.\nRecommended: 0.05. Set to 0 to disable.");
+            ImGui.EndTooltip();
+        }
         ImGui.Text("Movement decision delay");
         ImGui.SameLine();
         ImGui.SetNextItemWidth(100f);
@@ -227,6 +246,25 @@ sealed class AIManagementWindow : UIWindow
             ImGui.EndTooltip();
         }
         ImGui.SameLine();
+        ImGui.Text("Delay variance %");
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(100f);
+        var delayVarStr = _config.MoveDelayVariance.ToString(CultureInfo.InvariantCulture);
+        if (ImGui.InputText("##MoveDelayVariance", ref delayVarStr, 64))
+        {
+            delayVarStr = delayVarStr.Replace(',', '.');
+            if (float.TryParse(delayVarStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var delayVar))
+            {
+                _config.MoveDelayVariance = Math.Max(0f, delayVar);
+                configModified = true;
+            }
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.Text("Randomizes the move delay by this percentage to simulate human reaction time.\nRecommended: 20. Set to 0 to disable.");
+            ImGui.EndTooltip();
+        }
         ImGui.Text("Autorotation AI preset");
         ImGui.SameLine();
         ImGui.SetNextItemWidth(250f);

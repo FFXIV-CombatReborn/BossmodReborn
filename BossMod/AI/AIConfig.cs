@@ -1,4 +1,4 @@
-﻿namespace BossMod.AI;
+namespace BossMod.AI;
 
 [ConfigDisplay(Name = "AI configuration (AI is very experimental, use at your own risk!)", Order = 7)]
 sealed class AIConfig : ConfigNode
@@ -66,6 +66,12 @@ sealed class AIConfig : ConfigNode
 
     [PropertyDisplay("Movement decision delay", tooltip: "Only change this at your own risk and keep this value low! Too high and it won't move in time for some mechanics. Make sure to readjust the value for different content.")]
     public double MoveDelay = default;
+
+    [PropertyDisplay("Move delay variance %", tooltip: "Randomizes the move delay by this percentage to simulate human reaction time. Recommended: 20. Set to 0 to disable.")]
+    public float MoveDelayVariance = 0f;
+
+    [PropertyDisplay("Distance variance", tooltip: "Adds a random +/- offset to minimum and preferred distances. Recommended: 0.05. Set to 0 to disable.")]
+    public float DistanceVariance = 0f;
 
     [PropertyDisplay("Idle while mounted")]
     public bool ForbidAIMovementMounted = false;
