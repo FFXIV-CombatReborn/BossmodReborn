@@ -45,6 +45,33 @@ sealed class AIManagementWindow : UIWindow
 
         ImGui.TextUnformatted($"Navi={_manager.Controller.NaviTargetPos}");
 
+        // ═══════ OmniDuty Status Line ═══════
+        if (_manager.Beh != null)
+        {
+            var threat = _manager.Beh.CurrentThreatResult;
+            var threatStr = threat.Threat switch
+            {
+                AI.ThreatLevel.Cruise => "Cruise",
+                AI.ThreatLevel.Alert => "Alert",
+                AI.ThreatLevel.Critical => "CRITICAL",
+                _ => "None"
+            };
+            var slack = threat.SlackTime < 1000f ? $"{threat.SlackTime:F1}s" : "---";
+            var drift = _manager.Beh.IsGcdDrifting ? "ON" : "off";
+            var slide = _config.EnableSlideCast && SlideCastHelper.IsInSlideCastWindow(_config.SlideCastWindow) ? "ACTIVE" : "off";
+
+            // Color: green=Cruise, yellow=Alert, red=Critical
+            var color = threat.Threat switch
+            {
+                AI.ThreatLevel.Alert => 0xFF00FFFF,    // yellow (ABGR)
+                AI.ThreatLevel.Critical => 0xFF0000FF,  // red (ABGR)
+                AI.ThreatLevel.Cruise => 0xFF00FF00,    // green (ABGR)
+                _ => 0xFFFFFFFF                          // white (ABGR)
+            };
+            ImGui.PushStyleColor(ImGuiCol.Text, color);
+            ImGui.TextUnformatted($"Threat={threatStr} | Slack={slack} | Drift={drift} | Slide={slide}");
+            ImGui.PopStyleColor();
+        }
         configModified |= ImGui.Checkbox("Forbid actions", ref _config.ForbidActions);
         ImGui.SameLine();
         configModified |= ImGui.Checkbox("Forbid movement", ref _config.ForbidMovement);

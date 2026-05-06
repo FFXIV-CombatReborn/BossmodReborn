@@ -156,6 +156,9 @@ sealed class IPCProvider : IDisposable
         });
         Register("AI.IsNavigating", () => ai.Controller.NaviTargetPos != null);
         Register("AI.PlayerSpeed", () => ai.WorldState.Client.MoveSpeed);
+        Register("AI.ThreatLevel", () => ai.Beh != null ? (int)ai.Beh.CurrentThreatResult.Threat : 0);
+        Register("AI.SlackTime", () => ai.Beh != null ? ai.Beh.CurrentThreatResult.SlackTime : float.MaxValue);
+        Register("AI.IsGcdDrifting", () => ai.Beh?.IsGcdDrifting ?? false);
         // ---------------------------------
 
         // Type-specific damage prediction endpoints — search ALL entries for the first matching type

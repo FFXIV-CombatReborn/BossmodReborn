@@ -36,6 +36,15 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
     private WPos? _lastDestination;
     private float _currentRandomDistanceOffset;
     private ulong _lastTargetId;
+    private WPos _lastTargetPos; // Anti-jitter: stabilized target position for goal zones
+
+    // OmniDuty-ported engine state
+    private ThreatBudgetResult _threatResult;
+    private readonly GcdDriftEngine _gcdDrift = new();
+
+    // Public accessors for UI (AIManagementWindow) and IPC (IPCProvider)
+    public ThreatBudgetResult CurrentThreatResult => _threatResult;
+    public bool IsGcdDrifting => _gcdDrift.IsDrifting;
 
     public void Dispose()
     {
@@ -102,13 +111,41 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
                         : await BuildNavigationDecision(player, master, target).ConfigureAwait(false);
                     _naviDecision = naviDecision;
 
-                    // 2. Anti-Stutter Deadzone (Avoid micro-adjustments)
+                    // ═══════ ThreatBudget Evaluation (OmniDuty: TimeBudgetNavigator) ═══════
+                    if (_config.EnableThreatBudget && _naviDecision.Destination != null)
+                    {
+                        _threatResult = ThreatBudget.Evaluate(
+                            _naviDecision.Destination,
+                            player.Position,
+                            _naviDecision.LeewaySeconds,
+                            autorot.Bossmods.WorldState.Client.MoveSpeed,
+                            _config.ThreatAlertThreshold,
+                            _config.ThreatCriticalThreshold);
+                    }
+                    else
+                    {
+                        _threatResult = default;
+                    }
+
+                    // 2. Anti-Stutter Deadzone (Threat-aware)
+                    // At Critical: 0y deadzone (allow all micro-adjustments for survival)
+                    // At Alert: 0.1y deadzone (reduce stutter, but still responsive)
+                    // At Cruise/None/Legacy: 0.25y deadzone (original behavior)
+                    var antiStutterDeadzone = _config.EnableThreatBudget
+                        ? _threatResult.Threat switch
+                        {
+                            ThreatLevel.Critical => 0f,
+                            ThreatLevel.Alert => 0.1f,
+                            _ => 0.25f,
+                        }
+                        : 0.25f;
+
                     if (_naviDecision.Destination != null)
                     {
                         if (hadNavi && _lastDestination != null)
                         {
                             var distToOldDest = (_naviDecision.Destination.Value - _lastDestination.Value).Length();
-                            if (distToOldDest < 0.25f)
+                            if (distToOldDest < antiStutterDeadzone)
                             {
                                 // Ignore micro-adjustments to prevent stuttering
                                 _naviDecision.Destination = _lastDestination;
@@ -134,7 +171,10 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
 
                 var masterIsMoving = TrackMasterMovement(master);
                 var moveWithMaster = masterIsMoving && _followMaster;
-                ForceMovementIn = moveWithMaster || gazeImminent || pyreticImminent ? default : _naviDecision.LeewaySeconds;
+                // At Critical threat: override ForceMovementIn to 0 (move NOW)
+                ForceMovementIn = moveWithMaster || gazeImminent || pyreticImminent ? default
+                    : (_config.EnableThreatBudget && _threatResult.Threat == ThreatLevel.Critical) ? default
+                    : _naviDecision.LeewaySeconds;
 
                 if (_config.MoveDelay != 0d && !hadNavi && _naviDecision.Destination != null)
                 {
@@ -244,12 +284,34 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
             }
             else if (_config.FollowTarget && target != null && AIPreset == null)
             {
+                // Anti-jitter: only update the target position used for goal zones
+                // when the target moves more than 0.5y from the last committed position.
+                // This prevents micro-adjustments when the boss subtly shifts during
+                // animations, auto-attacks, or slight positional corrections.
+                // Affects both min distance and max distance to target calculations.
+                WPos stableTarget;
+                if (_config.EnableTargetAntiJitter)
+                {
+                    const float targetJitterDeadzone = 0.5f;
+                    var targetPos = target.Position;
+                    if (_lastTargetId != target.InstanceID || (targetPos - _lastTargetPos).LengthSq() > targetJitterDeadzone * targetJitterDeadzone)
+                    {
+                        _lastTargetPos = targetPos;
+                        _lastTargetId = target.InstanceID;
+                    }
+                    stableTarget = _lastTargetPos;
+                }
+                else
+                {
+                    stableTarget = target.Position;
+                }
+
                 var positional = _config.DesiredPositional;
                 var mindist = Math.Max(0f, _config.MinDistance + _currentRandomDistanceOffset);
                 var maxdist = _config.MaxDistanceToTarget;
                 if (positional is Positional.Rear or Positional.Flank && (target.CastInfo == null && target.NameID != 541u && target.TargetID == player.InstanceID || target.Omnidirectional)) // if player is target, rear/flank is usually impossible unless target is casting
                     positional = Positional.Any;
-                autorot.Hints.GoalZones.Add(AIHints.GoalSingleTarget(master, positional, positional != Positional.Any ? 2.6f : maxdist));
+                autorot.Hints.GoalZones.Add(AIHints.GoalSingleTarget(stableTarget, target.Rotation, positional, (positional != Positional.Any ? 2.6f : maxdist) + target.HitboxRadius));
 
                 if (mindist != default && target.InstanceID != player.InstanceID && interactTarget == null)
                 {
@@ -257,7 +319,7 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
                     var maxAdj = hitboxradius + maxdist;
                     var min = hitboxradius + mindist;
                     var max = maxAdj > min ? maxAdj : min + 1f;
-                    autorot.Hints.GoalZones.Add(AIHints.GoalDonut(target.Position, min, max, 2f));
+                    autorot.Hints.GoalZones.Add(AIHints.GoalDonut(stableTarget, min, max, 2f));
                 }
             }
             return await Task.Run(() => NavigationDecision.Build(_naviCtx, WorldState.CurrentTime, autorot.Hints, player, autorot.Bossmods.WorldState.Client.MoveSpeed, forbiddenZoneCushion: Math.Max(0f, _config.PreferredDistance + _currentRandomDistanceOffset))).ConfigureAwait(false);
@@ -364,6 +426,58 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
             ctrl.AllowInterruptingCastByMovement = player.CastInfo != null && _naviDecision.LeewaySeconds <= player.CastInfo.RemainingTime - 0.5d;
             ctrl.ForceCancelCast = false;
 
+            // ═══════ SlideCast Integration (OmniDuty: SlideCastEngine) ═══════
+            // If in slidecast window, always allow movement — the cast will complete.
+            if (_config.EnableSlideCast && SlideCastHelper.IsInSlideCastWindow(_config.SlideCastWindow))
+                ctrl.AllowInterruptingCastByMovement = true;
+
+            // ═══════ ThreatBudget → MaxCastTime / ForceCancelCast (OmniDuty: TimeBudgetNavigator) ═══════
+            if (_config.EnableThreatBudget)
+            {
+                if (_threatResult.Threat == ThreatLevel.Alert)
+                {
+                    // TL2: Smart cast suppression — instead of blanket MaxCastTime=0,
+                    // compute the maximum cast duration that fits within available slack time.
+                    // If SlideCast is enabled, casts that reach slidecast before deadline are allowed.
+                    if (_config.EnableSlideCast)
+                    {
+                        var smartMaxCast = SlideCastHelper.MaxCastTimeForSlack(_threatResult.SlackTime, _config.SlideCastWindow);
+                        autorot.Hints.MaxCastTime = Math.Min(autorot.Hints.MaxCastTime, smartMaxCast);
+                    }
+                    else
+                    {
+                        // Without slidecast: suppress all casts, oGCDs only
+                        autorot.Hints.MaxCastTime = Math.Min(autorot.Hints.MaxCastTime, 0f);
+                    }
+                }
+                else if (_threatResult.Threat == ThreatLevel.Critical)
+                {
+                    // TL3: Cancel casts and sprint — survival mode
+                    autorot.Hints.MaxCastTime = 0f;
+                    ctrl.ForceCancelCast = true;
+                }
+            }
+
+            // ═══════ GCD Drift Integration (OmniDuty: GcdInterleaveMover) ═══════
+            if (_config.EnableGcdDrift && _naviDecision.Destination != null)
+            {
+                var driftTarget = _gcdDrift.Evaluate(
+                    player.Position,
+                    _naviDecision.Destination,
+                    _config.EnableThreatBudget ? _threatResult.Threat : ThreatLevel.Cruise, // default to Cruise if ThreatBudget disabled
+                    player.CastInfo != null,
+                    _config.SlideCastWindow,
+                    _config.EnableSlideCast,
+                    WorldState.CurrentTime,
+                    player.Role);
+
+                // If drifting, override NaviTargetPos with the gradual drift target
+                if (driftTarget != null && ctrl.NaviTargetPos == null)
+                {
+                    ctrl.NaviTargetPos = driftTarget;
+                }
+            }
+
             //var cameraFacing = _ctrl.CameraFacing;
             //var dot = cameraFacing.Dot(_ctrl.TargetRot.Value);
             //if (dot < -0.707107f)
@@ -371,13 +485,67 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
             //else if (dot < 0.707107f)
             //    _ctrl.TargetRot = cameraFacing.OrthoL().Dot(_ctrl.TargetRot.Value) > 0 ? _ctrl.TargetRot.Value.OrthoR() : _ctrl.TargetRot.Value.OrthoL();
 
-            // Emergency Evasion Sprint (OmniDuty integration)
-            bool emergencyDodge = player.InCombat && _naviDecision.LeewaySeconds <= 1.5f && distSq > 9f; // Safe zone is >3 yalms away and we have <1.5s
-            
-            // sprint, if not in combat and far enough away from destination
-            if (emergencyDodge || (player.InCombat ? _naviDecision.LeewaySeconds <= 0f && distSq > 25f : player != master && distSq > 400f))
+            // ═══════ Emergency Evasion Sprint — now toggleable (OmniDuty: Emergency Sprint) ═══════
+            if (_config.EnableEmergencySprint)
             {
-                queueForSprint?.Push(ActionDefinitions.IDSprint, player, ActionQueue.Priority.Minimal + 100f);
+                // Smart sprint: threat-budget-aware if available, else legacy threshold
+                bool emergencyDodge;
+                if (_config.EnableThreatBudget)
+                {
+                    emergencyDodge = player.InCombat && _threatResult.Threat == ThreatLevel.Critical && distSq > 9f;
+                }
+                else
+                {
+                    emergencyDodge = player.InCombat && _naviDecision.LeewaySeconds <= 1.5f && distSq > 9f;
+                }
+
+                if (emergencyDodge || (player.InCombat ? _naviDecision.LeewaySeconds <= 0f && distSq > 25f : player != master && distSq > 400f))
+                {
+                    queueForSprint?.Push(ActionDefinitions.IDSprint, player, ActionQueue.Priority.Minimal + 100f);
+                }
+            }
+            else
+            {
+                // Legacy sprint behavior (always active when toggle is off)
+                if (player.InCombat ? _naviDecision.LeewaySeconds <= 0f && distSq > 25f : player != master && distSq > 400f)
+                {
+                    queueForSprint?.Push(ActionDefinitions.IDSprint, player, ActionQueue.Priority.Minimal + 100f);
+                }
+            }
+        }
+
+        // ═══════ World Waypoint Drawing ═══════
+        if (_config.DrawWaypoint && _naviDecision.Destination != null)
+        {
+            var cam = Camera.Instance;
+            if (cam != null)
+            {
+                var dest = _naviDecision.Destination.Value;
+                var playerY = player.PosRot.Y;
+
+                // Color by threat level
+                var waypointColor = _config.EnableThreatBudget ? _threatResult.Threat switch
+                {
+                    ThreatLevel.Alert => 0xFF00FFFF,     // yellow (ABGR)
+                    ThreatLevel.Critical => 0xFF0000FF,   // red (ABGR)
+                    ThreatLevel.Cruise => 0xFF00FF00,     // green (ABGR)
+                    _ => 0xFFFFFFFF                        // white (ABGR)
+                } : 0xFF00FF00u; // default green when ThreatBudget disabled
+
+                // Circle at destination
+                cam.DrawWorldCircle(new(dest.X, playerY, dest.Z), 0.5f, waypointColor, 2f);
+
+                // Line from player to destination
+                cam.DrawWorldLine(
+                    new(player.Position.X, playerY, player.Position.Z),
+                    new(dest.X, playerY, dest.Z),
+                    waypointColor, 1.5f);
+
+                // If drifting, draw smaller circle at drift target
+                if (_config.EnableGcdDrift && _gcdDrift.IsDrifting && _gcdDrift.DriftTarget is WPos driftPos)
+                {
+                    cam.DrawWorldCircle(new(driftPos.X, playerY, driftPos.Z), 0.3f, 0xFFFF8800, 1.5f); // orange
+                }
             }
         }
     }

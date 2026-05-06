@@ -80,4 +80,34 @@ sealed class AIConfig : ConfigNode
     public bool EchoToChat = true;
 
     public string? AIAutorotPresetName;
+
+    // ═══════ OmniDuty-Ported Movement Intelligence ═══════
+    // All features default to OFF. Existing behavior is preserved unless explicitly enabled.
+
+    [PropertyDisplay("Enable threat-level movement budgeting", tooltip: "Replaces binary move/don't-move with 3-tier threat system (Cruise/Alert/Critical) based on time-to-safety vs distance. Uses existing BMR LeewaySeconds data.")]
+    public bool EnableThreatBudget = false;
+
+    [PropertyDisplay("Threat budget — Alert threshold (seconds)", tooltip: "Below this SlackTime, suppress long casts (oGCDs only). Works via MaxCastTime=0 which RSR reads via IPC. Default: 8.0")]
+    public float ThreatAlertThreshold = 8.0f;
+
+    [PropertyDisplay("Threat budget — Critical threshold (seconds)", tooltip: "Below this SlackTime, cancel casts, Sprint, direct dash. Default: 2.0")]
+    public float ThreatCriticalThreshold = 2.0f;
+
+    [PropertyDisplay("Enable slidecast optimization", tooltip: "Detects the ~0.5s slidecast window at the end of casts and allows AI movement during that time. The cast still completes — zero DPS loss. Independent from RSR's own slidecast logic.")]
+    public bool EnableSlideCast = false;
+
+    [PropertyDisplay("Slidecast window (seconds)", tooltip: "Duration of the slidecast window. 0.5 is conservative, 0.4 works on high-latency. Default: 0.5")]
+    public float SlideCastWindow = 0.5f;
+
+    [PropertyDisplay("Enable inter-GCD drift", tooltip: "Gradually drift toward safe zone between GCD casts instead of standing still. Only drifts when: not in animation lock, not during oGCD weave windows, not casting. RSR-safe.")]
+    public bool EnableGcdDrift = false;
+
+    [PropertyDisplay("Enable emergency evasion sprint", tooltip: "Auto-queue Sprint when threat level is Critical and safe zone is >3 yalms away. If disabled, sprint logic reverts to legacy behavior.")]
+    public bool EnableEmergencySprint = false;
+
+    [PropertyDisplay("Draw AI waypoint in world", tooltip: "Draws a circle at the AI navigation destination and a line from player to it. Color changes by threat level: green=Cruise, yellow=Alert, red=Critical.")]
+    public bool DrawWaypoint = false;
+
+    [PropertyDisplay("Target position anti-jitter", tooltip: "Stabilizes the target position used for distance calculations (min distance and max distance to target). Ignores boss movements smaller than 0.5 yalms (e.g. auto-attack animations). Prevents micro-stutter at max melee range.")]
+    public bool EnableTargetAntiJitter = false;
 }
