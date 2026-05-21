@@ -130,7 +130,6 @@ public enum TetherID : uint
 abstract class FloorAOE(BossModule module, uint action) : Components.GenericAOEs(module, action)
 {
     protected List<Actor> Casters = [];
-    //private readonly List<AOEInstance> _aoes = [];
     protected abstract int GetDangerFloor(int slot, Actor actor);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
@@ -150,11 +149,9 @@ abstract class FloorAOE(BossModule module, uint action) : Components.GenericAOEs
             else if (danger == 0 && floor == 0)
                 // hop up to top floor from lower floor
                 return new ReadOnlySpan<AOEInstance>([new AOEInstance(new AOEShapeDonut(2, 100), Arena.Center - new WDir(0, 6), default, activation)]);
-            else if (danger == 0 && floor == 1)
+            else if(danger == 0 && floor == 1)
                 // stay on top floor to avoid danger on lower floor
-                //_aoes.Add(new (new AOEShapeCircle(6), Arena.Center - new WDir(0, 6), default, activation));
                 return new ReadOnlySpan<AOEInstance>([new AOEInstance(new AOEShapeCircle(6), Arena.Center - new WDir(0, 6), default, activation)]);
-
         }
         return default;
     }
