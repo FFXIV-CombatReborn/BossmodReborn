@@ -126,11 +126,74 @@ public enum TetherID : uint
 
 
 
+// Puts AOE or Safezone over launchpad to avoid room wide aoe
+abstract class FloorAOE(BossModule module, uint action) : Components.GenericAOEs(module, action)
+{
+    protected List<Actor> Casters = [];
+    //private readonly List<AOEInstance> _aoes = [];
+    protected abstract int GetDangerFloor(int slot, Actor actor);
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        foreach (var c in Casters)
+        {
+            var activation = Module.CastFinishAt(c.CastInfo);
+            var danger = GetDangerFloor(slot, actor);
+            var floor = Helpers.Level(actor);
+
+            if (danger == 1 && floor == 0)
+                // stay away from launcher on lower floor to avoid danger on top floor.
+                return new ReadOnlySpan<AOEInstance>([new AOEInstance(new AOEShapeCircle(2), Arena.Center - new WDir(0, 6), default, activation)]);
+            else if (danger == 1 && floor == 1)
+                // drop down to lower floor from top floor
+                return new ReadOnlySpan<AOEInstance>([new AOEInstance(new AOEShapeDonut(6, 100), Arena.Center - new WDir(0, 6), default, activation)]);
+            else if (danger == 0 && floor == 0)
+                // hop up to top floor from lower floor
+                return new ReadOnlySpan<AOEInstance>([new AOEInstance(new AOEShapeDonut(2, 100), Arena.Center - new WDir(0, 6), default, activation)]);
+            else if (danger == 0 && floor == 1)
+                // stay on top floor to avoid danger on lower floor
+                //_aoes.Add(new (new AOEShapeCircle(6), Arena.Center - new WDir(0, 6), default, activation));
+                return new ReadOnlySpan<AOEInstance>([new AOEInstance(new AOEShapeCircle(6), Arena.Center - new WDir(0, 6), default, activation)]);
+
+        }
+        return default;
+    }
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == WatchedAction)
+            Casters.Add(caster);
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID == WatchedAction)
+        {
+            NumCasts++;
+            Casters.Remove(caster);
+        }
+    }
+}
+
+
+class CosmicBreath(BossModule module) : FloorAOE(module, (uint)AID.CosmicBreath)
+{
+    protected override int GetDangerFloor(int slot, Actor actor) => 1;
+}
 
 
 
+class CosmicTail(BossModule module) : FloorAOE(module, (uint)AID.CosmicTail)
+{
+    protected override int GetDangerFloor(int slot, Actor actor) => 0;
+}
 
 
+
+class AtomicTail(BossModule module) : FloorAOE(module, (uint)AID.AtomicTail)
+{
+    protected override int GetDangerFloor(int slot, Actor actor) => 0;
+}
 
 
 
@@ -177,8 +240,15 @@ sealed class ShinryuParadoxStates : StateMachineBuilder
 
     private void SinglePhase(uint id)
     {
+        SimpleState(id + 0x100, default, "Catchall")
+            .ActivateOnEnter<CosmicBreath>()
+            .ActivateOnEnter<CosmicTail>()
+            .ActivateOnEnter<AtomicTail>()
+
+            ;
         Cast(id + 0x8000, (uint)AID.AtomicTailVisual1, 6.5f, 6)
             .ActivateOnEnter<AtomicTailArena>()
+
             ;
         Timeout(id + 0x8010, 1, "Ground floor disappears");
 
