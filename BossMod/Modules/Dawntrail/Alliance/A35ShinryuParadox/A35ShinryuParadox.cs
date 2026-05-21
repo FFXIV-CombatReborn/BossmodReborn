@@ -118,12 +118,10 @@ public enum IconID : uint
     Stack = 305, // player->self
 }
 
-
 public enum TetherID : uint
 {
     Tether_chn_fire001f = 5, // UnknownActor->HollowKing
 }
-
 
 
 // Puts AOE or Safezone over launchpad to avoid room wide aoe
@@ -140,6 +138,8 @@ abstract class FloorAOE(BossModule module, uint action) : Components.GenericAOEs
             var danger = GetDangerFloor(slot, actor);
             var floor = Helpers.Level(actor);
 
+            // By returning in each case directly instead of passing back a list
+            // we update the AOE pattern as pc changes floors.
             if (danger == 1 && floor == 0)
                 // stay away from launcher on lower floor to avoid danger on top floor.
                 return new ReadOnlySpan<AOEInstance>([new AOEInstance(new AOEShapeCircle(2), Arena.Center - new WDir(0, 6), default, activation)]);
@@ -172,30 +172,20 @@ abstract class FloorAOE(BossModule module, uint action) : Components.GenericAOEs
     }
 }
 
-
 class CosmicBreath(BossModule module) : FloorAOE(module, (uint)AID.CosmicBreath)
 {
     protected override int GetDangerFloor(int slot, Actor actor) => 1;
 }
-
-
 
 class CosmicTail(BossModule module) : FloorAOE(module, (uint)AID.CosmicTail)
 {
     protected override int GetDangerFloor(int slot, Actor actor) => 0;
 }
 
-
-
 class AtomicTail(BossModule module) : FloorAOE(module, (uint)AID.AtomicTail)
 {
     protected override int GetDangerFloor(int slot, Actor actor) => 0;
 }
-
-
-
-
-
 
 class AtomicTailArena(BossModule module) : BossComponent(module)
 {
@@ -217,10 +207,159 @@ class AtomicTailArena(BossModule module) : BossComponent(module)
     }
 }
 
+class TwilightNebula(BossModule module) : FloorAOE(module, (uint)AID.TwilightNebula1)
+{
+    readonly int[] colors = Utils.MakeArray(PartyState.MaxAllies, -1);
 
+    protected override int GetDangerFloor(int slot, Actor actor)
+    {
+        var x = 1 - colors[slot];
+        return x > 1 ? -1 : x;
+    }
 
+    public override void OnStatusGain(Actor actor, ref ActorStatus status)
+    {
+        switch ((SID)status.ID)
+        {
+            case SID.CloakOfWaningLight:
+                var s1 = Raid.FindSlot(actor.InstanceID);
+                if (s1 >= 0)
+                    colors[s1] = 1;
+                break;
+            case SID.CloakOfWaxingDark:
+                var s2 = Raid.FindSlot(actor.InstanceID);
+                if (s2 >= 0)
+                    colors[s2] = 0;
+                break;
+        }
+    }
 
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if ((AID)spell.Action.ID == AID.TwilightRadiance)
+        {
+            NumCasts++;
+            Casters.Clear();
+        }
+    }
+}
 
+// Starflare: Two sets of crisscrossing line AoE telegraphs, hitting both levels at once.
+// TODO: better filtering.  Currently shows all of StarflareP1Fast and all of StarflareP1Slow instead of just 5 casts.
+class Starflare(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.StarflareP1Fast, (uint)AID.StarflareP1Slow], new AOEShapeRect(60, 5), maxCasts: 5, expectedNumCasters:20)
+{
+    protected List<Actor> _casters = [];
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        var count = _casters.Count;
+        if (count == 0)
+            return [];
+        var aoes = new AOEInstance[count];
+
+        for (var i = 0; i < count; i++)
+        {
+            var c = _casters[i];
+
+            if (Helpers.Level(c) == Helpers.Level(actor))
+            {
+                // show aoe on our floor
+                // This version works(ish), but we want to limit to 5 entries
+                aoes[i] = new AOEInstance(Shape, c.CastInfo!.LocXZ, c.CastInfo!.Rotation,
+                    Module.CastFinishAt(c.CastInfo));
+            }
+            else
+            {
+                aoes[i] = new AOEInstance(new AOEShapeRect(0, 0), c.CastInfo!.LocXZ, c.CastInfo!.Rotation,
+                    Module.CastFinishAt(c.CastInfo));
+            }
+        }
+        return aoes;
+    }
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if ((AID)spell.Action.ID is AID.StarflareP1Fast || (AID)spell.Action.ID is AID.StarflareP1Slow)
+        {
+            _casters.Add(caster);
+            ++NumCasts;
+        }
+    }
+
+    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    {
+        if ((AID)spell.Action.ID is AID.StarflareP1Fast || (AID)spell.Action.ID is AID.StarflareP1Slow)
+        {
+            _casters.Remove(caster);
+        }
+    }
+}
+
+//TODO VortexNoMove
+
+class VortexStayMove(BossModule module) : Components.StayMove(module)
+{
+    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
+    {
+        Requirement r;
+        switch ((IconID)iconID)
+        {
+            case IconID.NoMove:
+                r = Requirement.Stay;
+                break;
+            case IconID.Move:
+                r = Requirement.Move;
+                break;
+            default:
+                return;
+        }
+
+        var p = Raid.FindSlot(actor.InstanceID);
+        if (p >= 0)
+            SetState(p, new(r, WorldState.FutureTime(7)));
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if ((AID)spell.Action.ID is AID.CataclysmicVortexVisual1 or AID.CataclysmicBladeVisual)
+            Array.Fill(PlayerStates, default);
+    }
+}
+
+class UpDownCounter(BossModule module) : Components.CastCounterMulti(module, [(uint)AID.CosmicBreath, (uint)AID.CosmicTail]);
+
+//TODO DarkNova tankbuster baits are not disappearing.
+class DarkNova(BossModule module) : Components.BaitAwayIcon(module, new AOEShapeCircle(6), (uint)IconID.Tankbuster, (uint)AID.DarkNovaP2, 5.1f, tankbuster: true);
+
+class DarkNovaP2(BossModule module) : Components.BaitAwayIcon(module, new AOEShapeCircle(6), (uint)IconID.Tankbuster, (uint)AID.DarkNovaP2, 5.1f, tankbuster: true);
+
+class CelestialTrail(BossModule module) : Components.CastTowers(module, (uint)AID.CelestialTrailTower, 2, 1, 10)
+{
+    BitMask _forbidden;
+
+    public override void OnStatusGain(Actor actor, ref ActorStatus status)
+    {
+        if ((SID)status.ID == SID.HPRecoveryDown)
+            _forbidden.Set(Raid.FindSlot(actor.InstanceID));
+    }
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        base.OnCastStarted(caster, spell);
+        if (spell.Action.ID == WatchedAction)
+        {
+            for (var i = 0; i < Towers.Count; i++)
+                Towers.Ref(i).ForbiddenSoakers = _forbidden;
+        }
+    }
+}
+
+class EmptyProclamation(BossModule module) : Components.RaidwideCast(module, (uint)AID.EmptyProclamation);
+class Swordscross1(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.RightSwordscross1, (uint)AID.LeftSwordscross1], new AOEShapeRect(60, 15));
+class Swordscross2(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.RightSwordscross2, (uint)AID.LeftSwordscross2], new AOEShapeRect(70, 18));
+class TwinBlaze1(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TwinBlazeIn, new AOEShapeDonutSector(20, 60, 45.Degrees()));
+class TwinBlaze2(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TwinBlazeOut, new AOEShapeCone(35, 45.Degrees()));
+class CataclysmicBlade(BossModule module) : Components.SimpleAOEs(module, (uint)AID.CataclysmicBladeCone, new AOEShapeCone(60, 22.5f.Degrees()));
 
 
 [SkipLocalsInit]
@@ -231,35 +370,28 @@ sealed class ShinryuParadoxStates : StateMachineBuilder
     public ShinryuParadoxStates(A35ShinryuParadox module) : base(module)
     {
         _module = module;
-        DeathPhase(0, SinglePhase)
-            .Raw.Update = () => module.PrimaryActor.IsDeadOrDestroyed && module.Enemies((uint)OID.HollowKing).All(k => k.IsDeadOrDestroyed);
-    }
 
-    private void SinglePhase(uint id)
-    {
-        SimpleState(id + 0x100, default, "Catchall")
+        TrivialPhase()
+
             .ActivateOnEnter<CosmicBreath>()
             .ActivateOnEnter<CosmicTail>()
             .ActivateOnEnter<AtomicTail>()
-
-            ;
-        Cast(id + 0x8000, (uint)AID.AtomicTailVisual1, 6.5f, 6)
             .ActivateOnEnter<AtomicTailArena>()
+            .ActivateOnEnter<TwilightNebula>()
+            .ActivateOnEnter<Starflare>()
+            .ActivateOnEnter<VortexStayMove>()
+            .ActivateOnEnter<UpDownCounter>()
+            .ActivateOnEnter<DarkNova>()
+            .ActivateOnEnter<DarkNovaP2>()
+            .ActivateOnEnter<CelestialTrail>()
+            .ActivateOnEnter<EmptyProclamation>()
+            .ActivateOnEnter<Swordscross1>()
+            .ActivateOnEnter<Swordscross2>()
+            .ActivateOnEnter<TwinBlaze1>()
+            .ActivateOnEnter<TwinBlaze2>()
+            .ActivateOnEnter<CataclysmicBlade>()
 
-            ;
-        Timeout(id + 0x8010, 1, "Ground floor disappears");
-
-        P2(id + 0x10000, 52.8f);
-    }
-
-    void P2(uint id, float delay)
-    {
-        ActorTargetable(id, _module.BossP2, true, delay, "Boss reappears")
-            .DeactivateOnExit<AtomicTailArena>()
-            .SetHint(StateMachine.StateHint.DowntimeEnd);
-
-        Timeout(id + 0x20000, 10000, "Repeat mechanics until death")
-            ;
+            .Raw.Update = () => module.PrimaryActor.IsDeadOrDestroyed && module.Enemies((uint)OID.HollowKing).All(k => k.IsDeadOrDestroyed);
     }
 }
 
