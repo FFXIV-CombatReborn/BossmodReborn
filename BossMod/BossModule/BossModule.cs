@@ -428,12 +428,31 @@ public abstract class BossModule : IDisposable
     public DateTime CastFinishAt(ActorCastInfo? cast, double extraDelay = default, DateTime fallback = default) => cast != null ? WorldState.FutureTime(cast.NPCRemainingTime + extraDelay) : fallback;
 
     // called during update if module is not yet active, should return true if it is to be activated
-    // default implementation activates if primary target is both targetable and in combat
-    protected virtual bool CheckPull() => PrimaryActor.IsTargetable && PrimaryActor.InCombat;
+    // default implementation activates if primary target is both targetable and in combat;
+    // FATE modules additionally require the player to be near the arena and not busy with a Critical Engagement/Duel (DutiesAsAssigned status)
+    protected virtual bool CheckPull()
+    {
+        if (!PrimaryActor.IsTargetable || !PrimaryActor.InCombat)
+        {
+            return false;
+        }
+
+        if (Info?.GroupType == BossModuleInfo.GroupType.ForayFATE)
+        {
+            var player = Raid.Player();
+            if (player == null || player.FindStatus(BossModuleInfo.DutiesAsAssignedSID) != null || !Bounds.Contains(player.Position - Center))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     // called during update if module is active; should return true if module is to be reset (i.e. deleted and new instance recreated for same actor)
-    // default implementation never resets, but it's useful for outdoor bosses that can be leashed
-    public virtual bool CheckReset() => false;
+    // default implementation never resets, but it's useful for outdoor bosses that can be leashed;
+    // FATE modules additionally reset if the player picks up a Critical Engagement/Duel (DutiesAsAssigned status) while the FATE is active
+    public virtual bool CheckReset() => Info?.GroupType == BossModuleInfo.GroupType.ForayFATE && Raid.Player()?.FindStatus(BossModuleInfo.DutiesAsAssignedSID) != null;
 
     // return true if out-of-combat enemies should be set to priority 0 - useful for multi-phase encounters when player wants to use automatic targeting via cdplan
     public virtual bool ShouldPrioritizeAllEnemies => false;

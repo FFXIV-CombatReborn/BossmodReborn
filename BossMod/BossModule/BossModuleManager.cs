@@ -120,6 +120,18 @@ public sealed class BossModuleManager : IDisposable
                 var wasActive = m.StateMachine.ActiveState != null;
                 var actor = m.PrimaryActor;
 
+                // force unload FATE modules while player has picked up a Critical Engagement/Duel (DutiesAsAssigned status),
+                // so it doesn't conflict with the CE/Duel module that should be the only one loaded
+                if (m.Info?.GroupType == BossModuleInfo.GroupType.ForayFATE && WorldState.Party[0]?.FindStatus(BossModuleInfo.DutiesAsAssignedSID) != null)
+                {
+                    if (wasActive)
+                    {
+                        ModuleDeactivated.Fire(m);
+                    }
+                    UnloadModule(i--);
+                    continue;
+                }
+
                 bool isActive;
 
                 try
