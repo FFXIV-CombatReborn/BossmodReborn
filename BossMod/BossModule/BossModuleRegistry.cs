@@ -181,7 +181,17 @@ public static class BossModuleRegistry
         }
 
         var info = FindByOID(primary.OID);
-        return info?.Maturity >= minMaturity ? CreateModule(info, ws, primary) : null;
+        if (info == null || info.Maturity < minMaturity)
+        {
+            return null;
+        }
+
+        if (info.GroupType == BossModuleInfo.GroupType.ForayFATE && ws.Party[0]?.FindStatus(BossModuleInfo.DutiesAsAssignedSID) != null)
+        {
+            return null;
+        }
+
+        return CreateModule(info, ws, primary);
     }
 
     // TODO: this is a hack...

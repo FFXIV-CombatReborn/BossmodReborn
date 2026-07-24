@@ -82,6 +82,10 @@ public static class BossModuleInfo
 
     public enum HuntRank : uint { B, A, S, SS }
 
+    // status granted to players participating in a Critical Engagement or Duel in Bozja/Zadnor; while active, FATE modules
+    // in the same zone should not be loaded/active, since only one module (the CE/Duel) should be active at a time
+    public const uint DutiesAsAssignedSID = 2415;
+
     // shorthand expansion names
     public static string ShortName(this Expansion e) => e switch
     {
