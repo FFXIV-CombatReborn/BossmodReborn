@@ -101,36 +101,37 @@ public struct NavigationDecision
                 for (var y = y1; y < y2; ++y)
                 {
                     var rowBase = y * width;
-                    var minY = y - d;
-                    var maxY = y + d;
+                    var minY = Math.Max(0, y - d);
+                    var maxY = Math.Min(height - 1, y + d);
                     for (var x = 0; x < width; ++x)
                     {
                         var idx = rowBase + x;
 
-                        // only penalize safe cells near danger / arena bounds
+                        // only penalize safe cells near danger / impassable obstacles
                         if (pixelMaxG[idx] == float.MaxValue)
                         {
-                            var minX = x - d;
-                            var maxX = x + d;
-                            // cushion past the pathfinding grid means near a map edge / fall-off
-                            var nearThreat = minX < 0 || minY < 0 || maxX >= width || maxY >= height;
-                            if (!nearThreat)
+                            var minX = Math.Max(0, x - d);
+                            var maxX = Math.Min(width - 1, x + d);
+                            var nearDanger = false;
+                            var nearObstacle = false;
+                            // check all neighbors within Chebyshev distance d
+                            for (var ny = minY; ny <= maxY && !(nearDanger && nearObstacle); ++ny)
                             {
-                                for (var ny = minY; ny <= maxY && !nearThreat; ++ny)
+                                var nBase = ny * width;
+                                for (var nx = minX; nx <= maxX; ++nx)
                                 {
-                                    var nBase = ny * width;
-                                    for (var nx = minX; nx <= maxX; ++nx)
-                                    {
-                                        // covers AOE danger and impassable arena/out-of-bounds cells
-                                        if (pixelMaxG[nBase + nx] != float.MaxValue)
-                                        {
-                                            nearThreat = true;
-                                            break;
-                                        }
-                                    }
+                                    var g = pixelMaxG[nBase + nx];
+                                    if (g == float.MaxValue)
+                                        continue;
+                                    if (g < 0f)
+                                        nearObstacle = true;
+                                    else
+                                        nearDanger = true;
                                 }
                             }
-                            if (nearThreat)
+                            if (nearDanger)
+                                pixelPriority[idx] -= 0.125f;
+                            if (nearObstacle)
                                 pixelPriority[idx] -= 0.125f;
                         }
 
