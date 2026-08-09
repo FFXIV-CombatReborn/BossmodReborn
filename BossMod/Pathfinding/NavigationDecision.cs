@@ -81,7 +81,7 @@ public struct NavigationDecision
 
     private static void AvoidForbiddenZone(Map map, float forbiddenZoneCushion)
     {
-        var d = (int)(forbiddenZoneCushion / map.Resolution);
+        var d = Math.Max(1, (int)(forbiddenZoneCushion / map.Resolution));
 
         var width = map.Width;
         var height = map.Height;
@@ -101,51 +101,37 @@ public struct NavigationDecision
                 for (var y = y1; y < y2; ++y)
                 {
                     var rowBase = y * width;
-
-                    var topY = y - d;
-                    if (topY < 0)
-                    {
-                        topY = 0;
-                    }
-                    var botY = y + d;
-                    if (botY >= height)
-                    {
-                        botY = height - 1;
-                    }
-                    var topBase = topY * width;
-                    var curBase = rowBase;
-                    var botBase = botY * width;
-
+                    var minY = y - d;
+                    var maxY = y + d;
                     for (var x = 0; x < width; ++x)
                     {
                         var idx = rowBase + x;
 
-                        // only penalize safe cells near danger
+                        // only penalize safe cells near danger / arena bounds
                         if (pixelMaxG[idx] == float.MaxValue)
                         {
-                            var leftX = x - d;
-                            if (leftX < 0)
+                            var minX = x - d;
+                            var maxX = x + d;
+                            // cushion past the pathfinding grid means near a map edge / fall-off
+                            var nearThreat = minX < 0 || minY < 0 || maxX >= width || maxY >= height;
+                            if (!nearThreat)
                             {
-                                leftX = 0;
+                                for (var ny = minY; ny <= maxY && !nearThreat; ++ny)
+                                {
+                                    var nBase = ny * width;
+                                    for (var nx = minX; nx <= maxX; ++nx)
+                                    {
+                                        // covers AOE danger and impassable arena/out-of-bounds cells
+                                        if (pixelMaxG[nBase + nx] != float.MaxValue)
+                                        {
+                                            nearThreat = true;
+                                            break;
+                                        }
+                                    }
+                                }
                             }
-                            var rightX = x + d;
-                            if (rightX >= width)
-                            {
-                                rightX = width - 1;
-                            }
-
-                            // check the 8 clamped neighbors (Chebyshev ring at distance d)
-                            if (pixelMaxG[topBase + leftX] != float.MaxValue ||
-                                pixelMaxG[topBase + x] != float.MaxValue ||
-                                pixelMaxG[topBase + rightX] != float.MaxValue ||
-                                pixelMaxG[curBase + leftX] != float.MaxValue ||
-                                pixelMaxG[curBase + rightX] != float.MaxValue ||
-                                pixelMaxG[botBase + leftX] != float.MaxValue ||
-                                pixelMaxG[botBase + x] != float.MaxValue ||
-                                pixelMaxG[botBase + rightX] != float.MaxValue)
-                            {
+                            if (nearThreat)
                                 pixelPriority[idx] -= 0.125f;
-                            }
                         }
 
                         // track local maximum priority
