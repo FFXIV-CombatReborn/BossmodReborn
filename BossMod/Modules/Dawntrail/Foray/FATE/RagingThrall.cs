@@ -22,17 +22,95 @@ public enum AID : uint {
     BruntOfTheBattlefield = 48373, // Machetaur1->self, 4.5s cast, range 10 circle
     Uplift = 47611, // Machetaur2/Machetaur3/Machetaur1/Machetaur4->location, 3.0s cast, range 6 circle
 
-    OctupleSwipe = 47600, // Machetaur->self, 10.0s cast, single-target
-    OctupleSwipeVisual = 47601, // Machetaur1->self, 1.0s cast, range 40 ?-degree cone
-    OctupleSwipe1 = 47604, // Machetaur->self, no cast, range 40 ?-degree cone
-    OctupleSwipe2 = 47605, // Machetaur->self, no cast, range 40 ?-degree cone
-    OctupleSwipe3 = 47602, // Machetaur->self, no cast, range 40 ?-degree cone
+    OctupleSwipeVisual = 47600, // Machetaur->self, 10.0s cast, visual
+    OctupleSwipeTelegraph = 47601, // Machetaur1->self, 1.0s cast, range 40 90-degree cone, eight directions in order
+    OctupleSwipe1 = 47604, // Machetaur->self, no cast, range 40 90-degree cone
+    OctupleSwipe2 = 47605, // Machetaur->self, no cast, range 40 90-degree cone
+    OctupleSwipe3 = 47602, // Machetaur->self, no cast, range 40 90-degree cone
 }
 
 sealed class FocusedTremor(BossModule module) : Components.RaidwideCast(module, (uint)AID.FocusedTremor);
 sealed class BruntOfTheBattlefield(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BruntOfTheBattlefield, 10f);
 sealed class Uplift(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Uplift, 6f);
 
+// Eight short helper casts record the directions during the long visual cast. The boss then
+// executes those cones in the same order, one every ~2.1s.
+sealed class OctupleSwipe(BossModule module) : Components.GenericAOEs(module)
+{
+    private static readonly AOEShapeCone Shape = new(40f, 45f.Degrees());
+    private readonly List<AOEInstance> _aoes = [with(8)];
+    private readonly HashSet<uint> _seenGlobalSequences = [];
+    private DateTime _firstActivation;
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        PruneExpired();
+        var count = Math.Min(_aoes.Count, 2);
+        return count == 0 ? [] : CollectionsMarshal.AsSpan(_aoes)[..count];
+    }
+
+    public override void Update() => PruneExpired();
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        switch (spell.Action.ID)
+        {
+            case (uint)AID.OctupleSwipeVisual:
+                if (!spell.EventHappened)
+                {
+                    _aoes.Clear();
+                    _firstActivation = Module.CastFinishAt(spell, 0.55d);
+                }
+                break;
+            case (uint)AID.OctupleSwipeTelegraph:
+                if (spell.EventHappened || _aoes.Count >= 8)
+                    break;
+                var order = _aoes.Count;
+                var activation = order == 0
+                    ? (_firstActivation > WorldState.CurrentTime ? _firstActivation : Module.CastFinishAt(spell, 7.6d))
+                    : _aoes[0].Activation.AddSeconds(order * 2.1d);
+                _aoes.Add(new(Shape, caster.Position, spell.Rotation, activation, order == 0 ? Colors.Danger : Colors.AOE, order == 0, shapeDistance: Shape.Distance(caster.Position, spell.Rotation)));
+                break;
+        }
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID is not ((uint)AID.OctupleSwipe1) and not ((uint)AID.OctupleSwipe2) and not ((uint)AID.OctupleSwipe3)
+            || spell.GlobalSequence != 0 && !_seenGlobalSequences.Add(spell.GlobalSequence))
+            return;
+
+        ++NumCasts;
+        if (_aoes.Count != 0)
+        {
+            _aoes.RemoveAt(0);
+            MarkNextDanger();
+        }
+    }
+
+    private void PruneExpired()
+    {
+        var removed = false;
+        while (_aoes.Count != 0 && WorldState.CurrentTime > _aoes[0].Activation.AddSeconds(1d))
+        {
+            _aoes.RemoveAt(0);
+            removed = true;
+        }
+        if (removed)
+            MarkNextDanger();
+    }
+
+    private void MarkNextDanger()
+    {
+        if (_aoes.Count != 0)
+        {
+            _aoes.Ref(0).Color = Colors.Danger;
+            _aoes.Ref(0).Risky = true;
+        }
+    }
+}
+
+// TODO make it a sequence one instead if its always a single one
 sealed class FocusedTremorCircle(BossModule module) : Components.GenericAOEs(module) {
     private readonly List<AOEInstance> aoes = [];
 
@@ -73,47 +151,15 @@ sealed class FocusedTremorCircle(BossModule module) : Components.GenericAOEs(mod
     }
 }
 
-sealed class OctupleSwipe(BossModule module) : Components.GenericAOEs(module) {
-    private List<AOEInstance> aoes = [];
-    private readonly AOEShapeCone shape = new(40.0f, 45.0f.Degrees());
-
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
-        if (spell.Action.ID == (uint)AID.OctupleSwipeVisual) {
-            aoes.Add(new(shape, spell.LocXZ, spell.Rotation));
-        }
-    }
-
-    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
-        if (spell.Action.ID is (uint)AID.OctupleSwipe1 or (uint)AID.OctupleSwipe2 or (uint)AID.OctupleSwipe3) {
-            if (aoes.Count > 0) {
-                aoes.RemoveAt(0);
-            }
-        }
-    }
-
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) {
-        int show = 0;
-        var incomingAOEs = aoes.Take(2).ToList();
-
-        foreach (ref var aoe in CollectionsMarshal.AsSpan(incomingAOEs)) {
-            aoe.Color = show == 0 ? Colors.Danger : Colors.AOE;
-            aoe.Risky = show == 0;
-            show++;
-        }
-
-        return CollectionsMarshal.AsSpan(incomingAOEs);
-    }
-}
-
 [SkipLocalsInit]
 sealed class RagingThrallStates : StateMachineBuilder {
     public RagingThrallStates(BossModule module) : base(module) {
         TrivialPhase()
+            .ActivateOnEnter<OctupleSwipe>()
             .ActivateOnEnter<FocusedTremor>()
             .ActivateOnEnter<FocusedTremorCircle>()
             .ActivateOnEnter<BruntOfTheBattlefield>()
-            .ActivateOnEnter<Uplift>()
-            .ActivateOnEnter<OctupleSwipe>();
+            .ActivateOnEnter<Uplift>();
     }
 }
 
@@ -121,18 +167,18 @@ sealed class RagingThrallStates : StateMachineBuilder {
     StatesType = typeof(RagingThrallStates),
     ConfigType = null, // replace null with typeof(MachetaurConfig) if applicable
     ObjectIDType = typeof(OID),
-    ActionIDType = typeof(AID), // replace null with typeof(AID) if applicable
+    ActionIDType = typeof(AID),
     StatusIDType = null, // replace null with typeof(SID) if applicable
     TetherIDType = null, // replace null with typeof(TetherID) if applicable
     IconIDType = null, // replace null with typeof(IconID) if applicable
     PrimaryActorOID = (uint)OID.Machetaur,
-    Contributors = "Equilius",
+    Contributors = "KanoNoUta",
     Expansion = BossModuleInfo.Expansion.Dawntrail,
     Category = BossModuleInfo.Category.Foray,
-    GroupType = BossModuleInfo.GroupType.CFC,
+    GroupType = BossModuleInfo.GroupType.ForayFATE,
     GroupID = 1093u,
-    NameID = 14735u,
-    SortOrder = 25,
+    NameID = 2074u,
+    SortOrder = 1,
     PlanLevel = 0)]
 [SkipLocalsInit]
-public sealed class RagingThrall(WorldState ws, Actor primary) : OpenWorldFate(ws, primary);
+public sealed class Machetaur(WorldState ws, Actor primary) : OpenWorldFate(ws, primary);

@@ -59,18 +59,18 @@ sealed class ARottenAffairStates : StateMachineBuilder {
     StatesType = typeof(ARottenAffairStates),
     ConfigType = null, // replace null with typeof(PatientKuribuConfig) if applicable
     ObjectIDType = typeof(OID),
-    ActionIDType = typeof(AID), // replace null with typeof(AID) if applicable
-    StatusIDType = typeof(SID), // replace null with typeof(SID) if applicable
+    ActionIDType = typeof(AID),
+    StatusIDType = null, // replace null with typeof(SID) if applicable
     TetherIDType = null, // replace null with typeof(TetherID) if applicable
     IconIDType = null, // replace null with typeof(IconID) if applicable
     PrimaryActorOID = (uint)OID.PatientKuribu,
-    Contributors = "Equilius",
+    Contributors = "KanoNoUta",
     Expansion = BossModuleInfo.Expansion.Dawntrail,
     Category = BossModuleInfo.Category.Foray,
-    GroupType = BossModuleInfo.GroupType.CFC,
+    GroupType = BossModuleInfo.GroupType.ForayFATE,
     GroupID = 1093u,
-    NameID = 14764u,
-    SortOrder = 20,
+    NameID = 2081u,
+    SortOrder = 1,
     PlanLevel = 0)]
 [SkipLocalsInit]
 public sealed class ARottenAffair(WorldState ws, Actor primary) : OpenWorldFate(ws, primary);

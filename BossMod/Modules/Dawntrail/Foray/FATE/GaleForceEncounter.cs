@@ -1,4 +1,4 @@
-﻿namespace BossMod.Dawntrail.Foray.FATE.GaleForceEncounter;
+﻿namespace BossMod.Dawntrail.Foray.FATE.NH104Stormcaller;
 
 public enum OID : uint {
     Stormcaller = 0x4BEC,
@@ -32,6 +32,48 @@ public enum AID : uint {
 sealed class Windage(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Windage, new AOEShapeCircle(7.0f));
 sealed class BitingScratch(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BitingScratch, new AOEShapeCone(40.0f, 45.0f.Degrees()));
 
+// FreefallTeleport supplies the landing point before the boss jumps. Damage is dealt at that
+// same point three times: ~0.23s, ~3.06s and ~5.84s after the teleport cast resolves.
+sealed class FreefallSequence(BossModule module) : Components.GenericAOEs(module)
+{
+    private static readonly AOEShapeCircle Shape = new(12f);
+    private static readonly double[] ResolveOffsets = [0.23d, 3.06d, 5.84d];
+    private readonly List<AOEInstance> _aoes = [with(3)];
+    private readonly HashSet<uint> _seenGlobalSequences = [];
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+        => _aoes.Count == 0 ? [] : CollectionsMarshal.AsSpan(_aoes)[..1];
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID != (uint)AID.FreefallTeleport || spell.EventHappened)
+            return;
+
+        _aoes.Clear();
+        _seenGlobalSequences.Clear();
+        foreach (var offset in ResolveOffsets)
+            _aoes.Add(new(Shape, spell.LocXZ, activation: Module.CastFinishAt(spell, offset), risky: false));
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID != (uint)AID.Freefall
+            || spell.GlobalSequence != 0 && !_seenGlobalSequences.Add(spell.GlobalSequence))
+            return;
+
+        ++NumCasts;
+        if (_aoes.Count != 0)
+            _aoes.RemoveAt(0);
+    }
+
+    public override void Update()
+    {
+        while (_aoes.Count != 0 && WorldState.CurrentTime > _aoes[0].Activation.AddSeconds(1d))
+            _aoes.RemoveAt(0);
+    }
+}
+
+// TODO improve colour display
 sealed class FocusedTremor(BossModule module) : Components.ConcentricAOEs(module, _shapes) {
     private static readonly AOEShape[] _shapes = [new AOEShapeCircle(10f), new AOEShapeDonut(10f, 20f), new AOEShapeDonut(20f, 30f)];
 
@@ -61,6 +103,7 @@ sealed class GaleForceEncounterStates : StateMachineBuilder {
         TrivialPhase()
             .ActivateOnEnter<Windage>()
             .ActivateOnEnter<BitingScratch>()
+            .ActivateOnEnter<FreefallSequence>()
             .ActivateOnEnter<FocusedTremor>();
     }
 }
@@ -69,18 +112,18 @@ sealed class GaleForceEncounterStates : StateMachineBuilder {
     StatesType = typeof(GaleForceEncounterStates),
     ConfigType = null, // replace null with typeof(StormcallerConfig) if applicable
     ObjectIDType = typeof(OID),
-    ActionIDType = typeof(AID), // replace null with typeof(AID) if applicable
+    ActionIDType = typeof(AID),
     StatusIDType = null, // replace null with typeof(SID) if applicable
     TetherIDType = null, // replace null with typeof(TetherID) if applicable
     IconIDType = null, // replace null with typeof(IconID) if applicable
     PrimaryActorOID = (uint)OID.Stormcaller,
-    Contributors = "Equilius",
+    Contributors = "KanoNoUta",
     Expansion = BossModuleInfo.Expansion.Dawntrail,
     Category = BossModuleInfo.Category.Foray,
-    GroupType = BossModuleInfo.GroupType.CFC,
+    GroupType = BossModuleInfo.GroupType.ForayFATE,
     GroupID = 1093u,
-    NameID = 14776u,
-    SortOrder = 23,
+    NameID = 2082u,
+    SortOrder = 1,
     PlanLevel = 0)]
 [SkipLocalsInit]
 public sealed class GaleForceEncounter(WorldState ws, Actor primary) : OpenWorldFate(ws, primary);

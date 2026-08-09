@@ -3,10 +3,14 @@
 public enum OID : uint
 {
     SwordDancer = 0x4D76, // R6.000, x1
+    DancingSwordThrowing = 0x4D77, // R2.000, x4
     Helper = 0x233C, // R0.500, x29, Helper type
     DancingSwordCyclosword = 0x4D79, // R2.000, x3
+    DancingSwordLeaping = 0x4D7A, // R1.000, x5
+    DancingSwordMystique = 0x4D7B, // R2.000, x2
     DancingSwordSurgesword = 0x4D7C, // R2.000, x16
     SwordDanceMarker = 0x1EC033, // R0.500, x0 (spawn during fight), EventObj type
+    Actor1ec033 = SwordDanceMarker, // compatibility alias used by the replay-backed sword-dance preview
 }
 
 public enum AID : uint
@@ -16,15 +20,21 @@ public enum AID : uint
     SwordStorm = 49684, // DancingSword5->self, no cast, ???
     ThrowingSwords = 49559, // SwordDancer->self, 2.0+1.0s cast, single-target
     Rush1 = 50525, // DancingSword4->location, 3.0s cast, width 7 rect charge
+    Rush = Rush1, // compatibility alias for the first normal-mode dash
     Rush2 = 50526, // DancingSword4->location, 3.0s cast, width 7 rect charge
     TurnInner1 = 49575, // DancingSword5->self, 3.5s cast, range 9-14 donut
+    Turn1 = TurnInner1,
     TurnOuter1 = 49577, // DancingSword5->self, 3.5s cast, range 19-24 donut
+    Turn2 = TurnOuter1,
     TurnInner2 = 49578, // DancingSword5->self, 3.5s cast, range 9-14 donut
+    Turn5 = TurnInner2,
     TurnOuter2 = 49580, // DancingSword5->self, 3.5s cast, range 19-24 donut
     TurnaboutInner = 49883, // DancingSword5->self, 3.5s cast, range ?-14 donut
     TurnaboutOuter = 49889, // DancingSword5->self, 3.5s cast, range ?-24 donut
+    Turnabout = TurnaboutOuter,
 
     MartialMystique = 49585, // DancingSword5->self, 5.5s cast, range 48 width 96 rect
+    MartialMystique2 = MartialMystique,
 
     CycloswordsUnsheathed = 49586, // SwordDancer->self, 3.0s cast, single-target
     Cycloswords = 49587, // SwordDancer->self, 3.0s cast, single-target
@@ -34,6 +44,7 @@ public enum AID : uint
 
     SwordDanceCast = 49609, // SwordDancer->self, 4.4+0.6s cast, single-target
     SwordDance = 49614, // DancingSword5->self, 1.5s cast, range 60 width 20 rect
+    SwordDance6 = SwordDance,
     LeapingLift = 49594, // SwordDancer->self, 3.0s cast, single-target
     Pierce = 49595, // DancingSword2->self, 3.6s cast, range 5 circle
 

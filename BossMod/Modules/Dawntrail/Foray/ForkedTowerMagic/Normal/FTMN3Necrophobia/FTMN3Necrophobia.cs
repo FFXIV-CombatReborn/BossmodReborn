@@ -1,108 +1,123 @@
-﻿namespace BossMod.Dawntrail.Foray.ForkedTowerMagic.Normal.FTMN3Necrophobia;
+using BossMod.Dawntrail.Foray.CriticalEngagement;
 
-sealed class HailOfHellflares(BossModule module) : Components.RaidwideCast(module, (uint)AID.HailOfHellflares);
-sealed class AncientFire(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.AncientFireIII, (uint)AID.AncientFireIII1, (uint)AID.SeveredFireIII], 18f); //necessary to predict Ancient Fire III1?
-sealed class AncientBlizzard(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.AncientBlizzardIII, (uint)AID.AncientBlizzardIII1, (uint)AID.SeveredBlizzardIII], new AOEShapeCross(45f, 7.5f));
-sealed class CorpseMangler(BossModule module) : Components.SingleTargetCast(module, (uint)AID.CorpseMangler, "");
-sealed class AncientThunder(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.AncientThunderIII1, (uint)AID.AncientThunderIII3], new AOEShapeCone(60f, 22.5f.Degrees()));
-sealed class DarkCurrent1(BossModule module) : Components.SimpleAOEs(module, (uint)AID.DarkCurrent1, new AOEShapeRect(60f, 5f));
-sealed class DarkCurrent2(BossModule module) : Components.SimpleAOEs(module, (uint)AID.DarkCurrent2, new AOEShapeRect(10f, 30f)); // happens x2 on both sides, add predict since cast time so low
-sealed class DarkCurrent(BossModule module) : Components.GenericAOEs(module)
+namespace BossMod.Dawntrail.Foray.ForkedTowerMagic.Normal.FTMN3Necrophobia;
+
+// Normal 魔之塔 Boss3: Necrophobia. 爆炎 18m 圈、冰封十字 45x15、古代暴雷 60y 45 度扇、
+// 灭亡射线 30x6 直条、黑暗奔流 60x10 直条 + 左右步进地火、真空波 180 度。
+sealed class NecrophobiaAOEs(BossModule module) : ReplayValidatedCastAOEs(module)
 {
-    private readonly List<AOEInstance> _aoes = [];
-    private readonly AOEShapeRect _rect = new(60f, 5f);
+    private static readonly AOEShapeCircle Fire = new(18f);
+    private static readonly AOEShapeCross Blizzard = new(45f, 7.5f);
+    private static readonly AOEShapeCone Thunder = new(60f, 22.5f.Degrees());
+    private static readonly AOEShapeRect DeathlyRay = new(30f, 3f);
+    private static readonly AOEShapeCone Vacuum = new(30f, 90f.Degrees());
+
+    protected override AOEConfig? ConfigFor(uint actionID) => actionID switch
+    {
+        (uint)AID.AncientFireIII or (uint)AID.SeveredFireIII or (uint)AID.AncientFireIII1 => new(Fire),
+        (uint)AID.AncientBlizzardIII or (uint)AID.SeveredBlizzardIII or (uint)AID.AncientBlizzardIII1 => new(Blizzard),
+        (uint)AID.AncientThunderIII1 or (uint)AID.AncientThunderIII3 => new(Thunder),
+        (uint)AID.DeathlyRay => new(DeathlyRay),
+        (uint)AID.VacuumWave => new(Vacuum),
+        _ => null
+    };
+}
+
+// 黑暗奔流的场地步进预兆。47478 自身只有 1s 读条，等它出现才画会让 AI 来不及
+// 穿过第一条安全缝；ARR 三次样本均为 47477 开始后约 7.6s / 9.7s 判定两轮。
+// 47477 的 LocXZ 是约 30y 外的技能目标点，不是直条起点；整组预兆从 boss 脚下展开。
+sealed class DarkCurrentTreadPreview(BossModule module) : Components.GenericAOEs(module)
+{
+    private static readonly AOEShapeRect Shape = new(30f, 5f, 30f);
+    private readonly List<AOEInstance> _pending = [with(6)];
+    private readonly List<AOEInstance> _displayed = [with(4)];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        var count = _aoes.Count;
-        if (count == 0)
+        Prune();
+        _displayed.Clear();
+        if (_pending.Count == 0)
             return [];
-        var max = count == 5 ? 3 : count > 3 ? 4 : count;
-        var aoes = CollectionsMarshal.AsSpan(_aoes)[..max];
-        var isFourAOEs = max == 4;
-        var isThreeAOEs = max == 3;
 
-        for (var i = 0; i < max; ++i)
+        var first = _pending[0].Activation;
+        foreach (var pending in _pending)
         {
-            ref var aoe = ref aoes[i];
-
-            var shouldBeDanger = isFourAOEs && i < 2 || isThreeAOEs && i == 0;
-            var shouldBeRisky = shouldBeDanger || max == 2 && i < 2;
-
-            if (shouldBeDanger)
-                aoe.Color = Colors.Danger;
-
-            if (shouldBeRisky)
-                aoe.Risky = true;
+            var aoe = pending;
+            var imminent = aoe.Activation <= first.AddSeconds(0.5d);
+            aoe.Risky = imminent;
+            aoe.Color = imminent ? Colors.Danger : Colors.AOE;
+            _displayed.Add(aoe);
         }
-
-        return aoes;
+        return CollectionsMarshal.AsSpan(_displayed);
     }
+
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.DarkCurrent1)
-        {
-            //2.1s between casts
-            var act = Module.CastFinishAt(spell);
-            var position = spell.LocXZ;
-            var rotation = spell.Rotation;
-            var dir = rotation.ToDirection().OrthoL().Normalized();
-            var distance = 10f;
-            _aoes.Add(new(_rect, position, rotation, act, risky: true));
+        if (spell.Action.ID != (uint)AID.DarkCurrent1 || spell.EventHappened)
+            return;
 
-            for (var i = 1; i <= 2; i++)
-            {
-                _aoes.Add(new(_rect, position + i * distance * dir, rotation, act.AddSeconds(2.1d * i), risky: false));
-                _aoes.Add(new(_rect, position + i * distance * dir * -1f, rotation, act.AddSeconds(2.1d * i), risky: false));
-            }
+        _pending.Clear();
+        var origin = Module.PrimaryActor.Position;
+        var side = (spell.Rotation + 90f.Degrees()).ToDirection();
+
+        // The first hit is the centered strip through the boss.  The two side waves
+        // only become dangerous after this central strip resolves, so all five strips
+        // must share one ordered queue instead of being drawn by separate components.
+        _pending.Add(new(Shape, origin, spell.Rotation, Module.CastFinishAt(spell)));
+        for (var wave = 0; wave < 2; ++wave)
+        {
+            // ARR: 47478 casts start +6.58/+8.66s and resolve one second later.
+            var activation = Module.CastFinishAt(spell, 2.1d + wave * 2.1d);
+            var offset = 10f * (wave + 1);
+            _pending.Add(new(Shape, origin + side * offset, spell.Rotation, activation));
+            _pending.Add(new(Shape, origin - side * offset, spell.Rotation, activation));
         }
+        _pending.Sort((left, right) => left.Activation.CompareTo(right.Activation));
     }
 
-    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (_aoes.Count != 0)
-        {
-            switch (spell.Action.ID)
-            {
-                case (uint)AID.DarkCurrent1:
-                case (uint)AID.DarkCurrent2:
-                    _aoes.RemoveAt(0);
-                    break;
-            }
-        }
+        if (spell.Action.ID is not ((uint)AID.DarkCurrent1 or (uint)AID.DarkCurrent2) || _pending.Count == 0)
+            return;
+
+        // Two helpers resolve the left/right strips together.  Remove that complete wave on
+        // the first event; duplicate helper events then have nothing stale to resurrect.
+        var deadline = WorldState.CurrentTime.AddSeconds(1.25d);
+        _pending.RemoveAll(aoe => aoe.Activation <= deadline);
     }
 
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    public override void Update() => Prune();
+
+    private void Prune()
     {
-        // stay near initial cast to move in after
-        if (_aoes.Count == 5)
-        {
-            ref var aoe = ref _aoes.Ref(0);
-            var shape = new SDInvertedRect(aoe.Origin, aoe.Rotation, 30f, 30f, 12f);
-            hints.AddForbiddenZone(shape, aoe.Activation);
-        }
-        base.AddAIHints(slot, actor, assignment, hints);
+        var now = WorldState.CurrentTime;
+        _pending.RemoveAll(aoe => now > aoe.Activation.AddSeconds(1d));
     }
 }
-sealed class DeathlyRay(BossModule module) : Components.SimpleAOEs(module, (uint)AID.DeathlyRay, new AOEShapeRect(30f, 3f));
-sealed class VacuumWave(BossModule module) : Components.SimpleAOEs(module, (uint)AID.VacuumWave, new AOEShapeCone(30f, 90f.Degrees()));
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP,
-    StatesType = typeof(NecrophobiaStates),
-    ConfigType = null, // replace null with typeof(NecrophobiaConfig) if applicable
-    ObjectIDType = typeof(OID),
-    ActionIDType = typeof(AID),
-    StatusIDType = typeof(SID),
-    TetherIDType = typeof(TetherID),
-    IconIDType = typeof(IconID),
+// 老三场地是圆形电网。ARR/实测边界点约为 Z=776.06 与 Z=823.82，
+// 得到中心 (100, 800)、直径 47.76、半径约 23.88；取 23.9 保留边界余量。
+sealed class ElectricBoundary(BossModule module) : Components.GenericAOEs(module)
+{
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => [];
+
+    public override void DrawArenaForeground(int pcSlot, Actor pc)
+        => Arena.ZoneCircleOutlineUnclipped(Arena.Center, 23.9f, Colors.Danger, 3f);
+}
+
+[ModuleInfo(BossModuleInfo.Maturity.Contributed,
+    Contributors = "KanoNoUta (based on gynorhino)",
     PrimaryActorOID = (uint)OID.Necrophobia,
-    Contributors = "gynorhino",
-    Expansion = BossModuleInfo.Expansion.Dawntrail,
-    Category = BossModuleInfo.Category.Foray,
     GroupType = BossModuleInfo.GroupType.CFC,
     GroupID = 1093u,
     NameID = 14503u,
-    SortOrder = 1,
-    PlanLevel = 0)]
-[SkipLocalsInit]
-public sealed class Necrophobia(WorldState ws, Actor primary) : BossModule(ws, primary, new(100f, 800f), new ArenaBoundsCircle(24f));
+    SortOrder = 3,
+    Category = BossModuleInfo.Category.Foray,
+    Expansion = BossModuleInfo.Expansion.Dawntrail)]
+public sealed class Necrophobia : BossModule
+{
+    public Necrophobia(WorldState ws, Actor primary) : base(ws, primary, new(100f, 800f), new ArenaBoundsCircle(23.9f))
+        => Service.Logger.Information($"[FT] {GetType().Name} created (oid={primary.OID:X})");
+
+    protected override void DrawEnemies(int pcSlot, Actor pc) => Arena.Actor(PrimaryActor, allowDeadAndUntargetable: true);
+}

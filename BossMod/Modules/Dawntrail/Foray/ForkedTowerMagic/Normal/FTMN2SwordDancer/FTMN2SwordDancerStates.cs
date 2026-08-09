@@ -6,16 +6,14 @@ sealed class SwordDancerStates : StateMachineBuilder
     public SwordDancerStates(BossModule module) : base(module)
     {
         TrivialPhase()
-            .ActivateOnEnter<SwordStormCast>()
-            .ActivateOnEnter<RushShort1>()
-            .ActivateOnEnter<RushShort2>()
-            .ActivateOnEnter<TurnInner>()
-            .ActivateOnEnter<TurnOuter>()
-            .ActivateOnEnter<MartialMystique>()
-            .ActivateOnEnter<Cyclosword>()
-            .ActivateOnEnter<SwordDance>()
-            .ActivateOnEnter<Pierce>()
+            .ActivateOnEnter<SwordDancerAOEs>()
+            .ActivateOnEnter<LeapLandingAOE>()
+            .ActivateOnEnter<SwordSpinAOEs>()
+            .ActivateOnEnter<DancingSwordPreview>()
+            .ActivateOnEnter<SwordRush>()
+            .ActivateOnEnter<SwordBladeRects>()
             .ActivateOnEnter<Steelsbreath>()
-            .ActivateOnEnter<RushSurgesword>();
+            .ActivateOnEnter<SurgeswordSequence>()
+            .ActivateOnEnter<ElectricBoundary>();
     }
 }
