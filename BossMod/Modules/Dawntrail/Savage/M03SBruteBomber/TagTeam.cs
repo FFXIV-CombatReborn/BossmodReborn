@@ -21,8 +21,8 @@ sealed class TagTeamLariatCombo(BossModule module) : Components.GenericAOEs(modu
             var safespot = _safespot[slot];
             if (safespot == null)
             {
-                var safeShapes = new RectangleSE[1];
-                var dangerShapes = new RectangleSE[1];
+                var safeShapes = new List<Shape>();
+                var dangerShapes = new List<Shape>();
                 var aoes = CollectionsMarshal.AsSpan(AOEs);
                 for (var i = 0; i < count; ++i)
                 {
@@ -32,11 +32,11 @@ sealed class TagTeamLariatCombo(BossModule module) : Components.GenericAOEs(modu
 
                     if (isSafe)
                     {
-                        safeShapes[0] = shape;
+                        safeShapes.Add(shape);
                     }
                     else
                     {
-                        dangerShapes[0] = shape;
+                        dangerShapes.Add(shape);
                     }
                 }
 
