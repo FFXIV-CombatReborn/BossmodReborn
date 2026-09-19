@@ -42,7 +42,6 @@ public enum AID : uint
     CombustingBladesSpawn = 48591, // _Gen_CombustingBlade->GuttlerTheGutter, no cast, single-target
     CombustingBladesSpawn1 = 48592, // _Gen_CombustingBlade->GuttlerTheGutter, no cast, single-target
     CombustingBladesSpawn2 = 48593, // _Gen_CombustingBlade->GuttlerTheGutter, no cast, single-target
-    // TODO confirm these deals no damage - they appear to deal 0 damage, even if they do damage, I don't think you can dodge them
     CombustingBladesTeleport = 48594, // Helper->self, 0.5s cast, range 2 circle
     CombustingBladesTeleport1 = 48595, // Helper->self, 0.7s cast, range 2 circle
     CombustingBladesTeleport2 = 48596, // Helper->self, 0.9s cast, range 2 circle
@@ -107,8 +106,7 @@ sealed class Gyrocleave(BossModule module) : Components.SimpleAOEs(module, (uint
 sealed class GluttonousGoring(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GluttonousGoring, 40.0f);
 sealed class MoltenMetalBaitAOE(BossModule module) : Components.SimpleAOEs(module, (uint)AID.MoltenMetalBaitCircle, 6.0f);
 
-// TODo confirm aoe damage size - its a flare - last checks: 30.0f - ~600 damage, 35.0f - ~464 damage, test going further out again
-sealed class BeastlyFlare(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BeastlyFlare, 35.0f);
+sealed class BeastlyFlare(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BeastlyFlare, 30.0f);
 sealed class GluttonousGutting(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GluttonousGutting, new AOEShapeRect(50.0f, 20.0f));
 
 sealed class MagicalCombustion : Components.SimpleAOEs
