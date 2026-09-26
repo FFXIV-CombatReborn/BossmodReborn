@@ -185,7 +185,7 @@ public sealed class CavalierPiece(WorldState ws, Actor primary) : BossModule(ws,
     }
 
     private readonly string[] _prePullHints = [
-        "This fight is easy if you kill every pack wave together and before the 4th pack spawn otherwise it starts getting complicated."
+        "Bone bishops will periodically spawn, these will drop an orb when killed that the boss will absorb when it casts Doubling. Up to 5 orbs can be absorbed, avoid having 5+ orbs accumulate or else mechanics will be undodgable"
     ];
 
     public override string[] PrePullHints => _prePullHints;

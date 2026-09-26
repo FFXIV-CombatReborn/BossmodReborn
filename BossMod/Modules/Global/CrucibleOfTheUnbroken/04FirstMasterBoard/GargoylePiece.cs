@@ -1,4 +1,4 @@
-﻿namespace BossMod.Modules.Global.CrucibleOfTheUnbroken.FirstMasterBoard.GargoylePiece;
+﻿namespace BossMod.Modules.CrucibleOfTheUnbroken.FirstMasterBoard.GargoylePiece;
 
 public enum OID : uint {
     GargoylePiece = 0x4CC2,
