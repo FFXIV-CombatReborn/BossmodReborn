@@ -1,4 +1,4 @@
-﻿namespace BossMod.Stormblood.Ultimate.UCOB;
+namespace BossMod.Stormblood.Ultimate.UCOB;
 
 sealed class P3AethericProfusion(UCOB module) : Components.CastCounter(module, (uint)AID.AethericProfusion)
 {
@@ -44,19 +44,19 @@ sealed class P3AethericProfusion(UCOB module) : Components.CastCounter(module, (
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (!Active)
+        if (!Active || _neurolinksSorted.Length < 3 || _assignments.Length == 0)
         {
             return;
         }
 
-        var myLink = _neurolinksSorted[assignment switch
+        var myLink = _assignments[slot] switch
         {
             PartyRolesConfig.Assignment.MT => 2,
             PartyRolesConfig.Assignment.OT => 0,
             _ => 1
-        }];
+        };
 
-        hints.AddForbiddenZone(new SDInvertedCircle(myLink.Position, 2f), _deadline);
+        hints.AddForbiddenZone(new SDInvertedCircle(_neurolinksSorted[myLink].Position, 2f), _deadline);
     }
 
     public override void OnActorPlayActionTimelineEvent(Actor actor, ushort id)
