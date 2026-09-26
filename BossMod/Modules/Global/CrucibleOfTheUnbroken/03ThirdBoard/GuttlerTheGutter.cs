@@ -71,33 +71,26 @@ public enum TetherID : uint
     OverpoweringPointTether = 1, // GuttlerTheGutter->player
 }
 
-sealed class AutoAttack(BossModule module) : Components.Cleave(module, (uint)AID.AutoAttack, new AOEShapeCone(9f, 55f.Degrees()))
-{
+sealed class AutoAttack(BossModule module) : Components.Cleave(module, (uint)AID.AutoAttack, new AOEShapeCone(9f, 55f.Degrees()), activeWhileCasting: false) {
     private readonly BeastlyAura? beastlyAura = module.FindComponent<BeastlyAura>();
 
-    public override void AddHints(int slot, Actor actor, TextHints hints)
-    {
-        if (beastlyAura == null || beastlyAura.knockbacks.Count > 0)
-        {
+    public override void AddHints(int slot, Actor actor, TextHints hints) {
+        if (beastlyAura == null || beastlyAura.knockbacks.Count > 0) {
             return;
         }
 
         base.AddHints(slot, actor, hints);
     }
 
-    // Set the cleave aoe to be 1.5f so it doesn't overlap with really bad mechanics such as the cage - getting hitting by the cleave is fine
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
-    {
-        if (beastlyAura == null || beastlyAura.knockbacks.Count > 0)
-        {
+    // Set the cleave aoe to be maxValue so it doesn't overlap with really bad mechanics such as the cage - getting hitting by the cleave is fine
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+        if (beastlyAura == null || beastlyAura.knockbacks.Count > 0) {
             return;
         }
 
-        foreach (var (origin, target, angle) in OriginsAndTargets())
-        {
-            if (actor != target)
-            {
-                hints.AddForbiddenZone(Shape, origin.Position, angle, WorldState.FutureTime(1.5d));
+        foreach (var (origin, target, angle) in OriginsAndTargets()) {
+            if (actor != target) {
+                hints.AddForbiddenZone(Shape, origin.Position, angle, DateTime.MaxValue);
             }
         }
     }
@@ -166,35 +159,40 @@ sealed class DeadlyDemesne(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
-sealed class MoltenMetalBait(BossModule module) : Components.BaitAwayIcon(module, new AOEShapeCircle(6.0f), (uint)IconID.MoltenMetal, centerAtTarget: true)
-{
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
-    {
-        if (spell.Action.ID == (uint)AID.MoltenMetalBaitCircle)
-        {
+sealed class MoltenMetalBait(BossModule module) : Components.BaitAwayIcon(module, new AOEShapeCircle(6.0f), (uint)IconID.MoltenMetal, centerAtTarget: true) {
+    private readonly WPos[] safeSpots = [new WPos(520.0f, -440.0f), new WPos(520.0f, -400.0f)];
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
+        if (spell.Action.ID == (uint)AID.MoltenMetalBaitCircle) {
             CurrentBaits.Clear();
         }
     }
 
-    public override void AddHints(int slot, Actor actor, TextHints hints)
-    {
-        if (CurrentBaits.Count == 0)
-        {
+    public override void AddHints(int slot, Actor actor, TextHints hints) {
+        if (CurrentBaits.Count == 0) {
             return;
         }
 
         hints.Add("Bait far away on one side of the map!");
     }
 
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
-    {
-        if (CurrentBaits.Count == 0)
-        {
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+        if (CurrentBaits.Count == 0 || !IsBaitTarget(actor)) {
             return;
         }
 
-        hints.AddForbiddenZone(new SDInvertedCircle(new WPos(520.0f, -400.0f), 2.0f));
+        var closestSpot = safeSpots[0];
+        var bestDistance = float.MaxValue;
 
+        foreach (var spot in safeSpots) {
+            var distance = (spot - actor.Position).LengthSq();
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                closestSpot = spot;
+            }
+        }
+
+        hints.AddForbiddenZone(new SDInvertedCircle(closestSpot, 2.0f));
     }
 }
 
