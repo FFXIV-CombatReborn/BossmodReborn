@@ -39,31 +39,28 @@ sealed class Earthrender(BossModule module) : Components.SimpleAOEs(module, (uin
 sealed class SandTempest(BossModule module) : Components.RaidwideCast(module, (uint)AID.SandTempest, "Applies blind debuff");
 
 // Eventcast is triggered but the bait actually resolves a little bit later, so a timer of 1.0 second is added
-sealed class EarthShaker(BossModule module) : Components.BaitAwayIcon(module, new AOEShapeCone(60f, 75f.Degrees()), (uint)IconID.EarthShake,
-    (uint)AID.EarthShaker, 3.3d)
-{
+sealed class EarthShaker : Components.BaitAwayIcon {
     private const double additionalActivationTime = 1d;
     private DateTime? eventCastActivation;
 
-    public override void OnEventCast(Actor caster, ActorCastEvent spell)
-    {
-        if (CurrentBaits.Count != 0 && spell.Action.ID == WatchedAction)
-        {
+    public EarthShaker(BossModule module) : base(module, new AOEShapeCone(60f, 75f.Degrees()), (uint)IconID.EarthShake, (uint)AID.EarthShaker, 3.3d) {
+        AllowPetTargets = true;
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
+        if (CurrentBaits.Count != 0 && spell.Action.ID == WatchedAction) {
             eventCastActivation = WorldState.CurrentTime;
         }
     }
 
-    public override void Update()
-    {
+    public override void Update() {
         base.Update();
 
-        if (eventCastActivation == null || CurrentBaits.Count == 0)
-        {
+        if (eventCastActivation == null || CurrentBaits.Count == 0) {
             return;
         }
 
-        if (eventCastActivation.Value.AddSeconds(additionalActivationTime) > WorldState.CurrentTime)
-        {
+        if (eventCastActivation.Value.AddSeconds(additionalActivationTime) > WorldState.CurrentTime) {
             return;
         }
 
