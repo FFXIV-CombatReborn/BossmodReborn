@@ -84,15 +84,14 @@ sealed class AutoAttack(BossModule module) : Components.Cleave(module, (uint)AID
 
     // Set the cleave aoe to be maxValue so it doesn't overlap with really bad mechanics such as the cage - getting hitting by the cleave is fine
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+        AllowPetTargets = true;
+        NextExpected = DateTime.MaxValue;
+
         if (beastlyAura == null || beastlyAura.knockbacks.Count > 0) {
             return;
         }
 
-        foreach (var (origin, target, angle) in OriginsAndTargets()) {
-            if (actor != target) {
-                hints.AddForbiddenZone(Shape, origin.Position, angle, DateTime.MaxValue);
-            }
-        }
+        base.AddAIHints(slot, actor, assignment, hints);
     }
 }
 
