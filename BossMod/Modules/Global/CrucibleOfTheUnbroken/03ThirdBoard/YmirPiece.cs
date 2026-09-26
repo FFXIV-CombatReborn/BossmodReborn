@@ -159,7 +159,8 @@ public sealed class YmirPiece(WorldState ws, Actor primary) : BossModule(ws, pri
     }
 
     private readonly string[] _prePullHints = [
-        "This fight is easy, break shell, kill the snail then kill the 2nd boss.",
+        "The ymir will take reduced damage until its shell is broken. When its shell is broken it will move to the closest shell and enter it. Stun and bind can help delay the ymir from reaching a shell.",
+        "Paralyzing Spikes: Buff on sahagin that inflicts paralysis if hit. Casted at the start of the fight and whenever ymir gets a new shell",
         "Interrupt the Dreadwash spell or use your pet to take the damage down."
     ];
 
