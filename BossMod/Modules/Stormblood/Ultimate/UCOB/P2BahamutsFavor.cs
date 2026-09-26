@@ -372,7 +372,7 @@ sealed class P2BahamutsFavorDeathstorm(BossModule module) : BossComponent(module
                         var isCovered = false;
                         for (var j = 0; j < len; ++j)
                         {
-                            if (position.InCircle(aoes[i].Origin, 4f))
+                            if (position.InCircle(aoes[j].Origin, 4f))
                             {
                                 isCovered = true;
                                 break;
