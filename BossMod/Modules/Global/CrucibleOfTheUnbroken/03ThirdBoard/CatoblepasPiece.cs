@@ -27,66 +27,107 @@ public enum AID : uint
 
 public enum SID : uint
 {
-    _Gen_ = 2056, // CatoblepasPiece->4C9D/4C9C, extra=0xAE
-    _Gen_Petrification = 4891, // Helper->player, extra=0x0
+    Unknown = 2056, // CatoblepasPiece->4C9D/4C9C, extra=0xAE, possibly eye with gaze
+    Petrification = 4891, // Helper->player, extra=0x0
 
 }
 
 public enum TetherID : uint
 {
-    _Gen_Tether_chn_ice_mouth01x = 195, // 4C9D/4C9C->CatoblepasPiece
+    ShiftingGaze = 195, // 4C9D/4C9C->CatoblepasPiece
 }
+
 sealed class BestialRoar(BossModule module) : Components.RaidwideCast(module, (uint)AID.BestialRoar);
+
 sealed class SinisterGleam(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SinisterGleam, new AOEShapeCone(60f, 90f.Degrees()));
-sealed class DemonicEye(BossModule module) : Components.Voidzone(module, 2f, GetEyes, 2f)
-{
-    private static Actor[] GetEyes(BossModule module)
-    {
-        var eyes = module.Enemies((uint)OID.DemonicEyeCircle);
-        eyes.AddRange(module.Enemies((uint)OID.DemonicEyeDonut));
-        var count = eyes.Count;
-        if (count == 0)
-            return [];
 
-        var voidzones = new Actor[count];
-        var index = 0;
-        for (var i = 0; i < count; ++i)
-        {
-            var z = eyes[i];
-            if (z.Renderflags == 0)
-                voidzones[index++] = z;
-        }
-        return voidzones[..index];
-    }
-}
 sealed class DemonicEyeCircle(BossModule module) : Components.Voidzone(module, 2f, module => module.Enemies((uint)OID.DemonicEyeCircle).Where(z => z.Renderflags == 0), 2f);
-sealed class DemonicEyeDonut(BossModule module) : Components.Voidzone(module, 2f, module => module.Enemies((uint)OID.DemonicEyeDonut).Where(z => z.Renderflags == 0), 2f);
-sealed class NearFarburst(BossModule module) : Components.GenericAOEs(module)
+
+sealed class DemonicEyeDonut(BossModule module) : Components.Voidzone(module, 2f, module => Service.Config.Get<CatoblepasPieceConfig>().PopDonut ? [] : module.Enemies((uint)OID.DemonicEyeDonut).Where(z => z.Renderflags == 0), 2f);
+
+sealed class DemonicEyes(BossModule module) : BossComponent(module)
 {
-    private readonly List<AOEInstance> _aoes = [];
     private readonly List<DemonicEye> _eyes = [];
-    private readonly AOEShapeCircle _circle = new(25f);
-    private readonly AOEShapeDonut _donut = new(5f, 50f);
-
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    private readonly List<DemonicEye> _near = [];
+    private readonly List<DemonicEye> _far = [];
+    public ReadOnlySpan<DemonicEye> Near => CollectionsMarshal.AsSpan(_near);
+    public ReadOnlySpan<DemonicEye> Far => CollectionsMarshal.AsSpan(_far);
+    public ReadOnlySpan<DemonicEye> Gazes
     {
-        if (_aoes.Count == 0)
+        get
         {
-            return [];
-        }
+            List<DemonicEye> eyes = [];
+            var nearcount = _near.Count;
+            for (var i = 0; i < nearcount; ++i)
+            {
+                var eye = _near[i];
+                if (eye.HasGaze)
+                {
+                    eyes.Add(eye);
+                }
+            }
 
-        var aoes = CollectionsMarshal.AsSpan(_aoes);
-        var count = aoes.Length;
-        var max = count > 2 ? 2 : count;
-        return aoes[..max];
+            var farcount = _far.Count;
+            for (var i = 0; i < farcount; ++i)
+            {
+                var eye = _far[i];
+                if (eye.HasGaze)
+                {
+                    eyes.Add(eye);
+                }
+            }
+
+            var eyespan = CollectionsMarshal.AsSpan(eyes);
+            RefSort.Sort(eyespan, new DemonicEyeActivationComparer());
+            return eyespan;
+        }
     }
 
     public override void OnActorCreated(Actor actor)
     {
         if (actor.OID is (uint)OID.DemonicEyeCircle or (uint)OID.DemonicEyeDonut)
         {
-            var position = actor.Position;
-            _eyes.Add(new(actor, position, actor.OID == (uint)OID.DemonicEyeCircle ? _circle : _donut));
+            _eyes.Add(new(actor, false, actor.Position));
+        }
+    }
+
+    public override void OnTethered(Actor source, in ActorTetherInfo tether)
+    {
+        // all 3 tethers go out after eyes spawn and before any move
+        if (tether.ID == (uint)TetherID.ShiftingGaze)
+        {
+            var count = _eyes.Count;
+            for (var i = 0; i < count; ++i)
+            {
+                var eye = _eyes[i];
+                if (eye.Actor == source)
+                {
+                    eye.HasGaze = true;
+                    return;
+                }
+            }
+        }
+    }
+
+    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    {
+        var list = spell.Action.ID switch
+        {
+            (uint)AID.Nearburst1 => _near,
+            (uint)AID.Farburst1 => _far,
+            _ => []
+        };
+        if (list.Count > 0)
+        {
+            var count = list.Count;
+            for (var i = 0; i < count; ++i)
+            {
+                if (list[i].Actor.Position.AlmostEqual(spell.LocXZ, 1f))
+                {
+                    list.RemoveAt(i);
+                    return;
+                }
+            }
         }
     }
 
@@ -104,8 +145,9 @@ sealed class NearFarburst(BossModule module) : Components.GenericAOEs(module)
         for (var i = 0; i < count; ++i)
         {
             var eye = _eyes[i];
+            var actor = eye.Actor;
             var start = eye.StartPosition;
-            var cur = eye.Actor.Position;
+            var cur = actor.Position;
 
             if (start.AlmostEqual(cur, 0.5f))
             {
@@ -120,8 +162,16 @@ sealed class NearFarburst(BossModule module) : Components.GenericAOEs(module)
                 var angle = Angle.AnglesFullCompass[j];
                 if (startrot.AlmostEqual(angle, 20f.Degrees().Rad))
                 {
-                    var finalPos = center + (angle + 135f.Degrees() * (ccw ? 1f : -1f)).ToDirection() * 20f;
-                    _aoes.Add(new(eye.Shape, finalPos, default, activation, actorID: eye.Actor.InstanceID));
+                    // ring slightly larger than arena
+                    var finalPos = center + (angle + 135f.Degrees() * (ccw ? 1f : -1f)).ToDirection() * 21f;
+                    if (actor.OID == (uint)OID.DemonicEyeCircle)
+                    {
+                        _near.Add(new(actor, false, start, finalPos, activation, eye.HasGaze));
+                    }
+                    else
+                    {
+                        _far.Add(new(actor, true, start, finalPos, activation, eye.HasGaze));
+                    }
                     _eyes.RemoveAt(i);
                     return;
                 }
@@ -129,26 +179,187 @@ sealed class NearFarburst(BossModule module) : Components.GenericAOEs(module)
         }
     }
 
-    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    public class DemonicEye(Actor actor, bool isDonut, WPos startPos, WPos endPos = default, DateTime activation = default, bool hasGaze = false)
     {
-        if (_aoes.Count != 0 && spell.Action.ID is (uint)AID.Nearburst1 or (uint)AID.Farburst1)
+        public Actor Actor = actor;
+        public bool IsDonut = isDonut;
+        public WPos StartPosition = startPos;
+        public WPos EndPosition = endPos;
+        public DateTime Activation = activation;
+        public bool HasGaze = hasGaze;
+    }
+
+    private readonly struct DemonicEyeActivationComparer : IRefComparer<DemonicEye>
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Compare(ref DemonicEye a, ref DemonicEye b) => a.Activation.CompareTo(b.Activation);
+    }
+}
+
+sealed class NearBurst(BossModule module) : Components.GenericAOEs(module)
+{
+    private readonly DemonicEyes _eyes = module.FindComponent<DemonicEyes>()!;
+    private readonly CatoblepasPieceConfig _config = Service.Config.Get<CatoblepasPieceConfig>();
+    private readonly AOEShapeCircle _circle = new(25f);
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        var near = _eyes.Near;
+        if (near.Length == 0)
         {
-            _aoes.RemoveAt(0);
+            return [];
+        }
+
+        // if popping early leave some time until risky so AI can run to donut eye first
+        // better way than creating new AOEInstance each time?
+        var eye = near[0];
+        var risky = !_config.PopDonut || WorldState.CurrentTime > eye.Activation.AddSeconds(-10d);
+        return eye.EndPosition == default ? [] : CollectionsMarshal.AsSpan([new AOEInstance(_circle, eye.EndPosition, activation: eye.Activation, risky: risky, actorID: eye.Actor.InstanceID, shapeDistance: _circle.Distance(eye.EndPosition, default))]);
+    }
+}
+
+sealed class FarBurst(BossModule module) : Components.GenericAOEs(module)
+{
+    private readonly DemonicEyes _eyes = module.FindComponent<DemonicEyes>()!;
+    private readonly CatoblepasPieceConfig _config = Service.Config.Get<CatoblepasPieceConfig>();
+    private readonly AOEShapeDonut _donut = new(5f, 50f);
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        if (!_config.PopDonut)
+        {
+            var far = _eyes.Far;
+            if (far.Length == 0)
+            {
+                return [];
+            }
+
+            var eye = far[0];
+            return eye.EndPosition == default ? [] : CollectionsMarshal.AsSpan([new AOEInstance(_donut, eye.EndPosition, activation: eye.Activation, actorID: eye.Actor.InstanceID, shapeDistance: _donut.Distance(eye.EndPosition, default))]);
+        }
+
+        return [];
+    }
+
+    public override void DrawArenaBackground(int pcSlot, Actor pc)
+    {
+        if (!_config.PopDonut)
+        {
+            base.DrawArenaBackground(pcSlot, pc);
+        }
+        else
+        {
+            var far = _eyes.Far;
+            if (far.Length != 0)
+            {
+                var eye = far[0];
+                Arena.ZoneCircle(eye.Actor.Position, 1.5f, Colors.SafeFromAOE);
+            }
         }
     }
 
-    private class DemonicEye(Actor actor, WPos startPos, AOEShape shape)
+    public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        public Actor Actor = actor;
-        public WPos StartPosition = startPos;
-        public AOEShape Shape = shape;
-        public bool HasGaze = false;
+        if (!_config.PopDonut)
+        {
+            base.AddHints(slot, actor, hints);
+        }
+        else
+        {
+            if (_eyes.Far.Length != 0)
+            {
+                hints.Add("Run to donut orb to pop early!", false);
+            }
+        }
+    }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        if (!_config.PopDonut)
+        {
+            base.AddAIHints(slot, actor, assignment, hints);
+        }
+        else
+        {
+            var far = _eyes.Far;
+            if (far.Length != 0)
+            {
+                // have to be in front to trigger explosion
+                var eye = far[0].Actor;
+                var position = eye.Position;
+                var rotation = eye.Rotation;
+                var direction = rotation.ToDirection() * 1.5f;
+                var goalpos = position + direction;
+                hints.GoalZones.Add(AIHints.GoalSingleTarget(goalpos, 1f, 5f));
+            }
+        }
     }
 }
 
 sealed class FalseDemonEye(BossModule module) : Components.GenericGaze(module, (uint)AID.FalseDemonEye)
 {
-    public override ReadOnlySpan<Eye> ActiveEyes(int slot, Actor actor) => [];
+    // what is best to handle gaze if popping early? 0.5s cast time, actual gaze is castevent
+    // want to keep gaze for circles
+    private readonly DemonicEyes _eyes = module.FindComponent<DemonicEyes>()!;
+    private readonly CatoblepasPieceConfig _config = Service.Config.Get<CatoblepasPieceConfig>();
+    private Eye? _gaze = null;
+
+    public override ReadOnlySpan<Eye> ActiveEyes(int slot, Actor actor)
+    {
+        var gazes = _eyes.Gazes;
+        var gcount = gazes.Length;
+        if (gcount == 0)
+        {
+            return [];
+        }
+
+        var eye = gazes[0];
+        if (eye.EndPosition == default)
+        {
+            return [];
+        }
+
+        if (_config.PopDonut)
+        {
+            if (eye.IsDonut)
+            {
+                if (_gaze != null)
+                {
+                    return CollectionsMarshal.AsSpan([_gaze.Value]);
+                }
+            }
+            else
+            {
+                return CollectionsMarshal.AsSpan([new Eye(eye.EndPosition, eye.Activation, actorID: eye.Actor.InstanceID, eyeCenter: eye.EndPosition)]);
+            }
+        }
+        else
+        {
+            return CollectionsMarshal.AsSpan([new Eye(eye.EndPosition, eye.Activation, actorID: eye.Actor.InstanceID, eyeCenter: eye.EndPosition)]);
+        }
+
+        return [];
+    }
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (_config.PopDonut && spell.Action.ID == (uint)AID.Farburst1 && _eyes.Gazes is var gaze && gaze.Length != 0)
+        {
+            var eye = gaze[0];
+            if (spell.LocXZ.AlmostEqual(eye.Actor.Position, 1f))
+            {
+                _gaze = new(spell.LocXZ, eyeCenter: IndicatorWorldPos(spell.LocXZ));
+            }
+        }
+    }
+
+    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    {
+        if (_config.PopDonut && spell.Action.ID == (uint)AID.Farburst1 && _gaze != null)
+        {
+            _gaze = null;
+        }
+    }
 }
 
 sealed class CatoblepasPieceStates : StateMachineBuilder
@@ -157,14 +368,31 @@ sealed class CatoblepasPieceStates : StateMachineBuilder
     {
         TrivialPhase()
             .ActivateOnEnter<BestialRoar>()
-            //.ActivateOnEnter<DemonicEye>()
+            .ActivateOnEnter<DemonicEyes>()
             .ActivateOnEnter<DemonicEyeCircle>()
             .ActivateOnEnter<DemonicEyeDonut>()
-            .ActivateOnEnter<NearFarburst>()
+            .ActivateOnEnter<NearBurst>()
+            .ActivateOnEnter<FarBurst>()
             .ActivateOnEnter<FalseDemonEye>()
             .ActivateOnEnter<SinisterGleam>();
     }
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.CatoblepasPiece, Contributors = "gynorhino", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14577u, SortOrder = 3)]
-public sealed class CatoblepasPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f));
+public sealed class CatoblepasPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f))
+{
+    private readonly string[] _prePullHints = [
+        "After the raidwide, spawns 3x circle orbs and 3x donut orbs. Getting hit will petrify the player",
+        "Orbs explode either on reaching the edge of the arena or the player running into it. Pop donuts early if you want",
+        "After the 1st time, boss will tether 3 orbs that will have an additional gaze mechanic that petrifies"
+    ];
+
+    public override string[] PrePullHints => _prePullHints;
+}
+
+[ConfigDisplay(Order = 0x10, Parent = typeof(GlobalConfig))]
+public sealed class CatoblepasPieceConfig : ConfigNode
+{
+    [PropertyDisplay("Try to pop donut AOEs early by running into it")]
+    public bool PopDonut = false;
+}
