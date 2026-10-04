@@ -1,4 +1,4 @@
-﻿namespace BossMod.AI;
+namespace BossMod.AI;
 
 [ConfigDisplay(Name = "Automovement", Order = 7)]
 sealed class AIConfig : ConfigNode
@@ -50,10 +50,10 @@ sealed class AIConfig : ConfigNode
     public float MaxDistanceToTarget = 2.6f;
 
     [PropertyDisplay("Minimum distance to hitbox")]
-    public float MinDistance = default;
+    public float MinDistance = 0f;
 
-    [PropertyDisplay("Preferred distance to forbidden zones")]
-    public float PreferredDistance = default;
+    [PropertyDisplay("Preferred distance to forbidden zones", tooltip: "Internally reduced to maximum 3y to preserve useful pathfinding.")]
+    public float PreferredDistance = 0f;
 
     [PropertyDisplay("Enable auto AFK", tooltip: "Enables auto AFK if out of combat. While AFK AI will not use autorotation or target anything")]
     public bool AutoAFK = false;
