@@ -1,4 +1,4 @@
-﻿namespace BossMod.Dawntrail.Extreme.Ex3QueenEternal;
+namespace BossMod.Dawntrail.Extreme.Ex3QueenEternal;
 
 sealed class ProsecutionOfWar(BossModule module) : Components.TankSwap(module, (uint)AID.ProsecutionOfWar, (uint)AID.ProsecutionOfWar, (uint)AID.ProsecutionOfWarAOE, default, 3.1d);
 sealed class DyingMemory(BossModule module) : Components.CastCounter(module, (uint)AID.DyingMemory);
@@ -23,5 +23,12 @@ public sealed class Ex3QueenEternal(WorldState ws, Actor primary) : BossModule(w
     {
         Arena.Actor(PrimaryActor);
         Arena.Actor(_bossP2);
+    }
+
+    public override int? ResolveArenaProjectionLayer(Actor actor)
+    {
+        var arenaChanges = FindComponent<VirtualShiftEarth>();
+
+        return arenaChanges != null ? arenaChanges.AdjustArenaProjectionLayer(actor) : base.ResolveArenaProjectionLayer(actor);
     }
 }
