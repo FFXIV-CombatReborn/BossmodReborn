@@ -382,7 +382,7 @@ public abstract class BossModule : IDisposable
     // Resolves an actor's current authored arena floor independently of world-projection settings.
     // Disjoint layers select by X/Z containment; overlapping floors use Y plus per-actor hysteresis
     // to prevent jumps near a midpoint from flickering hints, AI restrictions and pathfinding maps.
-    public int? ResolveArenaProjectionLayer(Actor actor)
+    public virtual int? ResolveArenaProjectionLayer(Actor actor)
     {
         if (Bounds is not ArenaBoundsCustom { WorldProjectionLayers.Length: > 0 } custom)
         {
