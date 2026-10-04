@@ -1,4 +1,4 @@
-﻿using BossMod.Autorotation.xan;
+using BossMod.Autorotation.xan;
 using BossMod.Pathfinding;
 
 namespace BossMod.Autorotation.MiscAI;
@@ -7,7 +7,7 @@ public sealed class NormalMovement : RotationModule
 {
     public enum Track { Destination, Range, Cast, SpecialModes, ForbiddenZoneCushion, DelayMovement, SeparateDodgeDelay, DodgeDelayMovement }
     public enum DestinationStrategy { None, Pathfind, Explicit }
-    public enum RangeStrategy { Any, MaxRange, GreedGCDExplicit, GreedLastMomentExplicit, GreedAutomatic }
+    public enum RangeStrategy { Any, MaxRange, GreedGCDExplicit, GreedLastMomentExplicit, GreedAutomatic, Drag }
     public enum CastStrategy { Leeway, Explicit, Greedy, FinishMove, DropMove, FinishInstants, DropInstants }
     public enum ForbiddenZoneCushionStrategy { None, Small, Medium, Large }
     public enum SpecialModesStrategy { Automatic, Ignore }
@@ -44,7 +44,7 @@ public sealed class NormalMovement : RotationModule
             .AddOption(RangeStrategy.GreedGCDExplicit, "Stay within effective range until last GCD; ensure destination is reached by the plan entry end", supportedTargets: ActionTargets.Hostile)
             .AddOption(RangeStrategy.GreedLastMomentExplicit, "Stay within effective range until last possible moment; ensure destination is reached by the plan entry end", supportedTargets: ActionTargets.Hostile)
             .AddOption(RangeStrategy.GreedAutomatic, "Stay within effective range as long as possible; try to ensure safety is reached before mechanic resolves", supportedTargets: ActionTargets.Hostile)
-            /*.AddOption(RangeStrategy.Drag, "Drag", "Drag the target to specified spot, but maintain gcd uptime", supportedTargets: ActionTargets.Hostile)*/; // TODO
+            .AddOption(RangeStrategy.Drag, "Drag", supportedTargets: ActionTargets.Hostile);
 
         res.Define(Track.Cast).As<CastStrategy>("Cast", "Cast", 10)
             .AddOption(CastStrategy.Leeway, "Continue slidecasting as long as there is enough time to get to safety")
@@ -191,8 +191,11 @@ public sealed class NormalMovement : RotationModule
 
         if (Hints.FindEnemy(primaryTarget) is { } enemy && enemy.Actor.TargetID == Player.InstanceID)
         {
-            if (enemy.CanMove && enemy.DesiredPosition is { } pos)
-                Hints.GoalZones.Add(Hints.PullTargetToLocation(enemy.Actor, pos, Player, GCD, 0.5f));
+            if (enemy.CanMove && (enemy.DesiredPosition is { } || strategy.Option(Track.Range).As<RangeStrategy>() == RangeStrategy.Drag))
+            {
+                var center = Bossmods.LoadedModules.Count != 0 ? Bossmods.LoadedModules[0].Arena.Center : new WPos(100f, 100f);
+                Hints.GoalZones.Add(Hints.PullTargetToLocation(enemy.Actor, enemy.DesiredPosition ?? center, Player, GCD, 0.5f));
+            }
 
             if (enemy.DesiredRotation is { } rot)
             {
