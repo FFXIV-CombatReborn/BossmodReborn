@@ -1,15 +1,17 @@
-﻿namespace BossMod.Dawntrail.Extreme.Ex3QueenEternal;
+namespace BossMod.Dawntrail.Extreme.Ex3QueenEternal;
 
 sealed class LegitimateForce(BossModule module) : Components.GenericAOEs(module)
 {
     public readonly List<AOEInstance> AOEs = [with(2)];
-    private static readonly AOEShapeRect rect = new(20f, 40f);
+    private readonly AOEShapeRect rect = new(60f, 15f);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = AOEs.Count;
         if (count == 0)
+        {
             return [];
+        }
         var aoes = CollectionsMarshal.AsSpan(AOEs);
         if (count == 1)
         {
@@ -23,17 +25,21 @@ sealed class LegitimateForce(BossModule module) : Components.GenericAOEs(module)
         switch (spell.Action.ID)
         {
             case (uint)AID.LegitimateForceFirstR:
-                AddAOEs(-90f, 90f);
+                AddAOEs(true);
                 break;
             case (uint)AID.LegitimateForceFirstL:
-                AddAOEs(90f, -90f);
+                AddAOEs(false);
                 break;
         }
-        void AddAOEs(float first, float second)
+        void AddAOEs(bool rightFirst)
         {
-            AddAOE(first);
-            AddAOE(second, 3.1d, false); // intentionally caster.Position here, since these are not the actual aoe spell casts
-            void AddAOE(float offset, double delay = default, bool first = true) => AOEs.Add(new(rect, caster.Position, spell.Rotation + offset.Degrees(), Module.CastFinishAt(spell, delay), first ? Colors.Danger : default, first));
+            WDir right = new(-15f, -10f);
+            WDir left = new(15f, -10f);
+            var rot = spell.Rotation;
+            var pos = caster.Position;
+            AddAOE(rightFirst ? right : left);
+            AddAOE(rightFirst ? left : right, 3.1d, false);
+            void AddAOE(WDir offset, double delay = default, bool first = true) => AOEs.Add(new(rect, (pos + offset).Quantized(), rot, Module.CastFinishAt(spell, delay), first ? Colors.Danger : default, first));
         }
     }
 
@@ -47,7 +53,9 @@ sealed class LegitimateForce(BossModule module) : Components.GenericAOEs(module)
             case (uint)AID.LegitimateForceSecondR:
                 ++NumCasts;
                 if (AOEs.Count != 0)
+                {
                     AOEs.RemoveAt(0);
+                }
                 break;
         }
     }
