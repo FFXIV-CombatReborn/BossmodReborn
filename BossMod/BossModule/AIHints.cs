@@ -27,8 +27,8 @@ public sealed class AIHints
         //public float TimeToKill;
         public float AttackStrength = 0.05f; // target's predicted HP percent is decreased by this amount (0.05 by default)
         public bool CanMove = true;
-        public WPos? DesiredPosition = actor.Position; // tank AI will try to move enemy to this position
-        public Angle? DesiredRotation = actor.Rotation; // tank AI will try to rotate enemy to this angle
+        public WPos? DesiredPosition; // tank AI will try to move enemy to this position
+        public Angle? DesiredRotation; // tank AI will try to rotate enemy to this angle
         public float TankDistance = 2f; // enemy will start moving if distance between hitboxes is bigger than this
         public bool ShouldBeTanked = shouldBeTanked; // tank AI will try to tank this enemy
         public bool PreferProvoking; // tank AI will provoke enemy if not targeted
