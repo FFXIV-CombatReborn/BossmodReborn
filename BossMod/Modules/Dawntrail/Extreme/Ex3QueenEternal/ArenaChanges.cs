@@ -4,6 +4,24 @@ sealed class ArenaChanges(BossModule module) : BossComponent(module)
 {
     public override bool KeepOnPhaseChange => true;
     private bool firstEarthArena = true;
+    public bool EnrageCastStarted;
+    public bool EnrageCastEnded;
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.AuthorityEternal)
+        {
+            EnrageCastStarted = true;
+        }
+    }
+
+    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.AuthorityEternal)
+        {
+            EnrageCastEnded = true;
+        }
+    }
 
     public override void OnEventDirectorUpdate(uint updateID, uint param1, uint param2, uint param3, uint param4)
     {
@@ -23,7 +41,13 @@ sealed class ArenaChanges(BossModule module) : BossComponent(module)
             case 0x04u: // disjointed rect (Earth) arena
                 if (firstEarthArena)
                 {
-                    firstEarthArena = false; // don't want to switch arena here because of gravity stuff
+                    var center = new WPos(100f, 100f);
+                    var sq = new Square(new(100f, 100f), 21f);
+                    var polyFull = new RelSimplifiedComplexPolygon(sq.Contour(center));
+                    var polySplit = PolygonClipper.GetCombinedPolygon(center, Trial.T03QueenEternal.T03QueenEternal.GetSplitArenaRects());
+                    var arena = new ArenaBoundsCustom([sq], WorldProjectionLayers: [new(polyFull, 0f, borderY: 0f), new(polySplit, 0f, borderY: 0f)]);
+                    SetArena(arena, center);
+                    firstEarthArena = false;
                 }
                 else
                 {
@@ -46,7 +70,7 @@ sealed class ArenaChanges(BossModule module) : BossComponent(module)
         {
             if (state == 0x01000080u)
             {
-                SetArena(new ArenaBoundsRect(20f, 10f), new(100, 110));
+                SetArena(new ArenaBoundsRect(20f, 10f), new(100f, 110f));
             }
             else if (state == 0x02000001u)
             {
