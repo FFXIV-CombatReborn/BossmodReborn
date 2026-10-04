@@ -9,7 +9,7 @@ namespace BossMod;
 //                       rotation 0 corresponds to South, and increases counterclockwise (so East is +pi/2, North is pi, West is -pi/2)
 // - camera azimuth 0 correpsonds to camera looking North and increases counterclockwise
 // - screen coordinates - X points left to right, Y points top to bottom
-public sealed class MiniArena(WPos center, ArenaBounds bounds)
+public sealed partial class MiniArena(WPos center, ArenaBounds bounds, Func<Actor, int?>? arenaProjectionLayerResolver = null)
 {
     public static readonly BossModuleConfig Config = Service.Config.Get<BossModuleConfig>();
     private const float ActorWorldProjectionHeight = 0.5f;
@@ -213,9 +213,22 @@ public sealed class MiniArena(WPos center, ArenaBounds bounds)
                 _arenaProjectionLayerActorID = layerActorID;
                 _arenaProjectionDefaultLayerIndex = -1;
             }
-            ref var playerPosition = ref player.PosRot;
-            _arenaProjectionDefaultLayerIndex = customBounds.ResolveProjectionLayer(new WPos(ref playerPosition) - _center, playerPosition.Y, _arenaProjectionDefaultLayerIndex, WorldProjectionLayerSwitchHysteresis);
-            _frameArenaProjectionLayer = _arenaProjectionDefaultLayerIndex;
+            if (arenaProjectionLayerResolver is { } resolveLayer)
+            {
+                var selectedLayer = resolveLayer(player);
+
+                _frameArenaProjectionLayer =
+                    customBounds.IsValidProjectionLayer(selectedLayer)
+                        ? selectedLayer : null;
+
+                _arenaProjectionDefaultLayerIndex = _frameArenaProjectionLayer ?? -1;
+            }
+            else
+            {
+                ref var playerPosition = ref player.PosRot;
+                _arenaProjectionDefaultLayerIndex = customBounds.ResolveProjectionLayer(new WPos(ref playerPosition) - _center, playerPosition.Y, _arenaProjectionDefaultLayerIndex, WorldProjectionLayerSwitchHysteresis);
+                _frameArenaProjectionLayer = _arenaProjectionDefaultLayerIndex;
+            }
         }
         else
         {
@@ -1758,8 +1771,16 @@ public sealed class MiniArena(WPos center, ArenaBounds bounds)
         else
         {
             // Keep the actor's exact Y even when its 2D marker is clamped to the presentation boundary.
-            var clamped = shape != null ? _center + shape.ClosestPointOnBoundary(offset) : ClampToBounds(position);
-            ActorOutsideBounds(clamped, new Angle(ref posRot), posRot.Y, color, draw2D, drawWorld);
+            var rot = new Angle(ref posRot);
+            if (offset.AlmostEqual(default, 1f) || Math.Abs(offset.X) < 0.1f) // if actor is almost in the center of the arena, do nothing (eg donut arena or wall boss)
+            {
+                ActorOutsideBounds(position, rot, color, draw2D, drawWorld);
+            }
+            else
+            {
+                var clamped = shape != null ? _center + shape.ClosestPointOnBoundary(offset) : ClampToBounds(position);
+                ActorOutsideBounds(clamped, rot, posRot.Y, color, draw2D, drawWorld);
+            }
         }
     }
 
@@ -1789,8 +1810,15 @@ public sealed class MiniArena(WPos center, ArenaBounds bounds)
         {
             // Do not apply the global custom-arena center/axis exceptions to a layer: those points
             // can lie in a hole or an inactive island and must still clamp to the visible boundary.
-            var clamped = shape != null ? _center + shape.ClosestPointOnBoundary(offset) : ClampToBounds(position);
-            ActorOutsideBounds(clamped, rotation, color, draw2D, drawWorld);
+            if (offset.AlmostEqual(default, 1f) || Math.Abs(offset.X) < 0.1f) // if actor is almost in the center of the arena, do nothing (eg donut arena or wall boss)
+            {
+                ActorOutsideBounds(position, rotation, color, draw2D, drawWorld);
+            }
+            else
+            {
+                var clamped = shape != null ? _center + shape.ClosestPointOnBoundary(offset) : ClampToBounds(position);
+                ActorOutsideBounds(clamped, rotation, color, draw2D, drawWorld);
+            }
         }
     }
 
