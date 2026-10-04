@@ -1,4 +1,4 @@
-﻿namespace BossMod.Dawntrail.Extreme.Ex3QueenEternal;
+namespace BossMod.Dawntrail.Extreme.Ex3QueenEternal;
 
 sealed class VirtualShiftEarth(BossModule module) : BossComponent(module)
 {
@@ -7,6 +7,15 @@ sealed class VirtualShiftEarth(BossModule module) : BossComponent(module)
     public static readonly WPos Midpoint = new(100f, 94f);
     public static readonly WDir CenterOffset = new(8f, default);
     public static readonly WDir HalfExtent = new(4f, 8f);
+
+    public int? AdjustArenaProjectionLayer(Actor actor)
+    {
+        if (Flying[Raid.FindSlot(actor.InstanceID)])
+        {
+            return 0;
+        }
+        return 1;
+    }
 
     public static bool OnPlatform(WPos p)
     {
@@ -18,25 +27,20 @@ sealed class VirtualShiftEarth(BossModule module) : BossComponent(module)
         return off.X <= HalfExtent.X && off.Z <= HalfExtent.Z;
     }
 
-    public override void DrawArenaForeground(int pcSlot, Actor pc)
-    {
-        var halfExtentZ = HalfExtent.Z;
-        var halfExtentX = HalfExtent.X;
-        var color = Colors.Border;
-        Arena.AddRect(Midpoint + CenterOffset, new(default, 1f), halfExtentZ, halfExtentZ, halfExtentX, color, 2f);
-        Arena.AddRect(Midpoint - CenterOffset, new(default, 1f), halfExtentZ, halfExtentZ, halfExtentX, color, 2f);
-    }
-
     public override void OnStatusGain(Actor actor, ref ActorStatus status)
     {
         if (status.ID == (uint)SID.GravitationalAnomaly)
-            Flying[Raid.FindSlot(actor.InstanceID)] = true;
+        {
+            Flying.Set(Raid.FindSlot(actor.InstanceID));
+        }
     }
 
     public override void OnStatusLose(Actor actor, ref ActorStatus status)
     {
         if (status.ID == (uint)SID.GravitationalAnomaly)
-            Flying[Raid.FindSlot(actor.InstanceID)] = false;
+        {
+            Flying.Clear(Raid.FindSlot(actor.InstanceID));
+        }
     }
 }
 
@@ -49,9 +53,10 @@ abstract class LawsOfEarthBurst(BossModule module) : Components.GenericTowers(mo
         if (_virtualShift != null && _virtualShift.Flying[slot])
         {
             var count = Towers.Count;
+            var towers = CollectionsMarshal.AsSpan(Towers);
             for (var i = 0; i < count; ++i)
             {
-                if (!Towers[i].ForbiddenSoakers[slot])
+                if (!towers[i].ForbiddenSoakers[slot])
                 {
                     hints.Add("Go to ground!");
                     break;
