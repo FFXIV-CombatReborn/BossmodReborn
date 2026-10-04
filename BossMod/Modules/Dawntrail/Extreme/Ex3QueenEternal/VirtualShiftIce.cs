@@ -1,11 +1,11 @@
-﻿namespace BossMod.Dawntrail.Extreme.Ex3QueenEternal;
+namespace BossMod.Dawntrail.Extreme.Ex3QueenEternal;
 
 sealed class VirtualShiftIce(BossModule module) : Components.GenericAOEs(module, default, "GTFO from broken bridge!")
 {
     private readonly List<AOEInstance> _unsafeBridges = [with(4)];
-    private readonly List<Rectangle> _destroyedBridges = [new(new(95f, 96f), 3f, 2f), new(new(95f, 104f), 3f, 2f), new(new(105f, 96f), 3f, 2f), new(new(95f, 104f), 3f, 2f)];
+    private readonly List<Rectangle> _destroyedBridges = [new(new(95f, 96f), 3f, 2f), new(new(95f, 104f), 3f, 2f), new(new(105f, 96f), 3f, 2f), new(new(105f, 104f), 3f, 2f)];
 
-    private static readonly AOEShapeRect _shape = new(2, 3, 2);
+    private static readonly AOEShapeRect _shape = new(2f, 3f, 2f);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_unsafeBridges);
 
@@ -48,7 +48,7 @@ sealed class VirtualShiftIce(BossModule module) : Components.GenericAOEs(module,
                 break;
             case 0x00800004u: // bridge gets destroyed
                 RemoveUnsafeBridges(center);
-                _destroyedBridges.Add(new(center, 3, 2));
+                _destroyedBridges.Add(new(center, 3f, 2f));
                 UpdateArena();
                 break;
         }
@@ -67,7 +67,7 @@ sealed class VirtualShiftIce(BossModule module) : Components.GenericAOEs(module,
             }
         }
 
-        void UpdateArena() => Arena.Bounds = new ArenaBoundsCustom(Ex3QueenEternal.GetIceRects(), [.. _destroyedBridges]);
+        void UpdateArena() => Arena.Bounds = new ArenaBoundsCustom(Ex3QueenEternal.GetAllIceRects(), [.. _destroyedBridges]);
     }
 }
 
@@ -257,12 +257,16 @@ sealed class RaisedTribute(BossModule module) : Components.GenericWildCharge(mod
     public override void OnTethered(Actor source, in ActorTetherInfo tether)
     {
         if (tether.ID == (uint)TetherID.IceDart && Raid.FindSlot(source.InstanceID) is var slot && slot >= 0 && PlayerRoles[slot] != PlayerRole.Target)
+        {
             PlayerRoles[slot] = PlayerRole.Avoid;
+        }
     }
 
     public override void OnUntethered(Actor source, in ActorTetherInfo tether)
     {
         if (tether.ID == (uint)TetherID.IceDart && Raid.FindSlot(source.InstanceID) is var slot && slot >= 0 && PlayerRoles[slot] != PlayerRole.Target)
+        {
             PlayerRoles[slot] = PlayerRole.Share;
+        }
     }
 }
