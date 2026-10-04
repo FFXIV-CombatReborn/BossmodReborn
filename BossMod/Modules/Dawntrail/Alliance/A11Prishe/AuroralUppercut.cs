@@ -68,10 +68,11 @@ sealed class AuroralUppercutHint(BossModule module) : Components.GenericAOEs(mod
         }
         Angle a45 = 45f.Degrees(), a135 = 135f.Degrees(), a44 = 44f.Degrees(), a13 = 12.5f.Degrees(), a59 = 59f.Degrees();
         var center = Arena.Center;
+        var isState200010 = arena.Curstate == 0x00200010u;
         switch (distance)
         {
             case 12f:
-                if (arena.Curstate == 0x00020001u)
+                if (isState200010)
                 {
                     SetAOE(new(center, [new ConeV(center, 5f, a135, a59, 8), new ConeV(center, 5f, -a45, a59, 8)]));
                 }
@@ -81,7 +82,7 @@ sealed class AuroralUppercutHint(BossModule module) : Components.GenericAOEs(mod
                 }
                 break;
             case 25f:
-                if (arena.Curstate == 0x00020001u)
+                if (isState200010)
                 {
                     SetAOE(new(center, [new DonutSegmentV(center, 4f, 10f, -144f.Degrees(), a44, 8), new DonutSegmentV(center, 4f, 10f, 36f.Degrees(), a44, 8)],
                         [new ConeV(center, 10f, -a135, a13, 8), new ConeV(center, 10f, a45, a13, 8)]));
@@ -93,7 +94,7 @@ sealed class AuroralUppercutHint(BossModule module) : Components.GenericAOEs(mod
                 }
                 break;
             case 38f:
-                if (arena.Curstate == 0x00020001u)
+                if (isState200010)
                 {
                     SetAOE(new(center, [new ConeV(center, 5f, -a135, a13, 8), new ConeV(center, 5f, a45, a13, 8)]));
                 }
