@@ -1,10 +1,10 @@
-﻿using BossMod.Autorotation;
+using BossMod.Autorotation;
 using BossMod.Pathfinding;
 using System.Threading;
 
 namespace BossMod.AI;
 
-public struct Targeting(AIHints.Enemy target, float preferredRange = 2.6f, Positional preferredPosition = Positional.Any, bool preferTanking = false)
+public struct Targeting(AIHints.Enemy target, float preferredRange = 3f, Positional preferredPosition = Positional.Any, bool preferTanking = false)
 {
     public AIHints.Enemy Target = target;
     public readonly float PreferredRange = preferredRange;
@@ -103,7 +103,7 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
                     _naviDecision = naviDecision;
 
                     // there is a difference between having a small positive leeway and having a negative one for pathfinding, prefer to keep positive
-                    _naviDecision.LeewaySeconds = Math.Max(0, _naviDecision.LeewaySeconds - 0.1f);
+                    _naviDecision.LeewaySeconds = Math.Max(0f, _naviDecision.LeewaySeconds - 0.1f);
                 }
 
                 var masterIsMoving = TrackMasterMovement(master);
@@ -263,9 +263,9 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
         }
 
         _followMaster = interactTarget == null && (_config.FollowDuringCombat || !master.InCombat || (_masterPrevPos - _masterMovementStart).LengthSq() > 100f) && (_config.FollowDuringActiveBossModule || autorot.Bossmods.ActiveModule?.StateMachine.ActiveState == null) && (_config.FollowOutOfCombat || master.InCombat);
-        if (forceDestination != null && forceDestination != master && hints.PathfindMapBounds.Contains(forceDestination.Position - hints.PathfindMapCenter))
+        if (forceDestination != null && forceDestination != master)
         {
-            hints.GoalZones.Add(AIHints.GoalProximity(forceDestination, 3.5f, 100f));
+            hints.GoalZones.Add(AIHints.GoalProximity(forceDestination, 5f, 100f));
         }
         if (_followMaster)
         {
