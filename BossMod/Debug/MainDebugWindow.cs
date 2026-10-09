@@ -27,6 +27,7 @@ sealed class MainDebugWindow(WorldState ws, RotationModuleManager autorot, ZoneM
     private readonly DebugTeleport _debugTeleport = new();
     private readonly DebugCollision _debugCollision = new();
     private readonly DebugQuests _debugQuests = new();
+    private readonly DebugCastMovement _debugCastMovement = new(ws, autorot.Hints, amex, move, rsr);
 
     protected override void Dispose(bool disposing)
     {
@@ -212,6 +213,10 @@ sealed class MainDebugWindow(WorldState ws, RotationModuleManager autorot, ZoneM
         if (ImGui.CollapsingHeader("Rotation Solver Reborn"))
         {
             DrawRSR();
+        }
+        if (ImGui.CollapsingHeader("Cast / movement (RSR)"))
+        {
+            _debugCastMovement.Draw();
         }
     }
 
