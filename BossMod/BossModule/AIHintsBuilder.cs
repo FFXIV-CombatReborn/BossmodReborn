@@ -94,6 +94,7 @@ public sealed class AIHintsBuilder : IDisposable
                 CalculateAutoHints(hints, player);
                 _zmm.ActiveModule?.CalculateAIHints(playerSlot, player, hints);
             }
+            FakeAoeTest.Apply(_ws, player, hints);
         }
         hints.Normalize();
         if (_rsr != null)

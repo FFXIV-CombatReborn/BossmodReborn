@@ -9,6 +9,7 @@ public sealed class RotationSolverRebornModule : IDisposable
     private readonly ICallGateSubscriber<SpecialCommandType, float, object> _triggerSpecialStateWithDuration;
     private readonly ICallGateSubscriber<byte> _getDesiredPositional;
     private readonly ICallGateSubscriber<byte, object?> _desiredPositionalChanged;
+    private readonly ICallGateSubscriber<bool> _autorotationActive;
     private const string rsr = "Rotation Solver Reborn";
 
     // current value of RSR's desired positional, kept up to date via the DesiredPositionalChanged event
@@ -23,6 +24,7 @@ public sealed class RotationSolverRebornModule : IDisposable
         _triggerSpecialStateWithDuration = pluginInterface.GetIpcSubscriber<SpecialCommandType, float, object>("RotationSolverReborn.TriggerSpecialStateWithDuration");
         _getDesiredPositional = pluginInterface.GetIpcSubscriber<byte>("RotationSolverReborn.GetDesiredPositional");
         _desiredPositionalChanged = pluginInterface.GetIpcSubscriber<byte, object?>("RotationSolverReborn.ActionUpdater.DesiredPositionalChanged");
+        _autorotationActive = pluginInterface.GetIpcSubscriber<bool>("RotationSolverReborn.AutorotationActive");
         try
         {
             _desiredPositionalChanged.Subscribe(OnDesiredPositionalChanged);
@@ -67,6 +69,21 @@ public sealed class RotationSolverRebornModule : IDisposable
     public void UnPauseRSR() => _changeOperationMode.InvokeAction(SpecialCommandType.EndSpecial);
 
     public void TriggerSpecialStateWithDuration(SpecialCommandType specialCommand, float duration) => _triggerSpecialStateWithDuration.InvokeAction(specialCommand, duration);
+
+    public bool IsAutorotationActive
+    {
+        get
+        {
+            try
+            {
+                return _autorotationActive.HasFunction && _autorotationActive.InvokeFunc();
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
 
     // polls RSR's current desired positional (0=None, 1=Rear, 2=Flank, 3=Front); returns Any if RSR is not installed/loaded
     public Positional GetDesiredPositional()

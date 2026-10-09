@@ -17,7 +17,7 @@ public sealed class ActionTweaksConfig : ConfigNode
     [PropertyDisplay("Remove extra framerate-induced cooldown delay", tooltip: "Dynamically adjusts cooldown and animation locks to ensure queued actions resolve immediately regardless of framerate limitations")]
     public bool RemoveCooldownDelay = false;
 
-    [PropertyDisplay("Prevent movement while casting", tags: ["slidecast"])]
+    [PropertyDisplay("Prevent movement while casting", tooltip: "Ignored while Rotation Solver Reborn's autorotation is active", tags: ["slidecast"])]
     public bool PreventMovingWhileCasting = false;
 
     public enum ModifierKey

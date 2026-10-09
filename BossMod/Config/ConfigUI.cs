@@ -341,7 +341,7 @@ public sealed class ConfigUI : IDisposable
             {
                 modified = props.Renderer is { } rendererType
                     ? GetPropertyRenderer(rendererType).Draw(props, false, node, value!, root, tree, ws)
-                    : DrawProperty(props.Label, props.Tooltip, node, field, value, root, tree, ws);
+                    : DrawProperty(props.Label, root.IsTransient(node, field) ? TransientTooltip(props.Tooltip) : props.Tooltip, node, field, value, root, tree, ws);
             }
             if (modified)
             {
@@ -356,6 +356,12 @@ public sealed class ConfigUI : IDisposable
 
         // draw custom stuff
         node.DrawCustom(tree, ws);
+    }
+
+    private static string TransientTooltip(string tooltip)
+    {
+        const string note = "Temporarily changed by another plugin (e.g. AutoDuty). Your own value is kept in the config file and restored when that plugin is done; changing it here keeps your new value.";
+        return tooltip.Length > 0 ? $"{tooltip}\n\n{note}" : note;
     }
 
     private static bool IsPropertyEnabled(ConfigNode node, ConfigTypeMetadata metadata, ConfigFieldMetadata field)

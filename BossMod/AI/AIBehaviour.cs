@@ -406,9 +406,10 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
             var distSq = toDest.LengthSq();
             ctrl.NaviTargetPos = WorldState.CurrentTime >= _navStartTime ? _naviDecision.Destination : null;
             ctrl.NaviTargetVertical = master != player ? master.PosRot.Y : null;
-            // if there's no active cast right now (e.g. it was just interrupted and an external plugin like RotationSolverReborn is about to re-queue it),
-            // there's nothing to protect - don't block forced movement, otherwise we can get stuck in an endless cast/interrupt loop without ever actually moving away from danger
-            ctrl.AllowInterruptingCastByMovement = player.CastInfo == null || _naviDecision.LeewaySeconds <= player.CastInfo.RemainingTime - 0.5d;
+            // note: don't decide whether movement may interrupt a cast here - this runs off the main thread on a stale player.CastInfo, which misses casts that were just started
+            // the controller makes that decision each frame from the leeway and the live cast state
+            ctrl.AllowInterruptingCastByMovement = false;
+            ctrl.NaviLeewaySeconds = _naviDecision.LeewaySeconds;
             ctrl.ForceCancelCastMechanicAI = false;
             ctrl.ForceCancelCastOtherAI = false;
 

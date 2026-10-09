@@ -169,6 +169,9 @@ public sealed class AIHints
 
     public bool ForceCancelCastMechanic;
 
+    // set by the active movement system while settling after a move that interrupted a cast (see CastSettleHold); external rotations should not start casts
+    public bool HoldCasts;
+
     // actions that we want to be executed, gathered from various sources (manual input, autorotation, planner, ai, modules, etc.)
     public readonly ActionQueue ActionsToExecute = new();
 
@@ -210,6 +213,7 @@ public sealed class AIHints
         MaxCastTime = float.MaxValue;
         ForceCancelCastOther = false;
         ForceCancelCastMechanic = false;
+        HoldCasts = false;
         ActionsToExecute.Clear();
         StatusesToCancel.Clear();
         WantJump = false;

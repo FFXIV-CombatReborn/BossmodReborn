@@ -183,7 +183,7 @@ sealed class IPCProvider : IDisposable
         Register("Hints.ForceCancelCastMechanicAI", () => ai.Controller.ForceCancelCastMechanicAI);
         Register("Hints.ForceCancelCastOtherAI", () => ai.Controller.ForceCancelCastOtherAI);
 
-        Register("Movement.IsMoving", () => hints.ForcedMovement != null);
+        Register("Movement.IsMoving", () => hints.ForcedMovement != null || hints.HoldCasts);
         Register("Movement.IsMoveRequested", movement.IsMoveRequested);
         Register("Hints.ForbiddenZonesCount", () => hints.ForbiddenZones.Count);
         Register("Hints.ForbiddenZonesNextActivation", () => hints.ForbiddenZones.Count == 0 ? float.MaxValue : (float)(hints.ForbiddenZones[0].activation - DateTime.Now).TotalSeconds);
@@ -288,6 +288,9 @@ sealed class IPCProvider : IDisposable
         });
 
         Register("Configuration", (List<string> args, bool save) => Service.Config.ConsoleCommand(args.AsSpan(), save));
+        // same arguments as Configuration, but the change is never saved; ClearTransient restores the user's values
+        Register("Configuration.SetTransient", (List<string> args) => Service.Config.SetTransient(args.AsSpan()));
+        Register("Configuration.ClearTransient", () => Service.Config.ClearTransient());
 
         var lastModified = DateTime.Now;
         Service.Config.Modified.Subscribe(() => lastModified = DateTime.Now);

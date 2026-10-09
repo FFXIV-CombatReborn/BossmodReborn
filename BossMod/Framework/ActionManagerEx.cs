@@ -46,12 +46,15 @@ public sealed unsafe class ActionManagerEx : IDisposable
     public Event<ulong, ActorCastEvent> ActionEffectReceived = new();
 
     public static readonly ActionTweaksConfig Config = Service.Config.Get<ActionTweaksConfig>();
+    public static ActionManagerEx? Instance;
     public ActionQueue.Entry AutoQueue;
     public bool MoveMightInterruptCast; // if true, moving now might cause cast interruption (for current or queued cast)
+    public readonly CastTracker CastTracker = new();
     private readonly ActionManager* _inst = ActionManager.Instance();
     private readonly WorldState _ws;
     private readonly AIHints _hints;
     private readonly MovementOverride _movement;
+    private readonly RotationSolverRebornModule _rsr;
     private readonly ManualActionQueueTweak _manualQueue;
     private readonly AnimationLockTweak _animLockTweak = new();
     private readonly CooldownDelayTweak _cooldownTweak = new();
@@ -78,11 +81,16 @@ public sealed unsafe class ActionManagerEx : IDisposable
 
     private readonly delegate* unmanaged<TargetSystem*, TargetSystem*> _autoSelectTarget;
 
-    public ActionManagerEx(WorldState ws, AIHints hints, MovementOverride movement)
+    // slidecast movement block is skipped while RSR's autorotation is on - RSR has its own orbwalker thing
+    public bool PreventMovingWhileCasting => Config.PreventMovingWhileCasting && !_rsr.IsAutorotationActive;
+
+    public ActionManagerEx(WorldState ws, AIHints hints, MovementOverride movement, RotationSolverRebornModule rsr)
     {
         _ws = ws;
         _hints = hints;
         _movement = movement;
+        _rsr = rsr;
+        Instance = this;
         _manualQueue = new(ws, hints);
         _cancelCastTweak = new(ws, hints);
         _dismountTweak = new(ws);
@@ -111,6 +119,7 @@ public sealed unsafe class ActionManagerEx : IDisposable
 
     public void Dispose()
     {
+        Instance = null;
         _setAutoAttackStateHook.Dispose();
         _processPacketActionEffectHook.Dispose();
         _useStoneHook.Dispose();
@@ -461,12 +470,20 @@ public sealed unsafe class ActionManagerEx : IDisposable
         _cooldownTweak.StartAdjustment(_inst->AnimationLock, imminentRecast != null && imminentRecast->IsActive ? imminentRecast->Total - imminentRecast->Elapsed : 0, dt);
         _updateHook.Original(self);
 
+        var playerObj = GameObjectManager.Instance()->Objects.IndexSorted[0].Value;
+        if (playerObj != null)
+        {
+            var autoMove = _movement.ActualMove != default && _movement.UserMove == default;
+            var userMove = _movement.ActualMove != default && _movement.UserMove != default;
+            CastTracker.Update(new(playerObj->Position.X, playerObj->Position.Z), CastTimeRemaining, autoMove, userMove);
+        }
+
         // check whether movement is safe; block movement if not and if desired
         MoveMightInterruptCast &= CastTimeRemaining > 0; // previous cast could have ended without action effect
         // if we're not casting, but will start soon, moving might interrupt future cast
         MoveMightInterruptCast |= imminentActionAdj && CastTimeRemaining <= 0 && _inst->AnimationLock < 0.1f && GetAdjustedCastTime(imminentActionAdj) > 0 && !CanMoveWhileCasting(imminentActionAdj) && GCD() < 0.1f;
 
-        var blockMovement = Config.PreventMovingWhileCasting && MoveMightInterruptCast && _ws.Party.Player()?.MountId == 0;
+        var blockMovement = MoveMightInterruptCast && _ws.Party.Player()?.MountId == 0 && PreventMovingWhileCasting;
         blockMovement |= Config.PyreticThreshold > 0 && _hints.ImminentSpecialMode.mode is AIHints.SpecialMode.Pyretic or AIHints.SpecialMode.NoMovement && _hints.ImminentSpecialMode.activation < _ws.FutureTime(Config.PyreticThreshold);
 
         // note: if we cancel movement and start casting immediately, it will be canceled some time later - instead prefer to delay for one frame
@@ -764,6 +781,7 @@ public sealed unsafe class ActionManagerEx : IDisposable
 
         MoveMightInterruptCast = false; // slidecast window start
         _movement.MovementBlocked = false; // unblock input unconditionally on successful cast (I assume there are no instances where we need to immediately start next GCD?)
+        CastTracker.OnEffect(header->SourceSequence);
 
         // animation lock delay update
         var animLockReduction = _animLockTweak.Apply(header->SourceSequence, prevAnimLock, _inst->AnimationLock, packetAnimLock, header->AnimationLock, out var animLockDelay);
@@ -777,6 +795,11 @@ public sealed unsafe class ActionManagerEx : IDisposable
         _animLockTweak.RecordRequest(seq, _inst->AnimationLock);
         _restoreRotTweak.Preserve(prevRot, currRot);
         MoveMightInterruptCast = CastTimeRemaining > 0 && !CanMoveWhileCasting(action);
+        if (CastTimeRemaining > 0)
+        {
+            var playerObj = GameObjectManager.Instance()->Objects.IndexSorted[0].Value;
+            CastTracker.OnCastStart(action, seq, playerObj != null ? new(playerObj->Position.X, playerObj->Position.Z) : default, CastTimeRemaining);
+        }
 
         var recast = _inst->GetRecastGroupDetail(GetRecastGroup(action));
 
