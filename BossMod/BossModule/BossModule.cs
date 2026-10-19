@@ -480,7 +480,7 @@ public abstract class BossModule : IDisposable
                 var originX = (int)originCell.X;
                 var originZ = (int)originCell.Z;
                 var halfSize = (int)(Bounds.Radius / bitmap.PixelSize);
-                hints.PathfindMapObstacles = new(bitmap, new(originX - halfSize, originZ - halfSize, originX + halfSize, originZ + halfSize));
+                hints.PathfindMapObstacles = new(bitmap, new(originX - halfSize, originZ - halfSize, originX + halfSize, originZ + halfSize), entry.Origin);
             }
         }
         var count = Components.Count;

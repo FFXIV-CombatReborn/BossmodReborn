@@ -307,6 +307,8 @@ public sealed class ObstacleMapManager : IDisposable
 
     public bool GenerateMap(Vector3 centerWorld, float radius, bool writeToFile, bool insertAtFront)
     {
+        if (!float.IsFinite(radius) || radius <= 0f)
+            return false;
         if (_generationTask is { IsCompleted: false })
         {
             return false;
@@ -319,25 +321,26 @@ public sealed class ObstacleMapManager : IDisposable
 
         _generationTask = Service.Framework.RunOnTick(() =>
         {
-            var minBounds = new Vector3(centerWorld.X - radius, -1024, centerWorld.Z - radius);
-            var maxBounds = new Vector3(centerWorld.X + radius, 1024, centerWorld.Z + radius);
             var pixelSize = 0.5f;
             var filename = writeToFile ? GeneratePersistentMapName() : Path.GetRandomFileName() + ".bmp";
             var fullPath = writeToFile ? RootPath + filename : Path.Combine(Path.GetTempPath(), filename);
 
             try
             {
-                var build = Service.PluginInterface.GetIpcSubscriber<Vector3, string, float, Vector3, Vector3, (Vector3, Vector3)>("vnavmesh.Nav.BuildBitmapBounded");
-                var (actualMin, actualMax) = build.InvokeFunc(centerWorld, fullPath, pixelSize, minBounds, maxBounds);
+                // BuildBitmapBounded can discard an entire navmesh polygon when just one
+                // vertex lies outside the requested bounds. Rasterize complete reachable
+                // polygons first, then crop pixels so walkable ground inside the FATE survives.
+                var build = Service.PluginInterface.GetIpcSubscriber<Vector3, string, float, (Vector3, Vector3)>("vnavmesh.Nav.BuildBitmap");
+                var (actualMin, _) = build.InvokeFunc(centerWorld, fullPath, pixelSize);
 
-                using var stream = File.OpenRead(fullPath);
-                // keep x/z bounds as-is, but make y bounds permissive
-                var min = new Vector3(actualMin.X, -1024, actualMin.Z);
-                var max = new Vector3(actualMax.X, 1024, actualMax.Z);
-                var entry = new ObstacleMapDatabase.Entry(min, max, new(actualMin.XZ()), 60, 60, filename);
-                var bitmap = new Bitmap(stream);
+                Bitmap source;
+                using (var stream = File.OpenRead(fullPath))
+                    source = new Bitmap(stream);
+                var (entry, bitmap) = CropGeneratedMap(source, new(actualMin.XZ()), centerWorld, radius, filename);
                 if (writeToFile)
                 {
+                    // Publish metadata only after the file contains the matching cropped image.
+                    bitmap.Save(fullPath);
                     var entryList = Database.Entries.GetOrAdd(CurrentKey());
                     if (insertAtFront)
                         entryList.Insert(0, entry);
@@ -374,6 +377,27 @@ public sealed class ObstacleMapManager : IDisposable
             }
         }, delayTicks: 1);
         return true;
+    }
+
+    private static (ObstacleMapDatabase.Entry Entry, Bitmap Bitmap) CropGeneratedMap(Bitmap source, WPos sourceOrigin, Vector3 center, float radius, string filename)
+    {
+        if (!float.IsFinite(radius) || radius <= 0f)
+            throw new ArgumentOutOfRangeException(nameof(radius));
+
+        var resolution = source.PixelSize;
+        var left = (int)MathF.Floor((center.X - radius - sourceOrigin.X) / resolution);
+        var top = (int)MathF.Floor((center.Z - radius - sourceOrigin.Z) / resolution);
+        var right = (int)MathF.Ceiling((center.X + radius - sourceOrigin.X) / resolution);
+        var bottom = (int)MathF.Ceiling((center.Z + radius - sourceOrigin.Z) / resolution);
+        var bitmap = new Bitmap(right - left, bottom - top, source.Color0, source.Color1, source.Resolution);
+        // Outside the source's reachable area remains blocked, including cropped padding.
+        Array.Fill(bitmap.Pixels, (byte)0xFF);
+        new Bitmap.Region(source, new(left, top, right, bottom)).CopyTo(bitmap, 0, 0);
+
+        var origin = sourceOrigin + resolution * new WDir(left, top);
+        var min = origin.ToVec3(-1024f);
+        var max = (origin + resolution * new WDir(bitmap.Width, bitmap.Height)).ToVec3(1024f);
+        return (new(min, max, origin, 60, 60, filename), bitmap);
     }
 
     public bool ClearTempMap()

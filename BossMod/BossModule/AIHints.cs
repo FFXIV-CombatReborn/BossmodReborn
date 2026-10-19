@@ -372,51 +372,19 @@ public sealed class AIHints
 
     public void InitPathfindMap(Pathfinding.Map map)
     {
-        if (PathfindMapBounds is ArenaBoundsCustom custom)
+        var bounds = PathfindMapBounds;
+        var center = PathfindMapCenter;
+        var obstacles = PathfindMapObstacles;
+        if (bounds is ArenaBoundsCustom custom)
         {
-            custom.PathfindMap(map, PathfindMapCenter, PathfindMapArenaProjectionLayer);
+            custom.PathfindMap(map, center, PathfindMapArenaProjectionLayer);
         }
         else
         {
-            PathfindMapBounds.PathfindMap(map, PathfindMapCenter);
+            bounds.PathfindMap(map, center);
         }
-        if (PathfindMapObstacles.Bitmap != null && !_config.DisableObstacleMaps)
-        {
-            var offX = -PathfindMapObstacles.Rect.Left;
-            var offY = -PathfindMapObstacles.Rect.Top;
-            var r = PathfindMapObstacles.Rect.Clamped(PathfindMapObstacles.Bitmap.FullRect);
-            var height = map.Height;
-            var width = map.Width;
-            var rTop = r.Top;
-            var rBottom = r.Bottom;
-            var rLeft = r.Left;
-            var rRight = r.Right;
-
-            for (var y = rTop; y < rBottom; ++y)
-            {
-                var my = y + offY;
-                if (my < 0 || my >= height)
-                {
-                    continue;
-                }
-                for (var x = rLeft; x < rRight; ++x)
-                {
-                    if (!PathfindMapObstacles.Bitmap[x, y])
-                    {
-                        continue;
-                    }
-
-                    var mx = x + offX;
-                    if (mx < 0 || mx >= width)
-                    {
-                        continue;
-                    }
-                    var index = map.GridToIndex(mx, my);
-                    map.PixelMaxG[index] = -1000f;
-                    map.PixelPriority[index] = float.MinValue;
-                }
-            }
-        }
+        if (obstacles.Bitmap != null && !_config.DisableObstacleMaps)
+            obstacles.BlockMapPixels(map, center);
     }
 
     // Allocation-free views used by consumers. These remain valid only until PotentialTargets is modified; in normal use that means until the next hints update.

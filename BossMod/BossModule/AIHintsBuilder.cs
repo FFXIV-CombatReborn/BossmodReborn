@@ -184,14 +184,16 @@ public sealed class AIHintsBuilder : IDisposable
                 };
             }
 
-            hints.PathfindMapBounds = (_activeFateBounds ??= new ArenaBoundsCircle(fate.Radius, resolution));
+            if (_activeFateBounds == null || _activeFateBounds.Radius != fate.Radius || _activeFateBounds.MapResolution != resolution)
+                _activeFateBounds = new ArenaBoundsCircle(fate.Radius, resolution);
+            hints.PathfindMapBounds = _activeFateBounds;
             if (e != null && bitmap != null)
             {
                 var originCell = (hints.PathfindMapCenter - e.Origin) / resolution;
                 var originX = (int)originCell.X;
                 var originZ = (int)originCell.Z;
                 var halfSize = (int)(fate.Radius / resolution);
-                hints.PathfindMapObstacles = new(bitmap, new(originX - halfSize, originZ - halfSize, originX + halfSize, originZ + halfSize));
+                hints.PathfindMapObstacles = new(bitmap, new(originX - halfSize, originZ - halfSize, originX + halfSize, originZ + halfSize), e.Origin);
             }
         }
         else if (e != null && bitmap != null)
@@ -207,7 +209,7 @@ public sealed class AIHintsBuilder : IDisposable
             // TODO: consider quantizing even more, to reduce jittering when player moves?..
             hints.PathfindMapCenter = e.Origin + resolution * new WDir(originX, originZ);
             hints.PathfindMapBounds = new ArenaBoundsRect(e.ViewWidth * resolution, e.ViewHeight * resolution, mapResolution: resolution); // note: we don't bother caching these bounds, they are very lightweight
-            hints.PathfindMapObstacles = new(bitmap, new(originX - e.ViewWidth, originZ - e.ViewHeight, originX + e.ViewWidth, originZ + e.ViewHeight));
+            hints.PathfindMapObstacles = new(bitmap, new(originX - e.ViewWidth, originZ - e.ViewHeight, originX + e.ViewWidth, originZ + e.ViewHeight), e.Origin);
         }
         else
         {

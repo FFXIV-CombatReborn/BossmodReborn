@@ -530,12 +530,7 @@ public sealed class RotationModuleManager : IDisposable
         }
 
         // clamp to nearest in-bounds cell
-        var centerCellX = (obstacleRegion.Rect.Left + obstacleRegion.Rect.Right) * 0.5f;
-        var centerCellY = (obstacleRegion.Rect.Top + obstacleRegion.Rect.Bottom) * 0.5f;
-        var invRes = 1.0f / map.PixelSize;
-        var delta = (player.Position - mapCenter) * invRes;
-        var sx = (int)MathF.Round(centerCellX + delta.X);
-        var sy = (int)MathF.Round(centerCellY + delta.Z);
+        obstacleRegion.TryWorldToBitmapCell(mapCenter, player.Position, out var sx, out var sy);
         sx = Math.Clamp(sx, 0, w - 1);
         sy = Math.Clamp(sy, 0, h - 1);
 

@@ -32,7 +32,7 @@ public sealed class Bitmap
         );
     }
 
-    public record struct Region(Bitmap Bitmap, Rect Rect)
+    public record struct Region(Bitmap Bitmap, Rect Rect, WPos? WorldOrigin = null)
     {
         // copy region into destination bitmap, starting at specified coordinates
         // any out-of-range accesses are ignored: actual copied region is intersection of source data, copy rect and dest rect

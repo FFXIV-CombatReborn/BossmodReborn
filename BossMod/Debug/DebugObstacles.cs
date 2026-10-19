@@ -208,10 +208,16 @@ sealed class DebugObstacles(ObstacleMapManager obstacles, IDalamudPluginInterfac
         ImGui.Separator();
         ImGui.TextUnformatted("Temp map (IPC / memory)");
         var gen = Obstacles.GenerationStatus;
-        if (gen is not TaskStatus.RanToCompletion)
+        ImGui.TextUnformatted($"Build task: {gen}");
+        var fate = Obstacles.World.Client.ActiveFate;
+        var generationPending = gen is not (TaskStatus.RanToCompletion or TaskStatus.Faulted or TaskStatus.Canceled);
+        using (ImRaii.Disabled(fate.ID == 0 || !float.IsFinite(fate.Radius) || fate.Radius <= 0f || generationPending))
         {
-            ImGui.TextUnformatted($"Build task: {gen}");
+            if (ImGui.Button("Rebuild current FATE map"))
+                Obstacles.GenerateMap(fate.Center, fate.Radius, writeToFile: false, insertAtFront: false);
         }
+        if (fate.ID == 0)
+            ImGui.TextDisabled("Enter a FATE to rebuild its temporary obstacle map.");
 
         if (Obstacles.TempMapMeta is not { } meta)
         {

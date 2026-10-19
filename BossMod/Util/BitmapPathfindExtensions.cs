@@ -8,8 +8,8 @@ public static class BitmapPathfindExtensions
         var centerCellY = (rect.Top + rect.Bottom) * 0.5f;
         var invRes = 1.0f / map.PixelSize;
         var delta = (pos - mapCenter) * invRes;
-        x = (int)MathF.Round(centerCellX + delta.X);
-        y = (int)MathF.Round(centerCellY + delta.Z);
+        x = (int)MathF.Floor(centerCellX + delta.X);
+        y = (int)MathF.Floor(centerCellY + delta.Z);
         return (uint)x < map.Width && (uint)y < map.Height;
     }
 
@@ -19,13 +19,31 @@ public static class BitmapPathfindExtensions
         var centerCellY = (rect.Top + rect.Bottom) * 0.5f;
         var ps = map.PixelSize;
         return new WPos(
-            mapCenter.X + (x - centerCellX) * ps,
-            mapCenter.Z + (y - centerCellY) * ps);
+            mapCenter.X + (x + 0.5f - centerCellX) * ps,
+            mapCenter.Z + (y + 0.5f - centerCellY) * ps);
     }
 
     public static bool HasObstacleMapLineOfSight(this Bitmap map, Bitmap.Rect rect, WPos mapCenter, WPos from, WPos to)
+        => HasObstacleMapLineOfSight(new Bitmap.Region(map, rect), mapCenter, from, to);
+
+    public static WPos GetWorldOrigin(this Bitmap.Region region, WPos mapCenter)
+        => region.WorldOrigin ?? mapCenter - region.Bitmap.PixelSize * new WDir((region.Rect.Left + region.Rect.Right) * 0.5f, (region.Rect.Top + region.Rect.Bottom) * 0.5f);
+
+    public static bool TryWorldToBitmapCell(this Bitmap.Region region, WPos mapCenter, WPos pos, out int x, out int y)
     {
-        if (!map.TryWorldToBitmapCell(rect, mapCenter, from, out var x0, out var y0) || !map.TryWorldToBitmapCell(rect, mapCenter, to, out var x1, out var y1))
+        var cell = (pos - region.GetWorldOrigin(mapCenter)) / region.Bitmap.PixelSize;
+        x = (int)MathF.Floor(cell.X);
+        y = (int)MathF.Floor(cell.Z);
+        return (uint)x < region.Bitmap.Width && (uint)y < region.Bitmap.Height;
+    }
+
+    public static WPos CellCenterToWorld(this Bitmap.Region region, WPos mapCenter, int x, int y)
+        => region.GetWorldOrigin(mapCenter) + region.Bitmap.PixelSize * new WDir(x + 0.5f, y + 0.5f);
+
+    public static bool HasObstacleMapLineOfSight(this Bitmap.Region region, WPos mapCenter, WPos from, WPos to)
+    {
+        var map = region.Bitmap;
+        if (!region.TryWorldToBitmapCell(mapCenter, from, out var x0, out var y0) || !region.TryWorldToBitmapCell(mapCenter, to, out var x1, out var y1))
             return true;
 
         var dx = Math.Abs(x1 - x0);
@@ -56,14 +74,66 @@ public static class BitmapPathfindExtensions
         }
     }
 
-    public static bool TryWorldToBitmapCell(this Bitmap.Region region, WPos mapCenter, WPos pos, out int x, out int y)
-        => region.Bitmap.TryWorldToBitmapCell(region.Rect, mapCenter, pos, out x, out y);
+    public static void BlockMapPixels(this Bitmap.Region region, Pathfinding.Map map, WPos mapCenter)
+    {
+        var bitmap = region.Bitmap;
+        var clip = region.Rect.Clamped(bitmap.FullRect);
+        var origin = region.GetWorldOrigin(mapCenter);
+        var first = (map.GridToWorld(0, 0, 0.5f, 0.5f) - origin) / bitmap.PixelSize;
+        var stepZ = map.LocalZDivRes * (map.Resolution * map.Resolution / bitmap.PixelSize);
+        var stepX = stepZ.OrthoL();
+        var halfX = (Math.Abs(stepX.X) + Math.Abs(stepZ.X)) * 0.5f;
+        var halfZ = (Math.Abs(stepX.Z) + Math.Abs(stepZ.Z)) * 0.5f;
+        const float epsilon = 1e-4f; // avoid including a neighboring pixel merely because of roundoff at a shared edge
+        var axisAligned = Math.Abs(stepX.Z) < epsilon && Math.Abs(stepZ.X) < epsilon
+            || Math.Abs(stepX.X) < epsilon && Math.Abs(stepZ.Z) < epsilon;
+        var sampleCenters = map.Resolution <= bitmap.PixelSize && axisAligned;
 
-    public static WPos CellCenterToWorld(this Bitmap.Region region, WPos mapCenter, int x, int y)
-        => region.Bitmap.CellCenterToWorld(region.Rect, mapCenter, x, y);
-
-    public static bool HasObstacleMapLineOfSight(this Bitmap.Region region, WPos mapCenter, WPos from, WPos to)
-        => region.Bitmap.HasObstacleMapLineOfSight(region.Rect, mapCenter, from, to);
+        // A cropped/rotated/coarser navigation grid does not share the bitmap's indices.
+        // At equal/finer resolution, preserve walkability at each node's world position:
+        // unioning neighboring pixels would close narrow passages when origins differ.
+        // Coarser or rotated grids still use conservative coverage to retain thin obstacles.
+        for (var y = 0; y < map.Height; ++y)
+        {
+            var rowStart = first + y * stepZ;
+            for (var x = 0; x < map.Width; ++x)
+            {
+                var index = map.GridToIndex(x, y);
+                if (map.PixelMaxG[index] < 0f)
+                    continue;
+                var blocked = false;
+                if (sampleCenters)
+                {
+                    // Use the same world coordinate as navigation/LOS queries. Accumulating
+                    // transformed offsets can round to the other side of a pixel boundary.
+                    var sample = (map.GridToWorld(x, y, 0.5f, 0.5f) - origin) / bitmap.PixelSize;
+                    var bx = (int)MathF.Floor(sample.X);
+                    var by = (int)MathF.Floor(sample.Z);
+                    blocked = bx >= clip.Left && bx < clip.Right && by >= clip.Top && by < clip.Bottom && bitmap[bx, by];
+                }
+                else
+                {
+                    var cell = rowStart + x * stepX;
+                    var left = Math.Max(clip.Left, (int)MathF.Floor(cell.X - halfX + epsilon));
+                    var right = Math.Min(clip.Right, (int)MathF.Ceiling(cell.X + halfX - epsilon));
+                    var top = Math.Max(clip.Top, (int)MathF.Floor(cell.Z - halfZ + epsilon));
+                    var bottom = Math.Min(clip.Bottom, (int)MathF.Ceiling(cell.Z + halfZ - epsilon));
+                    for (var by = top; by < bottom && !blocked; ++by)
+                        for (var bx = left; bx < right; ++bx)
+                            if (bitmap[bx, by])
+                            {
+                                blocked = true;
+                                break;
+                            }
+                }
+                if (blocked)
+                {
+                    map.PixelMaxG[index] = -1000f;
+                    map.PixelPriority[index] = float.MinValue;
+                }
+            }
+        }
+    }
 }
 
 // Scratch-allocation-free symmetric shadowcasting for obstacle bitmaps.
