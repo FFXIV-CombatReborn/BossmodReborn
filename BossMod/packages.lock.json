@@ -8,6 +8,12 @@
         "resolved": "15.0.0",
         "contentHash": "411vwC8/X8Z/sQ2TI6v3SvOn66xFPeOjFn3Zn+h0d3Ox2t1kFm66AhDvmx/qcMwVrR+Hidxj0dadpQ2dgyXMBQ=="
       },
+      "RebornMaterial": {
+        "type": "Direct",
+        "requested": "[7.5.7.5, )",
+        "resolved": "7.5.7.5",
+        "contentHash": "jsZDYO9Tr6OrJTGdxm0KF/I+/bNO/HYcjDl/OvK0VpGD6X7ysQNT6zjT7vvZ+/sw2ULwU+Ro+kZR0qt2KH/8bA=="
+      },
       "TerraFX.Interop.Windows": {
         "type": "Direct",
         "requested": "[10.0.26100.6, )",

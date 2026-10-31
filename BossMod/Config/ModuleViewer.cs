@@ -9,7 +9,7 @@ using System.Globalization;
 
 namespace BossMod;
 
-public sealed class ModuleViewer(PlanDatabase? planDB, WorldState ws) : IDisposable
+public sealed partial class ModuleViewer(PlanDatabase? planDB, WorldState ws) : IDisposable
 {
     private readonly struct ModuleInfo
     {
@@ -528,7 +528,7 @@ public sealed class ModuleViewer(PlanDatabase? planDB, WorldState ws) : IDisposa
                             {
                                 if (UIMisc.IconButton(FontAwesomeIcon.Cog, mod.ConfigID))
                                 {
-                                    _ = new BossModuleConfigWindow(mod.Info, ws);
+                                    BossModuleConfigWindow.Open(mod.Info, ws);
                                 }
                             }
 
