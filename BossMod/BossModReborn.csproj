@@ -55,6 +55,7 @@
 
   <ItemGroup>
     <PackageReference Include="DalamudPackager" Version="15.0.0" />
+    <PackageReference Include="RebornMaterial" Version="7.5.7.5" />
     <PackageReference Include="TerraFX.Interop.Windows" Version="10.0.26100.6" />
     <Reference Include="FFXIVClientStructs">
       <HintPath>$(DalamudLibPath)FFXIVClientStructs.dll</HintPath>
@@ -96,9 +97,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BossMod.SourceGen\BossMod.SourceGen.csproj"
-                      OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\BossMod.SourceGen\BossMod.SourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
@@ -126,10 +125,15 @@
   <ItemGroup>
     <EmbeddedResource Include="Pathfinding\ObstacleMaps\*" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="RebornUI\Images\*.png">
+      <LogicalName>BossMod.RebornUI.Images.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
 
   <Target Name="CleanupOutput" AfterTargets="Build" BeforeTargets="DalamudPackage">
     <ItemGroup>
-      <_ExtraOutputFiles Include="$(OutputPath)*" Exclude="$(OutputPath)BossModReborn.*;$(OutputPath)DefaultRotationPresets.json;$(OutputPath)RebornPresets.json;" />
+      <_ExtraOutputFiles Include="$(OutputPath)*" Exclude="$(OutputPath)BossModReborn.*;$(OutputPath)RebornMaterial.dll;$(OutputPath)DefaultRotationPresets.json;$(OutputPath)RebornPresets.json;" />
     </ItemGroup>
     <Delete Files="@(_ExtraOutputFiles)" />
   </Target>

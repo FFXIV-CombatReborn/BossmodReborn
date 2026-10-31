@@ -138,7 +138,7 @@ public sealed class BossModuleMainWindow : UIWindow
     {
         if (_mgr.ActiveModule?.Info != null)
         {
-            _ = new BossModuleConfigWindow(_mgr.ActiveModule.Info, _mgr.WorldState);
+            BossModuleConfigWindow.Open(_mgr.ActiveModule.Info, _mgr.WorldState);
         }
     }
 
