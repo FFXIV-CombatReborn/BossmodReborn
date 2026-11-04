@@ -5,7 +5,6 @@
 //  2. Different (support still north and dps still south)
 //  3. Same
 // TODO NA Graven Image 2 - Needs it own strat since they take the baits on the markers instead
-// TODO NA Graven Image 3 - just different spots for the melee everything else the same 
 
 [ConfigDisplay(Order = 0x400, Parent = typeof(DawntrailConfig))]
 public sealed class DMUConfig : ConfigNode {
@@ -17,7 +16,7 @@ public sealed class DMUConfig : ConfigNode {
         [PropertyDisplay("None")]
         GravenImage1None,
 
-        [PropertyDisplay("LPDU / Kefka Bin")]
+        [PropertyDisplay("LPDU / Kefka Bin (NA)")]
         GravenImage1LPDU,
     }
 
@@ -80,6 +79,9 @@ public sealed class DMUConfig : ConfigNode {
 
         [PropertyDisplay("LPDU")]
         GravenImage3LPDU,
+
+        [PropertyDisplay("Kefka Bin (NA)")]
+        GravenImage3KefkaBin,
     }
 
     public enum P2ForsakenStrategy {
