@@ -256,6 +256,16 @@ public class P1GravenImage3Data {
         return true;
     }
 
+    public static bool TryGetStackSpot(DMUConfig.P1GravenImage3Strategy strategy, bool isSupport, out WPos stackSpot) {
+        if (!stackSpots.TryGetValue(strategy, out var safeSpots)) {
+            stackSpot = default;
+            return false;
+        }
+
+        stackSpot = isSupport ? safeSpots.supports : safeSpots.dps;
+        return true;
+    }
+
     private static readonly Dictionary<PartyRolesConfig.Assignment, WPos> meleePrePositionsLPDU = new() {
         [PartyRolesConfig.Assignment.M1] = new WPos(95.000f, 94.500f),
         [PartyRolesConfig.Assignment.M2] = new WPos(104.500f, 95.500f),
@@ -275,5 +285,10 @@ public class P1GravenImage3Data {
         [PartyRolesConfig.Assignment.R2] = (new WPos(100.000f, 88.000f), new WPos(84.000f, 100.000f)),
         [PartyRolesConfig.Assignment.H1] = (new WPos(100.000f, 116.000f), new WPos(87.500f, 100.000f)),
         [PartyRolesConfig.Assignment.H2] = (new WPos(116.000f, 100.000f), new WPos(100.000f, 112.000f)),
+    };
+
+    // TODO consider moving LPDU into this, but LPDU isn't really a set position like Kefka Bin
+    private static readonly Dictionary<DMUConfig.P1GravenImage3Strategy, (WPos supports, WPos dps)> stackSpots = new() {
+        [DMUConfig.P1GravenImage3Strategy.GravenImage3KefkaBin] = new(new WPos(106.000f, 106.000f), new WPos(94.000f, 94.000f)),
     };
 }

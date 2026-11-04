@@ -95,11 +95,14 @@ sealed class GravenImage3FlagrantFire(BossModule module) : FlagrantFire(module) 
 
         // Case: the mechanic is stack: This means we only care about the line going through the boss to stand correctly
         if (mechanic == SpreadStack.Stack) {
-            var boss = Module.PrimaryActor;
-            var lightningDirection = cacheLightning[0].Rotation.ToDirection();
-            var northZone = lightningDirection.Z < 0.0f ? lightningDirection : -lightningDirection;
-            var stackZone = actor.Class.IsSupport() ? -northZone : northZone;
-            var safeSpot = boss.Position + stackZone * (boss.HitboxRadius + 1.0f);
+            // TODO used for the LPDU spot, considering moving into the data instead (refer to comment in P1Data.P1GravenImage3Data class)
+            if (!P1GravenImage3Data.TryGetStackSpot(dmuConfig.P1GravenImage3, actor.Class.IsSupport(), out var safeSpot)) {
+                var boss = Module.PrimaryActor;
+                var lightningDirection = cacheLightning[0].Rotation.ToDirection();
+                var northZone = lightningDirection.Z < 0.0f ? lightningDirection : -lightningDirection;
+                var stackZone = actor.Class.IsSupport() ? -northZone : northZone;
+                safeSpot = boss.Position + stackZone * (boss.HitboxRadius + 1.0f);
+            }
 
             foreach (var aoe in cacheLightning) {
                 if (aoe.ShapeDistance == null) {
