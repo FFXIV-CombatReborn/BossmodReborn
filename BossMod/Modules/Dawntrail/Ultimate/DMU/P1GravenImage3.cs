@@ -30,9 +30,8 @@ sealed class GravenImage3FlagrantFire(BossModule module) : FlagrantFire(module) 
         }
         var assignment = partyConfig[Raid.Members[pcSlot].ContentId];
 
-        // Only melee players will have pre-position drawn - LPDU doesn't really have pre-positions for range players, we only draw a green circle for the
-        // range players if it is stack
-        if (!P1GravenImage3Data.MeleePrePositions.ContainsKey(assignment) && mechanic != SpreadStack.Stack) {
+        // Only melee players will have pre-position drawn, other strats don't really have a pre-position spots for range players
+        if (!P1GravenImage3Data.TryGetPrePosition(dmuConfig.P1GravenImage3, assignment, out var prePosition) && mechanic != SpreadStack.Stack) {
             return;
         }
 
@@ -68,8 +67,13 @@ sealed class GravenImage3FlagrantFire(BossModule module) : FlagrantFire(module) 
             }
 
             addBasicAIHints(slot, actor, assignment, hints);
-            foreach (var meleePosition in P1GravenImage3Data.MeleePrePositions.Keys) {
-                hints.AddForbiddenZone(new SDCircle(SafeSpot(actor, meleePosition), SpreadRadius), cacheLightning[0].Activation);
+
+            // Adds a spread spot for each melee positions since melee players might move late to their position
+            foreach (var (playerSlot, _) in Raid.WithSlot()) {
+                var meleeSpot = SafeSpot(actor, partyConfig[Raid.Members[playerSlot].ContentId]);
+                if (meleeSpot != default) {
+                    hints.AddForbiddenZone(new SDCircle(meleeSpot, SpreadRadius), cacheLightning[0].Activation);
+                }
             }
 
             return;
@@ -91,11 +95,14 @@ sealed class GravenImage3FlagrantFire(BossModule module) : FlagrantFire(module) 
 
         // Case: the mechanic is stack: This means we only care about the line going through the boss to stand correctly
         if (mechanic == SpreadStack.Stack) {
-            var boss = Module.PrimaryActor;
-            var lightningDirection = cacheLightning[0].Rotation.ToDirection();
-            var northZone = lightningDirection.Z < 0.0f ? lightningDirection : -lightningDirection;
-            var stackZone = actor.Class.IsSupport() ? -northZone : northZone;
-            var safeSpot = boss.Position + stackZone * (boss.HitboxRadius + 1.0f);
+            // TODO used for the LPDU spot, considering moving into the data instead (refer to comment in P1Data.P1GravenImage3Data class)
+            if (!P1GravenImage3Data.TryGetStackSpot(dmuConfig.P1GravenImage3, actor.Class.IsSupport(), out var safeSpot)) {
+                var boss = Module.PrimaryActor;
+                var lightningDirection = cacheLightning[0].Rotation.ToDirection();
+                var northZone = lightningDirection.Z < 0.0f ? lightningDirection : -lightningDirection;
+                var stackZone = actor.Class.IsSupport() ? -northZone : northZone;
+                safeSpot = boss.Position + stackZone * (boss.HitboxRadius + 1.0f);
+            }
 
             foreach (var aoe in cacheLightning) {
                 if (aoe.ShapeDistance == null) {
@@ -119,7 +126,7 @@ sealed class GravenImage3FlagrantFire(BossModule module) : FlagrantFire(module) 
         // Case: the mechanic is spread: the spots are dependent if the player is a melee or range role
         if (mechanic == SpreadStack.Spread) {
             // If the player is assigned a range role they spread freely
-            if (!P1GravenImage3Data.MeleePrePositions.TryGetValue(assignment, out var prePosition)) {
+            if (!P1GravenImage3Data.TryGetPrePosition(dmuConfig.P1GravenImage3, assignment, out var prePosition)) {
                 return default;
             }
 
@@ -156,7 +163,7 @@ sealed class GravenImage3FlagrantFire(BossModule module) : FlagrantFire(module) 
     // Handles the pre-position for players before the lightning aoes show up
     private WPos prePositionSpot(PartyRolesConfig.Assignment assignment) {
         // Case: melee pre-position spot
-        if (P1GravenImage3Data.MeleePrePositions.TryGetValue(assignment, out var meleePrePosition)) {
+        if (P1GravenImage3Data.TryGetPrePosition(dmuConfig.P1GravenImage3, assignment, out var meleePrePosition)) {
             return meleePrePosition;
         }
 

@@ -97,8 +97,7 @@ sealed class Gravitas(BossModule module) : Components.UniformStackSpread(module,
 
         // Pre-position for stack
         if (!Active) {
-            var safeSpot = P1GravitasData.PuddlesSpots.GetValueOrDefault(side);
-            if (safeSpot == default) {
+            if (!P1GravitasData.TryGetPuddleSpot(dmuConfig.P1GravenImage2, side, out var safeSpot)) {
                 return;
             }
 
@@ -163,8 +162,7 @@ sealed class Gravitas(BossModule module) : Components.UniformStackSpread(module,
     }
 
     private WPos getStackSafeSpot() {
-        var safeSpot = P1GravitasData.PuddlesSpots.GetValueOrDefault(side);
-        if (safeSpot == default) {
+        if (!P1GravitasData.TryGetPuddleSpot(dmuConfig.P1GravenImage2, side, out var safeSpot)) {
             return default;
         }
 
@@ -398,12 +396,61 @@ sealed class DoubleTroubleTrapStacksGravitas : DoubleTroubleTrapStacks {
             return;
         }
 
+        safeSpot = adjustSafeSpot(safeSpot);
         hints.AddForbiddenZone(new SDInvertedCircle(safeSpot, PositionAIRadius.PRECISE), activation);
+    }
+
+    protected override void drawForegroundHints(int pcSlot, Actor pc) {
+        if (northSafeSpots == null || southSafeSpots == null) {
+            setupSafeSpots();
+            return;
+        }
+
+        WPos safeSpot = default;
+
+        if (IsStackTarget(pc)) {
+            if (pc.Class.IsSupport()) {
+                safeSpot = northSafeSpots.Value.back;
+            }
+
+            if (pc.Class.IsDD()) {
+                safeSpot = southSafeSpots.Value.back;
+            }
+        }
+
+        if (!IsStackTarget(pc)) {
+            if (pc.Class.IsSupport()) {
+                safeSpot = northSafeSpots.Value.front;
+            }
+
+            if (pc.Class.IsDD()) {
+                safeSpot = southSafeSpots.Value.front;
+            }
+        }
+
+        if (safeSpot == default) {
+            return;
+        }
+
+        safeSpot = adjustSafeSpot(safeSpot);
+        Arena.ZoneCircleOutline(safeSpot, PositionDrawSize.NORMAL, Colors.Safe, 2.0f);
+    }
+
+    // Handles checking which strategy to use for setting up the safe spots
+    private void setupSafeSpots() {
+        switch (dmuConfig.P1DoubleTrouble) {
+            case DMUConfig.P1DoubleTroubleStrategy.DoubleTroubleLPDU:
+                setupSafeSpotsLPDU();
+                break;
+            case DMUConfig.P1DoubleTroubleStrategy.DoubleTroubleKefkaBin:
+                setupSafeSpotsKefkaBin();
+                break;
+        }
     }
 
     // Creates the safe spot hints of where people should stand to resolve the knockbacks. Caches the safe spots since it's a lot of working out that
     // only needs to run once.
-    private void setupSafeSpots() {
+    private void setupSafeSpotsLPDU() {
         if (gravitationalWave == null || gravitationalWave.side == GravitationalWave.Sides.NONE) {
             return;
         }
@@ -470,38 +517,79 @@ sealed class DoubleTroubleTrapStacksGravitas : DoubleTroubleTrapStacks {
         }
     }
 
-    protected override void drawForegroundHints(int pcSlot, Actor pc) {
-        if (northSafeSpots == null || southSafeSpots == null) {
-            setupSafeSpots();
+    // Similar to setupSafeSpotsLPDU but for a different strategy
+    private void setupSafeSpotsKefkaBin() {
+        var puddleActors = Module.Enemies((uint)OID.GravitasPuddles);
+        if (puddleActors.Count == 0) {
             return;
         }
 
-        WPos safeSpot = default;
-
-        if (IsStackTarget(pc)) {
-            if (pc.Class.IsSupport()) {
-                safeSpot = northSafeSpots.Value.back;
-            }
-
-            if (pc.Class.IsDD()) {
-                safeSpot = southSafeSpots.Value.back;
-            }
-        }
-
-        if (!IsStackTarget(pc)) {
-            if (pc.Class.IsSupport()) {
-                safeSpot = northSafeSpots.Value.front;
-            }
-
-            if (pc.Class.IsDD()) {
-                safeSpot = southSafeSpots.Value.front;
+        // Split puddles into north and south
+        var northPuddles = new List<Actor>();
+        var southPuddles = new List<Actor>();
+        foreach (var puddle in puddleActors) {
+            if (puddle.Position.Z < Module.Center.Z) {
+                northPuddles.Add(puddle);
+            } else {
+                southPuddles.Add(puddle);
             }
         }
 
-        if (safeSpot == default) {
-            return;
+        const float puddleRadius = 5.0f;
+        const float puddleDistance = 1.0f; // Distance the debuff player stands in front of the puddle
+        const float frontDistance = puddleDistance + 1.0f; // Distance the non-debuff players stand further in front of the debuff player
+
+        foreach (var puddles in new[] { northPuddles, southPuddles }) {
+            if (puddles.Count == 0) {
+                continue;
+            }
+
+            // Midpoint of the puddles for that zone since the puddles can be slightly off from each since they're placed by players
+            var sum = new WDir();
+            foreach (var puddle in puddles) {
+                sum = sum + puddle.Position - Arena.Center;
+            }
+            var puddleCenter = Arena.Center + sum / puddles.Count;
+            var frontDirection = (Arena.Center - puddleCenter).Normalized();
+
+            // Looks at the frontDirection and if the puddle is too close, it will move it along a bit more that direction to avoid the puddle
+            var spread = 0.0f;
+            foreach (var puddle in puddles) {
+                var reach = (puddle.Position - puddleCenter).Dot(frontDirection);
+                if (reach > spread) {
+                    spread = reach;
+                }
+            }
+
+            var debuffSafeSpot = puddleCenter + frontDirection * (spread + puddleRadius + puddleDistance);
+            var nonDebuffSafeSpot = debuffSafeSpot + frontDirection * frontDistance;
+
+            if (puddles == northPuddles) {
+                northSafeSpots = new safeSpots(nonDebuffSafeSpot, debuffSafeSpot);
+            } else {
+                southSafeSpots = new safeSpots(nonDebuffSafeSpot, debuffSafeSpot);
+            }
+        }
+    }
+
+    // Handles moving the safe spot left / right if it's inside the GravitationalWave aoe so its easier to see for some strats
+    private WPos adjustSafeSpot(WPos safeSpot) {
+        if (gravitationalWave == null || gravitationalWave.aoes.Count == 0) {
+            return safeSpot;
         }
 
-        Arena.ZoneCircleOutline(safeSpot, PositionDrawSize.NORMAL, Colors.Safe, 2.0f);
+        var aoe = gravitationalWave.aoes[0];
+        var leftSpot = safeSpot + new WDir(-1.0f, 0);
+        var rightSpot = safeSpot + new WDir(1.0f, 0);
+
+        if (aoe.Check(leftSpot)) {
+            return rightSpot;
+        }
+
+        if (aoe.Check(rightSpot)) {
+            return leftSpot;
+        }
+
+        return safeSpot;
     }
 }

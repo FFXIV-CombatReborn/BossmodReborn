@@ -91,12 +91,32 @@ public class P1DoubleTroubleKnockBackData {
 public class P1GravitasData {
     public enum Side { NONE, NORTH, SOUTH } // TODO move to component class?
 
-    public static IReadOnlyDictionary<Side, WPos> PuddlesSpots => puddleSpots;
     public static IReadOnlyDictionary<PartyRolesConfig.Assignment, (WPos north, WPos south)> SpreadSafeSpots => spreadSafeSpots;
 
-    private static readonly Dictionary<Side, WPos> puddleSpots = new() {
+    public static bool TryGetPuddleSpot(DMUConfig.P1GravenImage2Strategy strategy, Side side, out WPos puddleSpot) {
+        var strategyPicked = strategy switch {
+            DMUConfig.P1GravenImage2Strategy.GravenImage2LPDUUptime => puddleSpotsLPDU,
+            DMUConfig.P1GravenImage2Strategy.GravenImage2KefkaBin => puddleSpotsKefkaBin,
+            _ => null,
+        };
+
+        if (strategyPicked == null || !strategyPicked.TryGetValue(side, out var spot)) {
+            puddleSpot = default;
+            return false;
+        }
+
+        puddleSpot = spot;
+        return true;
+    }
+
+    private static readonly Dictionary<Side, WPos> puddleSpotsLPDU = new() {
         [Side.NORTH] = new WPos(100.000f, 91.0f),
         [Side.SOUTH] = new WPos(100.000f, 109.0f),
+    };
+
+    private static readonly Dictionary<Side, WPos> puddleSpotsKefkaBin = new() {
+        [Side.NORTH] = new WPos(100.000f, 88.0f),
+        [Side.SOUTH] = new WPos(100.000f, 112.0f),
     };
 
     private static readonly Dictionary<PartyRolesConfig.Assignment, (WPos north, WPos south)> spreadSafeSpots = new() {
@@ -218,13 +238,45 @@ public class P1TeleTrouncingTethersData {
 }
 
 public class P1GravenImage3Data {
-    public static IReadOnlyDictionary<PartyRolesConfig.Assignment, WPos> MeleePrePositions => meleePrePositions;
     public static IReadOnlyDictionary<PartyRolesConfig.Assignment, (WPos dpsTookArrows, WPos supportTookArrows)> RangePrePositions => rangePrePositions;
 
-    private static readonly Dictionary<PartyRolesConfig.Assignment, WPos> meleePrePositions = new() {
+    public static bool TryGetPrePosition(DMUConfig.P1GravenImage3Strategy strategy, PartyRolesConfig.Assignment assignment, out WPos prePosition) {
+        var strategyPicked = strategy switch {
+            DMUConfig.P1GravenImage3Strategy.GravenImage3LPDU => meleePrePositionsLPDU,
+            DMUConfig.P1GravenImage3Strategy.GravenImage3KefkaBin => meleePrePositionsKefkaBin,
+            _ => null,
+        };
+
+        if (strategyPicked == null || !strategyPicked.TryGetValue(assignment, out var spot)) {
+            prePosition = default;
+            return false;
+        }
+
+        prePosition = spot;
+        return true;
+    }
+
+    public static bool TryGetStackSpot(DMUConfig.P1GravenImage3Strategy strategy, bool isSupport, out WPos stackSpot) {
+        if (!stackSpots.TryGetValue(strategy, out var safeSpots)) {
+            stackSpot = default;
+            return false;
+        }
+
+        stackSpot = isSupport ? safeSpots.supports : safeSpots.dps;
+        return true;
+    }
+
+    private static readonly Dictionary<PartyRolesConfig.Assignment, WPos> meleePrePositionsLPDU = new() {
         [PartyRolesConfig.Assignment.M1] = new WPos(95.000f, 94.500f),
         [PartyRolesConfig.Assignment.M2] = new WPos(104.500f, 95.500f),
         [PartyRolesConfig.Assignment.MT] = new WPos(94.000f, 106.000f),
+        [PartyRolesConfig.Assignment.OT] = new WPos(106.000f, 106.000f),
+    };
+
+    private static readonly Dictionary<PartyRolesConfig.Assignment, WPos> meleePrePositionsKefkaBin = new() {
+        [PartyRolesConfig.Assignment.M1] = new WPos(95.000f, 94.500f),
+        [PartyRolesConfig.Assignment.M2] = new WPos(94.000f, 106.000f),
+        [PartyRolesConfig.Assignment.MT] = new WPos(104.500f, 95.500f),
         [PartyRolesConfig.Assignment.OT] = new WPos(106.000f, 106.000f),
     };
 
@@ -233,5 +285,10 @@ public class P1GravenImage3Data {
         [PartyRolesConfig.Assignment.R2] = (new WPos(100.000f, 88.000f), new WPos(84.000f, 100.000f)),
         [PartyRolesConfig.Assignment.H1] = (new WPos(100.000f, 116.000f), new WPos(87.500f, 100.000f)),
         [PartyRolesConfig.Assignment.H2] = (new WPos(116.000f, 100.000f), new WPos(100.000f, 112.000f)),
+    };
+
+    // TODO consider moving LPDU into this, but LPDU isn't really a set position like Kefka Bin
+    private static readonly Dictionary<DMUConfig.P1GravenImage3Strategy, (WPos supports, WPos dps)> stackSpots = new() {
+        [DMUConfig.P1GravenImage3Strategy.GravenImage3KefkaBin] = new(new WPos(106.000f, 106.000f), new WPos(94.000f, 94.000f)),
     };
 }
