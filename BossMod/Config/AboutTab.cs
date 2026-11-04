@@ -46,17 +46,16 @@ public sealed class AboutTab(DirectoryInfo? replayDir)
             "Guide for using this feature can be found on the wiki.",
         ]);
         ImGui.Spacing();
-        DrawSection("AI",
+        DrawSection("Automovement system",
         [
-            "Automates movement during boss fights.",
-            "Automatically moves your character based on safe zones determined by a boss's module, visible on the radar.",
+            "Automatically moves your character based on safe zones determined by a fight's module, visible on the radar.",
             "Should not be used in when playing with unknown players.",
             "Can be hooked by other plugins to automate entire duties.",
         ]);
         ImGui.Spacing();
         DrawSection("Replays",
         [
-            "Useful for creating boss modules, analyzing problems with them, and making CD plans.",
+            "Useful for creating fight modules, analyzing problems with them, and making CD plans.",
             "When asking for help, make sure to provide a replay! Please note that replays will contain your player name!",
             "Enabled in Settings > Show replay management UI (or enable auto recording).",
             $"Files are located in '{replayDir}'.",

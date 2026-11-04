@@ -1,16 +1,19 @@
-﻿namespace BossMod.Endwalker.VariantCriterion.C01ASS.C013Shadowcaster;
+namespace BossMod.Endwalker.VariantCriterion.C01ASS.C013Shadowcaster;
 
 sealed class CastShadow(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeCone cone = new(65f, 15f.Degrees());
+    private readonly AOEShapeCone cone = new(65f, 15f.Degrees());
     public readonly List<AOEInstance> AOEs = [with(8)];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        var count = AOEs.Count;
-        if (count == 0)
+        var remaining = AOEs.Count - NumCasts;
+        if (remaining <= 0)
+        {
             return [];
-        var max = count > 6 ? 6 : count;
+        }
+
+        var max = remaining > 6 ? 6 : remaining;
         return CollectionsMarshal.AsSpan(AOEs).Slice(NumCasts, max);
     }
 
@@ -20,7 +23,9 @@ sealed class CastShadow(BossModule module) : Components.GenericAOEs(module)
         {
             AOEs.Add(new(cone, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell)));
             if (AOEs.Count == 12)
+            {
                 SortHelpers.SortAOEByActivation(AOEs);
+            }
         }
     }
 

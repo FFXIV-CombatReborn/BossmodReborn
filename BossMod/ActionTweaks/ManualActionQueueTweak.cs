@@ -24,27 +24,6 @@ public sealed class ManualActionQueueTweak(WorldState ws, AIHints hints)
     private readonly List<Entry> _queue = [];
     private bool _emergencyMode;
 
-    private static bool IsRSREnabled()
-    {
-        try
-        {
-            const string rsrName = "Rotation Solver Reborn";
-            var plugins = Service.PluginInterface.InstalledPlugins;
-            foreach (var p in plugins)
-            {
-                if ((p.Name.Equals(rsrName, StringComparison.OrdinalIgnoreCase) || p.InternalName.Equals(rsrName, StringComparison.OrdinalIgnoreCase)) && p.IsLoaded)
-                {
-                    return true;
-                }
-            }
-        }
-        catch
-        {
-            // ignore errors and assume not installed
-        }
-        return false;
-    }
-
     public void RemoveExpired()
     {
         if (_emergencyMode && _queue[0].Expired(ws.CurrentTime))
@@ -276,7 +255,7 @@ public sealed class ManualActionQueueTweak(WorldState ws, AIHints hints)
         }
 
         // custom smart-targeting
-        if (allowSmartTarget && _config.SmartTargeting && !IsRSREnabled() && def.SmartTarget != null)
+        if (allowSmartTarget && _config.SmartTargeting && !ActionTweaksConfig.IsRSREnabled() && def.SmartTarget != null)
         {
             target = ws.Actors.Find(targetNearest());
         }

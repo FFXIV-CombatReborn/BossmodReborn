@@ -20,6 +20,14 @@ public sealed class BossModuleConfigWindow : UIWindow
         _tabs.Add("Party roles assignment", DrawPartyRolesAssignmentsTab);
     }
 
+    public static void Open(BossModuleRegistry.Info info, WorldState ws)
+    {
+        if (!RebornUI.MaterialUI.OpenEncounterSettings(info, ws))
+        {
+            _ = new BossModuleConfigWindow(info, ws);
+        }
+    }
+
     public override void Draw() => _tabs.Draw();
 
     private void DrawEncounterTab()

@@ -25,3 +25,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+The settings and tool windows are drawn with RebornMaterial, which is linked as a separate assembly (`RebornMaterial.dll`).
+
+RebornMaterial: https://github.com/LTS-FFXIV/RebornMaterial
+
+Copyright (c) The Combat Reborn Team
+
+Licensed under the GNU Lesser General Public License, version 3 or any later version: https://www.gnu.org/licenses/lgpl-3.0.html

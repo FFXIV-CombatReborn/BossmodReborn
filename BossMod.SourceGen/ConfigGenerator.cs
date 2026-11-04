@@ -18,6 +18,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
     private const string PropertyComboMetadataName = "BossMod.PropertyComboAttribute";
     private const string PropertySliderMetadataName = "BossMod.PropertySliderAttribute";
     private const string PropertyStringOrderMetadataName = "BossMod.PropertyStringOrderAttribute";
+    private const string PropertyRadioMetadataName = "BossMod.PropertyRadioAttribute";
     private const string GroupDetailsMetadataName = "BossMod.GroupDetailsAttribute";
     private const string GroupPresetMetadataName = "BossMod.GroupPresetAttribute";
     private const string JsonIgnoreMetadataName = "System.Text.Json.Serialization.JsonIgnoreAttribute";
@@ -266,7 +267,8 @@ public sealed class ConfigGenerator : IIncrementalGenerator
                 .Append(field.PropertySliderExpression).Append(", ")
                 .Append(field.PropertyStringOrderExpression).Append(", ")
                 .Append(field.GroupDetailsExpression).Append(", ")
-                .Append(field.PresetArrayExpression).AppendLine("),");
+                .Append(field.PresetArrayExpression).Append(", ")
+                .Append(field.Radio ? "true" : "false").AppendLine("),");
         }
         sb.AppendLine("        }));");
     }
@@ -462,7 +464,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
     {
         private ConfigFieldSnapshot(string name, string escapedName, string typeName, bool serializable, string sectionStartExpression, string propertyDisplayExpression,
             string propertyComboExpression, string propertySliderExpression, string propertyStringOrderExpression, string groupDetailsExpression,
-            string presetArrayExpression, string sourceTreeKey, int sourceSpanStart, ConfigError? error)
+            string presetArrayExpression, bool radio, string sourceTreeKey, int sourceSpanStart, ConfigError? error)
         {
             Name = name;
             EscapedName = escapedName;
@@ -475,6 +477,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
             PropertyStringOrderExpression = propertyStringOrderExpression;
             GroupDetailsExpression = groupDetailsExpression;
             PresetArrayExpression = presetArrayExpression;
+            Radio = radio;
             SourceTreeKey = sourceTreeKey;
             SourceSpanStart = sourceSpanStart;
             Error = error;
@@ -491,6 +494,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         public readonly string PropertyStringOrderExpression;
         public readonly string GroupDetailsExpression;
         public readonly string PresetArrayExpression;
+        public readonly bool Radio;
         public readonly string SourceTreeKey;
         public readonly int SourceSpanStart;
         public readonly ConfigError? Error;
@@ -521,6 +525,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
                 AttributeExpression(SourceGenUtilities.Attribute(attributes, PropertyStringOrderMetadataName)),
                 AttributeExpression(SourceGenUtilities.Attribute(attributes, GroupDetailsMetadataName)),
                 PresetArrayExpression(attributes),
+                SourceGenUtilities.Attribute(attributes, PropertyRadioMetadataName) != null,
                 location?.SourceTree is { } tree ? SourceGenUtilities.SourceTreeKey(tree) : string.Empty,
                 location?.IsInSource == true ? location.SourceSpan.Start : int.MaxValue,
                 error);
@@ -530,7 +535,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
             => other is not null && Name == other.Name && EscapedName == other.EscapedName && TypeName == other.TypeName && Serializable == other.Serializable
                 && SectionStartExpression == other.SectionStartExpression && PropertyDisplayExpression == other.PropertyDisplayExpression && PropertyComboExpression == other.PropertyComboExpression
                 && PropertySliderExpression == other.PropertySliderExpression && PropertyStringOrderExpression == other.PropertyStringOrderExpression
-                && GroupDetailsExpression == other.GroupDetailsExpression && PresetArrayExpression == other.PresetArrayExpression
+                && GroupDetailsExpression == other.GroupDetailsExpression && PresetArrayExpression == other.PresetArrayExpression && Radio == other.Radio
                 && SourceTreeKey == other.SourceTreeKey && SourceSpanStart == other.SourceSpanStart && Equals(Error, other.Error);
 
         public override bool Equals(object? obj) => obj is ConfigFieldSnapshot other && Equals(other);
@@ -546,6 +551,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
             hash = hash * 31 + StringComparer.Ordinal.GetHashCode(PropertyStringOrderExpression);
             hash = hash * 31 + StringComparer.Ordinal.GetHashCode(GroupDetailsExpression);
             hash = hash * 31 + StringComparer.Ordinal.GetHashCode(PresetArrayExpression);
+            hash = hash * 31 + Radio.GetHashCode();
             hash = hash * 31 + StringComparer.Ordinal.GetHashCode(SourceTreeKey);
             hash = hash * 31 + SourceSpanStart;
             hash = hash * 31 + (Error?.GetHashCode() ?? 0);

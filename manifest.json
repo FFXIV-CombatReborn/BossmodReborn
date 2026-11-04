@@ -15,6 +15,7 @@
     "trials"
   ],
   "DalamudApiLevel": 15,
+  "TestingDalamudApiLevel": 15,
   "LoadRequiredState": 0,
   "LoadSync": false,
   "CanUnloadAsync": false,

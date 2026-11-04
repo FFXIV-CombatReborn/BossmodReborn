@@ -90,8 +90,19 @@ public sealed class ActionTweaksConfig : ConfigNode
 
     public bool ActivateAnticheat = true;
 
-    private static bool IsRSREnabled()
+    private static bool _rsrEnabled;
+    private static long _rsrNextCheck;
+
+    internal static bool IsRSREnabled()
     {
+        var now = Environment.TickCount64;
+        if (now < _rsrNextCheck)
+        {
+            return _rsrEnabled;
+        }
+
+        _rsrNextCheck = now + 1000;
+        _rsrEnabled = false;
         try
         {
             const string rsrName = "Rotation Solver Reborn";
@@ -99,12 +110,16 @@ public sealed class ActionTweaksConfig : ConfigNode
             {
                 if ((p.Name.Equals(rsrName, StringComparison.OrdinalIgnoreCase) || p.InternalName.Equals(rsrName, StringComparison.OrdinalIgnoreCase)) && p.IsLoaded)
                 {
-                    return true;
+                    _rsrEnabled = true;
+                    break;
                 }
             }
         }
-        catch { }
-        return false;
+        catch
+        {
+
+        }
+        return _rsrEnabled;
     }
 
     public override void DrawCustom(UITree tree, WorldState ws)
