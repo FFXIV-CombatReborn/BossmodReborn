@@ -33,7 +33,10 @@ public sealed class DMUConfig : ConfigNode {
         DoubleTroubleNone,
 
         [PropertyDisplay("LPDU")]
-        DoubleTroubleLPDU
+        DoubleTroubleLPDU,
+
+        [PropertyDisplay("Kefka Bin (NA)")]
+        DoubleTroubleKefkaBin
     }
 
     [PropertyDisplay("P1 DoubleTrouble strategy")]
