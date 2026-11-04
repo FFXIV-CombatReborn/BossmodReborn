@@ -97,8 +97,7 @@ sealed class Gravitas(BossModule module) : Components.UniformStackSpread(module,
 
         // Pre-position for stack
         if (!Active) {
-            var safeSpot = P1GravitasData.PuddlesSpots.GetValueOrDefault(side);
-            if (safeSpot == default) {
+            if (!P1GravitasData.TryGetPuddleSpot(dmuConfig.P1GravenImage2, side, out var safeSpot)) {
                 return;
             }
 
@@ -163,8 +162,7 @@ sealed class Gravitas(BossModule module) : Components.UniformStackSpread(module,
     }
 
     private WPos getStackSafeSpot() {
-        var safeSpot = P1GravitasData.PuddlesSpots.GetValueOrDefault(side);
-        if (safeSpot == default) {
+        if (!P1GravitasData.TryGetPuddleSpot(dmuConfig.P1GravenImage2, side, out var safeSpot)) {
             return default;
         }
 

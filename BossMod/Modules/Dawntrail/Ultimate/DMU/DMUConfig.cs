@@ -48,6 +48,9 @@ public sealed class DMUConfig : ConfigNode {
 
         [PropertyDisplay("LPDU - Uptime Graven Image 2")]
         GravenImage2LPDUUptime,
+
+        [PropertyDisplay("Kefka Bin (NA)")]
+        GravenImage2KefkaBin,
     }
 
     [PropertyDisplay("P1 Graven Image 2 strategy")]

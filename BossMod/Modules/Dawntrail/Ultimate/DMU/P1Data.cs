@@ -91,12 +91,32 @@ public class P1DoubleTroubleKnockBackData {
 public class P1GravitasData {
     public enum Side { NONE, NORTH, SOUTH } // TODO move to component class?
 
-    public static IReadOnlyDictionary<Side, WPos> PuddlesSpots => puddleSpots;
     public static IReadOnlyDictionary<PartyRolesConfig.Assignment, (WPos north, WPos south)> SpreadSafeSpots => spreadSafeSpots;
 
-    private static readonly Dictionary<Side, WPos> puddleSpots = new() {
+    public static bool TryGetPuddleSpot(DMUConfig.P1GravenImage2Strategy strategy, Side side, out WPos puddleSpot) {
+        var strategyPicked = strategy switch {
+            DMUConfig.P1GravenImage2Strategy.GravenImage2LPDUUptime => puddleSpotsLPDU,
+            DMUConfig.P1GravenImage2Strategy.GravenImage2KefkaBin => puddleSpotsKefkaBin,
+            _ => null,
+        };
+
+        if (strategyPicked == null || !strategyPicked.TryGetValue(side, out var spot)) {
+            puddleSpot = default;
+            return false;
+        }
+
+        puddleSpot = spot;
+        return true;
+    }
+
+    private static readonly Dictionary<Side, WPos> puddleSpotsLPDU = new() {
         [Side.NORTH] = new WPos(100.000f, 91.0f),
         [Side.SOUTH] = new WPos(100.000f, 109.0f),
+    };
+
+    private static readonly Dictionary<Side, WPos> puddleSpotsKefkaBin = new() {
+        [Side.NORTH] = new WPos(100.000f, 88.0f),
+        [Side.SOUTH] = new WPos(100.000f, 112.0f),
     };
 
     private static readonly Dictionary<PartyRolesConfig.Assignment, (WPos north, WPos south)> spreadSafeSpots = new() {
