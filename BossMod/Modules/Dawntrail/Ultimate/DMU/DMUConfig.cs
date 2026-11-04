@@ -1,11 +1,5 @@
 ﻿namespace BossMod.Dawntrail.Ultimate.DMU;
 
-// TODO NA double trouble knockbacks - needs it own strat since one of them is different
-//  1. Same
-//  2. Different (support still north and dps still south)
-//  3. Same
-// TODO NA Graven Image 2 - Needs it own strat since they take the baits on the markers instead
-
 [ConfigDisplay(Order = 0x400, Parent = typeof(DawntrailConfig))]
 public sealed class DMUConfig : ConfigNode {
     [SectionStart("Strategy Settings")]
