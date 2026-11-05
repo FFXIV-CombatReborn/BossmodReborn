@@ -11,14 +11,10 @@ internal static class PartyRolesPanel
 
     public static void Draw(PartyRolesConfig config, WorldState ws)
     {
-        var autoWidth = M3Widgets.ButtonWidth(FontAwesomeIcon.Magic, "Auto-assign");
-        var row = M3SettingRow.Begin("Auto-assign roles", "Assigns party roles from each member's job and their order in the party.", new(autoWidth, M3Widgets.ButtonHeight));
-        ImGui.SetCursorScreenPos(row.ControlPosition);
-        if (M3Widgets.Button("##autoassign", "Auto-assign", M3ButtonStyle.Filled, FontAwesomeIcon.Magic))
+        if (M3Widgets.RowButton("Auto-assign roles###autoassign", "Auto-assign", "Assigns party roles from each member's job and their order in the party.", M3ButtonStyle.Filled, FontAwesomeIcon.Magic))
         {
             config.AutoAssignRoles(ws.Party);
         }
-        M3SettingRow.End(row);
 
         M3Widgets.SectionLabel("Current party");
         DrawPartyAssignments(config, ws);
@@ -39,15 +35,12 @@ internal static class PartyRolesPanel
         }
 
         ImGui.Dummy(new(0f, M3.Space1));
-        var clearWidth = M3Widgets.ButtonWidth(FontAwesomeIcon.TrashAlt, "Hold to clear");
-        row = M3SettingRow.Begin("Clear all assignments", "Forgets every saved assignment, for example to shrink the config file.", new(clearWidth, M3Widgets.ButtonHeight));
-        ImGui.SetCursorScreenPos(row.ControlPosition);
-        if (M3Widgets.HoldButton("##clearassignments", "Hold to clear", 1f, M3ButtonStyle.Danger, FontAwesomeIcon.TrashAlt, enabled: config.Assignments.Count > 0))
+        if (M3Widgets.RowHoldButton("Clear all assignments###clearassignments", "Hold to clear", "Forgets every saved assignment, for example to shrink the config file.",
+            1f, M3ButtonStyle.Danger, FontAwesomeIcon.TrashAlt, enabled: config.Assignments.Count > 0))
         {
             config.Assignments.Clear();
             config.Modified.Fire();
         }
-        M3SettingRow.End(row);
     }
 
     private static void DrawTankPriority(PartyRolesConfig config, string id, Class[] order)

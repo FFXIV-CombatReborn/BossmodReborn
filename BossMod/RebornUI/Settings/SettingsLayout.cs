@@ -27,9 +27,21 @@ internal static class SettingsLayout
 
     public sealed record class Section(string Label, FontAwesomeIcon Icon, string[] Fields, string? StripPrefix = null);
 
-    public sealed record class Field(string? Label = null, string? Tooltip = null, string? Depends = null, string? Format = null, string[]? Options = null, float? Min = null, float? Max = null);
+    public sealed record class Field(string? Label = null, string? Tooltip = null, string? Depends = null, string? Format = null, string[]? Options = null, float? Min = null, float? Max = null,
+        M3ColorChoice[]? Choices = null);
 
     private static readonly string[] _maturityOptions = ["Dummy (dev work only)", "Work in progress", "Contributed", "Verified", "AI support"];
+
+    private static readonly M3ColorChoice[] _accentChoices =
+    [
+        new("Reborn teal (default)", M3ColorMath.FromRgb(0x5BA7B7)),
+        new("Sapphire", M3ColorMath.FromRgb(0x2F6DB5)),
+        new("Violet", M3ColorMath.FromRgb(0x7E57C2)),
+        new("Rose", M3ColorMath.FromRgb(0xC2185B)),
+        new("Crimson", M3ColorMath.FromRgb(0xC62828)),
+        new("Amber", M3ColorMath.FromRgb(0xC98A00)),
+        new("Forest", M3ColorMath.FromRgb(0x3E8E41)),
+    ];
 
     public static Node? For(Type type) => _nodes.GetValueOrDefault(type);
 
@@ -38,17 +50,23 @@ internal static class SettingsLayout
         [typeof(InterfaceConfig)] = new()
         {
             Icon = FontAwesomeIcon.PaintBrush,
-            Description = "Accent color and sizing of the BossMod Reborn windows",
+            Description = "Accent color, sizing and animations of the BossMod Reborn windows",
             Sections =
             [
                 new("Theme", FontAwesomeIcon.Palette, [nameof(InterfaceConfig.AccentColor)]),
-                new("Sizing", FontAwesomeIcon.TextHeight, [nameof(InterfaceConfig.TextScale), nameof(InterfaceConfig.ElementScale), nameof(InterfaceConfig.PaddingScale), nameof(InterfaceConfig.CompactSettings)]),
+                new("Sizing", FontAwesomeIcon.TextHeight,
+                [
+                    nameof(InterfaceConfig.TextScale), nameof(InterfaceConfig.ElementScale), nameof(InterfaceConfig.PaddingScale), nameof(InterfaceConfig.MotionScale),
+                    nameof(InterfaceConfig.CompactSettings),
+                ]),
             ],
             Fields = new()
             {
+                [nameof(InterfaceConfig.AccentColor)] = new(Choices: _accentChoices),
                 [nameof(InterfaceConfig.TextScale)] = new(Format: "%.2fx"),
                 [nameof(InterfaceConfig.ElementScale)] = new(Format: "%.2fx"),
                 [nameof(InterfaceConfig.PaddingScale)] = new(Format: "%.2fx"),
+                [nameof(InterfaceConfig.MotionScale)] = new(Format: "%.2fx"),
             },
         },
 
@@ -105,10 +123,10 @@ internal static class SettingsLayout
             Custom = NoCustom,
             SectionExtras = static (_, section, _, _) =>
             {
-                if (section == "Radar window")
+                if (section == "Radar window" && M3Widgets.RowButton("Radar window position###recenter", "Recenter",
+                    "Moves the radar window back to the middle of the screen. Also available as /bmr radar reset.", icon: FontAwesomeIcon.Crosshairs))
                 {
-                    ButtonRow("##recenter", "Radar window position", "Moves the radar window back to the middle of the screen. Also available as /bmr radar reset.", "Recenter", FontAwesomeIcon.Crosshairs,
-                        () => Service.BossModWindow?.RecenterWindow());
+                    Service.BossModWindow?.RecenterWindow();
                 }
             },
         },
@@ -318,18 +336,6 @@ internal static class SettingsLayout
             Fields = new() { [nameof(DeveloperConfig.MapSourcePath)] = new(Depends: nameof(DeveloperConfig.MapLoadFromSource)) },
         },
     };
-
-    private static void ButtonRow(string id, string label, string supporting, string button, FontAwesomeIcon icon, Action click)
-    {
-        var width = M3Widgets.ButtonWidth(icon, button);
-        var row = M3SettingRow.Begin(label, supporting, new(width, M3Widgets.ButtonHeight));
-        ImGui.SetCursorScreenPos(row.ControlPosition);
-        if (M3Widgets.Button(id, button, M3ButtonStyle.Tonal, icon))
-        {
-            click();
-        }
-        M3SettingRow.End(row);
-    }
 
     private static void SmartTargetingRow(ActionTweaksConfig config)
     {
