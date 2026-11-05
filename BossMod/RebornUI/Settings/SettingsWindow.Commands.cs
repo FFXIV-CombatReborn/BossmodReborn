@@ -83,11 +83,7 @@ internal sealed partial class SettingsWindow
             var command = args.Length > 0 ? $"{prefix} {args}" : prefix;
             var row = M3SettingRow.Begin(command, description, new(button, button), M3.Scheme.Primary);
             ImGui.SetCursorScreenPos(row.ControlPosition);
-            if (M3Widgets.IconButton($"##{command}", FontAwesomeIcon.Copy, "Copy to clipboard"))
-            {
-                ImGui.SetClipboardText(command);
-                M3Snackbar.Show($"Copied {command}");
-            }
+            _ = M3Widgets.CopyIconButton($"##{command}", command, snackbar: $"Copied {command}");
             M3SettingRow.End(row);
         }
     }

@@ -16,6 +16,7 @@ internal static class SettingsRenderer
         public readonly string? Depends = layout?.Depends ?? meta.Display!.Depends;
         public readonly string? Format = layout?.Format;
         public readonly string[]? Options = layout?.Options ?? meta.Combo?.Values;
+        public readonly M3ColorChoice[]? Choices = layout?.Choices;
         public readonly (float Min, float Max, bool Logarithmic)? Slider = layout is { Min: { } min, Max: { } max } ? (min, max, false)
             : meta.Slider is { } slider ? (slider.Min, slider.Max, slider.Logarithmic) : null;
         public string Section = "";
@@ -466,7 +467,7 @@ internal static class SettingsRenderer
         if (field.Options is { Length: >= 2 } options)
         {
             var index = v ? 1 : 0;
-            if (DrawComboRow(row, ref index, 2, i => options[i]))
+            if (DrawComboRow(row, ref index, options))
             {
                 field.Meta.Setter(node, index != 0);
                 return true;
@@ -513,7 +514,7 @@ internal static class SettingsRenderer
         }
         else
         {
-            changed = DrawComboRow(row, ref index, labels.Length, i => labels[i]);
+            changed = DrawComboRow(row, ref index, labels);
         }
 
         if (changed)
@@ -592,13 +593,22 @@ internal static class SettingsRenderer
     private static bool DrawProperty(in RowText row, ConfigNode node, FieldView field, Color v)
     {
         var current = v.ToFloat4();
-        Vector4? fallback = DefaultValue(node, field.Meta) is Color def ? def.ToFloat4() : null;
-        if (DrawColorRow(row, ref current, fallback))
+        bool changed;
+        if (field.Choices is { Length: > 0 } choices)
+        {
+            changed = M3Widgets.RowColorChoices($"{row.Label}###{row.Id}", ref current, choices, row.Supporting.Length > 0 ? row.Supporting : null, enabled: row.Enabled);
+        }
+        else
+        {
+            Vector4? fallback = DefaultValue(node, field.Meta) is Color def ? def.ToFloat4() : null;
+            changed = DrawColorRow(row, ref current, fallback);
+        }
+
+        if (changed)
         {
             field.Meta.Setter(node, Color.FromFloat4(current));
-            return true;
         }
-        return false;
+        return changed;
     }
 
     private static bool DrawProperty(in RowText row, ConfigNode node, FieldView field, Color[] v)
@@ -694,9 +704,15 @@ internal static class SettingsRenderer
         if (expanded)
         {
             var indent = M3.Space3;
-            ImGui.Indent(indent);
+            if (indent > 0f)
+            {
+                ImGui.Indent(indent);
+            }
             modified |= DrawGroupAssignmentTable(row, v, group, root, ws);
-            ImGui.Unindent(indent);
+            if (indent > 0f)
+            {
+                ImGui.Unindent(indent);
+            }
         }
         return modified;
     }
@@ -750,13 +766,14 @@ internal static class SettingsRenderer
         return modified;
     }
 
-    private static bool DrawComboRow(in RowText row, ref int index, int count, Func<int, string> label)
+    private static bool DrawComboRow(in RowText row, ref int index, string[] labels)
     {
+        var count = labels.Length;
         var widest = "";
         var widestWidth = 0f;
         for (var i = 0; i < count; ++i)
         {
-            var text = label(i);
+            var text = labels[i];
             var textWidth = ImGui.CalcTextSize(text).X;
             if (textWidth > widestWidth)
             {
@@ -767,7 +784,7 @@ internal static class SettingsRenderer
 
         var width = MathF.Min(MathF.Max(160f * Scale, M3Widgets.ComboWidthFor(widest)), MathF.Max(120f * Scale, M3SettingRow.MaxControlWidth() * 0.6f));
         var info = BeginRow(row, new(width, M3Widgets.ComboHeight));
-        var changed = M3Widgets.Combo($"##{row.Id}", ref index, count, label, width, search: count > 12, enabled: row.Enabled);
+        var changed = M3Widgets.Combo($"##{row.Id}", ref index, labels, width, search: count > 12, enabled: row.Enabled);
         M3SettingRow.End(info);
         return changed;
     }

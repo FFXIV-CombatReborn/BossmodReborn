@@ -2,7 +2,7 @@ using RebornMaterial;
 
 namespace BossMod.RebornUI;
 
-[ConfigDisplay(Name = "Interface", Order = -2, Tags = ["theme", "accent", "scale", "size", "material"])]
+[ConfigDisplay(Name = "Interface", Order = -2, Tags = ["theme", "accent", "scale", "size", "material", "animation", "motion"])]
 public sealed class InterfaceConfig : ConfigNode, IM3Settings
 {
     [SectionStart("Theme")]
@@ -21,6 +21,10 @@ public sealed class InterfaceConfig : ConfigNode, IM3Settings
     [PropertyDisplay("Spacing", tooltip: "Scales the space around and between controls without changing their size.")]
     [PropertySlider(0f, 3f)]
     public float PaddingScale = 1f;
+
+    [PropertyDisplay("Animation length", tooltip: "Lengthens or shortens the animations in the themed windows. 0 turns them off.")]
+    [PropertySlider(0f, 3f)]
+    public float MotionScale = 1f;
 
     [PropertyDisplay("Compact settings window", tooltip: "Uses tighter padding in the settings window, so more fits on screen.")]
     public bool CompactSettings = false;
@@ -47,5 +51,11 @@ public sealed class InterfaceConfig : ConfigNode, IM3Settings
     {
         get => PaddingScale;
         set => PaddingScale = value;
+    }
+
+    float IM3Settings.UiMotionScale
+    {
+        get => MotionScale;
+        set => MotionScale = value;
     }
 }
