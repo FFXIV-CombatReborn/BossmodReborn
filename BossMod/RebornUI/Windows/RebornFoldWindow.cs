@@ -56,7 +56,7 @@ public abstract class RebornFoldWindow : RebornWindow
         M3Draw.IconCentered(drawList, FontAwesomeIcon.Dragon, min, max, s.OnPrimaryContainer);
     }
 
-    protected M3WindowBrand Brand => new(LogoTexture, _brandLabel, FontAwesomeIcon.Dragon);
+    protected M3WindowBrand Brand => new(LogoTexture, "BMR", FontAwesomeIcon.Dragon);
 
     protected virtual M3WindowAction[] WindowActions => [];
 
