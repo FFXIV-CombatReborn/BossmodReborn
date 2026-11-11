@@ -55,7 +55,7 @@
 
   <ItemGroup>
     <PackageReference Include="DalamudPackager" Version="15.0.0" />
-    <PackageReference Include="RebornMaterial" Version="7.5.7.6" />
+    <PackageReference Include="RebornMaterial" Version="7.5.8.1" />
     <PackageReference Include="TerraFX.Interop.Windows" Version="10.0.26100.6" />
     <Reference Include="FFXIVClientStructs">
       <HintPath>$(DalamudLibPath)FFXIVClientStructs.dll</HintPath>
