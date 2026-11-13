@@ -12,6 +12,9 @@ class P3GrandOctet(BossModule module) : Components.GenericAOEs(module)
     public readonly int[] BaitOrder = new int[PartyState.MaxPartySize];
     public int NumBaitsAssigned = 1; // reserve for lunar dive
 
+    private readonly List<WPos> Towers = [];
+    private BitMask Stackers;
+
     private static readonly AOEShapeRect _shapeNaelTwin = new(60, 4);
     private static readonly AOEShapeRect _shapeBahamut = new(60, 6);
     private static readonly AOEShapeRect _shapeDrake = new(52, 10);
@@ -62,14 +65,52 @@ class P3GrandOctet(BossModule module) : Components.GenericAOEs(module)
             return;
         }
 
-        if (baitSource != null)
+        if (baitSource == null)
+            return;
+
+        var ctr = Arena.Center;
+        var baitAngle = (baitSource.Value - ctr).ToAngle();
+
+        // twin bait can stand relatively close so that they have the most time to get to the tower or to the stack destination
+        if (order == 8)
         {
-            var ctr = Arena.Center;
-            var goalA = (baitSource.Value - ctr).ToAngle();
-            goalA += (DiveOrder * 34).Degrees(); // approximation, i ain't doing no trigonometry
-            var goalEdge = AIHints.GoalProximity(ctr + goalA.ToDirection() * 21, 20, 5);
-            hints.GoalZones.Add(p => p.InCircle(ctr, 19) ? 0 : goalEdge(p));
+            if (NumCasts < 7)
+            {
+                // baha dive might cover our spot
+                hints.GoalZones.Add(AIHints.GoalProximity(baitSource.Value, 20, 5));
+            }
+            else
+            {
+                baitAngle += (DiveOrder * 15).Degrees();
+                var closeBait = Arena.Center + baitAngle.ToDirection() * 21.5f;
+
+                if (Stackers.Any() && !Stackers[slot])
+                {
+                    // if not stacking, the plan is to preposition as close to our desired tower as possible, ensuring that nobody else's tower gets hit by twin
+                    var myTower = Towers.MinBy(t => (t - closeBait).LengthSq());
+                    foreach (var t in Towers)
+                    {
+                        hints.AddForbiddenZone(ShapeDistance.Cone(baitSource.Value, 100, (t - baitSource.Value).ToAngle(), MathF.Atan2(7, (t - baitSource.Value).Length()).Radians()));
+                    }
+                    // additionally make sure we hide on the correct side of the arena, since the stackers are using the other side
+                    hints.AddForbiddenZone(ShapeDistance.HalfPlane(baitSource.Value, baitAngle.ToDirection().Rotate((90 * DiveOrder).Degrees())));
+                    // goal zone for tower
+                    hints.GoalZones.Add(AIHints.GoalProximity(myTower, 20, 5));
+                }
+                else
+                {
+                    // exact position isn't that important, but since we already use this one for tower assignments, just stand there
+                    hints.PathfindMapBounds = UCOB.PathfindHugBorderBounds;
+                    hints.AddForbiddenZone(ShapeDistance.PrecisePosition(closeBait, new(0, 1), 0.5f, actor.Position, 0.1f));
+                }
+            }
+
+            return;
         }
+
+        baitAngle += (DiveOrder * 34).Degrees(); // approximation, i ain't doing no trigonometry
+        var goalEdge = AIHints.GoalProximity(ctr + baitAngle.ToDirection() * 22, 20, 5);
+        hints.GoalZones.Add(p => Vector.ConditionalSelect(p.InCircle(ctr, 19), Vector<float>.Zero, goalEdge(p)));
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
@@ -101,6 +142,9 @@ class P3GrandOctet(BossModule module) : Components.GenericAOEs(module)
         {
             AOEs.Add(new(shape, caster.Position, spell.Rotation, Module.CastFinishAt(spell)));
         }
+
+        if ((AID)spell.Action.ID == AID.MegaflareTower)
+            Towers.Add(spell.LocXZ);
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
@@ -132,6 +176,9 @@ class P3GrandOctet(BossModule module) : Components.GenericAOEs(module)
                     for (var i = 0; i < BaitOrder.Length; ++i)
                         if (BaitOrder[i] == 0)
                             BaitOrder[i] = 8; // twintania bait
+                break;
+            case IconID.MegaflareStack:
+                Stackers.Set(slot);
                 break;
         }
     }
@@ -244,7 +291,10 @@ class P3GrandOctetTower : P3MegaflareTower
         if (_assigned || _stackTargets.NumSetBits() != 4 || go.Twintania == null || Towers.Count != 4)
             return;
 
-        Towers.SortBy(t => (t.Position - go.Twintania.Position).LengthSq());
+        var twinAngle = (go.Twintania.Position - Arena.Center).ToAngle();
+        var twinBaiterPos = Arena.Center + (twinAngle + (go.DiveOrder * 15).Degrees()).ToDirection() * 21.5f;
+
+        Towers.SortBy(t => (t.Position - twinBaiterPos).LengthSq());
 
         var allowedPlayers = Raid.WithSlot().ExcludedFromMask(_stackTargets).OrderBy(s => _qmtOrder[s.Item1] >= 0 ? (ulong)_qmtOrder[s.Item1] : s.Item2.InstanceID).ToList();
 

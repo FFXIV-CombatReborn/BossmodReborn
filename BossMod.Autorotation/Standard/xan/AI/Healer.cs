@@ -9,7 +9,7 @@ public class HealerAI(RotationModuleManager manager, Actor player) : AIBase<Heal
     {
         [Option("Heal everyone")]
         Enabled,
-        [Option("Babysit specific target (default: current main tank)", Targets = ActionTargets.Self | ActionTargets.Party)]
+        [Option("Babysit specific target (default: current main tank)", Targets = ActionTargets.Self | ActionTargets.Party | ActionTargets.Hostile)] // if a hostile is selected, we use that actor's target
         Babysit,
         [Option("Don't heal")]
         Disabled
@@ -137,9 +137,16 @@ public class HealerAI(RotationModuleManager manager, Actor player) : AIBase<Heal
                     break;
                 case StayNearPartyStrategy.EnabledSlow:
                     List<(WPos pos, float radius)> allies = [.. LightParty.Exclude(Player).Select(e => (e.Position, e.HitboxRadius))];
-                    var currentCoverage = allies.Count(a => a.pos.InCircle(Player.Position, a.radius + 0.5f + 15));
-                    var scale = 1f / Math.Max(1, allies.Count);
-                    Hints.GoalZones.Add(p => scale * Math.Max(currentCoverage, allies.Count(a => a.pos.InCircle(p, a.radius + 0.5f + 13))));
+                    var currentCoverage = VV.Create((float)allies.Count(a => a.pos.InCircle(Player.Position, a.radius + 0.5f + 15)));
+                    var scale = VV.Create(1f / Math.Max(1, allies.Count));
+                    Hints.GoalZones.Add(p =>
+                    {
+                        var ac = VFloat.Zero;
+                        foreach (var a in allies)
+                            ac += p.InCircle(a.pos, a.radius + 0.5f + 13).WithValue(VFloat.One);
+
+                        return scale * VV.Max(currentCoverage, ac);
+                    });
                     break;
             }
         }
@@ -471,6 +478,8 @@ public class HealerAI(RotationModuleManager manager, Actor player) : AIBase<Heal
                     UseGCD(BossMod.SCH.AID.Adloquium, tank, 4);
         }
 
+        // carelessly spending aetherflow stacks on the tank is a good way to get the party killed via missing mit
+        var babymode = strategy.Heal.Value == HealMode.Babysit;
         HealLowest(strategy, (target, ratio) =>
         {
             var tank = target.Role == Role.Tank;
@@ -479,16 +488,16 @@ public class HealerAI(RotationModuleManager manager, Actor player) : AIBase<Heal
                 UseOGCD(BossMod.SCH.AID.WhisperingDawn, Player, 12);
                 return;
             }
-            if (aetherflow && (tank ? ratio <= 0.6f : ratio < 0.5f))
+            if (aetherflow && (tank ? ratio <= 0.6f : ratio < 0.5f) && !babymode)
                 UseOGCD(BossMod.SCH.AID.Excogitation, target, tank ? 12 : 8);
             if (ratio <= 0.5f && gauge.FairyGauge >= 10 && pet != null && !haveSeraph && target.Position.InCircle(pet.Position, 30) && target.FindStatus(BossMod.SCH.SID.FeyUnion, World.FutureTime(1000)) == null)
                 UseOGCD(BossMod.SCH.AID.Aetherpact, target, 11);
             if (AutoMit && tank && ratio <= 0.5f)
                 UseOGCD(BossMod.SCH.AID.Protraction, target, 10);
-            if (ratio <= 0.25f && aetherflow)
+            if (ratio <= 0.25f && aetherflow && !babymode)
                 UseOGCD(BossMod.SCH.AID.Lustrate, target, 9);
 
-            var ogcdCovers = tank && aetherflow && ReadySoon(BossMod.SCH.AID.Excogitation);
+            var ogcdCovers = tank && aetherflow && !babymode && ReadySoon(BossMod.SCH.AID.Excogitation);
             if (SingledOut(ratio) && (ratio <= 0.3f || ratio <= 0.5f && !ogcdCovers))
                 UseGCD(BestActionUnlocked(BossMod.SCH.AID.Adloquium, BossMod.SCH.AID.Physick), target, 3);
         });
@@ -657,11 +666,27 @@ public class HealerAI(RotationModuleManager manager, Actor player) : AIBase<Heal
 
     private IEnumerable<Actor> LightParty => _lightParty;
 
-    private int ResolveHealTarget(in Strategy strategy) => strategy.Heal.TrackRaw.Target switch
+    private int ResolveHealTarget(in Strategy strategy)
     {
-        StrategyTarget.Automatic => World.Actors.Find(Player.TargetID) is { } t ? World.Party.FindSlot(t.TargetID) : -1,
-        _ => World.Party.FindSlot(Manager.ResolveTargetOverride(strategy.Heal.TrackRaw.Target, strategy.Heal.TrackRaw.TargetParam)?.InstanceID ?? 0)
-    };
+        var track = strategy.Heal.TrackRaw;
+
+        switch (track.Target)
+        {
+            // target of our target
+            case StrategyTarget.Automatic:
+                return World.Actors.Find(Player.TargetID) is { } t ? World.Party.FindSlot(t.TargetID) : -1;
+
+            // target of a specific target (e.g. main tank during some adds phase)
+            case StrategyTarget.EnemyByOID:
+            case StrategyTarget.EnemyWithHighestPriority:
+                var enemy = Manager.ResolveTargetOverride(track.Target, track.TargetParam);
+                return enemy == null ? -1 : World.Party.FindSlot(enemy.TargetID);
+
+            // party member
+            default:
+                return World.Party.FindSlot(Manager.ResolveTargetOverride(strategy.Heal.TrackRaw.Target, strategy.Heal.TrackRaw.TargetParam)?.InstanceID ?? 0);
+        }
+    }
 
     private void HealLowest(in Strategy strategy, Action<Actor, float> healFun)
     {
@@ -673,6 +698,10 @@ public class HealerAI(RotationModuleManager manager, Actor player) : AIBase<Heal
                     healFun(babysit, HealRatio(targetSlot) - ThresholdShift(babysit, targetSlot));
                 return;
             case HealMode.Enabled:
+                // banner of noble ends
+                // spirit of the profane
+                if (Player.Statuses.Any(s => s.ID is 2320 or 2326))
+                    return;
                 break;
             default:
                 return;

@@ -88,7 +88,7 @@ class P3QuickmarchTrio(BossModule module) : BossComponent(module)
 class P3TwistingDive(BossModule module) : Components.StandardAOEs(module, AID.TwistingDive, new AOEShapeRect(60, 4));
 class P3LunarDive(BossModule module) : Components.StandardAOEs(module, AID.LunarDive, new AOEShapeRect(60, 4));
 class P3MegaflareDive(BossModule module) : Components.StandardAOEs(module, AID.MegaflareDive, new AOEShapeRect(60, 6));
-class P3Twister(BossModule module) : Twister(module, AID.TwistingDive, 1.4f, Service.Config.Get<UCOBConfig>().TwisterPreDodge)
+class P3Twister(BossModule module) : Twister(module, AID.TwistingDive, 1.4f)
 {
     public bool Predicted => PredictedPositions.Count > 0;
 }
@@ -271,7 +271,7 @@ class P3TempestWing(BossModule module) : Components.TankbusterTether(module, AID
             }
             else if (!Targets[slot])
             {
-                List<Func<WPos, float>> goal = [];
+                List<Func<WVec, Vector<float>>> goal = [];
 
                 foreach (var side in Tethers.Where(t => t.Player.Role != Role.Tank))
                 {

@@ -14,8 +14,8 @@ class Multibox(RotationModuleManager manager, Actor player) : RotationModule(man
 
     public override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
     {
-        if (World.Party.WithoutSlot(includeDead: true).Any(p => p.IsDead || p.FindStatus(235) != null) && Bossmods.ActiveModule!.StateMachine.ActivePhaseIndex < 4)
-            Hints.ForcedMovement = -Player.DirectionTo(new WPos(100, 100)).ToVec3();
+        //if (World.Party.WithoutSlot(includeDead: true).Any(p => p.IsDead) && Bossmods.ActiveModule!.StateMachine.ActivePhaseIndex < 3)
+        //    Hints.ForcedMovement = -Player.DirectionTo(new WPos(100, 100)).ToVec3();
 
         var playerAssignment = partyRolesConfig[World.Party.Members[0].ContentId];
 
@@ -30,9 +30,7 @@ class Multibox(RotationModuleManager manager, Actor player) : RotationModule(man
             {
                 var destination = primaryTarget.Position + primaryTarget.DirectionTo(Player) * (14 + primaryTarget.HitboxRadius + 0.5f);
 
-                var sh = ShapeDistance.PrecisePosition(destination, new(0, 1), 0.5f, Player.Position, 0.1f);
-
-                Hints.GoalZones.Add(p => sh(p) > 0 ? 5 : 0);
+                Hints.GoalZones.AddSimple(ShapeDistance.PrecisePosition(destination, new(0, 1), 0.5f, Player.Position, 0.1f).Inverted().Discretize(), 5);
             }
         }
     }

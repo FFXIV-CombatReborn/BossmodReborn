@@ -1,5 +1,10 @@
 ﻿using BossMod.Pathfinding;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Textures;
+using Dalamud.Interface.Textures.TextureWraps;
+using SharpDX.Direct2D1;
+using SharpDX.Mathematics.Interop;
+using Vector2 = System.Numerics.Vector2;
 
 namespace BossMod.Dev;
 
@@ -35,6 +40,22 @@ class PathfindingTest : TestWindow
     private float _blockRectHalfWidth = 5;
     private float _blockRectRotationDeg;
     private float _blockRectG = 4;
+
+    bool _antialiased;
+
+    private readonly D2DDraw _draw = new();
+    private IDalamudTextureWrap _result = Service.Texture.CreateEmpty(RawImageSpecification.Bgra32(1, 1), false, false);
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _draw.Dispose();
+            _result.Dispose();
+        }
+
+        base.Dispose(disposing);
+    }
 
     public PathfindingTest() : base("Pathfinding test", new(400, 400), ImGuiWindowFlags.None)
     {
@@ -84,15 +105,23 @@ class PathfindingTest : TestWindow
             }
         }
 
+        rebuild |= ImGui.Checkbox("Antialiased", ref _antialiased);
+
         if (rebuild)
             _visu = RebuildMap();
+
+        //ImGui.Text($"{_visu.Map.Width} x {_visu.Map.Height}");
+        //var cursor = ImGui.GetCursorScreenPos();
+        //ImGui.GetWindowDrawList().AddRect(cursor, cursor + new Vector2(400), 0xFFFFFFFF);
+        //ImGui.Image(_result.Handle, new(400));
     }
 
     private MapVisualizer RebuildMap()
     {
         Map map = new(_mapResolution, new(_mapCenter), _mapHalfSize.X, _mapHalfSize.Y, _mapRotationDeg.Degrees());
-        List<float> sg = [];
-        var sb = new BitArray(0);
+
+        var sg = Array.Empty<float>();
+        var sd = Array.Empty<uint>();
         var now = DateTime.MinValue;
         List<(Sdf containsFn, DateTime activation, ulong source)> zones = [];
         if (_blockCone)
@@ -101,22 +130,61 @@ class PathfindingTest : TestWindow
             zones.Add((Sdf.Continuous(ShapeDistance.Rect(new(_blockRectCenter), _blockRectRotationDeg.Degrees(), _blockRectLen.X, _blockRectLen.Y, _blockRectHalfWidth)), now.AddSeconds(_blockRectG), 0));
         zones.SortBy(z => z.activation);
 
+        var gCopy = new List<float>();
+
         if (_useNewRasterizer)
-            NavigationDecision.RasterizeForbiddenZones(map, zones, now, sg, sb, _ping, _cushion);
+            NavigationDecision.RasterizeForbiddenZones(map, zones, now, _ping, _cushion, gCopy);
         else
-            NavigationDecision.RasterizeForbiddenZonesOld(map, zones, now, sg, sb, _ping, _cushion);
+            NavigationDecision.RasterizeForbiddenZonesOld(map, zones, now, _ping, _cushion);
 
-        List<Func<WPos, float>> goals = [];
-        goals.Add(AIHints.GoalSingleTarget(new(_targetPos), _targetFacingDeg.Degrees(), Positional.Rear, _targetRadius));
-        NavigationDecision.RasterizeGoalZones(map, goals, _cushion > 0);
+        NavigationDecision.RasterizeGoalZones(map, [AIHints.GoalSingleTarget(new(_targetPos), _targetFacingDeg.Degrees(), Positional.Rear, _targetRadius)]);
 
-        var visu = new MapVisualizer(map, new(_startingPos)/*, sg*/);
+        var visu = new MapVisualizer(map, new(_startingPos), [.. gCopy]);
 
         if (_blockCone)
             visu.Sectors.Add((new(_blockConeCenter), _blockConeRadius.X, _blockConeRadius.Y, _blockConeRotationDeg.Degrees(), _blockConeHalfAngle.Degrees()));
         if (_blockRect)
             visu.Rects.Add((new(_blockRectCenter), _blockRectLen.X, _blockRectLen.Y, _blockRectHalfWidth, _blockRectRotationDeg.Degrees()));
 
+        _result.Dispose();
+        _result = _draw.Draw(map.Width + 1, map.Height + 1, _antialiased, ctx =>
+        {
+            if (_blockCone)
+            {
+                var geometry = new PathGeometry(ctx.Factory);
+
+                using (var sink = geometry.Open())
+                {
+                    var p1 = _blockConeCenter + _mapHalfSize / _mapResolution + (_blockConeRotationDeg + _blockConeHalfAngle).Degrees().ToDirection().ToVec2() * _blockConeRadius.Y / _mapResolution;
+                    var p2 = _blockConeCenter + _mapHalfSize / _mapResolution + (_blockConeRotationDeg - _blockConeHalfAngle).Degrees().ToDirection().ToVec2() * _blockConeRadius.Y / _mapResolution;
+                    var p3 = _blockConeCenter + _mapHalfSize / _mapResolution + (_blockConeRotationDeg - _blockConeHalfAngle).Degrees().ToDirection().ToVec2() * _blockConeRadius.X / _mapResolution;
+                    var p4 = _blockConeCenter + _mapHalfSize / _mapResolution + (_blockConeRotationDeg + _blockConeHalfAngle).Degrees().ToDirection().ToVec2() * _blockConeRadius.X / _mapResolution;
+
+                    sink.BeginFigure(V(p1), FigureBegin.Filled);
+                    sink.AddArc(new()
+                    {
+                        Point = V(p2),
+                        Size = new(_blockConeRadius.Y / _mapResolution, _blockConeRadius.Y / _mapResolution),
+                        ArcSize = _blockConeHalfAngle >= 90 ? ArcSize.Large : ArcSize.Small,
+                        SweepDirection = SweepDirection.Clockwise
+                    });
+                    sink.AddLine(V(p3));
+                    sink.AddArc(new()
+                    {
+                        Point = V(p4),
+                        Size = new(_blockConeRadius.X / _mapResolution, _blockConeRadius.X / _mapResolution),
+                        ArcSize = _blockConeHalfAngle >= 90 ? ArcSize.Large : ArcSize.Small,
+                        SweepDirection = SweepDirection.CounterClockwise
+                    });
+                    sink.EndFigure(FigureEnd.Closed);
+                    sink.Close();
+                }
+
+                ctx.FillGeometry(geometry, new SolidColorBrush(ctx, new SharpDX.Color4(1, 0, 0, 1)));
+            }
+        });
+
         return visu;
     }
+    static RawVector2 V(Vector2 a) => new(a.X, a.Y);
 }

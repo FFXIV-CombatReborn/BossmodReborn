@@ -1,6 +1,9 @@
 ﻿namespace BossMod.Stormblood.Ultimate.UCOB;
 
-class Twister(BossModule module, AID cast, float delay, float predelay) : Components.CastTwister(module, 1.25f, (uint)OID.VoidzoneTwister, cast, delay, predictBeforeSpawn: predelay)
+// this component makes a genuine effort to ensure that the twister will spawn exactly at the player's current position, and then to dodge out of that exact position as late as possible, to minimize the amount of movement required (especially useful in p4)
+// it is impossible to precisely solve this in general, which is why predictRadius is a higher number
+// e.g. even in an environment with apparently consistent framerate and ping, it is possible for your twister to spawn in the position you're dodging to, before you even get there (on the client) - see mchteleport.log
+class Twister(BossModule module, AID cast, float delay) : Components.CastTwister(module, 1.25f, (uint)OID.VoidzoneTwister, cast, delay, predictBeforeSpawn: 0.6f, predictRadius: 2.25f)
 {
     // how early before the predicted twister appearance should movement, casts, and gapclosers be prevented
     // movement before resolution will kill us because our movement will be interpolated serverside
@@ -26,8 +29,8 @@ class Twister(BossModule module, AID cast, float delay, float predelay) : Compon
         }
         foreach (var z in PredictedPositions)
         {
-            hints.AddForbiddenZone(ShapeDistance.Circle(z, Radius));
-            hints.Voidzones.Add((z, Radius));
+            hints.AddForbiddenZone(ShapeDistance.Circle(z, PredictionRadius));
+            hints.Voidzones.Add((z, PredictionRadius));
         }
 
         var predictionPeriod = (_predictAt - WorldState.CurrentTime).TotalSeconds is > 0 and < PreSnapshotFreeze;
@@ -47,15 +50,33 @@ class Twister(BossModule module, AID cast, float delay, float predelay) : Compon
         }
 
         // pathfinder...please stop cutting across imminent danger zones to get to your goal........just get away...........
-        if (PredictedPositions.Any(p => actor.Position.InCircle(p, Radius)))
-        {
-            hints.GoalZonesEnabled = false;
+        if (PredictedPositions.Any(p => actor.Position.InCircle(p, PredictionRadius)))
             hints.AllowDash = false;
-        }
     }
 }
 
 class P1Twister : Twister
 {
-    public P1Twister(BossModule module) : base(module, AID.Twister, 0.3f, Service.Config.Get<UCOBConfig>().TwisterPreDodge) { KeepOnPhaseChange = true; }
+    public P1Twister(BossModule module) : base(module, AID.Twister, 0.3f) { KeepOnPhaseChange = true; }
+}
+
+// prevents dropping twisters in our prescribed stack spot
+class P1TwisterFireball(BossModule module) : Components.CastCounter(module, AID.Twister)
+{
+    bool Enabled = true;
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        Enabled |= spell.Action == WatchedAction;
+    }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        if (!Enabled)
+            return;
+
+        var dropPosition = Module.PrimaryActor.Position + Module.PrimaryActor.DirectionTo(Arena.Center) * (Module.PrimaryActor.HitboxRadius + 3);
+
+        hints.AddForbiddenZone(ShapeDistance.Circle(dropPosition, 2.5f), DateTime.MaxValue);
+    }
 }

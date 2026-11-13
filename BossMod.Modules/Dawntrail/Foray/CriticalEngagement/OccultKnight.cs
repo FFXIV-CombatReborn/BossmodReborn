@@ -126,31 +126,9 @@ class BlastKnuckles(BossModule module) : Components.KnockbackFromCastTarget(modu
 
     private readonly CageOfFire _cage = module.FindComponent<CageOfFire>()!;
 
-    private Func<WPos, float> HitByRect() => ShapeDistance.Union([.. _cage.ActiveCasters.Select(c => ShapeDistance.Rect(c.Position, c.Rotation, 60, 0, 4))]);
+    private DistFn HitByRect() => ShapeDistance.Union([.. _cage.ActiveCasters.Select(c => ShapeDistance.Rect(c.Position, c.Rotation, 60, 0, 4))]);
 
-    public override bool DestinationUnsafe(int slot, Actor actor, WPos pos) => !pos.InCircle(Arena.Center, 20) || HitByRect()(pos) < 0;
-
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
-    {
-        if (Casters.FirstOrDefault() is { } caster)
-        {
-            var activation = Module.CastFinishAt(caster.CastInfo);
-            if (IsImmune(slot, activation))
-                return;
-
-            hints.AddForbiddenZone(ShapeDistance.Donut(caster.Position, 5, 40), Module.CastFinishAt(caster.CastInfo));
-
-            var hitRectShape = HitByRect();
-            var center = Arena.Center;
-            var dist = Distance;
-
-            hints.AddForbiddenZone(Sdf.Discrete(p =>
-            {
-                var dir = (p - center).Normalized() * dist;
-                return hitRectShape(p + dir) < 0;
-            }), Module.CastFinishAt(caster.CastInfo));
-        }
-    }
+    public override Func<WVec, VBool> DestinationUnsafe(int slot, Actor actor) => HitByRect().Discretize();
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {

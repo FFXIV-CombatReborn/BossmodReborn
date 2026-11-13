@@ -134,7 +134,7 @@ class RelayHoly(BossModule module) : Components.Knockback(module, AID.TinyHolyAO
                 {
                     var dir = (p - s).Normalized();
                     var proj = p + dir * d;
-                    return !proj.InCircle(Arena.Center, 20);
+                    return ~proj.InCircle(Arena.Center, 20);
                 }), src.Activation);
             }
     }
@@ -241,7 +241,7 @@ class TinyTether(BossModule module) : Components.Knockback(module)
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         WPos orig;
-        Func<WPos, float> sh;
+        DistFn sh;
         switch (_mechanics)
         {
             case [{ Type: Orb.Flare } f1]:
@@ -261,7 +261,7 @@ class TinyTether(BossModule module) : Components.Knockback(module)
                 hints.AddForbiddenZone(Sdf.Discrete(p =>
                 {
                     var dir = (p - orig).Normalized() * 15;
-                    return !(p + dir).InCircle(Arena.Center, 20);
+                    return ~(p + dir).InCircle(Arena.Center, 20);
                 }), h1.Activation);
                 break;
             case [{ Type: Orb.Holy } h1, { Type: Orb.Flare } f2, ..]:
@@ -271,7 +271,7 @@ class TinyTether(BossModule module) : Components.Knockback(module)
                 {
                     var dir = (p - orig).Normalized() * 15;
                     var proj = p + dir;
-                    return !proj.InCircle(Arena.Center, 20) || proj.InCircle(f2.Origin, 12);
+                    return ~proj.InCircle(Arena.Center, 20) | proj.InCircle(f2.Origin, 12);
                 }), h1.Activation);
                 break;
             case [{ Type: Orb.Holy } h1, { Type: Orb.Holy } h2, ..]:
@@ -281,23 +281,18 @@ class TinyTether(BossModule module) : Components.Knockback(module)
                 {
                     var dir = (p - orig).Normalized() * 15;
                     var proj = p + dir;
-                    return !proj.InCircle(Arena.Center, 20) || !proj.InCircle(h2.Origin, 10);
+                    return ~proj.InCircle(Arena.Center, 20) | ~proj.InCircle(h2.Origin, 10);
                 }), h1.Activation);
                 break;
         }
     }
 
-    public override bool DestinationUnsafe(int slot, Actor actor, WPos pos)
+    public override PointTest DestinationUnsafe(int slot, Actor actor)
     {
-        if (_mechanics[0].Type != Orb.Holy)
-            return false;
+        if (_mechanics is [{ Type: Orb.Holy }, { Type: Orb.Flare, Origin: var f }, ..])
+            return ShapeDistance.Circle(f, 18).Discretize();
 
-        var danger = !pos.InCircle(Arena.Center, 20);
-
-        if (_mechanics is [_, { Type: Orb.Flare } f, ..])
-            danger |= pos.InCircle(f.Origin, 18);
-
-        return danger;
+        return PointTest.Never;
     }
 }
 

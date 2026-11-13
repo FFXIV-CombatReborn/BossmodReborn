@@ -83,7 +83,8 @@ public sealed class ReplayManager(RotationDatabase rotationDB, IFileDialogManage
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        RestoreHistory();
+        if (Service.IsMock)
+            RestoreHistory();
     }
 
     Task IHostedService.StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
@@ -368,7 +369,8 @@ public sealed class ReplayManager(RotationDatabase rotationDB, IFileDialogManage
         _replayHistory.History = [.. _replayEntries.Where(r => !r.Disposing).Select(r => new ReplayMemory(r.Path, r.Window?.IsOpen ?? false, r.Window?.CurrentTime ?? default))];
         try
         {
-            _replayHistory.Save();
+            using (Utils.GetGlobalLock())
+                _replayHistory.Save();
         }
         catch (IOException ex)
         {

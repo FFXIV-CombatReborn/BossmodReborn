@@ -92,7 +92,7 @@ class QuoteIronChariotLunarDynamo(BossModule module) : Components.GenericAOEs(mo
             if (shape.Shape is AOEShapeDonut d)
                 hints.AddForbiddenZone(ShapeDistance.InvertedCircle(shape.Origin, d.InnerRadius), shape.Activation);
             else
-                hints.AddForbiddenZone(shape.Distance, shape.Activation);
+                hints.AddForbiddenZone(shape.DistV, shape.Activation);
         }
     }
 }
@@ -101,12 +101,23 @@ class QuoteThermionicBeam(BossModule module) : Components.StrictUniformStackSpre
 {
     private readonly Quote? _quote = module.FindComponent<Quote>();
 
-    public override (WPos, float)? GetStackDestination(int order, Actor target) => (((UCOB)Module).Nael()!.Position, 1);
+    public override (WPos, float)? GetStackDestination(int order, Actor target)
+    {
+        var nael = ((UCOB)Module).Nael()!;
+
+        if (Module.FindComponent<P2HugNael>() is { } p2h)
+        {
+            if (p2h.Mode == P2HugNael.Pos.QuoteChainLightning1)
+                return (nael.Position + new WDir(0, 3), 1);
+        }
+
+        return (nael.Position, 1);
+    }
 
     public override void Update()
     {
         var stackImminent = _quote != null && _quote.PendingMechanics.Count > 0 && _quote.PendingMechanics[0] == AID.ThermionicBeam;
-        if (stackImminent && Stacks.Count == 0 && Raid.Player() is var target && target != null) // note: target is random
+        if (stackImminent && Stacks.Count == 0 && Raid.WithoutSlot().FirstOrDefault(p => ((UCOB)Module).Nael()?.TargetID != p.InstanceID) is { } target) // note: target is random
             AddStack(target, _quote!.NextActivation);
         else if (!stackImminent && Stacks.Count > 0)
             Stacks.Clear();
@@ -194,14 +205,23 @@ class QuoteMeteorStream(BossModule module) : Components.StrictUniformStackSpread
         // fixed-ish spots for p2 divebombs
         if (((UCOB)Module).Nael() is { } nael)
         {
-            // baiters get to do whatever
-            if (Module.FindComponent<P2Cauterize>()?.BaitOrder[slot].Order > 0)
+            var caut = Module.FindComponent<P2Cauterize>();
+            var baitOrder = caut?.BaitOrder[slot].Order ?? 0;
+            var cursed = caut?.Cursed ?? false;
+
+            var center = Arena.Center - new WDir(0, 4);
+
+            if (baitOrder == 1)
+                return (center + (cursed ? new WDir(8, 0) : new WDir(0, -8)), 0);
+
+            // baiters 2 and 3 get to do whatever, 2 just needs to find a safe spot south and 3 won't be able to threaten the rest of the party in time
+            if (baitOrder > 1)
                 return default;
 
             if (nael.TargetID == target.InstanceID)
-                return (Arena.Center, 0);
+                return (center, 0);
 
-            return (Arena.Center + (90 * _spreadCounter++).Degrees().ToDirection() * 5, 0);
+            return (center + (45 + 90 * _spreadCounter++).Degrees().ToDirection() * 5, 0);
         }
 
         return default;

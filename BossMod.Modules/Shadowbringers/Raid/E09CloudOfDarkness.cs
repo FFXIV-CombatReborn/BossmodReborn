@@ -67,30 +67,7 @@ class AntiAirParticleBeam(BossModule module) : Components.StandardAOEs(module, A
 class CloneZeroFormParticleBeam(BossModule module) : Components.StandardAOEs(module, AID.CloneZeroFormParticleBeam, new AOEShapeRect(60, 4));
 class EvilSeed(BossModule module) : Components.StandardAOEs(module, AID.EvilSeed, 4);
 class BadVibrations(BossModule module) : Components.StandardAOEs(module, AID.BadVibrations, new AOEShapeCone(22, 90.Degrees()));
-class WasteAway(BossModule module) : Components.KnockbackFromCastTarget(module, AID.WasteAway, 12)
-{
-    public override bool DestinationUnsafe(int slot, Actor actor, WPos pos)
-    {
-        if (!Module.InBounds(pos))
-            return true;
-        foreach (var c in Module.Components.OfType<Components.GenericAOEs>())
-            if (c.ActiveAOEs(slot, actor).Any(a => a.Risky && a.Check(pos)))
-                return true;
-        return false;
-    }
-
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
-    {
-        foreach (var s in Sources(slot, actor))
-        {
-            if (IsImmune(slot, s.Activation))
-                continue;
-            var origin = s.Origin;
-            var dist = s.Distance;
-            hints.AddForbiddenZone(Sdf.Discrete(p => DestinationUnsafe(slot, actor, AwayFromSource(p, origin, dist))), s.Activation);
-        }
-    }
-}
+class WasteAway(BossModule module) : Components.KnockbackFromCastTarget(module, AID.WasteAway, 12);
 
 class HyperchargedClouds(BossModule module) : Components.Adds(module, (uint)OID.HyperchargedCloud, 2)
 {
@@ -242,17 +219,12 @@ class SeedTethers(BossModule module) : BossComponent(module)
                 case TetherID.SeedNear:
                     // sit just outside the voidzone
                     hints.AddForbiddenZone(ShapeDistance.Circle(src.Position, 4));
-                    var ideal = src.Position + dir * 5;
-                    var toIdeal = ideal - actor.Position;
-                    if (toIdeal.LengthSq() > 0.25f)
-                        hints.ForcedMovement = toIdeal.ToVec3(actor.PosRot.Y);
+                    hints.GoalZones.Add(AIHints.GoalProximity(src.Position + dir * 5, 40, 1000));
                     break;
                 case TetherID.SeedFar:
                 case TetherID.SeedSuck:
                     // breaks at ~12y
                     hints.AddForbiddenZone(ShapeDistance.Circle(src.Position, 15));
-                    if (dist < 15)
-                        hints.ForcedMovement = dir.ToVec3(actor.PosRot.Y);
                     break;
             }
         }

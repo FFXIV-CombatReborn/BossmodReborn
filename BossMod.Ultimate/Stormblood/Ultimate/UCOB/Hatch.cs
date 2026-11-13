@@ -93,6 +93,15 @@ class Hatch : Components.CastCounter
 
         var linkShape = ShapeDistance.Union([.. _neurolinks.Select(n => ShapeDistance.Circle(n.Position, 2))]);
 
+        // if twin is HP locked during P1, we can ignore the rest of the mechanic
+        if (Module.PrimaryActor is { IsTargetable: true, PendingHPClamped: <= 1 })
+        {
+            hints.AddForbiddenZone(linkShape, DateTime.MaxValue);
+            foreach (var o in Module.Enemies(OID.Oviform))
+                hints.AddForbiddenZone(ShapeDistance.Circle(o.Position, 2), DateTime.MaxValue);
+            return;
+        }
+
         if (_targets[slot])
         {
             // tiebreaker
@@ -117,17 +126,13 @@ class Hatch : Components.CastCounter
             {
                 var src = closestOrb.Position;
                 var dir = m.Normalized();
-                hints.GoalZones.Add(p => p.InRect(src, dir * 1000, 1) ? 1 : 0);
+                hints.GoalZones.AddSimple(p => p.InRect(src, dir * 1000, 1), 1);
             }
 
-            /*
-            // now that we don't do super long twister dodges, i don't think this is necessary anymore?
-            // but it might be worth bringing back the logic to let ranged have more non-neurolink uptime
             if (WaitForTwister[slot])
-                hints.AddForbiddenZone(Sdf.Continuous(ShapeDistance.DonutSector(myLink.Position, 3, 5, Module.PrimaryActor.AngleTo(myLink), 90.Degrees())).Inverted(), WorldState.FutureTime(leewaySeconds));
+                hints.AddForbiddenZone(ShapeDistance.DonutSector(myLink.Position, 3, 5, Module.PrimaryActor.AngleTo(myLink), 90.Degrees()).Inverted(), WorldState.FutureTime(leewaySeconds));
             else
-            */
-            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(myLink.Position, 2), WorldState.FutureTime(leewaySeconds));
+                hints.AddForbiddenZone(ShapeDistance.InvertedCircle(myLink.Position, 2), WorldState.FutureTime(leewaySeconds));
         }
         else
         {
@@ -174,7 +179,7 @@ class Hatch : Components.CastCounter
             var linkPos = link.Position;
             var linkDir = (linkPos - Arena.Center).Normalized();
             var adj = linkDir.OrthoR();
-            hints.GoalZones.Add(p => p.InRect(linkPos, adj * 100, 2) ? 10 : 0);
+            hints.GoalZones.AddSimple(p => p.InRect(linkPos, adj * 100, 2), 10);
         }
     }
 

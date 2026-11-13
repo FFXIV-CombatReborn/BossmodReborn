@@ -219,11 +219,7 @@ class P3ThermionicBurst(BossModule module) : P2ThermionicBurst(module)
                 var bias = s + (_rotation * 5).Degrees();
                 var h = 11.25f.Degrees().Cos();
 
-                hints.GoalZones.Add(p =>
-                {
-                    var c = (p - ctr).Normalized().Dot(bias.ToDirection());
-                    return MathF.Abs(c) >= h ? 1 : 0;
-                });
+                hints.GoalZones.AddSimple(p => (p - ctr).Normalized().Dot(bias.ToDirection()).Abs() >= h, 1);
             }
             else
             {
@@ -247,7 +243,7 @@ class P3HeavensfallHypernova(BossModule module) : P2Hypernova(module)
         hints.GoalZones.Add(AIHints.GoalProximity(Arena.Center, 10, 5));
 
         var total = _predictedByEvent.Count + _sources.Count;
-        if (total < 3)
+        if (total < 2)
             // preserve at least a 1 unit gap between possible hypernova positions and pillar voidzone
             hints.AddForbiddenZone(ShapeDistance.Rect(Arena.Center, default(Angle), 10, 10, 10));
     }

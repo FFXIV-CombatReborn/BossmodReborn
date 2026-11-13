@@ -290,7 +290,7 @@ class SpinebreakingStampede(BossModule module) : Components.Knockback(module)
             {
                 var dir = (p - src).Normalized();
                 var proj = p + dir * 30;
-                return !proj.AlmostEqual(center, 20);
+                return ~proj.AlmostEqual(center, 20);
             }), _sources[^1].Activation);
         }
 

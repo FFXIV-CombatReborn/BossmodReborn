@@ -2,36 +2,25 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Config;
 using Dalamud.Plugin;
+using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.System.Input;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using Microsoft.Extensions.Hosting;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace BossMod;
 
-[StructLayout(LayoutKind.Explicit, Size = 0x18)]
-public unsafe struct PlayerMoveControllerFlyInput
-{
-    [FieldOffset(0x0)] public float Forward;
-    [FieldOffset(0x4)] public float Left;
-    [FieldOffset(0x8)] public float Up;
-    [FieldOffset(0xC)] public float Turn;
-    [FieldOffset(0x10)] public float u10;
-    [FieldOffset(0x14)] public byte DirMode;
-    [FieldOffset(0x15)] public byte HaveBackwardOrStrafe;
-}
-
-[StructLayout(LayoutKind.Explicit, Size = 0x140)]
-public unsafe struct MoveControllerSubMemberForMine
-{
-    [FieldOffset(0x94)] public byte Spinning;
-}
-
-public sealed unsafe class MovementOverride(IDalamudPluginInterface dalamud) : IMovementOverride, IHostedService, IDisposable
+public sealed unsafe class MovementOverride(
+    IDalamudPluginInterface dalamud,
+    ISigScanner sigScanner,
+    IGameConfig gameConfig,
+    IPluginLog logger,
+    ConfigRoot configRoot,
+    Camera camera
+) : IMovementOverride, IHostedService, IDisposable
 {
     public Vector3? DesiredDirection { get; set; }
     public Angle MisdirectionThreshold { get; set; }
@@ -40,7 +29,7 @@ public sealed unsafe class MovementOverride(IDalamudPluginInterface dalamud) : I
     public WDir UserMove { get; private set; } // unfiltered movement direction, as read from input
     public WDir ActualMove { get; private set; } // actual movement direction, as of last input read
 
-    private readonly ActionTweaksConfig _tweaksConfig = Service.Config.Get<ActionTweaksConfig>();
+    private readonly ActionTweaksConfig _tweaksConfig = configRoot.Get<ActionTweaksConfig>();
     private bool? _forcedControlState;
     private bool _legacyMode;
     private bool[]? _navmeshPathIsRunning;
@@ -83,7 +72,7 @@ public sealed unsafe class MovementOverride(IDalamudPluginInterface dalamud) : I
 
     async Task IHostedService.StartAsync(CancellationToken cancellationToken)
     {
-        ForcedMovementDirection = (float*)Service.SigScanner.GetStaticAddressFromSig("F3 0F 11 0D ?? ?? ?? ?? 48 85 DB");
+        ForcedMovementDirection = (float*)sigScanner.GetStaticAddressFromSig("F3 0F 11 0D ?? ?? ?? ?? 48 85 DB");
 
         _rmiWalkIsInputEnabled1 = HookAddress<RMIWalkIsInputEnabled>.FnPtr("E8 ?? ?? ?? ?? 84 C0 75 10 38 43 3C");
         _rmiWalkIsInputEnabled2 = HookAddress<RMIWalkIsInputEnabled>.FnPtr("E8 ?? ?? ?? ?? 84 C0 75 03 88 47 3F");
@@ -92,14 +81,14 @@ public sealed unsafe class MovementOverride(IDalamudPluginInterface dalamud) : I
         _rmiFlyHook = new("E8 ?? ?? ?? ?? 0F B6 0D ?? ?? ?? ?? B8", RMIFlyDetour);
         _mcIsInputActiveHook = new("E8 ?? ?? ?? ?? 84 C0 74 09 84 DB 74 1A", MCIsInputActiveDetour);
 
-        Service.GameConfig.UiControlChanged += OnConfigChanged;
+        gameConfig.UiControlChanged += OnConfigChanged;
         UpdateLegacyMode();
     }
 
     async Task IHostedService.StopAsync(CancellationToken cancellationToken)
     {
         dalamud.RelinquishData("vnav.PathIsRunning");
-        Service.GameConfig.UiControlChanged -= OnConfigChanged;
+        gameConfig.UiControlChanged -= OnConfigChanged;
     }
 
     public void Dispose()
@@ -172,7 +161,9 @@ public sealed unsafe class MovementOverride(IDalamudPluginInterface dalamud) : I
         // misdirection override logic
         if (misdirectionMode)
         {
-            var thresholdDeg = UserMove != default && _tweaksConfig.AutoMisdirection ? _tweaksConfig.MisdirectionThreshold : MisdirectionThreshold.Deg;
+            var thresholdDeg = UserMove != default
+                ? (_tweaksConfig.AutoMisdirection ? _tweaksConfig.MisdirectionThreshold : 180)
+                : MisdirectionThreshold.Deg;
             if (thresholdDeg < 180)
             {
                 // note: if we are already moving, it doesn't matter what we do here, only whether 'is input active' function returns true or false
@@ -229,7 +220,7 @@ public sealed unsafe class MovementOverride(IDalamudPluginInterface dalamud) : I
         return (dirH - ForwardMovementDirection(), dirV);
     }
 
-    private Angle ForwardMovementDirection() => _legacyMode ? Service.Camera.CameraAzimuth.Radians() + 180.Degrees() : GameObjectManager.Instance()->Objects.IndexSorted[0].Value->Rotation.Radians();
+    private Angle ForwardMovementDirection() => _legacyMode ? camera.CameraAzimuth.Radians() + 180.Degrees() : GameObjectManager.Instance()->Objects.IndexSorted[0].Value->Rotation.Radians();
 
     private bool PlayerHasMisdirection()
     {
@@ -246,7 +237,7 @@ public sealed unsafe class MovementOverride(IDalamudPluginInterface dalamud) : I
     private void OnConfigChanged(object? sender, ConfigChangeEvent evt) => UpdateLegacyMode();
     private void UpdateLegacyMode()
     {
-        _legacyMode = Service.GameConfig.UiControl.TryGetUInt("MoveMode", out var mode) && mode == 1;
-        Service.Log($"Legacy mode is now {(_legacyMode ? "enabled" : "disabled")}");
+        _legacyMode = gameConfig.UiControl.TryGetUInt("MoveMode", out var mode) && mode == 1;
+        logger.Debug($"Legacy mode is now {(_legacyMode ? "enabled" : "disabled")}");
     }
 }

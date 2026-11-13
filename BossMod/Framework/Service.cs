@@ -16,7 +16,6 @@ public sealed class Service
 #pragma warning disable CS8618
     [PluginService] public static IChatGui ChatGui { get; private set; }
     [PluginService] public static IGameGui GameGui { get; private set; }
-    [PluginService] public static IGameConfig GameConfig { get; private set; }
     [PluginService] public static IGameInteropProvider Hook { get; private set; }
     [PluginService] public static ISigScanner SigScanner { get; private set; }
     [PluginService] public static ICondition Condition { get; private set; }
@@ -56,6 +55,7 @@ public sealed class Service
     public static MediatorService Mediator = null!;
     public static GaugeVisualizer GaugeVisualizer = null!;
     public static ICamera Camera = null!;
+    public static IShadowcast Shadowcast = null!;
 #pragma warning restore CA2211
 
     //public static SharpDX.Direct3D11.Device? Device = null;

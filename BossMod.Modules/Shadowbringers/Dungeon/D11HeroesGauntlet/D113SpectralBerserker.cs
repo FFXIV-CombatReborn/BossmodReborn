@@ -93,7 +93,8 @@ class WildRageKnockback(BossModule module) : Components.KnockbackFromCastTarget(
             if (!IsImmune(slot, src.Activation))
             {
                 var safeX = src.Origin.X < 750 ? 746 : 754;
-                hints.AddForbiddenZone(Sdf.Discrete(p => !p.InCircle(new(safeX, 479), 1) && !p.InCircle(new(safeX, 485), 1)), src.Activation);
+                var eitherSpot = ShapeDistance.InvertedCircle(new(safeX, 479), 1) & ShapeDistance.InvertedCircle(new(safeX, 485), 1);
+                hints.AddForbiddenZone(eitherSpot, src.Activation);
             }
     }
 }
@@ -232,14 +233,10 @@ class WildHole(BossModule module) : Components.CastCounter(module, AID.WildRampa
     {
         if (_zones.Count > 0)
         {
-            var safe = UnsafeAt > WorldState.CurrentTime;
+            var holeSafe = UnsafeAt > WorldState.CurrentTime;
             var hs = HoleSize;
-            var zones = _zones.Select(z => ShapeDistance.Circle(z, hs));
-            hints.AddForbiddenZone(p =>
-            {
-                var inHole = zones.Min(z => z(p));
-                return safe ? -inHole : inHole;
-            }, UnsafeAt);
+            var zones = ShapeDistance.Union([.. _zones.Select(z => ShapeDistance.Circle(z, hs))]);
+            hints.AddForbiddenZone(zones.Inverted(holeSafe), UnsafeAt);
         }
     }
 

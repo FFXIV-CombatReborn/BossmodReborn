@@ -1,25 +1,14 @@
 ﻿namespace BossMod.Stormblood.Ultimate.UWU;
 
-// TODO: can subsequent eruptions bait on other targets?
 // casts are 3s long and 2s apart (overlapping)
-class P2Eruption(BossModule module) : Components.StandardAOEs(module, AID.EruptionAOE, 8)
+class P2Eruption(BossModule module, int numTargets) : Components.StandardAOEs(module, AID.EruptionAOE, 8)
 {
     public int NumCastsStarted { get; private set; }
-    private BitMask _baiters;
-
-    public override void Update()
-    {
-        if (NumCastsStarted == 0)
-        {
-            var source = ((UWU)Module).Ifrit();
-            if (source != null)
-                _baiters = Raid.WithSlot().WhereActor(a => a.Class.IsDD()).SortedByRange(source.Position).TakeLast(2).Mask();
-        }
-    }
+    public BitMask Targets;
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
-        if (_baiters[pcSlot])
+        if (Targets[pcSlot])
             Arena.AddCircle(pc.Position, 8, ArenaColor.Danger);
     }
 
@@ -28,17 +17,27 @@ class P2Eruption(BossModule module) : Components.StandardAOEs(module, AID.Erupti
         base.OnCastStarted(caster, spell);
         if ((AID)spell.Action.ID == AID.EruptionAOE)
         {
-            if (NumCastsStarted < 2)
+            if (NumCastsStarted < numTargets)
             {
                 if (NumCastsStarted == 0)
-                    _baiters.Reset();
-                var (baiterSlot, baiter) = Raid.WithSlot().ExcludedFromMask(_baiters).Closest(spell.LocXZ);
+                    Targets.Reset();
+                var (baiterSlot, baiter) = Raid.WithSlot().ExcludedFromMask(Targets).Closest(spell.LocXZ);
                 if (baiter != null)
-                    _baiters.Set(baiterSlot);
+                    Targets.Set(baiterSlot);
             }
             ++NumCastsStarted;
-            if (NumCastsStarted >= 8)
-                _baiters.Reset();
+            if (NumCastsStarted >= numTargets * 4)
+                Targets.Reset();
+        }
+    }
+
+    public override void Update()
+    {
+        if (NumCastsStarted == 0)
+        {
+            var source = ((UWU)Module).Ifrit();
+            if (source != null)
+                Targets = Raid.WithSlot().WhereActor(a => a.FindStatus(SID.SearingWind) == null).SortedByRange(source.Position).TakeLast(numTargets).Mask();
         }
     }
 }
@@ -52,7 +51,7 @@ class P2Eruption1 : P2Eruption
 
     bool Active => _fetters && _howl;
 
-    public P2Eruption1(BossModule module) : base(module)
+    public P2Eruption1(BossModule module) : base(module, 2)
     {
         BaitersPriorityOrder.AddRange(Raid.WithoutSlot().OrderBy(s => (s.Role switch
         {
@@ -99,25 +98,105 @@ class P2Eruption1 : P2Eruption
 
         var sign = myOrder == 0 ? -1 : 1;
 
-        WPos destination = default;
+        var start = nails.RelativeNorth + (sign * 67.5f).Degrees();
+        var s2 = Arena.Center + start.ToDirection() * 12;
+        var s3 = start + (90 * -sign).Degrees();
+
+        var myStart = s2 - s3.ToDirection() * 12.5f;
+        var myEnd = s2 + s3.ToDirection() * 12.5f;
+
+        float progress = -1;
 
         switch (NumCastsStarted)
         {
             case < 2:
-                destination = Arena.Center + (nails.RelativeNorth + (120 * sign).Degrees()).ToDirection() * 18;
+                progress = 0;
                 break;
             case < 4:
-                destination = Arena.Center + (nails.RelativeNorth + (90 * sign).Degrees()).ToDirection() * 16.25f;
+                progress = 0.33f;
                 break;
             case < 6:
-                destination = Arena.Center + (nails.RelativeNorth + (56 * sign).Degrees()).ToDirection() * 14.25f;
+                progress = 0.67f;
                 break;
             case < 8:
-                destination = Arena.Center + (nails.RelativeNorth + (22.5f * sign).Degrees()).ToDirection() * 18.5f;
+                progress = 1;
                 break;
         }
 
-        if (destination != default)
-            hints.AddForbiddenZone(ShapeDistance.PrecisePosition(destination, new(0, 1), Arena.Bounds.MapResolution, actor.Position, 0.1f));
+        if (progress >= 0)
+            hints.AddForbiddenZone(ShapeDistance.PrecisePosition(WPos.Lerp(myStart, myEnd, progress), new(0, 1), Arena.Bounds.MapResolution, actor.Position, 0.1f));
     }
 }
+
+class P2Eruption2(BossModule module) : P2Eruption(module, 2)
+{
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        base.AddAIHints(slot, actor, assignment, hints);
+
+        if (assignment is not (PartyRolesConfig.Assignment.R1 or PartyRolesConfig.Assignment.R2))
+            return;
+
+        if (Module.FindComponent<BossPositioning>() is not { DesiredRotation: { } relNorth })
+            return;
+
+        if (NumCastsStarted >= 8)
+            return;
+
+        var desiredOffset = (relNorth - (135 - 30 * (NumCastsStarted / 2)).Degrees()).ToDirection() * 18;
+
+        hints.AddForbiddenZone(ShapeDistance.PrecisePosition(Arena.Center + desiredOffset, new(0, 1), Arena.Bounds.MapResolution, actor.Position, 0.1f));
+    }
+}
+
+class P4Eruption(BossModule module) : P2Eruption(module, 2)
+{
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        base.AddAIHints(slot, actor, assignment, hints);
+
+        if (NumCastsStarted == 0 && assignment is PartyRolesConfig.Assignment.H2 or PartyRolesConfig.Assignment.R1)
+            hints.AddForbiddenZone(ShapeDistance.Circle(new(100, 80.5f), 20));
+    }
+}
+
+class P5Eruption(BossModule module) : P2Eruption(module, 3)
+{
+    bool MistralSongDone;
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        base.OnEventCast(caster, spell);
+
+        if ((AID)spell.Action.ID == AID.MistralSongAdds)
+            MistralSongDone = true;
+    }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        base.AddAIHints(slot, actor, assignment, hints);
+
+        if (MistralSongDone || actor.Role == Role.Tank || NumCastsStarted == 0)
+            return;
+
+        if (Targets[slot])
+        {
+            WPos dest = NumCastsStarted switch
+            {
+                <= 3 => new(94, 94),
+                <= 6 => new(101, 96.5f),
+                <= 9 => new(110, 96.5f),
+                _ => new(110, 105.5f)
+            };
+
+            hints.AddForbiddenZone(ShapeDistance.PrecisePosition(dest, new(0, 1), 0.5f, actor.Position, 0.1f));
+        }
+        else
+        {
+            // hide behind tanks
+            hints.AddForbiddenZone(ShapeDistance.InvertedCircle(new(91, 111), 1));
+        }
+    }
+}
+
+class P5Eruption2(BossModule module) : P2Eruption(module, 2);

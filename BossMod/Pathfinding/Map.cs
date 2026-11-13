@@ -14,7 +14,6 @@ public class Map
     public int Height { get; private set; } // always even
     public float[] PixelMaxG = []; // == MaxValue if not dangerous (TODO: consider changing to a byte per pixel?), < 0 if impassable
     public float[] PixelPriority = [];
-    public bool[] PixelAvoid = [];
 
     public Dictionary<int, List<int>> Portals = [];
 
@@ -48,10 +47,6 @@ public class Map
             PixelPriority = new float[numPixels];
         else
             Array.Fill(PixelPriority, 0, 0, numPixels);
-        if (PixelAvoid.Length < numPixels)
-            PixelAvoid = new bool[numPixels];
-        else
-            Array.Fill(PixelAvoid, false, 0, numPixels);
 
         Center = center;
         Rotation = rotation;
@@ -78,9 +73,6 @@ public class Map
         if (PixelPriority.Length < numPixels)
             PixelPriority = new float[numPixels];
         Array.Copy(source.PixelPriority, PixelPriority, numPixels);
-        if (PixelAvoid.Length < numPixels)
-            PixelAvoid = new bool[numPixels];
-        Array.Copy(source.PixelAvoid, PixelAvoid, numPixels);
 
         Center = center;
         Rotation = source.Rotation;
@@ -214,6 +206,44 @@ public class Map
                 err += 2 * dx;
             }
             while (y1 != y2);
+        }
+    }
+
+    public void Diff(Map other)
+    {
+        static bool Compare<T>(string label, T a, T b)
+        {
+            if (!EqualityComparer<T>.Default.Equals(a, b))
+            {
+                Service.Log($"{label} mismatch: {a} != {b}");
+                return true;
+            }
+            return false;
+        }
+
+        if (Compare("Resolution", Resolution, other.Resolution))
+            return;
+        if (Compare("Width", Width, other.Width))
+            return;
+        if (Compare("Height", Height, other.Height))
+            return;
+        if (Compare("Center", Center, other.Center))
+            return;
+        if (Compare("Rotation", Rotation, other.Rotation))
+            return;
+        if (Compare("MaxG", MaxG, other.MaxG))
+            return;
+        if (Compare("MaxPriority", MaxPriority, other.MaxPriority))
+            return;
+
+        for (var i = 0; i < Width * Height; i++)
+        {
+            var grid = IndexToGrid(i);
+            var world = GridToWorld(grid.x, grid.y, 0.5f, 0.5f);
+            if (Compare($"PixelMaxG({world})", PixelMaxG[i], other.PixelMaxG[i]))
+                return;
+            if (Compare($"PixelPriority({world})", PixelPriority[i], other.PixelPriority[i]))
+                return;
         }
     }
 }

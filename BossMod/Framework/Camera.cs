@@ -15,16 +15,21 @@ public sealed class Camera(IDalamudPluginInterface dalamud) : ICamera, IDisposab
     public float CameraAzimuth { get; private set; } // facing north = 0, facing west = pi/4, facing south = +-pi/2, facing east = -pi/4
     public float CameraAltitude; // facing horizontally = 0, facing down = pi/4, facing up = -pi/4
     public Vector2 ViewportSize;
+    private readonly DtrConfig _uiConfig = Service.Config.Get<DtrConfig>();
 
     record struct Line(Vector3 Start, Vector3 End, uint Color, float Thickness = 1, bool Occluded = true);
-    record struct Cone(Vector3 Center, float Radius, Angle Direction, Angle HalfAngle, uint Color, float Thickness = 1, bool Occluded = true);
-    record struct Circle(Vector3 Center, float Radius, uint Color, float Thickness = 1, bool Occluded = true);
-
-    readonly List<Line> _lines = [];
-    readonly List<Cone> _cones = [];
-    readonly List<Circle> _circles = [];
+    record struct Arc(Vector3 Center, float Radius, Angle Direction, Angle HalfAngle, uint Color, float Thickness = 1, bool Occluded = true);
+    // dimension = projection height (filled), thickness (stroked)
+    record struct Cone(Vector3 Center, float Radius, Angle Direction, Angle HalfAngle, uint Color, bool Filled, float Dimension = 1, bool Occluded = true);
+    record struct Circle(Vector3 Center, float Radius, uint Color, bool Filled, float Dimension, bool Occluded);
 
     private readonly PctContext picto = PctService.Initialize(dalamud);
+
+    private readonly List<Line> _lines = [];
+    private readonly List<Cone> _cones = [];
+    private readonly List<Arc> _arcs = [];
+    private readonly List<Circle> _circles = [];
+    private readonly List<(Vector3, Vector3, Vector3)> _triangles = [];
 
     public unsafe void Update()
     {
@@ -52,31 +57,51 @@ public sealed class Camera(IDalamudPluginInterface dalamud) : ICamera, IDisposab
         ViewportSize = new(device->Width, device->Height);
 
         using var drawList = PctService.Draw();
-        if (drawList == null)
-            return;
+        if (drawList != null)
+        {
+            PctDxParams p(bool isLine, bool occluded) => new() { OcclusionTolerance = isLine ? 0.02f : 0.02f, OccludedAlpha = occluded && _uiConfig.Occlude ? _uiConfig.OcclusionAlpha : 1 };
 
-        foreach (var line in _lines)
-            drawList.AddLine(line.Start, line.End, 0, line.Color, line.Thickness, new PctDxParams()
+            foreach (var line in _lines)
+                drawList.AddLine(line.Start, line.End, 0, line.Color, line.Thickness, p(true, line.Occluded));
+            foreach (var arc in _arcs)
+                drawList.AddArc(arc.Center, arc.Radius, (-arc.Direction - arc.HalfAngle).Rad, (-arc.Direction + arc.HalfAngle).Rad, arc.Color, thickness: arc.Thickness, p: p(true, arc.Occluded));
+
+            foreach (var cone in _cones)
             {
-                OccludedAlpha = line.Occluded ? 0.1f : 1
-            });
-        foreach (var cone in _cones)
-            drawList.AddFan(cone.Center, 0, cone.Radius, (-cone.Direction - cone.HalfAngle).Rad, (-cone.Direction + cone.HalfAngle).Rad, cone.Color, thickness: cone.Thickness, p: new PctDxParams()
+                if (cone.Filled)
+                    drawList.AddFanFilled(cone.Center, 0, cone.Radius, (-cone.Direction - cone.HalfAngle).Rad, (-cone.Direction + cone.HalfAngle).Rad, cone.Color, p: p(false, cone.Occluded) with { ProjectionHeight = cone.Dimension });
+                else
+                    drawList.AddFan(cone.Center, 0, cone.Radius, (-cone.Direction - cone.HalfAngle).Rad, (-cone.Direction + cone.HalfAngle).Rad, cone.Color, thickness: cone.Dimension, p: p(true, cone.Occluded));
+            }
+
+            foreach (var circle in _circles)
             {
-                OccludedAlpha = cone.Occluded ? 0.1f : 1
-            });
-        foreach (var circle in _circles)
-            drawList.AddCircle(circle.Center, circle.Radius, circle.Color, thickness: circle.Thickness, p: new PctDxParams()
+                if (circle.Filled)
+                    drawList.AddCircleFilled(circle.Center, circle.Radius, circle.Color, p: p(isLine: false, occluded: circle.Occluded) with { ProjectionHeight = circle.Dimension });
+                else if (circle.Radius > 0)
+                    drawList.AddCircle(circle.Center, circle.Radius, circle.Color, thickness: circle.Dimension, p: p(false, circle.Occluded));
+                else
+                    drawList.AddDot(circle.Center, circle.Dimension, circle.Color);
+            }
+
+            foreach (var (x, y, z) in _triangles)
             {
-                OccludedAlpha = circle.Occluded ? 0.1f : 1
-            });
+                drawList.AddTriangleFilled(x, y, z, 0x3030FF30, new()
+                {
+                    OccludedAlpha = 1,
+                    OcclusionTolerance = 0,
+                });
+            }
+        }
 
         _lines.Clear();
         _cones.Clear();
+        _arcs.Clear();
         _circles.Clear();
+        _triangles.Clear();
     }
 
-    public void DrawWorldLine(Vector3 start, Vector3 end, uint color, float thickness = 1, bool occluded = true)
+    public void AddLine(Vector3 start, Vector3 end, uint color, float thickness = 1, bool occluded = true)
     {
         if ((end.X, end.Z) == (start.X, start.Z) && end.Y != start.Y)
             Service.PluginLog.Warning($"Line {start} -> {end} is purely vertical, pictomancy doesn't like this");
@@ -84,17 +109,37 @@ public sealed class Camera(IDalamudPluginInterface dalamud) : ICamera, IDisposab
         _lines.Add(new(start, end, color, thickness, occluded));
     }
 
-    public void DrawWorldCone(Vector3 center, float radius, Angle direction, Angle halfWidth, uint color, float thickness = 1, bool occluded = true)
+    public void AddArc(Vector3 center, float radius, Angle direction, Angle halfWidth, uint color, float thickness = 1, bool occluded = true)
     {
-        _cones.Add(new(center, radius, direction, halfWidth, color, thickness, occluded));
+        _arcs.Add(new(center, radius, direction, halfWidth, color, thickness, occluded));
     }
 
-    public void DrawWorldCircle(Vector3 center, float radius, uint color, float thickness = 1, bool occluded = true)
+    public void AddCone(Vector3 center, float radius, Angle direction, Angle halfWidth, uint color, float thickness = 1, bool occluded = true)
     {
-        _circles.Add(new(center, radius, color, thickness, occluded));
+        _cones.Add(new(center, radius, direction, halfWidth, color, false, thickness, occluded));
     }
 
-    public void DrawWorldSphere(Vector3 center, float radius, uint color, float thickness = 1)
+    public void AddConeFilled(Vector3 center, float radius, Angle direction, Angle halfWidth, uint color, float projectionHeight = 0, bool occluded = true)
+    {
+        _cones.Add(new(center, radius, direction, halfWidth, color, true, projectionHeight, occluded));
+    }
+
+    public void AddCircle(Vector3 center, float radius, uint color, float thickness = 1, bool occluded = true)
+    {
+        _circles.Add(new(center, radius, color, false, thickness, occluded));
+    }
+
+    public void AddCircleFilled(Vector3 center, float radius, uint color, float projectionHeight = 0, bool occluded = true)
+    {
+        _circles.Add(new(center, radius, color, true, projectionHeight, occluded));
+    }
+
+    public void AddTriangle(Vector3 a, Vector3 b, Vector3 c)
+    {
+        _triangles.Add((a, b, c));
+    }
+
+    public void AddSphere(Vector3 center, float radius, uint color, float thickness = 1)
     {
         var numSegments = CurveApprox.CalculateCircleSegments(radius, 360.Degrees(), 1 / 90f);
         var prev1 = center + new Vector3(0, 0, radius);
@@ -106,9 +151,9 @@ public sealed class Camera(IDalamudPluginInterface dalamud) : ICamera, IDisposab
             var curr1 = center + radius * new Vector3(dir.X, 0, dir.Z);
             var curr2 = center + radius * new Vector3(0, dir.Z, dir.X);
             var curr3 = center + radius * new Vector3(dir.Z, dir.X, 0);
-            DrawWorldLine(curr1, prev1, color, thickness);
-            DrawWorldLine(curr2, prev2, color, thickness);
-            DrawWorldLine(curr3, prev3, color, thickness);
+            AddLine(curr1, prev1, color, thickness);
+            AddLine(curr2, prev2, color, thickness);
+            AddLine(curr3, prev3, color, thickness);
             prev1 = curr1;
             prev2 = curr2;
             prev3 = curr3;

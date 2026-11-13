@@ -19,7 +19,7 @@ public class AIHintsVisualizer(AIHints hints, WorldState ws, Actor player, float
 
         foreach (var _1 in tree.Node("Potential targets", hints.PotentialTargets.Count == 0))
         {
-            foreach (var pt in tree.Nodes(hints.PotentialTargets, e => new($"[{e.Priority}] {e.Actor} (str={e.AttackStrength:f2}), dist={e.Actor.DistanceToHitbox(player):f2}, v={e.Actor.Visibility}, tank={e.ShouldBeTanked}/{e.PreferProvoking}/{e.DesiredPosition}/{e.DesiredRotation}, dots={e.AllowDOTs}###{e.Actor.InstanceID}-{e.Actor.SpawnIndex}", e.PrioHistory.Count == 0)))
+            foreach (var pt in tree.Nodes(hints.PotentialTargets, e => new($"[{e.Priority}] {e.Actor} (str={e.AttackStrength:f2}), dist={e.Actor.DistanceToHitbox(player):f2}, v={e.Actor.Visibility}, tank={e.ShouldBeTanked}/{e.PreferProvoking}/{e.DesiredPosition}/{e.DesiredRotation}, dots={e.AllowDOTs}, target={e.ShouldBeTargeted}###{e.Actor.InstanceID}-{e.Actor.SpawnIndex}", e.PrioHistory.Count == 0)))
             {
                 tree.LeafNodes(Enumerable.Reverse(pt.PrioHistory), ph => $"{ph.Value}, reason={ph.Reason}");
             }
@@ -84,17 +84,16 @@ public class AIHintsVisualizer(AIHints hints, WorldState ws, Actor player, float
     {
         var map = new Map();
         hints.InitPathfindMap(map);
-        var gScratch = Utils.MakeArray((map.Width + 1) * (map.Height + 1), float.MinValue);
-        var dScratch = new BitArray(gScratch.Length);
-        NavigationDecision.RasterizeForbiddenZone(map, shape, 0, gScratch.AsSpan(), dScratch, 0);
-        return new MapVisualizer(map, player.Position, gScratch);
+        var gOut = new List<float>();
+        NavigationDecision.RasterizeRaw(map, [(shape, 0f)], 0, gOut);
+        return new MapVisualizer(map, player.Position, [.. gOut]);
     }
 
-    private MapVisualizer BuildGoalVisualizer(Func<WPos, float> shape)
+    private MapVisualizer BuildGoalVisualizer(GoalFn shape)
     {
         var map = new Map();
         hints.InitPathfindMap(map);
-        NavigationDecision.RasterizeGoalZones(map, [shape], false);
+        NavigationDecision.RasterizeGoalZones(map, [shape]);
         return new MapVisualizer(map, player.Position);
     }
 

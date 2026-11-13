@@ -15,7 +15,7 @@ namespace BossMod;
 // - entries from the manual queue are added to the autoqueue every frame with appropriate priorities, and usual logic selects best action to execute
 public sealed class ManualActionQueueTweak(WorldState ws, AIHints hints)
 {
-    private readonly record struct Entry(ActionID Action, Actor? Target, Vector3 TargetPos, Angle? FacingAngle, ActionDefinition Definition, DateTime ExpireAt, float CastTime)
+    private readonly record struct Entry(ActionID Action, Actor? Target, Vector3 TargetPos, Angle? FacingAngle, ActionDefinition Definition, DateTime ExpireAt, float CastTime, float PositionLock)
     {
         public readonly bool Expired(DateTime now) => ExpireAt < now || (Target?.IsDestroyed ?? false);
     }
@@ -49,7 +49,7 @@ public sealed class ManualActionQueueTweak(WorldState ws, AIHints hints)
         if (_emergencyMode)
         {
             ref var entry = ref _queue.Ref(0);
-            queue.Push(entry.Action, entry.Target, ActionQueue.Priority.ManualEmergency, 0, 0, 0, entry.TargetPos, entry.FacingAngle, true);
+            queue.Push(entry.Action, entry.Target, ActionQueue.Priority.ManualEmergency, 0, 0, 0, 0, entry.TargetPos, entry.FacingAngle, true);
         }
         else
         {
@@ -65,7 +65,7 @@ public sealed class ManualActionQueueTweak(WorldState ws, AIHints hints)
                 if (e.Definition.IsGCD || e.Definition.TotalDuration > 1.5f)
                     prio = ActionQueue.Priority.ManualGCD;
 
-                queue.Push(e.Action, e.Target, prio, expireOrder++, 0, e.CastTime, e.TargetPos, e.FacingAngle, true);
+                queue.Push(e.Action, e.Target, prio, expireOrder++, 0, e.CastTime, e.PositionLock, e.TargetPos, e.FacingAngle, true);
             }
         }
     }
@@ -100,7 +100,7 @@ public sealed class ManualActionQueueTweak(WorldState ws, AIHints hints)
         if (index < 0)
         {
             Service.Log($"[MAO] Queueing {action} @ {target}");
-            _queue.Add(new(action, target, targetPos, angleOverride, def, expireAt, castTime));
+            _queue.Add(new(action, target, targetPos, angleOverride, def, expireAt, castTime, def.PositionLock));
             return true;
         }
 
@@ -109,14 +109,14 @@ public sealed class ManualActionQueueTweak(WorldState ws, AIHints hints)
         {
             Service.Log($"[MAO] Replacing queued {e.Action} with {action} @ {target}");
             _queue.RemoveAt(index);
-            _queue.Add(new(action, target, targetPos, angleOverride, def, expireAt, castTime));
+            _queue.Add(new(action, target, targetPos, angleOverride, def, expireAt, castTime, def.PositionLock));
         }
         else
         {
             Service.Log($"[MAO] Entering emergency mode for {e.Action}");
             // spamming oGCD - enter emergency mode
             _queue.Clear();
-            _queue.Add(new(action, target, targetPos, angleOverride, def, expireAt, castTime));
+            _queue.Add(new(action, target, targetPos, angleOverride, def, expireAt, castTime, def.PositionLock));
             _emergencyMode = true;
         }
         return true;

@@ -40,11 +40,6 @@ public sealed class UIRotationWindow : UIWindow
         }
     }
 
-    public override void PreOpenCheck()
-    {
-        DrawPositional();
-    }
-
     public override bool DrawConditions() => _mgr.WorldState.Party.Player() != null;
 
     public override void Draw()
@@ -131,8 +126,8 @@ public sealed class UIRotationWindow : UIWindow
         }
 
         var upcoming = new List<(string label, float seconds)>();
-        if (next(AIHints.PredictedDamageType.Raidwide, StateMachine.StateHint.Raidwide) is var (rw, _))
-            upcoming.Add(("Raidwide", rw));
+        if (next(AIHints.PredictedDamageType.Raidwide, StateMachine.StateHint.Raidwide) is var (rw, rws))
+            upcoming.Add((rws == 1 ? "Spread" : "Raidwide", rw));
         if (next(AIHints.PredictedDamageType.Tankbuster, StateMachine.StateHint.Tankbuster) is var (tb, tanks))
             upcoming.Add((tanks > 1 ? $"Tankbuster x{tanks}" : "Tankbuster", tb));
         if (next(AIHints.PredictedDamageType.Shared, StateMachine.StateHint.None) is var (st, _))
@@ -307,27 +302,4 @@ public sealed class UIRotationWindow : UIWindow
 
         return modified;
     }
-
-    private void DrawPositional()
-    {
-        var pos = _mgr.Hints.RecommendedPositional;
-        if (_config.ShowPositionals && pos.Target != null && !pos.Target.Omnidirectional)
-        {
-            var color = PositionalColor(pos.Imminent, pos.Correct);
-            switch (pos.Pos)
-            {
-                case Positional.Flank:
-                    Service.Camera.DrawWorldCone(pos.Target.PosRot.XYZ(), pos.Target.HitboxRadius + 3.5f, pos.Target.Rotation + 90.Degrees(), 45.Degrees(), color);
-                    Service.Camera.DrawWorldCone(pos.Target.PosRot.XYZ(), pos.Target.HitboxRadius + 3.5f, pos.Target.Rotation - 90.Degrees(), 45.Degrees(), color);
-                    break;
-                case Positional.Rear:
-                    Service.Camera.DrawWorldCone(pos.Target.PosRot.XYZ(), pos.Target.HitboxRadius + 3.5f, pos.Target.Rotation + 180.Degrees(), 45.Degrees(), color);
-                    break;
-            }
-        }
-    }
-
-    private uint PositionalColor(bool imminent, bool correct) => imminent
-        ? (correct ? 0xff00ff00 : 0xff0000ff)
-        : (correct ? 0xffffffff : 0xff00ffff);
 }

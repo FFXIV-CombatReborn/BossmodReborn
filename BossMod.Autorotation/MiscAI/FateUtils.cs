@@ -16,7 +16,7 @@ public sealed class FateUtils(RotationModuleManager manager, Actor player) : Rot
             .AddOption(Flag.Disabled, "Do nothing");
 
         res.Define(Track.Collect).As<Flag>("Collect")
-            .AddOption(Flag.Enabled, "Try to collect FATE items instead of engaging in combat")
+            .AddOption(Flag.Enabled, "Collect pickups in hand-in FATEs")
             .AddOption(Flag.Disabled, "Do nothing");
 
         res.Define(Track.Sync).As<AIHints.FateSync>("Sync")
@@ -71,16 +71,16 @@ public sealed class FateUtils(RotationModuleManager manager, Actor player) : Rot
             // tight spot with high reward to get out of where we're at
             Hints.GoalZones.Add(AIHints.GoalSingleTarget(los.Destination, 0.3f, 120));
             // add a penalty to current position to actually encourage moving out of it
-            Hints.GoalZones.Add(p => p.InCircle(los.Origin, 1.0f) ? -25 : 0);
+            Hints.GoalZones.AddSimple(p => p.InCircle(los.Origin, 1.0f), -25);
             // more encouragement for going towards the destination, but need to cap it or else it'll just keep going
             Hints.GoalZones.Add(p =>
             {
-                var progress = WDir.Dot(p - los.Origin, losDir);
-                if (progress <= 0)
-                    return 0;
+                var progress = (p - los.Origin).Dot(losDir);
+                //if (progress <= 0)
+                //    return 0;
 
-                var cappedProgress = MathF.Min(progress, losDist);
-                var overshoot = MathF.Max(0, progress - losDist);
+                var cappedProgress = VV.Min(progress, VV.Create(losDist));
+                var overshoot = VV.Max(VFloat.Zero, progress - losDist);
                 return cappedProgress * 8 - overshoot * 16;
             });
         }

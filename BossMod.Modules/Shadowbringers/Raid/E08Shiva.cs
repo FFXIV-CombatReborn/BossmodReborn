@@ -263,16 +263,6 @@ class ThinIceHint(BossModule module) : Components.Knockback(module, ignoreImmune
             yield return new(actor.Position, dist, default, null, actor.Rotation, Kind.DirForward);
     }
 
-    public override bool DestinationUnsafe(int slot, Actor actor, WPos pos)
-    {
-        if (!Module.InBounds(pos))
-            return true;
-        foreach (var c in Module.Components.OfType<Components.GenericAOEs>())
-            if (c.ActiveAOEs(slot, actor).Any(a => a.Risky && a.Check(pos)))
-                return true;
-        return false;
-    }
-
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         var dist = SlideDistance(actor);
@@ -280,40 +270,6 @@ class ThinIceHint(BossModule module) : Components.Knockback(module, ignoreImmune
             return;
         hints.Add($"Slippery floor. Careful!");
         base.AddHints(slot, actor, hints);
-    }
-
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
-    {
-        var dist = SlideDistance(actor);
-        if (dist <= 0)
-            return;
-
-        // stand still unless you have to dodge cause of the slipper floor
-        var aoes = Module.Components.OfType<Components.GenericAOEs>().SelectMany(c => c.ActiveAOEs(slot, actor)).Where(a => a.Risky).ToList();
-        var inDanger = aoes.Any(a => a.Check(actor.Position));
-        if (!inDanger)
-        {
-            hints.ForcedMovement = default;
-            return;
-        }
-
-        WDir bestDir = default;
-        var bestScore = float.MinValue;
-        for (var i = 0; i < 16; ++i)
-        {
-            var dir = (i * 22.5f).Degrees().ToDirection();
-            var landing = actor.Position + dist * dir;
-            if (!Module.InBounds(landing) || aoes.Any(a => a.Check(landing)))
-                continue;
-
-            var score = -(landing - Module.PrimaryActor.Position).LengthSq(); // try to land near the boss
-            if (score > bestScore)
-            {
-                bestScore = score;
-                bestDir = dir;
-            }
-        }
-        hints.ForcedMovement = bestDir != default ? bestDir.ToVec3(actor.PosRot.Y) : default;
     }
 }
 
@@ -416,11 +372,8 @@ class LuminousRush(BossModule module) : BossComponent(module)
         if (LocalLuminous(actor) is not { } src)
             return;
 
-        hints.ForcedTarget = src;
-        // bypass normal move here because autorot will keep taking you off the tether
-        var offset = src.Position - actor.Position;
-        var arrive = MathF.Max(0.25f, src.HitboxRadius - actor.HitboxRadius);
-        hints.ForcedMovement = offset.LengthSq() > arrive * arrive ? offset.ToVec3(actor.PosRot.Y) : default;
+        // high weight because autorot will keep taking you off the tether
+        hints.GoalZones.Add(AIHints.GoalProximity(src.Position, 25, 1000));
     }
 }
 

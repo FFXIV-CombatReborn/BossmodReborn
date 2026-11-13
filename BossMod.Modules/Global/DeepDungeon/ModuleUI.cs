@@ -8,7 +8,7 @@ abstract partial class AutoClear : ZoneModule
 {
     private int DrawMap(Actor? player, int playerSlot)
     {
-        var ix = new Minimap(Palace, player?.Rotation ?? default, DesiredRoom, Math.Max(0, playerSlot)).Draw();
+        var ix = new Minimap(Palace, _config, player?.Rotation ?? default, DesiredRoom.Index, Math.Max(0, playerSlot)).Draw();
 
         DrawBoxes(player);
 
@@ -33,21 +33,22 @@ abstract partial class AutoClear : ZoneModule
         var playerSlot = Array.FindIndex(Palace.Party, p => p.EntityId == player?.InstanceID);
         var targetRoom = DrawMap(player, playerSlot);
         if (targetRoom >= 0)
-            DesiredRoom = targetRoom;
+            DesiredRoom = (targetRoom, PathfindReason.Manual);
 
         using (ImRaii.Disabled(true))
-            ImGui.Text("Click on a room to set a destination.");
+        {
+            if (DesiredRoom.Reason == PathfindReason.Nothing)
+                ImGui.Text("Click on a room to set a destination.");
+            else
+                ImGui.Text($"Currently: {ReasonReadable(DesiredRoom.Reason)}");
+        }
 
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
 
-        if (_palantirError != null)
-        {
-            ImGui.Text("Couldn't connect to Palantir. Trap locations will not be displayed.");
-            if (ImGui.Button("Retry"))
-                FilterTraps();
-        }
+        if (Service.IsDev && MostInterestingObject is { } obj)
+            Service.Camera.AddLine(player?.PosRot.XYZ() ?? default, obj.Actor.PosRot.XYZ(), ArenaColor.Danger, 2, false);
 
         var maxPull = _config.MaxPull;
         ImGui.AlignTextToFramePadding();

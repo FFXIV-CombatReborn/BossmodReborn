@@ -31,6 +31,7 @@ public abstract class BossModule : IDisposable
     public WPos Center => Arena.Center;
     public ArenaBounds Bounds => Arena.Bounds;
     public bool InBounds(WPos position) => Arena.InBounds(position);
+    public VBool InBounds(WVec position) => Arena.InBounds(position);
 
     // per-oid enemy lists; filled on first request
     private readonly Dictionary<uint, List<Actor>> _relevantEnemies = []; // key = actor OID
@@ -293,10 +294,31 @@ public abstract class BossModule : IDisposable
         foreach (var comp in _components)
             comp.AddAIHints(slot, actor, assignment, hints);
         CalculateModuleAIHints(slot, actor, assignment, hints);
+
         if (!WindowConfig.AllowAutomaticActions)
             hints.ActionsToExecute.Clear();
         if (!WindowConfig.AllowAutomaticInteract)
             hints.InteractWithTarget = null;
+
+        // always clear low level hints; these are executed unconditionally, regardless of autorot state, and can confuse users
+        // if the module wants the player to go somewhere or target something it should set appropriate hints instead
+        if (hints.ForcedMovement is { } move && move != new Vector3(0))
+        {
+            Service.PluginLog.Warning($"Module {GetType()} sets ForcedMovement to a non-zero value; this is not supported!");
+            hints.ForcedMovement = null;
+        }
+
+        if (hints.ForcedTarget != null)
+        {
+            Service.PluginLog.Warning($"Module {GetType()} forces a target; this is not supported!");
+            hints.ForcedTarget = null;
+        }
+
+        if (hints.ForcedFocusTarget != null)
+        {
+            Service.PluginLog.Warning($"Module {GetType()} forces a focus target; this is not supported!");
+            hints.ForcedFocusTarget = null;
+        }
     }
 
     public void ReportError(BossComponent? comp, string message)
@@ -368,6 +390,12 @@ public abstract class BossModule : IDisposable
     {
         foreach (var enemy in hints.PotentialTargets.Where(a => a.Actor is { IsDeadOrDestroyed: false, CastInfo: null } && a.CanMove))
         {
+            if (enemy.DesiredPosition is { } pos && (pos - enemy.Actor.Position).LengthSq() > 0.25f)
+            {
+                Arena.AddLine(enemy.Actor.Position, pos, ArenaColor.Object);
+                Arena.AddCircle(pos, 0.5f, ArenaColor.Object);
+            }
+
             if (WorldState.Actors.Find(enemy.Actor.TargetID) is { } target)
             {
                 var toTarget = target.Position - enemy.Actor.Position;

@@ -90,7 +90,8 @@ class P1GravitasVitrophyre : Components.UniformStackSpread
         {
             var gravity = Module.Enemies(OID.Gravitas).Select(g => ShapeDistance.Circle(g.Position, 5 + SpreadRadius + ExtraAISpreadThreshold)).ToList();
             // away from gravity
-            hints.AddForbiddenZone(ShapeDistance.Union(gravity), Spreads[0].Activation);
+            if (gravity.Count > 0)
+                hints.AddForbiddenZone(ShapeDistance.Union(gravity), Spreads[0].Activation);
 
             var spreadParty = _config.P1GravityPuddleSpread[assignment];
             // spread on predetermined side, otherwise we confuse our teammates
@@ -98,7 +99,7 @@ class P1GravitasVitrophyre : Components.UniformStackSpread
             {
                 var safeSide = spreadParty == 0 ? _facingBoss + 90.Degrees() : _facingBoss - 90.Degrees();
                 var ctr = Arena.Center + safeSide.ToDirection() * 5;
-                hints.GoalZones.Add(p => p.InCone(ctr, safeSide, 90.Degrees()) ? 1 : 0);
+                hints.GoalZones.AddSimple(p => p.InCone(ctr, safeSide, 90.Degrees()), 1);
             }
         }
         else if (Spreads.Count > 0 && Stacks.Count == 0)
@@ -179,12 +180,6 @@ class P1GravitationalWaveIntemperateWill(BossModule module) : Components.Generic
     AOEInstance? _predicted;
 
     public override IEnumerable<AOEInstance> ActiveAOEs(int slot, Actor actor) => Utils.ZeroOrOne(_predicted).Select(w => w with { Risky = Risky });
-
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
-    {
-        foreach (var aoe in ActiveAOEs(slot, actor))
-            hints.AddForbiddenZone(aoe.Distance, aoe.Activation);
-    }
 
     public override void OnActorEAnim(Actor actor, uint state)
     {

@@ -82,4 +82,43 @@ class P1Mesohigh(BossModule module) : Mesohigh(module)
     }
 }
 
-class P4Mesohigh(BossModule module) : Mesohigh(module);
+class P4Mesohigh(BossModule module) : Mesohigh(module)
+{
+    public int Order;
+    public bool EnableHints = true;
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        base.AddAIHints(slot, actor, assignment, hints);
+
+        if (Order == 2 && actor.FindStatus(SID.SearingWind) != null && WorldState.Actors.Find(Module.PrimaryActor.Tether.Target) is { } currentTarget && currentTarget != actor)
+        {
+            hints.ForbiddenZones.Clear();
+            var intercept = Module.PrimaryActor.Position + Module.PrimaryActor.DirectionTo(currentTarget) * 7;
+            hints.AddForbiddenZone(ShapeDistance.PrecisePosition(intercept, new(0, 1), 0.5f, actor.Position, 0.1f));
+        }
+
+        if (Order == 3)
+        {
+            var isTarget = actor.Role == Role.Tank && actor.FindStatus(SID.ThermalLow) != null;
+            if (isTarget && WorldState.Actors.Find(Module.PrimaryActor.Tether.Target) is { } tt)
+            {
+                if (tt == actor)
+                {
+                    hints.GoalZones.Add(AIHints.GoalProximity(Arena.Center, 5, 1));
+                }
+                else
+                {
+                    var targetToBoss = Module.PrimaryActor.Position - tt.Position;
+                    var farSide = targetToBoss.Normalized().OrthoR();
+                    if (tt.DirectionTo(actor).Dot(farSide) > 0)
+                        farSide = -farSide;
+                    var src = tt.Position;
+
+                    var inside = ShapeDistance.Circle(Module.PrimaryActor.Position, targetToBoss.Length() - 2);
+                    hints.GoalZones.AddSimple(p => (inside(p) <= 0) & p.InCone(src, farSide, 90.Degrees()), 1);
+                }
+            }
+        }
+    }
+}
