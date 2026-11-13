@@ -30,6 +30,8 @@ public sealed class HookAddress<T> : IDisposable where T : Delegate
     public HookAddress(string signature, T detour, bool autoEnable = true) : this(Service.SigScanner.ScanText(signature), detour, autoEnable) { }
     public HookAddress(nint address, T detour, bool autoEnable = true)
     {
+        if (address == 0)
+            throw new InvalidOperationException($"Cannot hook {typeof(T).Name}: resolved address is null. CS may need updating.");
         Service.Log($"Hooking {typeof(T)} @ 0x{address:X}");
         _hook = Service.Hook.HookFromAddress(address, detour);
         if (autoEnable)
