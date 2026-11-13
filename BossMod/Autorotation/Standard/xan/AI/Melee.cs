@@ -12,6 +12,8 @@ public sealed class MeleeAI(RotationModuleManager manager, Actor player) : AIBas
         public Track<EnabledByDefault> Bloodbath;
         [Track(Action = ClassShared.AID.LegSweep)]
         public Track<EnabledByDefault> Stun;
+        [Track("Feint", InternalName = "Feint", Action = ClassShared.AID.Feint)]
+        public Track<DisabledByDefault> Feint;
         [Track("Limit Break", InternalName = "Limit Break", Actions = [ClassShared.AID.Braver, ClassShared.AID.Bladedance])]
         public Track<EnabledByDefault> LimitBreak;
 
@@ -56,13 +58,20 @@ public sealed class MeleeAI(RotationModuleManager manager, Actor player) : AIBas
         }
         */
 
+        // feint before raidwides, unless another melee already did
+        if (strategy.Feint.IsEnabled() && Player.InCombat && primaryTarget is { IsAlly: false } ft
+            && RaidwideWithin(5)
+            && Unlocked(ClassShared.AID.Feint) && NextChargeIn(ClassShared.AID.Feint) == 0
+            && ft.FindStatus(ClassShared.SID.Feint) == null && Player.DistanceToHitbox(ft) <= 10)
+            Hints.ActionsToExecute.Push(ActionID.MakeSpell(ClassShared.AID.Feint), ft, ActionQueue.Priority.Medium);
+
         AutoDash(strategy, primaryTarget);
         AutoLB(strategy, primaryTarget);
     }
 
     private void AutoLB(in Strategy strategy, Actor? primaryTarget)
     {
-        if (!strategy.LimitBreak.IsEnabled() || World.Party.WithoutSlot(includeDead: true).Count(x => x.Type == ActorType.Player) > 1 || Bossmods.ActiveModule is null)
+        if (!strategy.LimitBreak.IsEnabled() || World.Party.WithoutSlot(includeDead: true).Count(x => x.Type == ActorType.Player) > 1 || Bossmods.ActiveModule == null)
             return;
 
         switch (World.Party.LimitBreakLevel)
@@ -91,7 +100,7 @@ public sealed class MeleeAI(RotationModuleManager manager, Actor player) : AIBas
 
     private void AutoDash(in Strategy strategy, Actor? primaryTarget)
     {
-        if (!strategy.Dash.IsEnabled() || primaryTarget is not { IsAlly: false })
+        if (!strategy.Dash.IsEnabled() || primaryTarget is not { IsAlly: false } || World.Client.CountdownRemaining >= 0)
             return;
 
         switch (Player.Class)

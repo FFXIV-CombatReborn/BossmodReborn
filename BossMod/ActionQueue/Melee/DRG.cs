@@ -104,7 +104,7 @@ public sealed class Definitions : Defs
 
     public override void Define(ActionDefinitions d)
     {
-        d.RegisterSpell(AID.DragonsongDive, castAnimLock: 3.70f); // animLock=3.700s?
+        d.RegisterSpell(AID.DragonsongDive, castAnimLock: 3.70f, positionLock: 3.67f); // animLock=3.700s?
         d.RegisterSpell(AID.TrueThrust);
         d.RegisterSpell(AID.VorpalThrust);
         d.RegisterSpell(AID.LifeSurge);
@@ -112,7 +112,7 @@ public sealed class Definitions : Defs
         d.RegisterSpell(AID.Disembowel);
         d.RegisterSpell(AID.FullThrust);
         d.RegisterSpell(AID.LanceCharge);
-        d.RegisterSpell(AID.Jump, instantAnimLock: 0.80f); // animLock=0.800s?
+        d.RegisterSpell(AID.Jump, instantAnimLock: 0.80f, positionLock: 0.33f); // animLock=0.800s?
         d.RegisterSpell(AID.ElusiveJump, instantAnimLock: 0.80f); // animLock=0.800s?
         d.RegisterSpell(AID.DoomSpike);
         d.RegisterSpell(AID.WingedGlide); // animLock=???
@@ -127,7 +127,7 @@ public sealed class Definitions : Defs
         d.RegisterSpell(AID.MirageDive);
         d.RegisterSpell(AID.Nastrond);
         d.RegisterSpell(AID.CoerthanTorment);
-        d.RegisterSpell(AID.HighJump, instantAnimLock: 0.80f); // animLock=0.800s?
+        d.RegisterSpell(AID.HighJump, instantAnimLock: 0.80f, positionLock: 0.33f); // animLock=0.800s?
         d.RegisterSpell(AID.RaidenThrust);
         d.RegisterSpell(AID.Stardiver, instantAnimLock: 1.50f); // animLock=1.500s?
         d.RegisterSpell(AID.DraconianFury);
@@ -168,38 +168,7 @@ public sealed class Definitions : Defs
         d.Spell(AID.Stardiver)!.AllowExecute =
             d.Spell(AID.DragonfireDive)!.AllowExecute =
             d.Spell(AID.WingedGlide)!.AllowExecute = ActionPredicate.AllowDashToTarget;
+
         d.Spell(AID.ElusiveJump)!.AllowExecute = ActionPredicate.AllowDashFixed(15, backwards: true);
     }
-
-    public float EffectApplicationDelay(AID aid) => aid switch
-    {
-        AID.ChaoticSpring => 0.45f,          //Chaotic Spring delay
-        AID.HighJump => 0.49f,               //High Jump delay
-        AID.CoerthanTorment => 0.49f,        //Coerthan Torment delay
-        AID.BattleLitany => 0.62f,           //Battle Litany delay
-        AID.LanceBarrage => 0.62f,           //Lance Barrage delay
-        AID.FangAndClaw => 0.62f,            //Fang and Claw delay
-        AID.RaidenThrust => 0.62f,           //Raiden Thrust delay
-        AID.Geirskogul => 0.67f,             //Geirskogul delay
-        AID.WheelingThrust => 0.67f,         //Wheeling Thrust delay
-        AID.HeavensThrust => 0.71f,          //Heavens Thrust delay
-        AID.DraconianFury => 0.76f,          //Draconian Fury delay
-        AID.Nastrond => 0.76f,               //Nastrond delay
-        AID.TrueThrust => 0.76f,             //True Thrust delay
-        AID.DragonfireDive => 0.8f,          //Dragonfire Dive delay
-        AID.MirageDive => 0.8f,              //Mirage Dive delay
-        AID.SonicThrust => 0.8f,             //Sonic Thrust delay
-        AID.PiercingTalon => 0.85f,          //Piercing Talon delay
-        AID.Starcross => 0.98f,              //Starcross delay
-        AID.VorpalThrust => 1.02f,           //Vorpal Thrust delay
-        AID.RiseOfTheDragon => 1.16f,        //Rise of the Dragon delay
-        AID.WyrmwindThrust => 1.2f,          //Wyrmwind Thrust delay
-        AID.DoomSpike => 1.29f,              //Doom Spike delay
-        AID.Stardiver => 1.29f,              //Stardiver delay
-        AID.SpiralBlow => 1.38f,             //Spiral Blow delay
-        AID.Disembowel => 1.65f,             //Disembowel delay
-        AID.DragonsongDive => 2.23f,         //Dragonsong Dive delay
-        _ => 0.0f
-    };
-
 }

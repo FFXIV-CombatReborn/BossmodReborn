@@ -670,4 +670,5 @@ public static class ApplicationDelay
     public static float Get(uint actionId) => _delay.TryGetValue(actionId, out var d) ? d : 0f;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static float Get(ActionID aid) => Get(aid.ID);
+    public static float Get<E>(E actionId) where E : struct, Enum => Get((uint)(object)actionId);
 }

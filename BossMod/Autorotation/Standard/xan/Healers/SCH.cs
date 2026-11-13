@@ -10,8 +10,10 @@ public sealed class SCH(RotationModuleManager manager, Actor player) : Castxan<A
     {
         public Track<Targeting> Targeting;
         public Track<AOEStrategy> AOE;
-        [Track("Chain Stratagem", Actions = [AID.ChainStratagem, AID.Dissipation])]
+        [Track("Chain Stratagem", Actions = [AID.ChainStratagem, AID.Dissipation], Targets = ActionTargets.Hostile)]
         public Track<OffensiveStrategy> Buffs;
+        [Track("Fairy management")]
+        public Track<SummonBehavior> Summon;
         [Track("Fairy placement")]
         public Track<FairyPlacement> FairyPlace;
 
@@ -29,6 +31,16 @@ public sealed class SCH(RotationModuleManager manager, Actor player) : Castxan<A
         FullAuto,
         [Option("Place fairy at specified location", Targets = ActionTargets.Area, Context = StrategyContext.Plan)]
         Specific
+    }
+
+    public enum SummonBehavior
+    {
+        [Option("Summon fairy if missing")]
+        Summon,
+        [Option("Dismiss fairy if summoned")]
+        Dismiss,
+        [Option("Do nothing")]
+        Disabled,
     }
 
     public static RotationModuleDefinition Definition()
@@ -93,7 +105,7 @@ public sealed class SCH(RotationModuleManager manager, Actor player) : Castxan<A
         if (Eos != null || FairyGone)
             _summonWait = World.CurrentTime.AddSeconds(1);
 
-        if (Eos == null && !FairyGone && World.CurrentTime > _summonWait)
+        if (Eos == null && !FairyGone && World.CurrentTime > _summonWait && strategy.Summon.Value == SummonBehavior.Summon)
             PushGCD(AID.SummonEos, Player);
 
         OGCD(strategy, primaryTarget);
@@ -105,7 +117,7 @@ public sealed class SCH(RotationModuleManager manager, Actor player) : Castxan<A
 
         if (CountdownRemaining > 0)
         {
-            if (CountdownRemaining <= GetCastTime(AID.Broil1))
+            if (CountdownRemaining <= GetCastTime(AID.Broil1) + ApplicationDelay.Get(AID.Broil4))
                 PushGCD(AID.Broil1, primaryTarget);
 
             return;
@@ -135,22 +147,25 @@ public sealed class SCH(RotationModuleManager manager, Actor player) : Castxan<A
 
     private void OGCD(Strategy strategy, Enemy? primaryTarget)
     {
-        if (primaryTarget == null || !Player.InCombat)
+        if (!Player.InCombat)
+            return;
+
+        if (Aetherflow == 0)
+            PushOGCD(AID.Aetherflow, Player);
+
+        if (primaryTarget == null)
             return;
 
         switch (strategy.Buffs.Value)
         {
             case OffensiveStrategy.Automatic:
                 if (RaidBuffsLeft > 15 || RaidBuffsIn > 1000)
-                    PushOGCD(AID.ChainStratagem, primaryTarget);
+                    UsePlanned(strategy.Buffs, AID.ChainStratagem, primaryTarget);
                 break;
             case OffensiveStrategy.Force:
-                PushOGCD(AID.ChainStratagem, primaryTarget);
+                UsePlanned(strategy.Buffs, AID.ChainStratagem, primaryTarget);
                 break;
         }
-
-        if (Aetherflow == 0)
-            PushOGCD(AID.Aetherflow, Player);
 
         if (Aetherflow > 0 && CanWeave(AID.Aetherflow, Aetherflow))
             PushOGCD(AID.EnergyDrain, primaryTarget);
@@ -166,6 +181,12 @@ public sealed class SCH(RotationModuleManager manager, Actor player) : Castxan<A
 
     private void OrderFairy(Strategy strategy)
     {
+        if (strategy.Summon.Value == SummonBehavior.Dismiss && Eos != null)
+        {
+            Hints.ActionsToExecute.Push(new ActionID(ActionType.PetAction, 1), null, ActionQueue.Priority.VeryHigh);
+            return;
+        }
+
         if (Eos == null)
             return;
 
@@ -179,7 +200,7 @@ public sealed class SCH(RotationModuleManager manager, Actor player) : Castxan<A
         {
             if (FairyOrder != PetOrder.Place && (Player.InCombat || CountdownRemaining > 0))
             {
-                if (Bossmods.ActiveModule?.Arena.Center is WPos p)
+                if (Bossmods.ActiveModule is { Arena.Center: var p })
                     Hints.ActionsToExecute.Push(new ActionID(ActionType.PetAction, 3), null, ActionQueue.Priority.VeryHigh, targetPos: p.ToVec3(Player.PosRot.Y));
             }
         }

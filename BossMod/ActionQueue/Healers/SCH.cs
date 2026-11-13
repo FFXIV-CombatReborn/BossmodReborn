@@ -108,6 +108,10 @@ public enum SID : uint
     ChainStratagem = 1221, // applied by Chain Stratagem to target
     FeyUnion = 1223, // applied by Aetherpact to target
     Seraphism = 3884, // applied by Seraphism to self
+    SeraphismRegen = 3885, // applied by Seraphism to party
+    SacredSoil = 299, // applied by Sacred Soil to party, damage reduction
+    DesperateMeasures = 2711, // applied by Expedient to party, damage reduction
+    WhisperingDawn = 315, // applied by Whispering Dawn to party, regen
 
     //Shared
     Surecast = ClassShared.SID.Surecast, // applied by Surecast to self
@@ -121,7 +125,7 @@ public sealed class Definitions : Defs
 
     public override void Define(ActionDefinitions d)
     {
-        d.RegisterSpell(AID.AngelFeathers, castAnimLock: 8.10f); // animLock=8.100s?
+        d.RegisterSpell(AID.AngelFeathers, castAnimLock: 8.10f, positionLock: 8); // animLock=8.100s?
         d.RegisterSpell(AID.Ruin1);
         d.RegisterSpell(AID.Bio1);
         d.RegisterSpell(AID.Physick);

@@ -114,7 +114,7 @@ public sealed class Definitions : Defs
 
     public override void Define(ActionDefinitions d)
     {
-        d.RegisterSpell(AID.TheEnd, castAnimLock: 3.70f); // animLock=3.700s?
+        d.RegisterSpell(AID.TheEnd, castAnimLock: 3.70f, positionLock: 3.67f); // animLock=3.700s?
         d.RegisterSpell(AID.Slice);
         d.RegisterSpell(AID.WaxingSlice);
         d.RegisterSpell(AID.ShadowofDeath);
@@ -161,8 +161,6 @@ public sealed class Definitions : Defs
     {
         d.RegisterChargeIncreaseTrait(AID.SoulSlice, TraitID.TemperedSoul);
         d.RegisterChargeIncreaseTrait(AID.SoulScythe, TraitID.TemperedSoul);
-
-        d.Spell(AID.Harpe)!.AllowExecute = (ws, player, _, _) => !(_config.ForbidEarlyHarpe && !player.InCombat && ws.Client.CountdownRemaining > 1.7f);
 
         d.Spell(AID.HellsEgress)!.TransformAngle =
             d.Spell(AID.HellsIngress)!.TransformAngle = (ws, _, _) => _config.AlignDashToCamera

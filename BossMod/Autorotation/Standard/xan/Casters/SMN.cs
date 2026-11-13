@@ -212,8 +212,8 @@ public sealed class SMN(RotationModuleManager manager, Actor player) : Castxan<A
         var gauge = World.Client.GetGauge<SummonerGauge>();
         TranceFlags = (SmnFlags)gauge.AetherFlags;
         SummonLeft = gauge.SummonTimer * 0.001f;
-        AttunementType = (AttunementType)(gauge.Attunement & 3);
-        Attunement = gauge.Attunement >> 2;
+        AttunementType = (AttunementType)gauge.AttunementType;
+        Attunement = gauge.AttunementCount;
 
         // intentionally not using activepet as it is cleared when current summon's duration expires, even though the actor still exists, causing autorot to constantly do redundant summons
         Carbuncle = World.Actors.FirstOrDefault(x => x.Type == ActorType.Pet && x.OwnerID == Player.InstanceID);
@@ -244,7 +244,7 @@ public sealed class SMN(RotationModuleManager manager, Actor player) : Castxan<A
 
         if (CountdownRemaining > 0)
         {
-            if (CountdownRemaining <= GetCastTime(AID.Ruin1))
+            if (CountdownRemaining <= GetCastTime(AID.Ruin1) + ApplicationDelay.Get(AID.Ruin3))
                 PushGCD(AID.Ruin1, primaryTarget);
 
             return;
