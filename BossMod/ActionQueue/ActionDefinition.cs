@@ -78,6 +78,7 @@ public sealed record class ActionDefinition(ActionID ID)
     public delegate bool ConditionDelegate(WorldState ws, Actor player, ActionQueue.Entry action, AIHints hints);
     public delegate Actor? SmartTargetDelegate(WorldState ws, Actor player, Actor? target, AIHints hints);
     public delegate Angle? TransformAngleDelegate(WorldState ws, Actor player, AIHints hints);
+    public delegate float? AdjustedRangeDelegate(WorldState ws, Actor player);
 
     public BitMask AllowedClasses = new(~0ul);
     public int MinLevel;
@@ -96,6 +97,8 @@ public sealed record class ActionDefinition(ActionID ID)
     public bool IsRoleAction; // unlocked conditions are different for these
     public float InstantAnimLock = 0.6f; // animation lock if ability is instant-cast
     public float CastAnimLock = 0.1f; // animation lock if ability is non-instant
+    public float PositionLock; // how long this action freezes the user in place
+    public AdjustedRangeDelegate? GetAdjustedRange; // optional range override (e.g. trait- or status-dependent range)
     public ConditionDelegate? AllowExecute; // optional condition, if it returns false, action is not executed
     public SmartTargetDelegate? SmartTarget; // optional target transformation for 'smart targeting' feature
     public TransformAngleDelegate? TransformAngle; // optional facing angle transformation
@@ -506,7 +509,7 @@ public sealed class ActionDefinitions
     private Lumina.Excel.Sheets.Trait TraitData(uint id) => _traitSheet.GetRow(id);
 
     // registration for different kinds of actions
-    public void RegisterSpell(ActionID aid, bool isPhysRanged = false, float instantAnimLock = 0.6f, float castAnimLock = 0.1f)
+    public void RegisterSpell(ActionID aid, bool isPhysRanged = false, float instantAnimLock = 0.6f, float castAnimLock = 0.1f, float positionLock = 0f)
     {
         var data = ActionData(aid.ID);
         var def = new ActionDefinition(aid)
@@ -525,14 +528,15 @@ public sealed class ActionDefinitions
             MaxChargesBase = SpellBaseMaxCharges(data),
             InstantAnimLock = instantAnimLock,
             CastAnimLock = castAnimLock,
+            PositionLock = positionLock,
             IsRoleAction = data.IsRoleAction,
             Category = (ActionCategory)data.ActionCategory.RowId
         };
         Register(aid, def);
     }
 
-    public void RegisterSpell<AID>(AID aid, bool isPhysRanged = false, float instantAnimLock = 0.6f, float castAnimLock = 0.1f) where AID : Enum
-        => RegisterSpell(ActionID.MakeSpell(aid), isPhysRanged, instantAnimLock, castAnimLock);
+    public void RegisterSpell<AID>(AID aid, bool isPhysRanged = false, float instantAnimLock = 0.6f, float castAnimLock = 0.1f, float positionLock = 0f) where AID : Enum
+        => RegisterSpell(ActionID.MakeSpell(aid), isPhysRanged, instantAnimLock, castAnimLock, positionLock);
 
     private void Register(ActionID aid, ActionDefinition definition) => _definitions.Add(aid, definition);
 

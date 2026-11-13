@@ -63,6 +63,8 @@ public sealed class RaidCooldowns : IDisposable
         return Math.Min(float.MaxValue, (float)(firstAvailable - _ws.CurrentTime).TotalSeconds);
     }
 
+    public IReadOnlyList<(int Slot, ActionID Action, DateTime AvailableAt)> DamageCooldowns => _damageCooldowns;
+
     public static bool IsDamageBuff(uint statusID) => statusID
         is (uint)AST.SID.Divination or (uint)DRG.SID.BattleLitany or (uint)RPR.SID.ArcaneCircle or (uint)MNK.SID.Brotherhood
         or (uint)BRD.SID.BattleVoice or (uint)DNC.SID.TechnicalFinish or (uint)SMN.SID.SearingLight or (uint)RDM.SID.Embolden

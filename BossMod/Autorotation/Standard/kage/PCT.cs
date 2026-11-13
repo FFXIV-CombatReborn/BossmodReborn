@@ -1,0 +1,425 @@
+﻿using BossMod.PCT;
+using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
+using static BossMod.AIHints;
+
+namespace BossMod.Autorotation.kage;
+
+public sealed class KagePCT(RotationModuleManager manager, Actor player) : KageShared<KagePCT.Strategy>(manager, player)
+{
+    public struct Strategy
+    {
+        [Track(UiPriority = 500)]
+        public Track<Targeting> Targeting;
+        [Track(UiPriority = 499)]
+        public Track<AOEStrategy> AOE;
+
+        [Track("Starry Muse", InternalName = "Burst", MinLevel = 70, Action = AID.StarryMuse, UiPriority = 100)]
+        public Track<OffensiveStrategy> Starry;
+
+        [Track("Living Muse", MinLevel = 30, Actions = [AID.PomMuse, AID.WingedMuse, AID.ClawedMuse, AID.FangedMuse], UiPriority = 99)]
+        public Track<OffensiveStrategy> Living;
+
+        [Track("Striking Muse", MinLevel = 50, Action = AID.StrikingMuse, UiPriority = 98)]
+        public Track<OffensiveStrategy> Striking;
+
+        [Track("Portraits", MinLevel = 30, Actions = [AID.MogOfTheAges, AID.RetributionOfTheMadeen], UiPriority = 97)]
+        public Track<OffensiveStrategy> Portrait;
+
+        [Track("Hammer Combo", MinLevel = 50, Actions = [AID.HammerStamp, AID.HammerBrush, AID.PolishingHammer], UiPriority = 96)]
+        public Track<OffensiveStrategy> Hammer;
+
+        [Track("Holy in White / Comet in Black", MinLevel = 80, Actions = [AID.HolyInWhite, AID.CometInBlack], UiPriority = 95)]
+        public Track<OffensiveStrategy> Holy;
+
+        [Track("Subtractive Palette", MinLevel = 60, Action = AID.SubtractivePalette, UiPriority = 94)]
+        public Track<OffensiveStrategy> Palette;
+
+        [Track("Tempera Coat / Grassa", MinLevel = 10, Actions = [AID.TemperaCoat, AID.TemperaGrassa], UiPriority = 93)]
+        public Track<TemperaStrategy> Tempera;
+
+        [Track("Lucid Dreaming", MinLevel = 14, Action = ClassShared.AID.LucidDreaming, UiPriority = 92)]
+        public Track<OffensiveStrategy> Lucid;
+
+        [Track("Motifs", UiPriority = 91)]
+        public Track<MotifStrategy> Motifs;
+
+        [Track("Swiftcast", MinLevel = 18, Action = ClassShared.AID.Swiftcast, UiPriority = 90.5f)]
+        public Track<OffensiveStrategy> Swiftcast;
+        [Track("Potion", Item = 1049237, UiPriority = 90)]
+        public Track<PotionStrategy> Potion;
+
+        [Track("Opener", MinLevel = 90, UiPriority = -10)]
+        public Track<OpenerStrategy> Opener;
+    }
+
+    public enum MotifStrategy
+    {
+        [Option("Paint in downtime and between bursts")]
+        Automatic,
+        [Option("Only out of combat and in downtime")]
+        Downtime,
+        [Option("Do not use")]
+        Delay
+    }
+
+    public enum TemperaStrategy
+    {
+        [Option("Use Coat and Grassa before raidwides")]
+        Automatic,
+        [Option("Only Tempera Coat, no Grassa")]
+        Self,
+        [Option("Do not use")]
+        Delay
+    }
+
+    public enum PotionStrategy
+    {
+        [Option("Do not use automatically")]
+        Manual,
+        [Option("Optimal: with Starry Muse")]
+        AlignWithBurst,
+        [Option("Follow party raid buffs")]
+        AlignWithRaidBuffs,
+        [Option("Use ASAP")]
+        Immediate
+    }
+
+    public enum OpenerStrategy
+    {
+        [Option("Starry Muse after the 2nd GCD")]
+        SecondGCD,
+        [Option("Starry Muse after the 3rd GCD")]
+        ThirdGCD,
+        [Option("No pre-pull or opener rules")]
+        None
+    }
+
+    public static RotationModuleDefinition Definition()
+    {
+        return new RotationModuleDefinition("Kage PCT", "Pictomancer", "Standard rotation (Kage)|Casters", "Kagekazu", RotationModuleQuality.Ok, BitMask.Build(Class.PCT), 100).WithStrategies<Strategy>();
+    }
+
+    protected override bool UsesSpellSpeed => true;
+
+    private int Palette;
+    private int Paint;
+    private CanvasFlags Canvas;
+    private CreatureFlags Creature;
+
+    private bool Subtractive;
+    private bool Monochrome;
+    private float StarryLeft;
+    private float Spectrum;
+    private float Hyperphantasia;
+    private int HyperStacks;
+    private float Starstruck;
+    private float RainbowBright;
+    private float HammerTime;
+    private float Aetherhues2;
+
+    private bool AOEMode;
+    private int SplashCount;
+    private Actor? BestSplash;
+    private Actor? BestLine;
+
+    private bool CreatureDrawn => (Canvas & (CanvasFlags.Pom | CanvasFlags.Wing | CanvasFlags.Claw | CanvasFlags.Maw)) != 0;
+    private bool WeaponDrawn => Canvas.HasFlag(CanvasFlags.Weapon);
+    private bool LandscapeDrawn => Canvas.HasFlag(CanvasFlags.Landscape);
+    private bool PortraitReady => (Creature & (CreatureFlags.MooglePortait | CreatureFlags.MadeenPortrait)) != 0;
+    private float StarryIn => ReadyIn(AID.StarryMuse);
+    private bool CanCast => SwiftcastUp || CastFits(ScaledCastTime(AID.FireInRed)) && DowntimeIn > GCD + ScaledCastTime(AID.FireInRed);
+    private OpenerStrategy OpenerMode;
+    private bool InOpener => OpenerMode != OpenerStrategy.None && CombatTime < 30;
+    private bool Dying;
+
+    private OffensiveStrategy StarryStrat;
+
+    public override void Execute(in Strategy strategy, Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
+    {
+        var target = SelectTarget(strategy, strategy.Targeting.Value, primaryTarget, estimatedAnimLockDelay, 25, strategy.AOE.Value);
+        StarryStrat = strategy.Starry.Value;
+        OpenerMode = Unlocked(AID.StarrySkyMotif) && Unlocked(AID.RainbowDrip) ? strategy.Opener.Value : OpenerStrategy.None;
+
+        var gauge = World.Client.GetGauge<PictomancerGauge>();
+        Palette = gauge.PalleteGauge;
+        Paint = gauge.Paint;
+        Canvas = gauge.CanvasFlags;
+        Creature = gauge.CreatureFlags;
+
+        Subtractive = HasSelfStatus(SID.SubtractivePalette);
+        Monochrome = HasSelfStatus(SID.MonochromeTones);
+        StarryLeft = SelfStatusLeft(SID.StarryMuse);
+        Spectrum = SelfStatusLeft(SID.SubtractiveSpectrum);
+        (Hyperphantasia, HyperStacks) = SelfStatusDetails(SID.Hyperphantasia);
+        Starstruck = SelfStatusLeft(SID.Starstruck);
+        RainbowBright = SelfStatusLeft(SID.RainbowBright);
+        HammerTime = SelfStatusLeft(SID.HammerTime);
+        Aetherhues2 = SelfStatusLeft(SID.AetherhuesII);
+
+        (BestSplash, SplashCount) = BestAOETarget(target, 25, AllowAoE, (c, e) => TargetInAOECircle(e, c.Position, 5));
+        BestLine = BestAOETarget(target, 25, AllowAoE, (c, e) => TargetInAOERect(e, Player.Position, Player.DirectionTo(c), 25, 2)).Best;
+        var breakpoint = Unlocked(TraitID.EnhancedPictomancyIV) || !Subtractive && Aetherhues2 == 0 ? 4 : 3;
+        AOEMode = Unlocked(AID.FireIIInRed) && UseAOE(strategy.AOE.Value, SplashCount, breakpoint);
+
+        if (UsePotion(strategy))
+            PushPotion(ActionDefinitions.IDPotionInt);
+
+        if (!Player.InCombat && strategy.Motifs.Value != MotifStrategy.Delay)
+            Motifs(true, null);
+
+        if (World.Client.CountdownRemaining is > 0 and var countdown)
+        {
+            if (target != null && strategy.Opener.Value != OpenerStrategy.None)
+                Engage(target, countdown);
+            return;
+        }
+
+        if (Player.InCombat && strategy.Tempera.Value != TemperaStrategy.Delay)
+        {
+            if (SelfStatusLeft(SID.TemperaCoat) > 0)
+            {
+                if (strategy.Tempera.Value == TemperaStrategy.Automatic && Unlocked(AID.TemperaGrassa) && RaidwideWithin(4))
+                    PushOGCD(AID.TemperaGrassa, Player, 46);
+            }
+            else if (CanWeave(AID.TemperaCoat) && DamageIncoming(4))
+                PushOGCD(AID.TemperaCoat, Player, 45);
+        }
+
+        if (target == null)
+        {
+            if (Player.InCombat && strategy.Motifs.Value != MotifStrategy.Delay)
+                Motifs(true, null);
+            return;
+        }
+
+        Dying = target.Priority == Enemy.PriorityPointless;
+        Hints.GoalZones.Add(Hints.GoalSingleTarget(target.Actor, Player, World.Actors, 25));
+
+        GCDs(strategy, target);
+
+        if (Player.InCombat)
+            OGCDs(strategy, target);
+    }
+
+    private void Engage(Enemy target, float countdown)
+    {
+        var rainbow = Unlocked(AID.RainbowDrip) ? AID.RainbowDrip : AID.FireInRed;
+        if (countdown < ScaledCastTime(rainbow) + 0.5f)
+            PushGCD(rainbow, target.Actor, 10, ScaledCastTime(rainbow));
+    }
+
+    #region GCD
+
+    private void GCDs(in Strategy strategy, Enemy target)
+    {
+        var splash = BestSplash ?? target.Actor;
+        var spellTarget = AOEMode ? splash : target.Actor;
+        var blizzard = AOEMode ? AID.BlizzardIIInCyan : AID.BlizzardInCyan;
+        var inStarry = StarryLeft > GCD;
+        var prismReserve = Starstruck > GCD ? 1 : 0;
+        var cometReady = Monochrome && Paint > 0;
+
+        if (Starstruck > GCD)
+            PushGCD(AID.StarPrism, splash, Starstruck < GCD + GCDLength * 2 ? 63 : 60);
+
+        if (inStarry && Hyperphantasia > 0 && Subtractive && HyperStacks > prismReserve + (cometReady ? 1 : 0))
+            PushGCD(blizzard, spellTarget, 62, HardcastTime(AID.BlizzardInCyan));
+
+        if (RainbowBright > GCD)
+            PushGCD(AID.RainbowDrip, BestLine ?? target.Actor, inStarry && HammerTime > GCD ? 47 : 58);
+
+        if (cometReady && UseComet(strategy.Holy.Value, prismReserve))
+            PushGCD(AID.CometInBlack, splash, !inStarry ? 55 : Hyperphantasia > 0 ? 61 : HammerTime > GCD ? 45 : 55);
+
+        if (SwiftRainbowBeforeDowntime)
+        {
+            if (SwiftcastUp)
+                PushGCD(AID.RainbowDrip, BestLine ?? target.Actor, 57);
+            else
+                PushOGCD(ClassShared.AID.Swiftcast, Player, 81);
+        }
+
+        if (HammerTime > GCD && UseHammer(strategy.Hammer.Value))
+            PushGCD(AID.HammerStamp, splash, 50);
+
+        if (InOpener && OpenerMode == OpenerStrategy.ThirdGCD && CombatTime < 5 && Paint > 0 && !Canvas.HasFlag(CanvasFlags.Wing))
+            PushGCD(Monochrome ? AID.CometInBlack : AID.HolyInWhite, splash, 35);
+
+        if (strategy.Motifs.Value == MotifStrategy.Automatic && !Dying && StarryLeft == 0 && Hyperphantasia == 0 && Spectrum <= GCD)
+            Motifs(false, target);
+
+        if (!CanCast)
+            MovementGCDs(strategy, splash);
+
+        if (Subtractive)
+            PushGCD(blizzard, spellTarget, 20, HardcastTime(AID.BlizzardInCyan));
+
+        if (strategy.Holy.Value != OffensiveStrategy.Delay && !Monochrome && Paint > 0
+            && (strategy.Holy.Value == OffensiveStrategy.Force || Dying || AOEMode || SplashCount > 1 && Paint > 1))
+            PushGCD(AID.HolyInWhite, splash, AOEMode ? 25 : 15);
+
+        PushGCD(AOEMode ? AID.FireIIInRed : AID.FireInRed, spellTarget, 10, HardcastTime(AID.FireInRed));
+    }
+
+    private void MovementGCDs(in Strategy strategy, Actor splash)
+    {
+        if (strategy.Hammer.Value != OffensiveStrategy.Delay && HammerTime > GCD && Hyperphantasia == 0)
+            PushGCD(AID.HammerStamp, splash, 45);
+        if (strategy.Holy.Value != OffensiveStrategy.Delay && Monochrome && Paint > 0)
+            PushGCD(AID.CometInBlack, splash, 44);
+        if (StarryLeft == 0 && NeedsMotif && ReadyIn(ClassShared.AID.Swiftcast) <= GCD)
+            PushOGCD(ClassShared.AID.Swiftcast, Player, 80);
+        if (strategy.Holy.Value != OffensiveStrategy.Delay && !Monochrome && Paint > 0)
+            PushGCD(AID.HolyInWhite, splash, 43);
+    }
+
+    private bool SwiftRainbowBeforeDowntime => Unlocked(AID.RainbowDrip) && RainbowBright == 0 && StarryLeft == 0
+        && DowntimeIn > GCD + 1.3f && DowntimeIn < GCD + GCDLength && (SwiftcastUp || ReadyIn(ClassShared.AID.Swiftcast) <= GCD);
+
+    private bool NextCreatureGivesPortrait => Creature.HasFlag(CreatureFlags.Pom) && (!Creature.HasFlag(CreatureFlags.Wings) || Creature.HasFlag(CreatureFlags.Claw));
+
+    private bool NeedsMotif => Unlocked(AID.CreatureMotif) && !CreatureDrawn || Unlocked(AID.WeaponMotif) && !WeaponDrawn && HammerTime == 0 || Unlocked(AID.LandscapeMotif) && !LandscapeDrawn;
+
+    private void Motifs(bool free, Enemy? target)
+    {
+        var alive = target == null || TimeToKill.WillLive(target.Actor, 10);
+        var creatureAlive = target == null || TimeToKill.WillLive(target.Actor, NextCreatureGivesPortrait || !Unlocked(AID.WingMotif) ? 8 : 16);
+        var burstPrep = Unlocked(AID.StarryMuse) && StarryIn <= 20;
+
+        if (Unlocked(AID.CreatureMotif) && !CreatureDrawn && (free || creatureAlive && (burstPrep || ReadyIn(AID.LivingMuse) <= 8 || SwiftcastUp)))
+            PushGCD(AID.CreatureMotif, Player, 30, MotifCast);
+
+        if (Unlocked(AID.WeaponMotif) && !WeaponDrawn && HammerTime == 0 && (free || alive && (burstPrep || !Unlocked(AID.StarryMuse) && ReadyIn(AID.StrikingMuse) <= 8 || SwiftcastUp)))
+            PushGCD(AID.WeaponMotif, Player, 29, MotifCast);
+
+        if (Unlocked(AID.LandscapeMotif) && !LandscapeDrawn && StarryLeft == 0 && (free || alive && (burstPrep || SwiftcastUp)))
+            PushGCD(AID.LandscapeMotif, Player, 28, MotifCast);
+    }
+
+    private float MotifCast => HardcastTime(AID.CreatureMotif);
+
+    private bool UseComet(OffensiveStrategy strategy, int prismReserve) => strategy switch
+    {
+        OffensiveStrategy.Delay => false,
+        OffensiveStrategy.Force => true,
+        _ => Dying || (StarryLeft > GCD ? Hyperphantasia > 0 && HyperStacks > prismReserve || Hyperphantasia == 0 : !Subtractive)
+    };
+
+    private bool UseHammer(OffensiveStrategy strategy) => strategy switch
+    {
+        OffensiveStrategy.Delay => false,
+        OffensiveStrategy.Force => true,
+        _ => Dying || Hyperphantasia == 0 && (StarryIn >= 10 || !Unlocked(AID.StarryMuse))
+            && (StarryLeft > GCD || HammerTime <= 30 || StarryIn <= 30 || AOEMode)
+    };
+
+    #endregion
+
+    #region oGCD
+
+    private void OGCDs(in Strategy strategy, Enemy target)
+    {
+        var splash = BestSplash ?? target.Actor;
+
+        if (UsePalette(strategy.Palette.Value) && CanWeave(AID.SubtractivePalette))
+            PushOGCD(AID.SubtractivePalette, Player, 70);
+
+        if (LandscapeDrawn && UseStarry(target) && CanWeave(AID.StarryMuse))
+            PushOGCD(AID.StarryMuse, Player, 68);
+
+        if (CreatureDrawn && UseLiving(strategy.Living.Value) && CanWeave(AID.LivingMuse))
+            PushOGCD(LivingMuseAID, splash, 60);
+
+        if (WeaponDrawn && HammerTime == 0 && UseStriking(strategy.Striking.Value) && CanWeave(AID.StrikingMuse))
+            PushOGCD(AID.StrikingMuse, Player, 58);
+
+        if (PortraitReady && UsePortrait(strategy.Portrait.Value) && CanWeave(AID.MogOfTheAges))
+            PushOGCD(Creature.HasFlag(CreatureFlags.MadeenPortrait) ? AID.RetributionOfTheMadeen : AID.MogOfTheAges, BestLine ?? target.Actor, 55);
+
+        if ((strategy.Lucid.Value == OffensiveStrategy.Force || strategy.Lucid.Value == OffensiveStrategy.Automatic && MP <= 6500)
+            && CanWeave(ClassShared.AID.LucidDreaming))
+            PushOGCD(ClassShared.AID.LucidDreaming, Player, 20);
+
+        if (strategy.Swiftcast.Value == OffensiveStrategy.Force && !SwiftcastUp && CanWeave(ClassShared.AID.Swiftcast))
+            PushOGCD(ClassShared.AID.Swiftcast, Player, 80);
+    }
+
+    private bool UsePalette(OffensiveStrategy strategy)
+    {
+        if (strategy == OffensiveStrategy.Delay || !Unlocked(AID.SubtractivePalette) || Subtractive || Monochrome)
+            return false;
+        if (strategy == OffensiveStrategy.Force)
+            return Palette >= 50 || Spectrum > 0;
+        return Spectrum > 0 || Dying && Palette >= 50
+            || Palette >= 50 && StarryIn > 35
+            || Palette == 100 && Aetherhues2 > 0
+            || Palette >= 50 && StarryIn < GCDLength * 1.5f && StarryStrat != OffensiveStrategy.Delay;
+    }
+
+    private bool UseStarry(Enemy target) => StarryStrat switch
+    {
+        OffensiveStrategy.Delay => false,
+        OffensiveStrategy.Force => true,
+        _ => TimeToKill.BurstWorthIt(Bossmods.ActiveModule, Hints, target.Actor, 20) && DowntimeIn > 15 && GCD < 1.2f
+            && (!InOpener || CombatTime > 10 || Canvas.HasFlag(CanvasFlags.Wing) || Canvas.HasFlag(CanvasFlags.Maw) || !Unlocked(AID.WingMotif))
+    };
+
+    private AID LivingMuseAID
+        => Canvas.HasFlag(CanvasFlags.Pom) ? AID.PomMuse
+        : Canvas.HasFlag(CanvasFlags.Wing) ? AID.WingedMuse
+        : Canvas.HasFlag(CanvasFlags.Claw) ? AID.ClawedMuse
+        : Canvas.HasFlag(CanvasFlags.Maw) ? AID.FangedMuse
+        : AID.None;
+
+    private bool UseLiving(OffensiveStrategy strategy)
+    {
+        switch (strategy)
+        {
+            case OffensiveStrategy.Delay:
+                return false;
+            case OffensiveStrategy.Force:
+                return true;
+        }
+        if (MaxChargesIn(AID.LivingMuse) <= GCD + 0.6f || Dying)
+            return true;
+        if (LivingMuseAID is AID.WingedMuse or AID.FangedMuse && PortraitReady)
+            return false;
+        return !Unlocked(AID.StarryMuse) || StarryStrat == OffensiveStrategy.Delay || TrashAoE
+            || StarryLeft > 0 || RaidBuffsLeft > GCD || StarryIn > 40;
+    }
+
+    private bool UseStriking(OffensiveStrategy strategy) => strategy switch
+    {
+        OffensiveStrategy.Delay => false,
+        OffensiveStrategy.Force => true,
+        _ => !Unlocked(AID.StarryMuse) || StarryStrat == OffensiveStrategy.Delay || MaxChargesIn(AID.StrikingMuse) <= GCD + 3 || Dying
+            || StarryLeft > 0 || StarryIn is < 10 or > 60
+    };
+
+    private bool UsePortrait(OffensiveStrategy strategy) => strategy switch
+    {
+        OffensiveStrategy.Delay => false,
+        OffensiveStrategy.Force => true,
+        _ => Dying || StarryLeft > 0 || StarryIn >= 60 || !Unlocked(AID.StarryMuse) || StarryStrat == OffensiveStrategy.Delay || TrashAoE
+    };
+
+    private bool TrashAoE => AOEMode && Bossmods.ActiveModule == null;
+
+    #endregion
+
+    #region Helpers
+
+    private bool UsePotion(in Strategy strategy) => strategy.Potion.Value switch
+    {
+        PotionStrategy.AlignWithBurst => PotionBurst || PotionBeforeKill,
+        PotionStrategy.AlignWithRaidBuffs => PotionWithRaidBuffs(PotionBurst) || PotionBeforeKill,
+        PotionStrategy.Immediate => true,
+        _ => false
+    };
+
+    private bool PotionBurst => PotionPrepull || Player.InCombat && (Unlocked(AID.StarryMuse) && StarryStrat != OffensiveStrategy.Delay ? StarryIn < 6 : RaidBuffsLeft > 0 || RaidBuffsIn < 5);
+
+    private bool Unlocked(TraitID tid) => TraitUnlocked((uint)tid);
+
+    #endregion
+}

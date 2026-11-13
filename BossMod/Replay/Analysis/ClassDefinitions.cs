@@ -59,10 +59,27 @@ sealed class ClassDefinitions
         public readonly Dictionary<uint, StatusData> Statuses = [];
     }
 
+    class Mean
+    {
+        public readonly List<double> Values = [];
+        public double Average { get; private set; }
+
+        public void Add(IEnumerable<double> item)
+        {
+            var def = item.DefaultIfEmpty(float.MinValue).Min();
+            if (def > float.MinValue)
+            {
+                Values.Add(def);
+                Average = Values.Average();
+            }
+        }
+    }
+
     private readonly Dictionary<ActionID, ActionData> _actionData = [];
     private readonly Dictionary<Class, ClassData> _classData = [];
     private readonly SortedDictionary<string, List<ActionData>> _byCategory = [];
     private readonly Dictionary<int, Dictionary<ActionID, List<Entry>>> _byLock = [];
+    private readonly Dictionary<ActionID, Mean> _appDelay = [];
     private readonly SortedDictionary<int, List<ActionData>> _byCDGroup = [];
     private readonly BitMask[] _classPerCategory = new BitMask[(int)ClassCategory.Limited + 1];
 
@@ -119,6 +136,8 @@ sealed class ClassDefinitions
             {
                 var alock = (int)MathF.Round(a.AnimationLock * 1000);
                 _byLock.GetOrAdd(alock).GetOrAdd(a.ID).Add(new(r, a));
+
+                _appDelay.GetOrAdd(a.ID).Add(a.Targets.Where(t => t.ConfirmationTarget != default).Select(t => (t.ConfirmationTarget - a.Timestamp).TotalSeconds));
 
                 if (RegisterAction(a.ID, a.ID.Type == ActionType.Spell ? actionSheet?.GetRow(a.ID.ID) : null, nullOwner, out var data))
                 {
@@ -341,6 +360,8 @@ sealed class ClassDefinitions
             {
                 DrawEntries(tree, nl.Value);
             }
+            if (_appDelay.TryGetValue(na.ID, out var m))
+                tree.LeafNode($"Application delay: {m.Average:f3} ({m.Values.Count} samples)", m.Values.Count < 10 ? 0xFF00FFFF : 0xFFFFFFFF);
             foreach (var ns in tree.Node("Statuses applied to self", na.AppliedStatusesToSource.Count == 0))
             {
                 tree.LeafNodes(na.AppliedStatusesToSource, Utils.StatusString);

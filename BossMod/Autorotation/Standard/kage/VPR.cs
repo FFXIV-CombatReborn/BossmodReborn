@@ -1,0 +1,584 @@
+﻿using BossMod.VPR;
+using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
+using static BossMod.AIHints;
+
+namespace BossMod.Autorotation.kage;
+
+public sealed class KageVPR(RotationModuleManager manager, Actor player) : KageShared<KageVPR.Strategy>(manager, player)
+{
+    public struct Strategy
+    {
+        [Track(UiPriority = 500)]
+        public Track<Targeting> Targeting;
+        [Track(UiPriority = 499)]
+        public Track<AOEStrategy> AOE;
+
+        [Track("Serpent's Ire", MinLevel = 86, Action = AID.SerpentsIre, UiPriority = 100)]
+        public Track<OffensiveStrategy> Ire;
+
+        [Track("Reawaken", MinLevel = 90, Actions = [AID.Reawaken, AID.FirstGeneration, AID.SecondGeneration, AID.ThirdGeneration, AID.FourthGeneration, AID.Ouroboros], UiPriority = 99)]
+        public Track<OffensiveStrategy> Reawaken;
+
+        [Track("Vicewinder / Vicepit", MinLevel = 65, Actions = [AID.Vicewinder, AID.Vicepit], UiPriority = 98)]
+        public Track<OffensiveStrategy> Twinblade;
+
+        [Track("Uncoiled Fury", MinLevel = 82, Action = AID.UncoiledFury, UiPriority = 97)]
+        public Track<UncoiledStrategy> Uncoiled;
+
+        [Track("Writhing Snap", MinLevel = 15, Action = AID.WrithingSnap, UiPriority = 96)]
+        public Track<SnapStrategy> Snap;
+
+        [Track("True North", MinLevel = 50, Action = ClassShared.AID.TrueNorth, UiPriority = 95)]
+        public Track<OffensiveStrategy> TrueNorth;
+
+        [Track("Slither", MinLevel = 40, Action = AID.Slither, UiPriority = 94)]
+        public Track<SlitherStrategy> Slither;
+
+        [Track("Engage", UiPriority = 93)]
+        public Track<EngageStrategy> Engage;
+
+        [Track("Potion", Item = 1049235, UiPriority = 92)]
+        public Track<PotionStrategy> Potion;
+
+        [Track("Opener", MinLevel = 96, UiPriority = -10)]
+        public Track<OpenerStrategy> Opener;
+    }
+
+    public enum UncoiledStrategy
+    {
+        [Option("Spend between combos, keep one", Targets = ActionTargets.Hostile)]
+        Automatic,
+        [Option("Always keep one for movement", Targets = ActionTargets.Hostile)]
+        HoldOne,
+        [Option("Out of melee, or to avoid overcapping", Targets = ActionTargets.Hostile)]
+        Overcap,
+        [Option("Use ASAP (outside combos)", Targets = ActionTargets.Hostile)]
+        ASAP,
+        [Option("Do not use")]
+        Delay
+    }
+
+    public enum SnapStrategy
+    {
+        [Option("Use out of melee without Rattling Coils", Targets = ActionTargets.Hostile)]
+        Ranged,
+        [Option("Do not use")]
+        Never
+    }
+
+    public enum SlitherStrategy
+    {
+        [Option("Do not use")]
+        None,
+        [Option("Use when out of melee range", Targets = ActionTargets.Hostile)]
+        GapClose,
+        [Option("Use to cancel knockback", Targets = ActionTargets.Party | ActionTargets.Hostile)]
+        Knockback,
+        [Option("Close gaps and cancel knockback", Targets = ActionTargets.Hostile)]
+        Both
+    }
+
+    public enum EngageStrategy
+    {
+        [Option("Slither to target")]
+        Slither,
+        [Option("Sprint into melee range")]
+        Sprint,
+        [Option("Walk in and open at the pull")]
+        Facepull,
+        [Option("Do not move before the pull")]
+        Manual
+    }
+
+    public enum PotionStrategy
+    {
+        [Option("Do not use automatically")]
+        Manual,
+        [Option("Optimal: with Serpent's Ire")]
+        AlignWithBurst,
+        [Option("Follow party raid buffs")]
+        AlignWithRaidBuffs,
+        [Option("Use ASAP")]
+        Immediate
+    }
+
+    public enum OpenerStrategy
+    {
+        [Option("Pick by fight (FRU / DMU openers)")]
+        Automatic,
+        [Option("Standard opener")]
+        Standard,
+        [Option("FRU: Swiftskin's Coil first")]
+        FRU,
+        [Option("DMU: Hunter's Coil first")]
+        DMU,
+        [Option("No opener-specific rules")]
+        None
+    }
+
+    public static RotationModuleDefinition Definition()
+    {
+        return new RotationModuleDefinition("Kage VPR", "Viper", "Standard rotation (Kage)|Melee", "Kagekazu", RotationModuleQuality.Ok, BitMask.Build(Class.VPR), 100).WithStrategies<Strategy>();
+    }
+
+    private DreadCombo Dread;
+    private int Coil;
+    private int Offering;
+    private int Anguine;
+    private AID CurSerpentsTail;
+
+    private float Swiftscaled;
+    private float Instinct;
+    private float HonedReavers;
+    private float HonedSteel;
+    private float FlankstungVenom;
+    private float FlanksbaneVenom;
+    private float HindstungVenom;
+    private float HindsbaneVenom;
+    private float GrimskinsVenom;
+    private float HuntersVenom;
+    private float SwiftskinsVenom;
+    private float FellhuntersVenom;
+    private float FellskinsVenom;
+    private float PoisedForTwinfang;
+    private float PoisedForTwinblood;
+    private float ReawakenReady;
+    private float Reawakened;
+
+    private bool AOEMode;
+
+    private OpenerStrategy OpenerMode;
+    private bool IreWanted;
+
+    private AID ComboLastMove => (AID)World.Client.ComboState.Action;
+    private AID NextGCD => NextGCDAction.As<AID>();
+    private int CoilMax => Unlocked(TraitID.EnhancedVipersRattle) ? 3 : 2;
+    private int MaxAnguine => Unlocked(TraitID.EnhancedSerpentsLineage) ? 5 : 4;
+    private bool BuffsExpiring(float within)
+        => IsExpiring(FlankstungVenom, within) || IsExpiring(FlanksbaneVenom, within) || IsExpiring(HindstungVenom, within) || IsExpiring(HindsbaneVenom, within)
+        || IsExpiring(HonedSteel, within) || IsExpiring(HonedReavers, within);
+    private static bool IsExpiring(float left, float within) => left > 0 && left < within;
+
+    private bool TwinWeavesPending => Unlocked(AID.TwinfangBite) && (HuntersVenom > 0 || SwiftskinsVenom > 0 || FellhuntersVenom > 0 || FellskinsVenom > 0 || PoisedForTwinfang > 0 || PoisedForTwinblood > 0);
+    private float IreIn => ReadyIn(AID.SerpentsIre);
+    private bool VicewinderOpener => OpenerMode is OpenerStrategy.FRU or OpenerStrategy.DMU;
+
+    private OffensiveStrategy ReawakenStrat;
+    private OffensiveStrategy IreStrat;
+
+    public override void Execute(in Strategy strategy, Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
+    {
+        var target = SelectTarget(strategy, strategy.Targeting.Value, primaryTarget, estimatedAnimLockDelay, 3, strategy.AOE.Value);
+        ReawakenStrat = strategy.Reawaken.Value;
+        IreStrat = strategy.Ire.Value;
+
+        OpenerMode = !Unlocked(TraitID.EnhancedSerpentsLineage) ? OpenerStrategy.None : strategy.Opener.Value switch
+        {
+            OpenerStrategy.Automatic => World.CurrentZone switch
+            {
+                1238 => OpenerStrategy.FRU,
+                1363 => OpenerStrategy.DMU,
+                _ => OpenerStrategy.Standard
+            },
+            var o => o
+        };
+
+        var gauge = World.Client.GetGauge<ViperGauge>();
+        Dread = ForceST && gauge.DreadCombo is DreadCombo.PitOfDread or DreadCombo.HuntersDen or DreadCombo.SwiftskinsDen ? default : gauge.DreadCombo;
+        Coil = gauge.RattlingCoilStacks;
+        Offering = gauge.SerpentOffering;
+        Anguine = gauge.AnguineTribute;
+        CurSerpentsTail = gauge.SerpentCombo switch
+        {
+            SerpentCombo.DeathRattle => AID.DeathRattle,
+            SerpentCombo.LastLash when !ForceST => AID.LastLash,
+            SerpentCombo.FirstLegacy => AID.FirstLegacy,
+            SerpentCombo.SecondLegacy => AID.SecondLegacy,
+            SerpentCombo.ThirdLegacy => AID.ThirdLegacy,
+            SerpentCombo.FourthLegacy => AID.FourthLegacy,
+            _ => AID.None
+        };
+
+        Swiftscaled = SelfStatusLeft(SID.Swiftscaled);
+        Instinct = SelfStatusLeft(SID.HuntersInstinct);
+        HonedReavers = SelfStatusLeft(SID.HonedReavers);
+        HonedSteel = SelfStatusLeft(SID.HonedSteel);
+        FlankstungVenom = SelfStatusLeft(SID.FlankstungVenom);
+        FlanksbaneVenom = SelfStatusLeft(SID.FlanksbaneVenom);
+        HindstungVenom = SelfStatusLeft(SID.HindstungVenom);
+        HindsbaneVenom = SelfStatusLeft(SID.HindsbaneVenom);
+        GrimskinsVenom = SelfStatusLeft(SID.GrimskinsVenom);
+        HuntersVenom = SelfStatusLeft(SID.HuntersVenom);
+        SwiftskinsVenom = SelfStatusLeft(SID.SwiftskinsVenom);
+        FellhuntersVenom = ForceST ? 0 : SelfStatusLeft(SID.FellhuntersVenom);
+        FellskinsVenom = ForceST ? 0 : SelfStatusLeft(SID.FellskinsVenom);
+        PoisedForTwinfang = SelfStatusLeft(SID.PoisedForTwinfang);
+        PoisedForTwinblood = SelfStatusLeft(SID.PoisedForTwinblood);
+        ReawakenReady = SelfStatusLeft(SID.ReawakenReady);
+        Reawakened = SelfStatusLeft(SID.Reawakened);
+
+        AOEMode = Unlocked(AID.SteelMaw) && UseAOE(strategy.AOE.Value, Hints.NumPriorityTargetsInAOECircle(Player.Position, 5), 3);
+
+        if (UsePotion(strategy))
+            PushPotion(ActionDefinitions.IDPotionDex);
+
+        if (World.Client.CountdownRemaining is > 0 and var countdown)
+        {
+            if (target != null)
+                Engage(strategy, target, countdown);
+            return;
+        }
+
+        if (target == null)
+            return;
+
+        IreWanted = IreStrat switch
+        {
+            OffensiveStrategy.Force => true,
+            OffensiveStrategy.Automatic => target.Priority != Enemy.PriorityPointless && (Coil < CoilMax || strategy.Uncoiled.Value != UncoiledStrategy.Delay) && TimeToKill.BurstWorthIt(Bossmods.ActiveModule, Hints, target.Actor, 10),
+            _ => false
+        };
+
+        GCDs(strategy, target);
+        var (pos, imminent) = NextPositional(target.Actor);
+        RecommendPositional(target, pos, imminent, strategy.TrueNorth.Value, InMelee);
+        AddGoalZone(target);
+
+        if (Player.InCombat)
+            OGCD(strategy, target);
+    }
+
+    private void Engage(in Strategy strategy, Enemy target, float countdown)
+    {
+        var first = VicewinderOpener ? AID.Vicewinder : OpenerMode == OpenerStrategy.Standard ? AID.ReavingFangs : AID.SteelFangs;
+        var engage = strategy.Engage.Value == EngageStrategy.Slither && !Unlocked(AID.Slither) ? EngageStrategy.Facepull : strategy.Engage.Value;
+        switch (engage)
+        {
+            case EngageStrategy.Slither:
+            case EngageStrategy.Manual:
+                DashPull(target, first, AID.Slither, countdown, engage == EngageStrategy.Slither);
+                break;
+            case EngageStrategy.Sprint:
+                SprintPull(target, first, countdown);
+                break;
+            case EngageStrategy.Facepull:
+                Facepull(target, first, countdown);
+                break;
+        }
+    }
+
+    #region GCD
+
+    private void GCDs(in Strategy strategy, Enemy target)
+    {
+        var dying = target.Priority == Enemy.PriorityPointless;
+
+        switch (Dread)
+        {
+            case DreadCombo.Dreadwinder:
+                PushGCD(FirstCoil(target.Actor), target.Actor, 40);
+                break;
+            case DreadCombo.HuntersCoil:
+                PushGCD(AID.SwiftskinsCoil, target.Actor, 40);
+                break;
+            case DreadCombo.SwiftskinsCoil:
+                PushGCD(AID.HuntersCoil, target.Actor, 40);
+                break;
+            case DreadCombo.PitOfDread:
+                PushGCD(Swiftscaled <= Instinct ? AID.SwiftskinsDen : AID.HuntersDen, Player, 40);
+                break;
+            case DreadCombo.HuntersDen:
+                PushGCD(AID.SwiftskinsDen, Player, 40);
+                break;
+            case DreadCombo.SwiftskinsDen:
+                PushGCD(AID.HuntersDen, Player, 40);
+                break;
+        }
+
+        if (Anguine > 0)
+            PushGCD(NextGeneration(), BestSplash(target, 3), 35);
+
+        if (ShouldReawaken(dying, target.Actor))
+            PushGCD(AID.Reawaken, target.Actor, 30);
+
+        if (strategy.Uncoiled.Value != UncoiledStrategy.Delay && Coil >= CoilMax && Dread == 0 && Reawakened == 0 && !TwinWeavesPending && (IreIn <= GCDLength * 3 || GCDReady(AID.Vicewinder)))
+            PushGCD(AID.UncoiledFury, target.Actor, 25);
+
+        var twinblade = AOEMode && Unlocked(AID.Vicepit) ? AID.Vicepit : AID.Vicewinder;
+        if (ShouldTwinblade(strategy, twinblade))
+            PushGCD(twinblade, target.Actor, 20);
+
+        if (ShouldUncoil(strategy, dying, target.Actor))
+            PushGCD(AID.UncoiledFury, BestSplash(target, 20), 15);
+
+        if (!InMelee)
+        {
+            if (Coil > 0 && Unlocked(AID.UncoiledFury) && strategy.Uncoiled.Value != UncoiledStrategy.Delay)
+                PushGCD(AID.UncoiledFury, target.Actor, 5);
+            else if (strategy.Snap.Value == SnapStrategy.Ranged)
+                PushGCD(AID.WrithingSnap, target.Actor, 4);
+        }
+
+        if (AOEMode)
+            DualWieldAoE();
+        else
+            DualWieldST(target);
+    }
+
+    private Positional NextFinisherPositional
+        => FlankstungVenom > 0 || FlanksbaneVenom > 0 ? Positional.Flank
+         : HindstungVenom > 0 || HindsbaneVenom > 0 ? Positional.Rear
+         : Positional.Any;
+
+    private AID FirstCoil(Actor target)
+    {
+        if (CombatTime < 10 && OpenerMode != OpenerStrategy.None)
+            return OpenerMode == OpenerStrategy.FRU ? AID.SwiftskinsCoil : AID.HuntersCoil;
+
+        var refresh = GCDLength * 6;
+        if (Swiftscaled < refresh && Swiftscaled <= Instinct)
+            return AID.SwiftskinsCoil;
+        if (Instinct < refresh)
+            return AID.HuntersCoil;
+
+        return NextFinisherPositional switch
+        {
+            Positional.Rear => AID.HuntersCoil,
+            Positional.Flank => AID.SwiftskinsCoil,
+            _ => CurrentPositional(target) == Positional.Rear ? AID.SwiftskinsCoil : AID.HuntersCoil
+        };
+    }
+
+    private AID NextGeneration() => (MaxAnguine - Anguine) switch
+    {
+        0 => AID.FirstGeneration,
+        1 => AID.SecondGeneration,
+        2 => AID.ThirdGeneration,
+        3 => AID.FourthGeneration,
+        4 => AID.Ouroboros,
+        _ => AID.None
+    };
+
+    private void DualWieldST(Enemy target)
+    {
+        if (ComboLeft > 0)
+        {
+            if (ComboLastMove == AID.HuntersSting && Unlocked(AID.FlankstingStrike))
+            {
+                PushGCD(FlanksbaneVenom > 0 || HindsbaneVenom > 0 ? AID.FlanksbaneFang : AID.FlankstingStrike, target.Actor, 3);
+                return;
+            }
+            if (ComboLastMove == AID.SwiftskinsSting && Unlocked(AID.HindstingStrike))
+            {
+                PushGCD(HindsbaneVenom > 0 || FlanksbaneVenom > 0 ? AID.HindsbaneFang : AID.HindstingStrike, target.Actor, 3);
+                return;
+            }
+            if (ComboLastMove is AID.SteelFangs or AID.ReavingFangs && Unlocked(AID.HuntersSting))
+            {
+                var hindNext = HindstungVenom > 0 || HindsbaneVenom > 0;
+                var flankNext = FlankstungVenom > 0 || FlanksbaneVenom > 0;
+                var swift = Unlocked(AID.SwiftskinsSting) && (hindNext || Swiftscaled == 0 || !flankNext && Swiftscaled <= Instinct);
+                PushGCD(swift ? AID.SwiftskinsSting : AID.HuntersSting, target.Actor, 2);
+                return;
+            }
+        }
+        PushGCD(Unlocked(AID.ReavingFangs) && (HonedReavers > 0 || HonedSteel == 0) ? AID.ReavingFangs : AID.SteelFangs, target.Actor, 1);
+    }
+
+    private void DualWieldAoE()
+    {
+        if (ComboLeft > 0)
+        {
+            if (ComboLastMove is AID.HuntersBite or AID.SwiftskinsBite && Unlocked(AID.JaggedMaw))
+            {
+                PushGCD(GrimskinsVenom > 0 ? AID.BloodiedMaw : AID.JaggedMaw, Player, 3);
+                return;
+            }
+            if (ComboLastMove is AID.SteelMaw or AID.ReavingMaw && Unlocked(AID.HuntersBite))
+            {
+                var swift = Unlocked(AID.SwiftskinsBite) && (GrimskinsVenom > 0 || Swiftscaled <= Instinct);
+                PushGCD(swift ? AID.SwiftskinsBite : AID.HuntersBite, Player, 2);
+                return;
+            }
+        }
+        PushGCD(Unlocked(AID.ReavingMaw) && (HonedReavers > 0 || HonedSteel == 0) ? AID.ReavingMaw : AID.SteelMaw, Player, 1);
+    }
+
+    private bool HoldForIre => IreWanted && InBossFight && IreIn <= 10 && !HoldIreForBuffs && Swiftscaled > GCDLength * 4 && Instinct > GCDLength * 4;
+    // like MCH's Wildfire: the estimate drops buffs 10s after they're overdue, so this holds ~22s at most; no pooling while held
+    private bool HoldIreForBuffs => IreStrat == OffensiveStrategy.Automatic && HasRaidBuffJobs && !(OpenerMode != OpenerStrategy.None && CombatTime < 30)
+        && IreIn <= GCD && RaidBuffsLeft == 0 && RaidBuffsIn < 12;
+
+    private bool ShouldTwinblade(in Strategy strategy, AID aid)
+    {
+        if (!GCDReady(aid) || Dread != 0 || Reawakened > 0 || Anguine > 0 || TwinWeavesPending)
+            return false;
+
+        switch (strategy.Twinblade.Value)
+        {
+            case OffensiveStrategy.Force:
+                return true;
+            case OffensiveStrategy.Delay:
+                return false;
+        }
+
+        if (HoldForIre || aid == AID.Vicewinder && !InMelee)
+            return false;
+        if (!Unlocked(AID.Reawaken) && HasRaidBuffJobs && RaidBuffsLeft <= GCD && MaxChargesIn(aid) > GCD + GCDLength * 3 && RaidBuffsIn < MaxChargesIn(aid))
+            return false;
+        if (OpenerMode == OpenerStrategy.Standard && CombatTime < 10 && ComboLastMove != AID.SwiftskinsSting)
+            return false;
+        if (DowntimeIn < GCD + GCDLength * 3)
+            return false;
+        return !IsExpiring(ComboLeft, GCDLength * 6) && !BuffsExpiring(GCDLength * 4);
+    }
+
+    private bool ShouldUncoil(in Strategy strategy, bool dying, Actor target)
+    {
+        if (Coil == 0 || strategy.Uncoiled.Value is UncoiledStrategy.Delay or UncoiledStrategy.Overcap)
+            return false;
+        if (strategy.Uncoiled.Value == UncoiledStrategy.HoldOne && Coil <= 1)
+            return false;
+        if (dying)
+            return true;
+        if (strategy.Uncoiled.Value == UncoiledStrategy.ASAP)
+            return Dread == 0 && Reawakened == 0 && !TwinWeavesPending;
+        var ireSoon = IreWanted && IreIn <= GCDLength * 2;
+        var inBurst = RaidBuffsLeft > GCD || OpenerMode != OpenerStrategy.None && CombatTime < 30;
+        if (Coil <= 1 && !ireSoon && !inBurst && TimeToKill.WillLive(target, 6) && DowntimeIn > GCDLength * 3)
+            return false;
+        if (Dread != 0 || Reawakened > 0 || ReawakenReady > 0 && Unlocked(AID.Reawaken) || TwinWeavesPending || HoldForIre && !ireSoon)
+            return false;
+        if (Swiftscaled < GCDLength * 3 || Instinct < GCDLength * 3)
+            return false;
+        return !IsExpiring(ComboLeft, GCDLength * 2) && !BuffsExpiring(GCDLength * 2);
+    }
+
+    private bool ShouldReawaken(bool dying, Actor target)
+    {
+        if (!Unlocked(AID.Reawaken) || Reawakened > 0 || ReawakenReady == 0 && Offering < 50 || Dread != 0 || TwinWeavesPending)
+            return false;
+
+        switch (ReawakenStrat)
+        {
+            case OffensiveStrategy.Delay:
+                return false;
+            case OffensiveStrategy.Force:
+                return true;
+        }
+
+        if (!InMelee && !AOEMode)
+            return false;
+
+        if (!TimeToKill.BurstWorthIt(Bossmods.ActiveModule, Hints, target, GCDLength * 6))
+            return false;
+
+        var windowLength = (MaxAnguine + 1) * GCDLength;
+        if (Swiftscaled < windowLength || Instinct < windowLength || IsExpiring(ComboLeft, GCDLength * 6))
+            return false;
+
+        if (dying || !InBossFight || NoRaidBuffs || !TimeToKill.WillLive(target, 20))
+            return true;
+
+        if (ReawakenReady > 30 - GCDLength && DowntimeIn > windowLength * 2 + GCDLength)
+            return false;
+
+        if (DowntimeIn < windowLength)
+            return false;
+
+        if (ReawakenReady > 0 || Offering >= 100 || RaidBuffsLeft > windowLength)
+            return true;
+
+        return IreIn is >= 50 and <= 62;
+    }
+
+    #endregion
+
+    #region oGCD
+
+    private void OGCD(in Strategy strategy, Enemy target)
+    {
+        if (CurSerpentsTail != AID.None)
+            PushExpiringOGCD(CurSerpentsTail, target.Actor, 60);
+
+        if (PoisedForTwinfang > 0)
+            PushExpiringOGCD(AID.UncoiledTwinfang, target.Actor, 55);
+        if (PoisedForTwinblood > 0)
+            PushExpiringOGCD(AID.UncoiledTwinblood, target.Actor, 55);
+
+        if (FellhuntersVenom > 0)
+            PushExpiringOGCD(AID.TwinfangThresh, Player, 55);
+        if (FellskinsVenom > 0)
+            PushExpiringOGCD(AID.TwinbloodThresh, Player, 55);
+
+        if (HuntersVenom > 0)
+            PushExpiringOGCD(AID.TwinfangBite, target.Actor, 55);
+        if (SwiftskinsVenom > 0)
+            PushExpiringOGCD(AID.TwinbloodBite, target.Actor, 55);
+
+        if (IreWanted && !HoldIreForBuffs && (Coil < CoilMax || IreStrat == OffensiveStrategy.Force) && CanWeave(AID.SerpentsIre))
+            PushOGCD(AID.SerpentsIre, Player, 40);
+
+        if (strategy.Slither.Value is SlitherStrategy.GapClose or SlitherStrategy.Both && !InMelee && Player.DistanceToHitbox(target.Actor) <= 20)
+            PushOGCD(AID.Slither, ResolveTarget(strategy.Slither) ?? target.Actor, 30);
+        if (strategy.Slither.Value is SlitherStrategy.Knockback or SlitherStrategy.Both)
+            CancelKnockback(AID.Slither, ResolveTarget(strategy.Slither) ?? target.Actor);
+    }
+
+    private void AddGoalZone(Enemy target)
+    {
+        var aoeBreakpoint = Dread switch
+        {
+            DreadCombo.Dreadwinder or DreadCombo.HuntersCoil or DreadCombo.SwiftskinsCoil => 50,
+            DreadCombo.PitOfDread or DreadCombo.HuntersDen or DreadCombo.SwiftskinsDen => 1,
+            _ => Anguine > 0 ? 50 : 3
+        };
+        AddMeleeGoal(target, AllowAoE && Unlocked(AID.SteelMaw) && aoeBreakpoint < 50 ? Hints.GoalAOECircle(5) : null, aoeBreakpoint,
+            NextGCD == AID.Vicewinder && Hints.RecommendedPositional.Pos is Positional.Flank or Positional.Rear);
+    }
+
+    private (Positional, bool) NextPositional(Actor target)
+    {
+        if (!Unlocked(AID.FlankstingStrike) || AOEMode || Reawakened > 0)
+            return (Positional.Any, false);
+
+        return NextGCD switch
+        {
+            AID.FlankstingStrike or AID.FlanksbaneFang or AID.HuntersCoil => (Positional.Flank, true),
+            AID.HindstingStrike or AID.HindsbaneFang or AID.SwiftskinsCoil => (Positional.Rear, true),
+            AID.Vicewinder => (FirstCoil(target) == AID.HuntersCoil ? Positional.Flank : Positional.Rear, false),
+            _ => (ComboLastMove switch
+            {
+                AID.HuntersSting => Positional.Flank,
+                AID.SwiftskinsSting => Positional.Rear,
+                _ => Swiftscaled <= Instinct ? Positional.Rear : Positional.Flank
+            }, false)
+        };
+    }
+
+    #endregion
+
+    #region Helpers
+
+    private bool UsePotion(in Strategy strategy) => strategy.Potion.Value switch
+    {
+        PotionStrategy.AlignWithBurst => PotionBurst || PotionBeforeKill,
+        PotionStrategy.AlignWithRaidBuffs => PotionWithRaidBuffs(PotionBurst) || PotionBeforeKill,
+        PotionStrategy.Immediate => true,
+        _ => false
+    };
+
+    private bool PotionBurst => Player.InCombat && (IreStrat == OffensiveStrategy.Delay ? RaidBuffsLeft > 0 || RaidBuffsIn < 5
+        : Unlocked(AID.Reawaken) ? ReawakenReady > 0 && ReawakenReady <= 30 - 1.5f * GCDLength && Reawakened == 0
+        : Unlocked(AID.SerpentsIre) ? IreIn < 6 && !HoldIreForBuffs : RaidBuffsLeft > 0 || RaidBuffsIn < 5);
+
+    private Actor BestSplash(Enemy primary, float range)
+        => BestAOETarget(primary, range, AllowAoE, (c, e) => TargetInAOECircle(e, c.Position, 5)).Best ?? primary.Actor;
+
+    private bool Unlocked(TraitID tid) => TraitUnlocked((uint)tid);
+
+    private void PushExpiringOGCD(AID aid, Actor? target, int priority)
+        => PushAction(ActionID.MakeSpell(aid), target, ActionQueue.Priority.Medium + priority);
+
+    #endregion
+}

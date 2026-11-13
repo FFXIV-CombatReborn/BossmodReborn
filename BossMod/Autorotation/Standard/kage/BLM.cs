@@ -1,0 +1,503 @@
+﻿using BossMod.BLM;
+using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
+using static BossMod.AIHints;
+
+namespace BossMod.Autorotation.kage;
+
+public sealed class KageBLM(RotationModuleManager manager, Actor player) : KageShared<KageBLM.Strategy>(manager, player)
+{
+    public struct Strategy
+    {
+        [Track(UiPriority = 500)]
+        public Track<Targeting> Targeting;
+        [Track(UiPriority = 499)]
+        public Track<AOEStrategy> AOE;
+
+        [Track("Ley Lines", MinLevel = 52, Action = AID.LeyLines, UiPriority = 100)]
+        public Track<OffensiveStrategy> LeyLines;
+
+        [Track("Thunder", MinLevel = 6, Actions = [AID.HighThunder, AID.Thunder3, AID.Thunder1, AID.HighThunder2, AID.Thunder4, AID.Thunder2], UiPriority = 99)]
+        public Track<OffensiveStrategy> Thunder;
+
+        [Track("Manafont", MinLevel = 30, Action = AID.Manafont, UiPriority = 98)]
+        public Track<OffensiveStrategy> Manafont;
+
+        [Track("Amplifier", MinLevel = 86, Action = AID.Amplifier, UiPriority = 97)]
+        public Track<OffensiveStrategy> Amplifier;
+
+        [Track("Polyglot", MinLevel = 70, Actions = [AID.Xenoglossy, AID.Foul], UiPriority = 96)]
+        public Track<PolyglotStrategy> Polyglot;
+
+        [Track("Transpose / Umbral Soul", MinLevel = 4, UiPriority = 95.5f)]
+        public Track<DowntimeStrategy> Downtime;
+
+        [Track("Manaward", MinLevel = 30, Action = AID.Manaward, UiPriority = 95)]
+        public Track<ManawardStrategy> Manaward;
+
+        [Track("Triplecast", InternalName = "Movement", MinLevel = 66, Action = AID.Triplecast, UiPriority = 94)]
+        public Track<OffensiveStrategy> Triplecast;
+
+        [Track("Swiftcast", MinLevel = 18, Action = ClassShared.AID.Swiftcast, UiPriority = 93)]
+        public Track<OffensiveStrategy> Swiftcast;
+
+        [Track("Aetherial Manipulation", MinLevel = 50, Action = AID.AetherialManipulation, UiPriority = 92.5f)]
+        public Track<ManipulationStrategy> Manipulation;
+
+        [Track("Potion", Item = 1049237, UiPriority = 92)]
+        public Track<PotionStrategy> Potion;
+
+        [Track("Opener", MinLevel = 2, UiPriority = -10)]
+        public Track<OpenerStrategy> Opener;
+    }
+
+    public enum PolyglotStrategy
+    {
+        [Option("Spend in Astral Fire during raid buffs")]
+        Automatic,
+        [Option("Only to avoid overcapping")]
+        Overcap,
+        [Option("Use ASAP")]
+        ASAP,
+        [Option("Do not use")]
+        Delay
+    }
+
+    public enum ManawardStrategy
+    {
+        [Option("Before raidwides, busters or solo hits")]
+        Automatic,
+        [Option("Do not use")]
+        Delay
+    }
+
+    public enum ManipulationStrategy
+    {
+        [Option("Do not use")]
+        None,
+        [Option("Use to cancel knockback", Targets = ActionTargets.Party)]
+        Knockback
+    }
+
+    public enum DowntimeStrategy
+    {
+        [Option("Transpose, then Umbral Soul in downtime")]
+        Both,
+        [Option("Only Transpose in downtime")]
+        Transpose,
+        [Option("Only Umbral Soul in downtime")]
+        UmbralSoul,
+        [Option("Do not use in downtime")]
+        Never
+    }
+
+    public enum PotionStrategy
+    {
+        [Option("Do not use automatically")]
+        Manual,
+        [Option("Optimal: with Ley Lines")]
+        AlignWithBurst,
+        [Option("Follow party raid buffs")]
+        AlignWithRaidBuffs,
+        [Option("Use ASAP")]
+        Immediate
+    }
+
+    public enum OpenerStrategy
+    {
+        [Option("Standard opener (Fire III at -4s)")]
+        Standard,
+        [Option("Flare opener (second Flare Star)", MinLevel = 100)]
+        Flare,
+        [Option("No pre-pull or opener rules")]
+        None
+    }
+
+    public static RotationModuleDefinition Definition()
+    {
+        return new RotationModuleDefinition("Kage BLM", "Black Mage", "Standard rotation (Kage)|Casters", "Kagekazu", RotationModuleQuality.Ok, BitMask.Build(Class.BLM, Class.THM), 100).WithStrategies<Strategy>();
+    }
+
+    private int Astral;
+    private int Umbral;
+    private int Hearts;
+    private int Polyglot;
+    private int AstralSoul;
+    private bool Paradox;
+    private float EnochianLeft;
+    private float FirestarterLeft;
+    private float ThunderheadLeft;
+    private bool Instant;
+    private bool InLeyLines;
+    private float ManafontIn;
+
+    private bool AOEMode;
+    private int NumAOETargets;
+    private bool AoEExitIce;
+    private OpenerStrategy OpenerMode;
+
+    protected override bool UsesSpellSpeed => true;
+    private bool ManafontReady => ManafontIn <= GCD;
+    private int FireCost => Hearts > 0 ? 800 : 1600;
+    private int Fire3Cost => Hearts > 0 ? 2000 : 4000;
+    private bool FlareFinisher => Unlocked(AID.Flare) && !Unlocked(AID.Fire4);
+    private bool FireMPOut => MP < (Unlocked(AID.Despair) || FlareFinisher ? 800 : FireCost);
+    private bool AoEFireMPOut => Unlocked(AID.Flare) ? MP < (Hearts > 0 ? 800 : 1000) : MP < 3000;
+    private bool OpenerManafont => OpenerMode == OpenerStrategy.Standard && CombatTime < 30 && ManafontReady && InFire && AstralSoul < 6 && MP < FireCost + 800;
+    private bool FlareOpenerFinish => OpenerMode == OpenerStrategy.Flare && CombatTime < 60 && Unlocked(AID.Manafont) && ReadyIn(AID.Manafont) > 30 && AstralSoul < 6;
+    private bool AoECastSwap => Unlocked(AID.Fire3) && !Unlocked(AID.Freeze);
+    private bool InOpener => OpenerMode != OpenerStrategy.None && CombatTime < 35;
+    private bool MPFull => MP >= Player.HPMP.MaxMP;
+    private int MaxPolyglot => Player.Level >= 98 ? 3 : Player.Level >= 80 ? 2 : 1;
+    private bool InFire => Astral > 0;
+    private bool InIce => Umbral > 0;
+    private bool CantCast => !CastFits(CastTime(InIce ? (Unlocked(AID.Blizzard4) ? AID.Blizzard4 : AID.Blizzard1) : (Unlocked(AID.Fire4) ? AID.Fire4 : AID.Fire1)));
+    private bool BuffsActive => HasRaidBuffJobs && RaidBuffsLeft > GCD;
+    private bool HoldPolyglotForBuffs => HasRaidBuffJobs && RaidBuffsLeft == 0 && RaidBuffsIn <= 15;
+    private bool CanSpendPolyglot => !ForceST || Unlocked(AID.Xenoglossy);
+    private bool CanUseTranspose => Player.InCombat && Unlocked(AID.Transpose) && ReadyIn(AID.Transpose) <= GCD;
+
+    private DateTime NoTargetSince;
+    private OffensiveStrategy LeyLinesStrat;
+    private OffensiveStrategy AmplifierStrat;
+    private OffensiveStrategy ManafontStrat;
+    private PolyglotStrategy PolyglotStrat;
+
+    public override void Execute(in Strategy strategy, Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
+    {
+        var target = SelectTarget(strategy, strategy.Targeting.Value, primaryTarget, estimatedAnimLockDelay, 25, strategy.AOE.Value);
+        LeyLinesStrat = strategy.LeyLines.Value;
+        AmplifierStrat = strategy.Amplifier.Value;
+        ManafontStrat = strategy.Manafont.Value;
+        PolyglotStrat = strategy.Polyglot.Value;
+        OpenerMode = strategy.Opener.Value == OpenerStrategy.Flare && !Unlocked(AID.FlareStar) ? OpenerStrategy.Standard : strategy.Opener.Value;
+
+        var gauge = World.Client.GetGauge<BlackMageGauge>();
+        Astral = gauge.AstralStacks;
+        Umbral = gauge.UmbralStacks;
+        Hearts = gauge.UmbralHearts;
+        Polyglot = gauge.PolyglotStacks;
+        AstralSoul = gauge.AstralSoulStacks;
+        Paradox = gauge.ParadoxActive && Unlocked(AID.Paradox);
+        EnochianLeft = gauge.EnochianTimer / 1000f;
+        FirestarterLeft = ProcLeft(SID.Firestarter);
+        ThunderheadLeft = ProcLeft(SID.Thunderhead);
+        Instant = SelfStatusLeft(SID.Triplecast) > GCD || SwiftcastUp;
+        InLeyLines = SelfStatusLeft(SID.CircleOfPower) > 0;
+        ManafontIn = ManafontStrat != OffensiveStrategy.Delay && Player.InCombat ? ReadyIn(AID.Manafont) : float.MaxValue;
+        NumAOETargets = target == null ? 0 : Hints.NumPriorityTargetsInAOECircle(target.Actor.Position, 5);
+        AOEMode = Unlocked(AID.Fire2) && UseAOE(strategy.AOE.Value, NumAOETargets, 2);
+
+        if (UsePotion(strategy))
+            PushPotion(ActionDefinitions.IDPotionInt);
+
+        if (World.Client.CountdownRemaining is > 0 and var countdown)
+        {
+            if (target != null && OpenerMode != OpenerStrategy.None && countdown < 4 && Astral == 0 && Unlocked(AID.Fire3))
+                PushGCD(AID.Fire3, target.Actor, 10);
+            return;
+        }
+
+        if (target == null)
+        {
+            if (NoTargetSince == default)
+                NoTargetSince = World.CurrentTime;
+            Downtime(strategy.Downtime.Value);
+            return;
+        }
+        NoTargetSince = default;
+
+        Hints.GoalZones.Add(Hints.GoalSingleTarget(target.Actor, Player, World.Actors, 25));
+
+        GCDs(strategy, target);
+        if (Player.InCombat)
+            OGCDs(strategy, target);
+    }
+
+    private void Downtime(DowntimeStrategy strategy)
+    {
+        if (!Player.InCombat)
+            return;
+        var noTargetFor = (World.CurrentTime - NoTargetSince).TotalSeconds;
+        if (noTargetFor < 1.5f)
+            return;
+        if (strategy is DowntimeStrategy.Both or DowntimeStrategy.Transpose && InFire && CanUseTranspose)
+            PushOGCD(AID.Transpose, Player, 65);
+        if (strategy is DowntimeStrategy.Both or DowntimeStrategy.UmbralSoul && noTargetFor >= 3.5f && InIce && Unlocked(AID.UmbralSoul) && (Umbral < 3 || Hearts < 3 || !MPFull))
+            PushGCD(AID.UmbralSoul, Player, 10);
+    }
+
+    #region GCD
+
+    private void GCDs(in Strategy strategy, Enemy target)
+    {
+        var dying = !TimeToKill.WillLive(target.Actor, 5);
+
+        if (Polyglot > 0 && PolyglotStrat != PolyglotStrategy.Delay && CanSpendPolyglot)
+        {
+            var overcap = Polyglot >= MaxPolyglot && (EnochianLeft <= 5 || Unlocked(AID.Amplifier) && ReadyIn(AID.Amplifier) < 5);
+            var spend = PolyglotStrat switch
+            {
+                PolyglotStrategy.ASAP => true,
+                PolyglotStrategy.Overcap => overcap,
+                _ => overcap || dying || DowntimeIn < GCDLength * Polyglot + 1 || InFire && !HoldPolyglotForBuffs && (Polyglot > 1 || BuffsActive || Player.Level < 80)
+            };
+            if (spend)
+                PushGCD(PolyglotAction, target.Actor, 70);
+            if (CantCast)
+                PushGCD(PolyglotAction, target.Actor, 5);
+        }
+
+        var thunderAt = InOpener ? (InLeyLines ? 7.5f : 5) : AOEMode && NumAOETargets == 2 ? 30 : 3;
+        if (strategy.Thunder.Value != OffensiveStrategy.Delay && ThunderheadLeft > GCD && (strategy.Thunder.Value == OffensiveStrategy.Force || ThunderLeft(target.Actor) < thunderAt && DowntimeIn > 20 && !target.ForbidDOTs && TimeToKill.WorthDot(Bossmods.ActiveModule, target.Actor, 12)))
+            PushGCD(ThunderAction, target.Actor, 65);
+
+        if (strategy.Thunder.Value == OffensiveStrategy.Automatic && !AOEMode && ThunderheadLeft > GCD && DowntimeIn > 20
+            && PriorityTargets.Where(e => e != target && Player.DistanceToHitbox(e.Actor) <= 25 && DotWorthIt(e) && ThunderLeft(e.Actor) < 3).MaxBy(e => e.Actor.HPMP.CurHP) is { } second)
+            PushGCD(ThunderAction, second.Actor, 64);
+
+        if (CantCast && MovementThunder(strategy, target))
+            PushGCD(ThunderAction, target.Actor, 4);
+
+        if (CantCast && !Instant && ReadyIn(ClassShared.AID.Swiftcast) > GCD && (!Unlocked(AID.Triplecast) || TriplecastCharges == 0))
+            PushGCD(AID.Scathe, target.Actor, 1);
+
+        AoEExitIce = false;
+        if (AOEMode)
+            AoE(strategy, target);
+        else if (InFire)
+            Fire(target);
+        else if (InIce)
+            Ice(target);
+        else
+            PushGCD(MP < 7500 && Unlocked(AID.Blizzard3) ? AID.Blizzard3 : Unlocked(AID.Fire3) ? AID.Fire3 : Unlocked(AID.Fire1) && MP >= 1600 ? AID.Fire1 : AID.Blizzard1, target.Actor, 20);
+    }
+
+    private void Fire(Enemy target)
+    {
+        if (Astral < 3)
+        {
+            if (FirestarterLeft > GCD)
+                PushGCD(AID.Fire3, target.Actor, 50);
+            else if (Paradox && MP >= 1600)
+                PushGCD(AID.Paradox, target.Actor, 50);
+            else if (Unlocked(AID.Fire3) && MP >= Fire3Cost)
+                PushGCD(AID.Fire3, target.Actor, 49);
+        }
+
+        if (Unlocked(AID.FlareStar) && AstralSoul >= 6)
+            PushGCD(AID.FlareStar, target.Actor, 45);
+
+        if (Unlocked(AID.Fire4))
+        {
+            var paradoxReserve = Paradox && Astral == 3 && !FlareOpenerFinish && !(OpenerMode == OpenerStrategy.Standard && CombatTime < 60) ? 1600 : 0;
+            if (MP - FireCost >= (FlareOpenerFinish ? 2400 : Unlocked(AID.Despair) && !OpenerManafont ? 800 : 0) + paradoxReserve)
+                PushGCD(AID.Fire4, target.Actor, 40);
+        }
+        else if (MP >= FireCost + (FlareFinisher ? 800 : 0))
+            PushGCD(AID.Fire1, target.Actor, 40);
+        else if (FlareFinisher && MP >= 800)
+            PushGCD(AID.Flare, target.Actor, 40);
+
+        if (!Unlocked(AID.Fire4) && FirestarterLeft > GCD)
+            PushGCD(AID.Fire3, target.Actor, 45);
+
+        if (Paradox && MP >= 1600)
+            PushGCD(AID.Paradox, target.Actor, 38);
+
+        if (FlareOpenerFinish && AstralSoul >= 3 && MP >= 800)
+            PushGCD(AID.Flare, target.Actor, 36);
+
+        if (OpenerManafont && Polyglot > 0 && CanSpendPolyglot)
+            PushGCD(PolyglotAction, target.Actor, 36);
+        else if (Unlocked(AID.Despair) && MP >= 800)
+            PushGCD(AID.Despair, target.Actor, 35);
+
+        if (FireMPOut && !ManafontReady && (Unlocked(AID.Blizzard3) || !CanUseTranspose))
+            PushGCD(Unlocked(AID.Blizzard3) ? AID.Blizzard3 : AID.Blizzard1, target.Actor, 20);
+
+        if (CantCast && FirestarterLeft > GCD && Astral == 3)
+            PushGCD(AID.Fire3, target.Actor, 6);
+    }
+
+    private void Ice(Enemy target)
+    {
+        if (Umbral < 3 && Unlocked(AID.Blizzard3))
+            PushGCD(AID.Blizzard3, target.Actor, 50);
+
+        if (Unlocked(AID.Blizzard4) && Hearts < 3)
+            PushGCD(AID.Blizzard4, target.Actor, 45);
+        else if (!Unlocked(AID.Blizzard4) && (!MPFull || !Unlocked(AID.Fire1)))
+            PushGCD(AID.Blizzard1, target.Actor, 45);
+
+        if (Paradox && (FirestarterLeft > 0 || !Unlocked(AID.Transpose) || Umbral == 3 && Hearts >= 3))
+            PushGCD(AID.Paradox, target.Actor, 42);
+
+        if (Hearts >= 3 || !Unlocked(AID.Blizzard4) && MPFull)
+        {
+            if (!CanUseTranspose || !Unlocked(AID.Paradox) && FirestarterLeft == 0 && Unlocked(AID.Fire3))
+                PushGCD(Unlocked(AID.Fire3) ? AID.Fire3 : AID.Fire1, target.Actor, 40);
+        }
+        else if (!MPFull)
+            PushGCD(AID.Blizzard1, target.Actor, 1);
+
+        if (CantCast && Paradox)
+            PushGCD(AID.Paradox, target.Actor, 6);
+    }
+
+    private void AoE(in Strategy strategy, Enemy target)
+    {
+        var fireAoE = Unlocked(AID.HighFire2) ? AID.HighFire2 : AID.Fire2;
+        var iceAoE = Unlocked(AID.HighBlizzard2) ? AID.HighBlizzard2 : AID.Blizzard2;
+        if (InFire)
+        {
+            if (Unlocked(AID.FlareStar) && AstralSoul >= 6)
+                PushGCD(AID.FlareStar, target.Actor, 50);
+            if (Unlocked(AID.Flare) && !Unlocked(AID.Blizzard4) && Astral < 3 && MP >= 3000)
+                PushGCD(fireAoE, target.Actor, 46);
+            if (!AoEFireMPOut)
+                PushGCD(Unlocked(AID.Flare) ? AID.Flare : fireAoE, target.Actor, 45);
+            if (AoEFireMPOut && (!CanUseTranspose || AoECastSwap) && !ManafontReady)
+                PushGCD(iceAoE, target.Actor, 20);
+            if (AoEFireMPOut && AstralSoul < 6 && CanUseTranspose && !AoECastSwap && !ManafontReady && Polyglot > 0 && Unlocked(AID.Foul) && PolyglotStrat != PolyglotStrategy.Overcap)
+                PushGCD(AID.Foul, target.Actor, 30);
+        }
+        else if (InIce)
+        {
+            AoEExitIce = Unlocked(AID.Blizzard4) ? Hearts >= 3 || MP >= 5000 && Unlocked(AID.Flare)
+                : Unlocked(AID.Flare) || !Unlocked(AID.Freeze) || strategy.Thunder.Value == OffensiveStrategy.Delay || target.ForbidDOTs ? MPFull
+                : MPFull && NeedThunderhead(target);
+            var iceSpell = NumAOETargets == 2 && Unlocked(AID.Blizzard4) ? AID.Blizzard4 : Unlocked(AID.Freeze) ? AID.Freeze : iceAoE;
+            if (Unlocked(AID.Blizzard4)
+                ? (Hearts < 3 || !Unlocked(AID.Freeze)) && !(MP >= 5000 && Unlocked(AID.Flare) && Hearts >= 3)
+                : !AoEExitIce || Unlocked(AID.Freeze) && !CanUseTranspose)
+                PushGCD(iceSpell, target.Actor, 45);
+            if (Paradox)
+                PushGCD(AID.Paradox, target.Actor, 30);
+            if (Unlocked(AID.Blizzard4) ? !CanUseTranspose && (MPFull || Hearts >= 3) : AoEExitIce && (!CanUseTranspose || AoECastSwap))
+                PushGCD(fireAoE, target.Actor, 25);
+            if (CanUseTranspose && AoEExitIce && !AoECastSwap && Polyglot > 0 && Unlocked(AID.Foul))
+                PushGCD(AID.Foul, target.Actor, 30);
+        }
+        else
+            PushGCD(iceAoE, target.Actor, 20);
+    }
+
+    private bool NeedThunderhead(Enemy target) => ThunderheadLeft == 0 && ThunderLeft(target.Actor) < 10 && TimeToKill.WorthDot(Bossmods.ActiveModule, target.Actor, 15);
+
+    private bool MovementThunder(in Strategy strategy, Enemy target) => strategy.Thunder.Value != OffensiveStrategy.Delay && ThunderheadLeft > GCD && !target.ForbidDOTs;
+
+    #endregion
+
+    #region oGCD
+
+    private void OGCDs(in Strategy strategy, Enemy target)
+    {
+        if (strategy.Manipulation.Value == ManipulationStrategy.Knockback)
+            CancelKnockback(AID.AetherialManipulation, ResolveTarget(strategy.Manipulation) ?? World.Party.WithoutSlot(excludeAlliance: true).Where(p => p != Player && !p.IsDead).Closest(Player.Position));
+
+        if (ManafontStrat != OffensiveStrategy.Delay && InFire && (CanWeave(AID.Manafont) || GCD == 0 && ReadyIn(AID.Manafont) <= 0) && (ManafontStrat == OffensiveStrategy.Force || (AOEMode ? AoEFireMPOut : FireMPOut) && AstralSoul < 6 || OpenerManafont))
+            PushOGCD(AID.Manafont, Player, 70);
+
+        if (CanUseTranspose)
+        {
+            var endOfFire = InFire && FireMPOut && ManafontIn >= 5 && AstralSoul < 6;
+            if (endOfFire && (Instant || !Unlocked(AID.Blizzard3)))
+                PushOGCD(AID.Transpose, Player, 65);
+            var endOfIce = InIce && (Hearts >= 3 || !Unlocked(AID.Blizzard4) && MPFull) && (!Paradox || FirestarterLeft == 0);
+            if (endOfIce && !AOEMode && (FirestarterLeft > GCD || Unlocked(AID.Paradox) || !Unlocked(AID.Fire3)))
+                PushOGCD(AID.Transpose, Player, 65);
+            if (AOEMode && !AoECastSwap && (InFire && AoEFireMPOut && AstralSoul < 6 && !ManafontReady || InIce && AoEExitIce))
+                PushOGCD(AID.Transpose, Player, 65);
+        }
+
+        if (!AOEMode && InFire && FireMPOut && Astral == 3 && !Instant && ManafontIn >= 5 && AstralSoul < 6)
+        {
+            if (CanWeave(ClassShared.AID.Swiftcast))
+                PushOGCD(ClassShared.AID.Swiftcast, Player, 66);
+            else if (CanWeave(AID.Triplecast) && !InLeyLines && TriplecastCharges >= 2)
+                PushOGCD(AID.Triplecast, Player, 66);
+        }
+
+        if (!AOEMode && InOpener && CombatTime < 10 && InFire && !Instant && ThunderLeft(target.Actor) > 20 && Unlocked(AID.LeyLines) && ReadyIn(AID.LeyLines) < 5 && CanWeave(ClassShared.AID.Swiftcast))
+            PushOGCD(ClassShared.AID.Swiftcast, Player, 61);
+
+        if (!AOEMode && FlareOpenerFinish && InFire && AstralSoul >= 3 && !Instant && MP - FireCost < 2400 && CanWeave(AID.Triplecast))
+            PushOGCD(AID.Triplecast, Player, 67);
+
+        if (AmplifierStrat != OffensiveStrategy.Delay && (InFire || InIce) && CanWeave(AID.Amplifier) && (AmplifierStrat == OffensiveStrategy.Force || Polyglot < MaxPolyglot))
+            PushOGCD(AID.Amplifier, Player, 60);
+
+        if (LeyLinesStrat != OffensiveStrategy.Delay && CanWeave(AID.LeyLines) && !InLeyLines && SelfStatusLeft(SID.LeyLines) == 0
+            && (LeyLinesStrat == OffensiveStrategy.Force || ShouldLeyLines(target.Actor)))
+            PushOGCD(AID.LeyLines, Player, 55);
+
+        if (!Instant)
+        {
+            var moving = CantCast && (Polyglot == 0 || Player.Level < 80 || PolyglotStrat == PolyglotStrategy.Delay) && !MovementThunder(strategy, target) && !(InFire && FirestarterLeft > 0 && !AOEMode);
+            var triple = strategy.Triplecast.Value == OffensiveStrategy.Force || strategy.Triplecast.Value == OffensiveStrategy.Automatic && moving && !InLeyLines;
+            if (triple && CanWeave(AID.Triplecast))
+                PushOGCD(AID.Triplecast, Player, 50);
+            else if ((strategy.Swiftcast.Value == OffensiveStrategy.Force || strategy.Swiftcast.Value == OffensiveStrategy.Automatic && moving) && CanWeave(ClassShared.AID.Swiftcast))
+                PushOGCD(ClassShared.AID.Swiftcast, Player, 49);
+        }
+
+        if (strategy.Manaward.Value == ManawardStrategy.Automatic && CanWeave(AID.Manaward) && DamageIncoming(4))
+            PushOGCD(AID.Manaward, Player, 45);
+    }
+
+    private bool ShouldLeyLines(Actor target)
+    {
+        if (Hints.MaxCastTime < 2.5f || DowntimeIn <= 15 || !TimeToKill.BurstWorthIt(Bossmods.ActiveModule, Hints, target, 15))
+            return false;
+        if (InOpener && CombatTime < 10 && InFire)
+            return true;
+        var full = MaxChargesIn(AID.LeyLines) <= 0;
+        if (!InBossFight || NoRaidBuffs)
+            return full;
+        return RaidBuffsLeft > 10 || RaidBuffsIn <= 3 || full && RaidBuffsIn > 40;
+    }
+
+    #endregion
+
+    #region Helpers
+
+    private AID PolyglotAction => AOEMode && Unlocked(AID.Foul) || !Unlocked(AID.Xenoglossy) ? AID.Foul : AID.Xenoglossy;
+
+    private AID ThunderAction => AOEMode && Unlocked(AID.Thunder2)
+        ? (Unlocked(AID.HighThunder2) ? AID.HighThunder2 : Unlocked(AID.Thunder4) ? AID.Thunder4 : AID.Thunder2)
+        : (Unlocked(AID.HighThunder) ? AID.HighThunder : Unlocked(AID.Thunder3) ? AID.Thunder3 : AID.Thunder1);
+
+    private float ProcLeft(SID sid) => Player.FindStatus(sid) is { } st ? MathF.Max(StatusDuration(st.ExpireAt), st.ExpireAt <= World.CurrentTime ? float.MaxValue : 0) : 0;
+
+    private float ThunderLeft(Actor target) => MaxDotLeft(target, SID.HighThunder, SID.HighThunderII, SID.Thunder, SID.ThunderII, SID.ThunderIII, SID.ThunderIV);
+
+    private float CastTime(AID aid)
+    {
+        if (Instant || aid == AID.Foul && Player.Level >= 80)
+            return 0;
+        var t = ScaledCastTime(aid);
+        var isFire = aid is AID.Fire1 or AID.Fire3 or AID.Fire4 or AID.Fire2 or AID.HighFire2 or AID.Flare or AID.Despair or AID.FlareStar;
+        var isIce = aid is AID.Blizzard1 or AID.Blizzard3 or AID.Blizzard4 or AID.Blizzard2 or AID.HighBlizzard2 or AID.Freeze;
+        if (isFire && Umbral == 3 || isIce && Astral == 3)
+            t *= 0.5f;
+        if (aid == AID.Fire3 && FirestarterLeft > GCD || aid == AID.Despair && Player.Level >= 100)
+            t = 0;
+        return t;
+    }
+
+    private bool UsePotion(in Strategy strategy) => strategy.Potion.Value switch
+    {
+        PotionStrategy.AlignWithBurst => PotionBurst || PotionBeforeKill,
+        PotionStrategy.AlignWithRaidBuffs => PotionWithRaidBuffs(PotionBurst) || PotionBeforeKill,
+        PotionStrategy.Immediate => true,
+        _ => false
+    };
+
+    private bool PotionBurst => Player.InCombat && (Unlocked(AID.LeyLines) && LeyLinesStrat != OffensiveStrategy.Delay ? ReadyIn(AID.LeyLines) < 3 && InFire && (CombatTime > 30 || AmplifierStrat == OffensiveStrategy.Delay || !Unlocked(AID.Amplifier) || ReadyIn(AID.Amplifier) > GCD) : RaidBuffsLeft > 0 || RaidBuffsIn < 5);
+
+    private int TriplecastCharges => ChargesLeft(AID.Triplecast);
+
+    private void PushGCD(AID aid, Actor? target, int priority) => base.PushGCD(aid, target, priority, CastTime(aid));
+
+    #endregion
+}

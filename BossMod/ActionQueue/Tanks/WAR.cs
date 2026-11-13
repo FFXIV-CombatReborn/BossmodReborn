@@ -128,7 +128,7 @@ public sealed class Definitions : Defs
 
     public override void Define(ActionDefinitions d)
     {
-        d.RegisterSpell(AID.LandWaker, instantAnimLock: 3.86f);
+        d.RegisterSpell(AID.LandWaker, instantAnimLock: 3.86f, positionLock: 3.77f);
         d.RegisterSpell(AID.HeavySwing);
         d.RegisterSpell(AID.Maim);
         d.RegisterSpell(AID.Berserk);
@@ -171,9 +171,8 @@ public sealed class Definitions : Defs
         // hardcoded mechanics
         d.RegisterChargeIncreaseTrait(AID.Onslaught, TraitID.EnhancedOnslaught);
 
-        d.Spell(AID.Tomahawk)!.AllowExecute = (ws, player, _, _) => !(_config.ForbidEarlyTomahawk && !player.InCombat && ws.Client.CountdownRemaining > 0.7f);
         d.Spell(AID.Holmgang)!.SmartTarget = (_, player, target, _) => _config.HolmgangSelf ? player : target;
-        d.Spell(AID.Equilibrium)!.AllowExecute = (_, player, _, _) => player.PendingHPRatio < 1; // don't use equilibrium at full hp
+        d.Spell(AID.Equilibrium)!.AllowExecute = (_, player, _, _) => player.HPRatio < 1; // don't use equilibrium at full hp
         d.Spell(AID.NascentFlash)!.SmartTarget = ActionDefinitions.SmartTargetCoTank;
 
         // upgrades (TODO: don't think we actually care...)

@@ -1,0 +1,373 @@
+﻿using BossMod.PLD;
+using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
+using static BossMod.AIHints;
+
+namespace BossMod.Autorotation.kage;
+
+public sealed class KagePLD(RotationModuleManager manager, Actor player) : KageShared<KagePLD.Strategy>(manager, player)
+{
+    public struct Strategy
+    {
+        [Track(UiPriority = 500)]
+        public Track<Targeting> Targeting;
+        [Track(UiPriority = 499)]
+        public Track<AOEStrategy> AOE;
+
+        [Track("Fight or Flight", MinLevel = 2, Action = AID.FightOrFlight, UiPriority = 100)]
+        public Track<OffensiveStrategy> FightOrFlight;
+
+        [Track("Requiescat / Imperator", MinLevel = 68, Actions = [AID.Requiescat, AID.Imperator], UiPriority = 99)]
+        public Track<OffensiveStrategy> Requiescat;
+
+        [Track("Goring Blade", MinLevel = 54, Action = AID.GoringBlade, UiPriority = 98)]
+        public Track<OffensiveStrategy> Goring;
+
+        [Track("Circle of Scorn / Expiacion", MinLevel = 30, Actions = [AID.CircleOfScorn, AID.SpiritsWithin, AID.Expiacion], UiPriority = 97)]
+        public Track<OffensiveStrategy> Spenders;
+
+        [Track("Shield Lob / Holy Spirit", MinLevel = 15, UiPriority = 96.5f)]
+        public Track<RangedStrategy> Ranged;
+        [Track("Sheltron", MinLevel = 35, Actions = [AID.Sheltron, AID.HolySheltron], UiPriority = 96)]
+        public Track<SheltronStrategy> Sheltron;
+
+        [Track("Intervene", MinLevel = 74, Action = AID.Intervene, UiPriority = 95)]
+        public Track<InterveneStrategy> Intervene;
+
+        [Track("Potion", Item = 1049234, UiPriority = 94)]
+        public Track<PotionStrategy> Potion;
+
+        [Track("Opener", MinLevel = 2, UiPriority = -10)]
+        public Track<OpenerStrategy> Opener;
+    }
+
+    public enum InterveneStrategy
+    {
+        [Option("Use in the rotation")]
+        Automatic,
+        [Option("Use in rotation and to close gaps", Targets = ActionTargets.Hostile)]
+        GapClose,
+        [Option("Use in rotation and to cancel knockback", Targets = ActionTargets.Hostile)]
+        Knockback,
+        [Option("Use in rotation, gap close and knockback", Targets = ActionTargets.Hostile)]
+        Both,
+        [Option("Do not use")]
+        Delay
+    }
+
+    public enum RangedStrategy
+    {
+        [Option("Holy Spirit if standing, else Shield Lob")]
+        Ranged,
+        [Option("Only Shield Lob")]
+        ShieldLob,
+        [Option("Only Holy Spirit")]
+        HolySpirit,
+        [Option("Do not use at range")]
+        Never
+    }
+
+    public enum SheltronStrategy
+    {
+        [Option("Spend Oath at 95+ while being hit")]
+        Automatic,
+        [Option("Do not use")]
+        Delay
+    }
+
+    public enum PotionStrategy
+    {
+        [Option("Do not use automatically")]
+        Manual,
+        [Option("Optimal: with Fight or Flight")]
+        AlignWithBurst,
+        [Option("Follow party raid buffs")]
+        AlignWithRaidBuffs,
+        [Option("Use ASAP")]
+        Immediate
+    }
+
+    public enum OpenerStrategy
+    {
+        [Option("Standard opener (pre-pull Holy Spirit)")]
+        Standard,
+        [Option("Early Fight or Flight opener")]
+        EarlyBuff,
+        [Option("No pre-pull or opener rules")]
+        None
+    }
+
+    public static RotationModuleDefinition Definition()
+    {
+        return new RotationModuleDefinition("Kage PLD", "Paladin", "Standard rotation (Kage)|Tanks", "Kagekazu", RotationModuleQuality.Good, BitMask.Build(Class.PLD, Class.GLA), 100).WithStrategies<Strategy>();
+    }
+
+    private const int HolySpiritMP = 1000;
+    private const uint PassageOfArmsSID = 1175;
+    private const uint SheltronSID = 1856;
+    private const uint HolySheltronSID = 2674;
+
+    private int Oath;
+    private float FoFLeft;
+    private float RequiescatLeft;
+    private float ConfiteorLeft;
+    private float GoringLeft;
+    private float DivineMightLeft;
+    private float AtonementLeft;
+    private float SupplicationLeft;
+    private float SepulchreLeft;
+    private float BladeOfHonorLeft;
+
+    private Actor? BestSplashTarget;
+    private Actor? BestMeleeSplashTarget;
+    private int NumAOETargets;
+    private bool AOEMode;
+    private bool IsMoving;
+    private List<Actor> Loose = [];
+
+    private AID ComboLastMove => (AID)World.Client.ComboState.Action;
+    private int AoEMinTargets => Player.Level >= 94 ? 3 : 2;
+    private float FoFIn;
+    private AID BestRequiescat => Unlocked(AID.Imperator) ? AID.Imperator : AID.Requiescat;
+
+    public override void Execute(in Strategy strategy, Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
+    {
+        if (Player.FindStatus(PassageOfArmsSID, Player.InstanceID) != null)
+            return;
+
+        var target = SelectTarget(strategy, strategy.Targeting.Value, primaryTarget, estimatedAnimLockDelay, 3, strategy.AOE.Value);
+
+        Oath = World.Client.GetGauge<PaladinGauge>().OathGauge;
+        FoFLeft = SelfStatusLeft(SID.FightOrFlight);
+        FoFIn = strategy.FightOrFlight.Value == OffensiveStrategy.Delay ? float.MaxValue : ReadyIn(AID.FightOrFlight);
+        RequiescatLeft = SelfStatusLeft(SID.Requiescat);
+        ConfiteorLeft = SelfStatusLeft(SID.ConfiteorReady);
+        GoringLeft = SelfStatusLeft(SID.GoringBladeReady);
+        DivineMightLeft = SelfStatusLeft(SID.DivineMight);
+        AtonementLeft = SelfStatusLeft(SID.AtonementReady);
+        SupplicationLeft = SelfStatusLeft(SID.SupplicationReady);
+        SepulchreLeft = SelfStatusLeft(SID.SepulchreReady);
+        BladeOfHonorLeft = SelfStatusLeft(SID.BladeOfHonorReady);
+
+        NumAOETargets = Hints.NumPriorityTargetsInAOECircle(Player.Position, 5);
+        if (ForceST)
+            NumAOETargets = NumAOETargets > 0 && target != null && TargetInAOECircle(target.Actor, Player.Position, 5) ? 1 : 0;
+        IsMoving = isMoving;
+        Loose = Player.InCombat && !InBossFight && !ForceST
+            ? [.. PriorityTargets.Select(e => e.Actor).Where(a => a.InCombat && a.TargetID != Player.InstanceID && World.Party.FindSlot(a.TargetID) >= 0)]
+            : [];
+        AOEMode = Unlocked(AID.TotalEclipse) && (UseAOE(strategy.AOE.Value, NumAOETargets, AoEMinTargets)
+            || strategy.AOE.Value == AOEStrategy.AOE && NumAOETargets >= 2 && Loose.Any(a => TargetInAOECircle(a, Player.Position, 5)));
+        BestSplashTarget = BestAOETarget(target, 25, AllowAoE, (c, e) => TargetInAOECircle(e, c.Position, 5)).Best;
+        BestMeleeSplashTarget = BestAOETarget(target, 3, AllowAoE, (c, e) => TargetInAOECircle(e, c.Position, 5)).Best;
+
+        if (UsePotion(strategy))
+            PushPotion(ActionDefinitions.IDPotionStr);
+
+        if (World.Client.CountdownRemaining is > 0 and var countdown)
+        {
+            if (target != null && strategy.Opener.Value == OpenerStrategy.Standard && countdown < 2.2f && Unlocked(AID.HolySpirit) && MP >= HolySpiritMP && Player.DistanceToHitbox(target.Actor) <= 25)
+            {
+                var pos = Player.Position;
+                Hints.GoalZones.Add(p => p.InCircle(pos, 0.5f) ? 100f : 0f);
+                if (countdown < 1.75f)
+                    PushGCD(AID.HolySpirit, target.Actor, 10);
+            }
+            return;
+        }
+
+        if (target == null)
+            return;
+
+        var goal = Hints.GoalSingleTarget(target.Actor, Player, World.Actors, 3);
+        Hints.GoalZones.Add(AllowAoE && Unlocked(AID.TotalEclipse) ? GoalCombined(goal, Hints.GoalAOECircle(5), AoEMinTargets) : goal);
+        if (Loose.Count > 0)
+        {
+            var loose = Loose;
+            Hints.GoalZones.Add(p =>
+            {
+                var c = 0f;
+                foreach (var l in loose)
+                    c += p.InCircle(l.Position, 5f + l.HitboxRadius) ? 1f : 0f;
+                return c;
+            });
+        }
+
+        GCDs(strategy, target);
+        if (Player.InCombat)
+            OGCDs(strategy, target);
+    }
+
+    #region GCD
+
+    private void GCDs(in Strategy strategy, Enemy target)
+    {
+        var holyAction = AOEMode && Unlocked(AID.HolyCircle) ? AID.HolyCircle : AID.HolySpirit;
+        var holyTarget = holyAction == AID.HolyCircle ? Player : target.Actor;
+        var canHoly = Unlocked(holyAction) && MP >= HolySpiritMP;
+
+        var requiescatSoon = FoFLeft > 0 && strategy.Requiescat.Value != OffensiveStrategy.Delay && ReadyIn(BestRequiescat) <= GCD;
+        if (strategy.Goring.Value != OffensiveStrategy.Delay && GoringLeft > GCD && (RequiescatLeft == 0 && !requiescatSoon || strategy.Goring.Value == OffensiveStrategy.Force))
+        {
+            var goringTarget = AOEMode
+                ? PriorityTargets.Where(e => Player.DistanceToHitbox(e.Actor) <= 3).MaxBy(e => e.Actor.HPMP.CurHP)?.Actor
+                : InMelee ? target.Actor : null;
+            if (goringTarget != null && (!AOEMode || NumAOETargets <= (Player.Level >= 72 ? 3 : 4)))
+                PushGCD(AID.GoringBlade, goringTarget, 60);
+        }
+
+        var next = (World.Client.GetGauge<PaladinGauge>().ConfiteorComboStep & 0xFF) switch
+        {
+            1 => AID.BladeOfFaith,
+            2 => AID.BladeOfTruth,
+            3 => AID.BladeOfValor,
+            _ => ConfiteorLeft > GCD ? AID.Confiteor : AID.None
+        };
+        if (next != AID.None && Unlocked(next) && MP >= HolySpiritMP)
+            PushGCD(next, BestSplashTarget, 58);
+        else if (RequiescatLeft > GCD && canHoly)
+            PushGCD(holyAction, holyTarget, 58);
+
+        if (canHoly && DivineMightLeft > GCD && (FoFLeft > GCD || !InMelee || ComboLastMove == (AOEMode ? AID.TotalEclipse : AID.RiotBlade) || DivineMightLeft < 6))
+            PushGCD(holyAction, holyTarget, FoFLeft > GCD && Player.Level < 94 ? 49 : DivineMightLeft < 6 || FoFLeft <= GCD ? 46 : 44);
+
+        if (Loose.Where(a => !TargetInAOECircle(a, Player.Position, 5) && Player.DistanceToHitbox(a) <= 20).MinBy(Player.DistanceToHitbox) is { } stray)
+        {
+            if (canHoly && DivineMightLeft > GCD)
+                PushGCD(AID.HolySpirit, stray, 55);
+            PushGCD(AID.ShieldLob, stray, 54);
+        }
+
+        if (AOEMode)
+        {
+            if (Unlocked(AID.Prominence) && ComboLastMove == AID.TotalEclipse && ComboLeft > GCD)
+                PushGCD(AID.Prominence, Player, 10);
+            PushGCD(AID.TotalEclipse, Player, 1);
+            return;
+        }
+
+        if (!InMelee && strategy.Ranged.Value != RangedStrategy.Never)
+        {
+            if (strategy.Ranged.Value != RangedStrategy.ShieldLob && canHoly && (DivineMightLeft > GCD || InBossFight && !IsMoving))
+                PushGCD(AID.HolySpirit, target.Actor, 20);
+            if (strategy.Ranged.Value != RangedStrategy.HolySpirit)
+                PushGCD(AID.ShieldLob, target.Actor, 19);
+        }
+
+        var spend = FoFLeft > GCD || ComboLastMove == AID.RiotBlade;
+        if (AtonementLeft > GCD)
+            PushGCD(AID.Atonement, target.Actor, 48);
+        if (SupplicationLeft > GCD && (spend || SupplicationLeft < 6))
+            PushGCD(AID.Supplication, target.Actor, 47);
+        if (SepulchreLeft > GCD && (spend || SepulchreLeft < 6))
+            PushGCD(AID.Sepulchre, target.Actor, 45);
+
+        if (Unlocked(AID.RageOfHalone) && ComboLastMove == AID.RiotBlade && ComboLeft > GCD)
+            PushGCD(Unlocked(AID.RoyalAuthority) ? AID.RoyalAuthority : AID.RageOfHalone, target.Actor, 11);
+        if (Unlocked(AID.RiotBlade) && ComboLastMove == AID.FastBlade && ComboLeft > GCD)
+            PushGCD(AID.RiotBlade, target.Actor, 10);
+        PushGCD(AID.FastBlade, target.Actor, 1);
+    }
+
+    #endregion
+
+    #region oGCD
+
+    private void OGCDs(in Strategy strategy, Enemy target)
+    {
+        var requiescat = BestRequiescat;
+        if (ShouldFightOrFlight(strategy, target.Actor))
+            PushOGCD(AID.FightOrFlight, Player, 70, ReadyIn(requiescat) <= GCD ? 0 : GCD - 0.8f);
+
+        if (BladeOfHonorLeft > 0)
+            PushOGCD(AID.BladeOfHonor, BestSplashTarget, 65);
+
+        var imperator = requiescat == AID.Imperator;
+        if (strategy.Requiescat.Value != OffensiveStrategy.Delay && CanWeave(requiescat) && Player.DistanceToHitbox(target.Actor) <= (imperator ? 25 : 3)
+            && (strategy.Requiescat.Value == OffensiveStrategy.Force || FoFLeft > 0 || FoFIn > 50))
+            PushOGCD(requiescat, imperator ? BestSplashTarget : target.Actor, 64);
+
+        if (strategy.Spenders.Value != OffensiveStrategy.Delay)
+        {
+            var hold = strategy.Spenders.Value != OffensiveStrategy.Force && FoFLeft == 0 && FoFIn < 2.5f;
+            if (!hold && CanWeave(AID.CircleOfScorn) && NumAOETargets > 0)
+                PushOGCD(AID.CircleOfScorn, Player, 60);
+            var spirits = Unlocked(AID.Expiacion) ? AID.Expiacion : AID.SpiritsWithin;
+            if (!hold && CanWeave(spirits))
+                PushOGCD(spirits, spirits == AID.Expiacion ? BestMeleeSplashTarget : target.Actor, 59);
+        }
+
+        Intervene(strategy, target);
+
+        if (strategy.Sheltron.Value == SheltronStrategy.Automatic && Oath >= 95 && Hints.PotentialTargets.Any(e => e.Actor.TargetID == Player.InstanceID && e.Actor.InCombat))
+        {
+            var sheltron = Unlocked(AID.HolySheltron) ? AID.HolySheltron : AID.Sheltron;
+            if (CanWeave(sheltron) && SelfStatusLeft(sheltron == AID.HolySheltron ? HolySheltronSID : SheltronSID, 8) == 0)
+                PushOGCD(sheltron, Player, 40);
+        }
+    }
+
+    private bool ShouldFightOrFlight(in Strategy strategy, Actor target)
+    {
+        if (!CanWeave(AID.FightOrFlight) || strategy.FightOrFlight.Value == OffensiveStrategy.Delay)
+            return false;
+        if (strategy.FightOrFlight.Value == OffensiveStrategy.Force)
+            return true;
+        if (DowntimeIn < 10 || !TimeToKill.BurstWorthIt(Bossmods.ActiveModule, Hints, target, 10)
+            || Unlocked(AID.Requiescat) && MP < HolySpiritMP * 3.6f || !InMelee && !CanWeave(AID.Imperator))
+            return false;
+        if (CombatTime < 15)
+            return strategy.Opener.Value switch
+            {
+                OpenerStrategy.Standard => ComboLastMove == AID.RoyalAuthority || !Unlocked(AID.RoyalAuthority) && CombatTime >= 7,
+                OpenerStrategy.EarlyBuff => ComboLastMove is AID.FastBlade or AID.RiotBlade or AID.RoyalAuthority,
+                _ => CombatTime >= 8
+            };
+        return true;
+    }
+
+    private void Intervene(in Strategy strategy, Enemy target)
+    {
+        if (strategy.Intervene.Value == InterveneStrategy.Delay)
+            return;
+        if (strategy.Intervene.Value is InterveneStrategy.Knockback or InterveneStrategy.Both)
+            CancelKnockback(AID.Intervene, ResolveTarget(strategy.Intervene) ?? target.Actor);
+        if (!CanWeave(AID.Intervene))
+            return;
+        var dist = Player.DistanceToHitbox(target.Actor);
+        if (strategy.Intervene.Value is InterveneStrategy.GapClose or InterveneStrategy.Both && dist > 3 && dist <= 20)
+        {
+            PushOGCD(AID.Intervene, ResolveTarget(strategy.Intervene) ?? target.Actor, 55);
+            return;
+        }
+        if (dist > 3 || Hints.MaxCastTime <= 0)
+            return;
+        var capping = MaxChargesIn(AID.Intervene) < GCD + 2;
+        if (FoFLeft > 0 || capping && FoFIn > 25)
+            PushOGCD(AID.Intervene, target.Actor, 55);
+    }
+
+    #endregion
+
+    #region Helpers
+
+    private bool UsePotion(in Strategy strategy) => strategy.Potion.Value switch
+    {
+        PotionStrategy.AlignWithBurst => PotionBurst(strategy) || PotionBeforeKill,
+        PotionStrategy.AlignWithRaidBuffs => PotionWithRaidBuffs(PotionBurst(strategy)) || PotionBeforeKill,
+        PotionStrategy.Immediate => true,
+        _ => false
+    };
+
+    private bool PotionBurst(in Strategy strategy) => Player.InCombat && (strategy.FightOrFlight.Value == OffensiveStrategy.Delay ? RaidBuffsLeft > 0 || RaidBuffsIn < 5 : ReadyIn(AID.FightOrFlight) < 3 && (CombatTime > 15 || ComboLastMove == (strategy.Opener.Value == OpenerStrategy.EarlyBuff ? AID.FastBlade : AID.RiotBlade) || !Unlocked(AID.RiotBlade)));
+
+    private void PushGCD(AID aid, Actor? target, int priority) => PushGCD(aid, target, priority, CastTime(aid));
+
+    private float CastTime(AID aid)
+    {
+        if (aid is not (AID.HolySpirit or AID.HolyCircle) || DivineMightLeft > GCD || RequiescatLeft > GCD)
+            return 0;
+        return ActionDefinitions.Instance.Spell(aid)?.CastTime ?? 0;
+    }
+
+    #endregion
+}
