@@ -1,42 +1,27 @@
 ﻿namespace BossMod.Dawntrail.Criterion.C01AMT.C013PariOfPlenty;
 
-// TODO
-//  - Complete timeline - end of fight - need enrage log
-//  - Pari's Curse - Add stack/spread AOEs?
-//  - Towers add cleaves
-//  - FireFlight:
-//        - find out who gets the stack
-//        - Add Enums value for left and right instead of using side number int
-//  - WheelOfFableFlight:
-//      - find out who gets the stack
-//      - Add initial AOE for the cleaves
-//  - Improve visual for SpurningFlames? - Really not needed, but could add indictors on the direction to go instead of showing the AOEs (assumes BD)
-//  - Pari's Curse - Mechanic works fine, just a lot of stuff for solving it - Remove gridMap if possible and find a different way to do it
+sealed class HeatBurst(BossModule module) : Components.RaidwideCast(module, (uint)AID.HeatBurst);
+sealed class ParisCurseRaidwide(BossModule module) : Components.RaidwideCast(module, (uint)AID.ParisCurse);
+sealed class SpurningFlames(BossModule module) : Components.RaidwideCast(module, (uint)AID.SpurningFlames);
+sealed class SpurningFlamesPreEnrage(BossModule module) : Components.RaidwideCast(module, (uint)AID.SpurningFlamesPreEnrage);
+sealed class ScouringScorn(BossModule module) : Components.RaidwideCast(module, (uint)AID.ScouringScorn);
+sealed class FireOfVictory(BossModule module) : Components.BaitAwayCast(module, (uint)AID.FireOfVictory, 4f, true, true, true, AIHints.PredictedDamageType.Tankbuster);
+sealed class SunCirclet(BossModule module) : Components.CastCounter(module, (uint)AID.SunCirclet);
+sealed class KindledFlameStack(BossModule module) : Components.StackWithIcon(module, (uint)IconID.Stack, (uint)AID.KindledFlame2, 6f, 5.2d);
 
-class HeatBurst(BossModule module) : Components.RaidwideCast(module, (uint)AID.HeatBurst);
+sealed class FireflightRectStart(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.FireflightByEmberlightRight, (uint)AID.FireflightByEmberlightLeft,
+    (uint)AID.FireflightByPyrelightRight, (uint)AID.FireflightByPyrelightLeft], RectStart.Shape);
+sealed class WheelRectStart(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.WheelOfFableflightCW, (uint)AID.WheelOfFableflightCCW], RectStart.Shape);
+sealed class LongNightRectStart(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.FireflightFourLongNightsE, (uint)AID.FireflightFourLongNightsW], RectStart.Shape);
+sealed class FableflightLongRectStart(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.FableflightLeftVerySlow, (uint)AID.FableflightRightVerySlow], RectStart.Shape);
+sealed class FableflightRectStart(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.FableflightLeftFast, (uint)AID.FableflightRightFast,
+    (uint)AID.FableflightRightSlow, (uint)AID.FableflightLeftSlow], RectStart.Shape);
+sealed class CharmdFlightRect(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.CharmdFlightFourNightsW, (uint)AID.CharmdFlightFourNightsE], RectStart.Shape);
 
-class FireOfVictory(BossModule module) : Components.BaitAwayCast(module, (uint)AID.FireOfVictory, 4f, true, true, true, AIHints.PredictedDamageType.Tankbuster);
-
-class RedCrystals(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BurningGleam, new AOEShapeCross(40, 5), 3);
-
-class RedCrystals2 : Components.SimpleAOEs
+static class RectStart
 {
-    public RedCrystals2(BossModule module) : base(module, (uint)AID.BurningGleam, new AOEShapeCross(40, 5), 2)
-    {
-        Color = Colors.Danger;
-    }
+    public static readonly AOEShapeRect Shape = new(40f, 2f);
 }
 
-class KindleFlameStackIcon(BossModule module) : Components.StackTogether(module, (uint)IconID.StackIcon, 5, 6)
-{
-    public override void DrawArenaForeground(int pcSlot, Actor pc)
-    {
-        foreach (var target in Targets)
-        {
-            Arena.ZoneCircleOutline(target.Position, Radius, Colors.Safe);
-        }
-    }
-}
-
-[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.PariOfPlenty, Contributors = "Equilius", Category = BossModuleInfo.Category.VariantCriterion, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1079u, NameID = 14274u)]
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.PariOfPlenty, Contributors = "Equilius, xan, LTS", Category = BossModuleInfo.Category.VariantCriterion, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1079u, NameID = 14274u, PlanLevel = 100)]
 public sealed class C013PariOfPlenty(WorldState ws, Actor primary) : BossModule(ws, primary, new(-760f, -805f), new ArenaBoundsSquare(20f));

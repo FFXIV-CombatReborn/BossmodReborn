@@ -134,6 +134,7 @@ sealed class WindborneSeeds(BossModule module) : Components.GenericAOEs(module)
 }
 sealed class StreamingSands(BossModule module) : Components.RaidwideCast(module, (uint)AID.StreamingSands);
 sealed class BitingScratch(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BitingScratch, new AOEShapeCone(40f, 45f.Degrees()));
+sealed class Beaksbane(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Beaksbane, 11f, 3);
 sealed class BigBurst(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = [];

@@ -14,125 +14,121 @@ public enum OID : uint
 
 public enum AID : uint
 {
-    AutoAttack = 45545, // PariOfPlenty->player, no cast, single-target
-    HeatBurst = 45517, // PariOfPlenty->self, 5.0s cast, range 60 circle
-    Ability = 45421, // PariOfPlenty->location, no cast, single-target
+    AutoAttack = 45545,
+    HeatBurst = 45517,
+    Jump = 45421,
 
-    FireflightByPyrelightLeft = 45436, // Boss->self, 10.0s cast, range 40 width 4 rect
-    FireflightByPyrelightRight = 45437, // Boss->self, 10.0s cast, range 40 width 4 rect
-    FireflightByEmberlightLeft = 45434, // Boss->self, 10.0s cast, range 40 width 4 rect
-    FireflightByEmberlightRight = 45435, // Boss->self, 10.0s cast, range 40 width 4 rect
-    FireflightByEmberlightSpread = 45444, // Helper->players, no cast, range 3 circle
-    FireflightByPyrelightStack = 45445, // Helper->players, no cast, range 3 circle
-    SunCirclet = 45448, // PariOfPlenty->self, 2.0s cast, range ?-60 donut
+    FireflightByEmberlightRight = 45434,
+    FireflightByEmberlightLeft = 45435,
+    FireflightByPyrelightRight = 45436,
+    FireflightByPyrelightLeft = 45437,
+    CarpetRideDashRight = 45440,
+    CarpetRideDashLeft = 45441,
+    CarpetRide1Right = 45442,
+    CarpetRide1Left = 45443,
+    FireflightByEmberlightStack = 45444,
+    FireflightByPyrelightSpread = 45445,
+    SunCirclet = 45448,
 
-    WheelOfFableflightRight = 45478, // 4A71->self, 11.0s cast, range 40 width 4 rect
-    WheelOfFableflightLeft = 45479, // 4A71->self, 11.0s cast, range 40 width 4 rect
-    WheelOfFireflight = 45469, // PariOfPlenty/4A71->self, no cast, range 40 ?-degree cone
-    WheelOfFireflight1 = 45470, // PariOfPlenty/4A71->self, no cast, range 40 ?-degree cone
-    WheelOfFireflight2 = 45471, // PariOfPlenty/4A71->self, no cast, range 40 ?-degree cone
-    WheelOfFireflight3 = 45472, // PariOfPlenty/4A71->self, no cast, range 40 ?-degree cone
-    KindledFlameStack = 45538, // Boss->self, 8.0s cast, single-target
-    ScatteredKindlingSpread = 45536, // PariOfPlenty->self, 8.0s cast, single-target
-    KindledFlame1 = 45539, // Helper->players, no cast, range 6 circle
-    ScatteredKindling1 = 45537, // Helper->player, no cast, range 6 circle
+    WheelOfFableflightCCW = 45478,
+    WheelOfFableflightCW = 45479,
+    ScatteredKindlingCast = 45536,
+    ScatteredKindling = 45537,
+    KindledFlame1Cast = 45538,
+    KindledFlame1 = 45539,
+    WheelOfFireflightRTLBack = 45469,
+    WheelOfFireflightRTLFront = 45470,
+    WheelOfFireflightLTRFront = 45471,
+    WheelOfFireflightLTRBack = 45472,
+    FireOfVictory = 45519,
 
-    FireOfVictory = 45519, // PariOfPlenty->player, 5.0s cast, range 4 circle
+    FireflightFourLongNightsE = 45467,
+    FireflightFourLongNightsW = 45468,
+    FellFirework = 45476,
+    FireWell = 45477,
 
-    FireflightFourLongNightsRight = 45467, // Boss->self, 17.0s cast, range 40 width 4 rect
-    FireflightFourLongNightsLeft = 45468, // Boss->self, 17.0s cast, range 40 width 4 rect
-    FellFirework = 45476, // Helper->player, no cast, range 3 circle
-    FireWell = 45477, // Helper->players, no cast, range 3 circle
+    ParisCurse = 45551,
+    CharmingBaubles = 45503,
+    CharmingBaublesInstant = 45497,
+    ThievesWeave = 46754,
+    CarpetAppear = 45504,
+    CarpetDash = 47153,
+    Unravel = 45506,
+    FableflightRightVerySlow = 45438,
+    FableflightLeftVerySlow = 45439,
+    BurningGleam = 45548,
+    ChillingGleam = 45501,
+    FirePowder = 45523,
+    HighFirePowder = 45524,
 
-    ParisCurse = 45551, // PariOfPlenty->self, 5.0s cast, range 60 circle
-    CharmingBaubles = 45503, // PariOfPlenty->self, 3.0s cast, single-target
-    CharmingBaubles1 = 45497, // PariOfPlenty->self, no cast, single-target
-    BurningGleam = 45548, // 4A72->self, 7.0s cast, range 40 width 10 cross
-    ChillingGleam = 45501, // 4A73->self, 2.0s cast, range 40 width 10 cross
-    ThievesWeave = 46754, // PariOfPlenty->self, 3.0s cast, single-target
-    CurseFableflightLeft = 45438, // _Gen_FalseFlame->self, 24.1s cast, range 40 width 4 rect
-    CurseFableflightRight = 45439, // _Gen_FalseFlame->self, 24.1s cast, range 40 width 4 rect
-    CarpetTeleport = 45504, // 4A74->self, 1.0s cast, single-target
-    CarpetTeleport1 = 47153, // 4A74->location, no cast, single-target
-    Unravel = 45506, // 4A74->self, 3.0s cast, single-target
-    HighFirePowder = 45524, // Helper->location, no cast, range 15 circle
-    FirePowder = 45523, // Helper->self, no cast, range 15 circle
+    SpurningFlames = 45482,
+    ImpassionedSparksCast = 45483,
+    ImpassionedSparksVisual = 45484,
+    ImpassionedSparksFireball = 45485,
+    ImpassionedSparksPuddle = 45488,
+    BurningPillar = 45527,
+    HotFoot = 45542,
+    ScouringScorn = 45491,
 
-    SpurningFlames = 45482, // PariOfPlenty->self, 7.0s cast, range 40 circle
-    ImpassionedSparks = 45483, // PariOfPlenty->self, 5.0s cast, single-target
-    ImpassionedSparks1 = 45484, // PariOfPlenty->self, no cast, single-target
-    ImpassionedSparks2 = 45485, // Helper->self, 2.0s cast, single-target
-    ImpassionedSparks3 = 45488, // Helper->self, 6.0s cast, range 8 circle
-    BurningPillar = 45527, // Helper->self, 4.0s cast, range 10 circle
-    HotFoot = 45542, // Helper->player, no cast, range 10 circle
-    ScouringScorn = 45491, // PariOfPlenty->self, 6.0s cast, range 40 circle
+    Doubling = 47041,
+    FableflightRightFast = 45449,
+    FableflightLeftFast = 45450,
+    FableflightRightSlow = 45451,
+    FableflightLeftSlow = 45452,
+    Explosion = 45532,
+    UnmitigatedExplosion = 45533,
+    CarpetRideTetherRight = 46573,
+    CarpetRideTetherLeft = 46574,
 
-    Doubling = 47041, // PariOfPlenty->self, 3.0s cast, single-target
-    TowerExplosion = 45532, // Helper->self, 8.0s cast, range 4 circle
-    FableflightLeft = 45450, // 4A71->self, 8.0s cast, range 40 width 4 rect
-    FableflightLeft1 = 45452, // 4A71->self, 15.0s cast, range 40 width 4 rect
-    FableflightRight = 45449, // 4A71->self, 8.0s cast, range 40 width 4 rect
-    FableflightRight1 = 45451, // 4A71->self, 15.0s cast, range 40 width 4 rect
+    KindledFlame2Cast = 45540,
+    KindledFlame2 = 45541,
 
-    KindledFlame3 = 45540, // PariOfPlenty->self, 5.0s cast, single-target
-    KindledFlame2 = 45541, // Helper->players, no cast, range 6 circle
+    CharmdFlightFourNightsE = 47031,
+    CharmdFlightFourNightsW = 47032,
 
-    CharmedFlightFourNightsRight = 47031, // PariOfPlenty->self, 17.5s cast, range 40 width 4 rect
-    CharmedFlightFourNightsLeft = 47032, // PariOfPlenty->self, 17.5s cast, range 40 width 4 rect
-
-    CarpetRide = 45441, // PariOfPlenty/4A71->location, no cast, single-target
-    CarpetRide1 = 45442, // Helper->location, 2.0s cast, ???
-    CarpetRide2 = 45443, // Helper->location, 2.0s cast, ???
-    CarpetRide3 = 45440, // 4A71->location, no cast, single-target
-    CarpetRide4 = 46574, // Helper->location, 2.1s cast, ???
-    CarpetRide5 = 46573, // Helper->location, 2.1s cast, ???
+    SpurningFlamesPreEnrage = 45492,
+    ScouringScornEnrageCast = 45493,
+    ScouringScornEnrage = 45494,
+    UtterImmolation = 45525
 }
 
 public enum SID : uint
 {
-    MagicVulnerabilityUp = 2941, // Helper->player, extra=0x0
-    WitchHunt = 2970, // none->Boss, extra=0x3F5/0x3F4
-    DarkResistanceDown = 3619, // Helper->player, extra=0x0
-
-    CurseOfSolitude = 4615, // none->player, extra=0x0
-    CurseOfImmolation = 4617, // none->player, extra=0x0
-    CurseOfCompanionship = 4616, // none->player, extra=0x0
-    FireResistanceDownII = 2937, // Helper->player, extra=0x0
-
-    Fury = 4627, // PariOfPlenty->PariOfPlenty, extra=0x16B
-    ChainsOfPassionA = 4844, // none->player, extra=0x0
-    ChainsOfPassionB = 4845, // none->player, extra=0x0
-    BurningChains = 769, // none->player, extra=0x0
-    Prey = 2939, // none->player, extra=0x0
-
-    _Gen_ = 2056, // PariOfPlenty/_Gen_FalseFlame->PariOfPlenty/_Gen_FalseFlame/_Gen_IcyBauble/_Gen_FieryBauble, extra=0x3DA/0x3D9/0x448
+    WitchHunt = 2970,
+    FireResistanceDownII = 2937,
+    MagicVulnerabilityUp = 2941,
+    DarkResistanceDown = 3619,
+    CurseOfImmolation = 4617,
+    CurseOfSolitude = 4615,
+    CurseOfCompanionship = 4616,
+    Fury = 4627,
+    ChainsOfPassionA = 4844,
+    ChainsOfPassionB = 4845,
+    Burns = 3065,
+    BurningChains = 769,
+    Prey = 2939
 }
 
 public enum IconID : uint
 {
-    FalseFlameRight = 628, // _Gen_FalseFlame->self
-    FalseFlameLeft = 629, // _Gen_FalseFlame->self
-    FalseFlameRRight = 646, // _Gen_FalseFlame->self
-    FalseFlameRLeft = 647, // _Gen_FalseFlame->self
-
-    TankBuster = 342, // player->self
-
-    TurnRight = 624, // Boss->self
-    TurnLeft = 625, // Boss->self
-    TurnRLeft = 645, // Boss->self
-    TurnRRight = 644, // Boss->self
-
-    ChainsAppearing = 97, // player->self
-    HotFootSpread = 138, // player->self
-
-    BlueRug = 631, // player->self
-
-    StackIcon = 161, // player->self
+    LeftToRight3Sec = 624,
+    LeftToLeft3Sec = 625,
+    LeftToRight8Sec = 628,
+    LeftToLeft8Sec = 629,
+    RightToRight3Sec = 644,
+    RightToLeft3Sec = 645,
+    RightToRight8Sec = 646,
+    RightToLeft8Sec = 647,
+    Tankbuster = 342,
+    Chain = 97,
+    Spread10 = 138,
+    Rug = 631,
+    Stack = 161
 }
 
 public enum TetherID : uint
 {
-    CarpetRideTether = 355, // _Gen_->_Gen_
-    FireChain = 9, // player->player
-    TowerTether = 17, // _Gen_FalseFlame->player
+    Rug = 355,
+    Chain = 9,
+    Generic = 17
 }

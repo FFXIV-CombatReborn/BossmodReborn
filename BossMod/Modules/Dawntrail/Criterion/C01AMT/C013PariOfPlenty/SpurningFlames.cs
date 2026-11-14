@@ -1,30 +1,46 @@
 ﻿namespace BossMod.Dawntrail.Criterion.C01AMT.C013PariOfPlenty;
 
-class SpurningFlames(BossModule module) : Components.RaidwideCast(module, (uint)AID.SpurningFlames);
+sealed class ImpassionedSparks(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ImpassionedSparksPuddle, 8f);
+sealed class ChainsOfPassion(BossModule module) : Components.Chains(module, (uint)TetherID.Chain, (uint)AID.HotFoot, 35f);
+sealed class HotFoot(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.Spread10, (uint)AID.HotFoot, 10f, 5.2d);
 
-class ScouringScorn(BossModule module) : Components.RaidwideCast(module, (uint)AID.ScouringScorn);
-
-class ImpassionedSparks(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ImpassionedSparks3, new AOEShapeCircle(8f), 8);
-
-class BurningPillar(BossModule module) : Components.GenericAOEs(module)
+sealed class BurningPillar(BossModule module) : Components.VoidzoneAtCastTarget(module, 10f, (uint)AID.BurningPillar, GetPuddles, 0.8d)
 {
-    private readonly List<AOEInstance> aoes = [];
+    public int Groups;
+    private DateTime _prevCast;
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.BurningPillar)
+        base.OnCastStarted(caster, spell);
+        if (spell.Action.ID == WatchedAction)
         {
-            aoes.Add(new AOEInstance(new AOEShapeCircle(10f), caster.Position, default, default, Colors.Danger));
-            NumCasts++;
+            var now = WorldState.CurrentTime;
+            if (now > _prevCast.AddSeconds(1d))
+            {
+                ++Groups;
+            }
+            _prevCast = now;
         }
     }
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    private static Actor[] GetPuddles(BossModule module)
     {
-        return CollectionsMarshal.AsSpan(aoes);
+        var enemies = module.Enemies((uint)OID.BurnPuddle);
+        var count = enemies.Count;
+        if (count == 0)
+        {
+            return [];
+        }
+        var result = new Actor[count];
+        var index = 0;
+        for (var i = 0; i < count; ++i)
+        {
+            var z = enemies[i];
+            if (z.EventState != 7)
+            {
+                result[index++] = z;
+            }
+        }
+        return index == count ? result : result[..index];
     }
 }
-
-class BurningPillarSpreads(BossModule module) : Components.IconStackSpread(module, default, (uint)IconID.HotFootSpread, default, (uint)AID.HotFoot, default, 10f, default);
-
-class FireChains(BossModule module) : Components.Chains(module, (uint)TetherID.FireChain, default, 15F);

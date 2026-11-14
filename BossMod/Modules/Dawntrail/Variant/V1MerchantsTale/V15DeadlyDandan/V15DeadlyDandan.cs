@@ -8,7 +8,7 @@ sealed class TidalGuillotine(BossModule module) : Components.SimpleAOEs(module, 
 sealed class SwallowedSea(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SwallowedSea, new AOEShapeCone(50f, 60f.Degrees())); // could draw earlier by checking action timeline 0x11D1
 sealed class UnfathomableHorror(BossModule module) : Components.ConcentricAOEs(module, _shapes)
 {
-    private static readonly AOEShape[] _shapes = [new AOEShapeCircle(8f), new AOEShapeDonut(8f, 16f), new AOEShapeDonut(16f, 24f), new AOEShapeDonut(24f, 32f)];
+    private static readonly AOEShape[] _shapes = [new AOEShapeCircle(8f), new AOEShapeDonut(8f, 16f), new AOEShapeDonut(16f, 24f), new AOEShapeDonut(24f, 36f)];
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {

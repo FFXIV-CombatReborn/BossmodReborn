@@ -44,6 +44,7 @@ public enum AID : uint
     BigBurst = 45758, // 4AD9->self, 4.0s cast, range 15 circle
     FallingRock = 45759, // Helper->self, no cast, range 9 width 6 rect
     BitingScratch = 45763, // Rukhkh->self, 5.0s cast, range 40 90.000-degree cone
+    Beaksbane = 45765,
 }
 
 public enum TetherID : uint

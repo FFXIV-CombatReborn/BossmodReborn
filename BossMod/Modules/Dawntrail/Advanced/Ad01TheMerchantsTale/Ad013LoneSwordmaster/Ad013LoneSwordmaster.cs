@@ -15,14 +15,19 @@ sealed class DebuffTracker(BossModule module) : BossComponent(module)
     }
     public uint[] Malefic = new uint[4];
 
+    private static readonly uint[] _debuffsNorth = [(uint)SID.MaleficN, (uint)SID.MaleficNE, (uint)SID.MaleficNW, (uint)SID.MaleficNEW, (uint)SID.MaleficNS, (uint)SID.MaleficNSE, (uint)SID.MaleficNSW, (uint)SID.MaleficNSEW];
+    private static readonly uint[] _debuffsEast = [(uint)SID.MaleficE, (uint)SID.MaleficEW, (uint)SID.MaleficSE, (uint)SID.MaleficSEW, (uint)SID.MaleficNE, (uint)SID.MaleficNEW, (uint)SID.MaleficNSE, (uint)SID.MaleficNSEW];
+    private static readonly uint[] _debuffsWest = [(uint)SID.MaleficW, (uint)SID.MaleficEW, (uint)SID.MaleficSW, (uint)SID.MaleficSEW, (uint)SID.MaleficNW, (uint)SID.MaleficNEW, (uint)SID.MaleficNSW, (uint)SID.MaleficNSEW];
+    private static readonly uint[] _debuffsSouth = [(uint)SID.MaleficS, (uint)SID.MaleficSE, (uint)SID.MaleficSW, (uint)SID.MaleficSEW, (uint)SID.MaleficNS, (uint)SID.MaleficNSE, (uint)SID.MaleficNSW, (uint)SID.MaleficNSEW];
+
     public uint[] GetDebuffsInDirections(Direction direction)
     {
         return direction switch
         {
-            Direction.North => [(uint)SID.MaleficN, (uint)SID.MaleficNE, (uint)SID.MaleficNW, (uint)SID.MaleficNEW, (uint)SID.MaleficNS, (uint)SID.MaleficNSE, (uint)SID.MaleficNSW, (uint)SID.MaleficNSEW],
-            Direction.East => [(uint)SID.MaleficE, (uint)SID.MaleficEW, (uint)SID.MaleficSE, (uint)SID.MaleficSEW, (uint)SID.MaleficNE, (uint)SID.MaleficNEW, (uint)SID.MaleficNSE, (uint)SID.MaleficNSEW],
-            Direction.West => [(uint)SID.MaleficW, (uint)SID.MaleficEW, (uint)SID.MaleficSW, (uint)SID.MaleficSEW, (uint)SID.MaleficNW, (uint)SID.MaleficNEW, (uint)SID.MaleficNSW, (uint)SID.MaleficNSEW],
-            Direction.South => [(uint)SID.MaleficS, (uint)SID.MaleficSE, (uint)SID.MaleficSW, (uint)SID.MaleficSEW, (uint)SID.MaleficNS, (uint)SID.MaleficNSE, (uint)SID.MaleficNSW, (uint)SID.MaleficNSEW],
+            Direction.North => _debuffsNorth,
+            Direction.East => _debuffsEast,
+            Direction.West => _debuffsWest,
+            Direction.South => _debuffsSouth,
             _ => []
         };
     }
@@ -112,7 +117,11 @@ sealed class DebuffTracker(BossModule module) : BossComponent(module)
     {
         if (status.ID is >= (uint)SID.MaleficE and <= (uint)SID.MaleficNSEW)
         {
-            Malefic[Raid.FindSlot(actor.InstanceID)] = status.ID;
+            var slot = Raid.FindSlot(actor.InstanceID);
+            if ((uint)slot < (uint)Malefic.Length)
+            {
+                Malefic[slot] = status.ID;
+            }
         }
     }
 
@@ -123,7 +132,11 @@ sealed class DebuffTracker(BossModule module) : BossComponent(module)
             var remaining = (status.ExpireAt - WorldState.CurrentTime).TotalSeconds;
             if (remaining < 2d)
             {
-                Malefic[Raid.FindSlot(actor.InstanceID)] = 0;
+                var slot = Raid.FindSlot(actor.InstanceID);
+                if ((uint)slot < (uint)Malefic.Length)
+                {
+                    Malefic[slot] = 0;
+                }
             }
         }
     }
@@ -309,47 +322,31 @@ sealed class MaleficPortent(BossModule module) : Components.CastCounter(module, 
     }
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        var keys = _tethers.Keys.ToArray();
-        var count = keys.Length;
-        if (count == 0)
+        if (_tethers.Count == 0)
             return;
 
         if (_tethered[slot])
         {
-            var tether = _tethers[actor];
-            if (!IsPlayerSafe(actor, tether))
+            if (_tethers.TryGetValue(actor, out var ownTether) && !IsPlayerSafe(actor, ownTether))
             {
                 hints.Add("Pass tether to another player!");
             }
         }
         else
         {
-            var canIntercept = false;
-            for (var i = 0; i < count; ++i)
+            foreach (var (player, tether) in _tethers)
             {
-                var player = keys[i];
-                var tether = _tethers[player];
-                if (!IsPlayerSafe(player, tether))
+                if (!IsPlayerSafe(player, tether) && IsPlayerSafe(actor, tether))
                 {
-                    if (IsPlayerSafe(actor, tether))
-                    {
-                        canIntercept = true;
-                        break;
-                    }
+                    hints.Add("Grab the tether!");
+                    break;
                 }
-            }
-
-            if (canIntercept && !_tethered[slot])
-            {
-                hints.Add("Grab the tether!");
             }
         }
     }
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
-        var keys = _tethers.Keys.ToArray();
-        var count = keys.Length;
-        if (count == 0)
+        if (_tethers.Count == 0)
             return;
         /*
         for (var i = 0; i < count; ++i)
@@ -365,9 +362,8 @@ sealed class MaleficPortent(BossModule module) : Components.CastCounter(module, 
             }
         }
         */
-        if (_tethered[pcSlot])
+        if (_tethered[pcSlot] && _tethers.TryGetValue(pc, out var tether))
         {
-            var tether = _tethers[pc];
             var isTetherSafe = IsPlayerSafe(pc, tether);
             Arena.AddLine(Module.PrimaryActor.Position, pc.Position, isTetherSafe ? Colors.Safe : default);
 
@@ -393,13 +389,9 @@ sealed class MaleficPortent(BossModule module) : Components.CastCounter(module, 
         }
         else
         {
-            for (var i = 0; i < count; ++i)
+            foreach (var (player, otherTether) in _tethers)
             {
-                var player = keys[i];
-                var tether = _tethers[player];
-                var isTetherSafe = IsPlayerSafe(player, tether);
-
-                if (!isTetherSafe && IsPlayerSafe(pc, tether))
+                if (!IsPlayerSafe(player, otherTether) && IsPlayerSafe(pc, otherTether))
                 {
                     Arena.AddLine(Module.PrimaryActor.Position, player.Position);
                     Arena.ZoneCircleOutline(player.Position, 1.5f);
@@ -412,17 +404,16 @@ sealed class MaleficPortent(BossModule module) : Components.CastCounter(module, 
         if (!_tethered[playerSlot])
             return PlayerPriority.Irrelevant;
 
-        if (!_tethers.ContainsKey(player))
+        if (!_tethers.TryGetValue(player, out var tetherID))
             return PlayerPriority.Irrelevant;
 
-        var tetherID = _tethers[player];
         return IsPlayerSafe(player, tetherID) ? PlayerPriority.Normal : IsPlayerSafe(pc, tetherID) ? PlayerPriority.Danger : PlayerPriority.Normal;
     }
     private bool IsPlayerSafe(Actor pc, uint tetherID)
     {
         // each tether (N/E/W/S) can have up to 8 bad statuses
         var slot = Raid.FindSlot(pc.InstanceID);
-        if (slot == -1)
+        if ((uint)slot >= (uint)_debuffs.Malefic.Length)
             return true;
 
         var malefic = _debuffs.Malefic[slot];
@@ -585,6 +576,6 @@ sealed class SilentEight(BossModule module) : Components.GenericBaitAway(module)
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.LoneSwordmaster, Contributors = "", Category = BossModuleInfo.Category.VariantCriterion,
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.LoneSwordmaster, Contributors = "LTS, gynorhino", Category = BossModuleInfo.Category.VariantCriterion,
 GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1084u, NameID = 14323u, SortOrder = 3)]
 public sealed class Ad013LoneSwordmaster(WorldState ws, Actor primary) : BossModule(ws, primary, new(170f, -815f), new ArenaBoundsSquare(20f));

@@ -1,4 +1,4 @@
-namespace BossMod.Dawntrail.Variant.V01MerchantsTale.V07StonePuppet;
+﻿namespace BossMod.Dawntrail.Variant.V01MerchantsTale.V07StonePuppet;
 
 public enum OID : uint
 {
@@ -61,7 +61,18 @@ sealed class RockHints(BossModule module) : BossComponent(module)
         {
             if (actor == MagneticTarget)
             {
-                var closestRock = rocks.MinBy(actor.DistanceToHitbox);
+                Actor? closestRock = null;
+                var minDistance = float.MaxValue;
+                for (var i = 0; i < count; ++i)
+                {
+                    var rock = rocks[i];
+                    var distance = actor.DistanceToHitbox(rock);
+                    if (distance < minDistance)
+                    {
+                        minDistance = distance;
+                        closestRock = rock;
+                    }
+                }
                 if (closestRock != null)
                 {
                     hints.AddForbiddenZone(new SDInvertedCircle(closestRock.Position, 4f));
