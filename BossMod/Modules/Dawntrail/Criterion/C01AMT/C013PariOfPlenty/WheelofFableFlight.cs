@@ -1,87 +1,101 @@
 ﻿namespace BossMod.Dawntrail.Criterion.C01AMT.C013PariOfPlenty;
 
-// TODO figure out who gets the stack - its always support / DPS - but can we tell who?
-class WheelOfFableFlight(BossModule module) : Components.GenericAOEs(module)
+sealed class WheelOfFireflight(BossModule module) : Components.GenericAOEs(module)
 {
-    private readonly List<AOEInstance> aoes = [];
-    private Angle offset;
+    private static readonly AOEShapeCone _cone = new(40f, 90f.Degrees());
+    private readonly List<AOEInstance> _predicted = [];
+    private WheelRectStart? _start;
 
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
-    {
-        if (spell.Action.ID is var id && id == (uint)AID.WheelOfFableflightRight)
-        {
-            offset = -90.Degrees();
-        }
-        else if (spell.Action.ID == (uint)AID.WheelOfFableflightLeft)
-        {
-            offset = 90.Degrees();
-        }
-    }
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_predicted);
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
-        if (iconID == (uint)IconID.FalseFlameRight)
+        float deg;
+        switch (iconID)
         {
-            aoes.Add(new AOEInstance(new AOEShapeRect(40, 40, 0, offset), actor.Position, actor.Rotation - 90.Degrees(), WorldState.CurrentTime, Colors.AOE));
+            case (uint)IconID.LeftToRight8Sec:
+            case (uint)IconID.RightToRight8Sec:
+                deg = -90f;
+                break;
+            case (uint)IconID.LeftToLeft8Sec:
+            case (uint)IconID.RightToLeft8Sec:
+                deg = 90f;
+                break;
+            default:
+                return;
         }
-
-        else if (iconID == (uint)IconID.FalseFlameLeft)
+        _start ??= Module.FindComponent<WheelRectStart>();
+        if (_start == null)
         {
-            aoes.Add(new AOEInstance(new AOEShapeRect(40, 40, 0, -offset), actor.Position, actor.Rotation - 90.Degrees(), WorldState.CurrentTime, Colors.AOE));
+            return;
         }
-
-        else if (iconID == (uint)IconID.FalseFlameRRight)
+        var casters = CollectionsMarshal.AsSpan(_start.Casters);
+        var len = casters.Length;
+        var pos = actor.Position;
+        for (var i = 0; i < len; ++i)
         {
-            aoes.Add(new AOEInstance(new AOEShapeRect(40, 40, 0, offset), actor.Position, actor.Rotation - 90.Degrees(), WorldState.CurrentTime, Colors.AOE));
-        }
-
-        else if (iconID == (uint)IconID.FalseFlameRLeft)
-        {
-            aoes.Add(new AOEInstance(new AOEShapeRect(40, 40, 0, -offset), actor.Position, actor.Rotation - 90.Degrees(), WorldState.CurrentTime, Colors.AOE));
-        }
-    }
-
-    public override void OnEventCast(Actor caster, ActorCastEvent spell)
-    {
-        if (spell.Action.ID is (uint)AID.WheelOfFireflight or (uint)AID.WheelOfFireflight1 or (uint)AID.WheelOfFireflight2 or (uint)AID.WheelOfFireflight3)
-        {
-            aoes.Clear();
-            ++NumCasts;
-        }
-    }
-
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
-    {
-        return CollectionsMarshal.AsSpan(aoes);
-    }
-}
-
-class WheelofFableFlightStackSpread(BossModule module) : Components.UniformStackSpread(module, 6f, 6f, 2)
-{
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
-    {
-        if (spell.Action.ID is var id && id == (uint)AID.KindledFlameStack)
-        {
-            AddStacks(Raid.WithoutSlot().Where(p => p.Class.IsSupport()));
-        }
-        else if (id == (uint)AID.ScatteredKindlingSpread)
-        {
-            foreach (var (i, player) in Raid.WithSlot(false, true, true))
+            ref var c = ref casters[i];
+            if (c.Origin.AlmostEqual(pos, 0.5f))
             {
-                AddSpread(player);
+                _predicted.Add(new(_cone, c.Origin, c.Rotation + deg.Degrees(), c.Activation.AddSeconds(10d)));
+                return;
             }
         }
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID is var id && id == (uint)AID.KindledFlame1)
+        if (spell.Action.ID is (uint)AID.WheelOfFireflightLTRBack or (uint)AID.WheelOfFireflightLTRFront or (uint)AID.WheelOfFireflightRTLFront or (uint)AID.WheelOfFireflightRTLBack)
         {
-            Stacks.Clear();
+            ++NumCasts;
+            _predicted.Clear();
         }
-        else if (id == (uint)AID.ScatteredKindling1)
+    }
+}
+
+sealed class Kindling(BossModule module) : Components.UniformStackSpread(module, 6f, 6f)
+{
+    public int NumCasts;
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        switch (spell.Action.ID)
         {
+            case (uint)AID.ScatteredKindlingCast:
+                AddSpreads(Raid.WithoutSlot(false, true, true), Module.CastFinishAt(spell));
+                break;
+            case (uint)AID.KindledFlame1Cast:
+                var party = Raid.WithoutSlot(false, true, true);
+                var len = party.Length;
+                var activation = Module.CastFinishAt(spell);
+                var added = 0;
+                for (var i = 0; i < len && added < 2; ++i)
+                {
+                    if (party[i].Class.IsSupport())
+                    {
+                        AddStack(party[i], activation);
+                        ++added;
+                    }
+                }
+                for (var i = 0; i < len && added < 2; ++i)
+                {
+                    if (!party[i].Class.IsSupport())
+                    {
+                        AddStack(party[i], activation);
+                        ++added;
+                    }
+                }
+                break;
+        }
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID is (uint)AID.ScatteredKindling or (uint)AID.KindledFlame1)
+        {
+            ++NumCasts;
             Spreads.Clear();
+            Stacks.Clear();
         }
     }
 }

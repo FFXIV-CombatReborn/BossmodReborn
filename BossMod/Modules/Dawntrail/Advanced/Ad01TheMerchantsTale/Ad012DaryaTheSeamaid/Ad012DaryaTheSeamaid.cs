@@ -259,18 +259,14 @@ sealed class EchoedSerenade(BossModule module) : Components.GenericAOEs(module)
         if (len == 0)
             return [];
 
-        List<AOEInstance> upcoming = [];
         var firstAct = aoes[0].Activation;
-
-        for (var i = 0; i < len; ++i)
+        var count = 1;
+        while (count < len && aoes[count].Activation == firstAct)
         {
-            if (aoes[i].Activation == firstAct)
-            {
-                upcoming.Add(aoes[i]);
-            }
+            ++count;
         }
 
-        return CollectionsMarshal.AsSpan(upcoming);
+        return aoes[..count];
     }
 
     public override void OnEventVFX(Actor actor, uint vfxID, ulong targetID)
@@ -383,18 +379,14 @@ sealed class SunkenTreasure(BossModule module) : Components.GenericAOEs(module)
         if (len == 0)
             return [];
 
-        List<AOEInstance> upcoming = [];
         var firstAct = aoes[0].Activation;
-
-        for (var i = 0; i < len; ++i)
+        var count = 1;
+        while (count < len && aoes[count].Activation == firstAct)
         {
-            if (aoes[i].Activation == firstAct)
-            {
-                upcoming.Add(aoes[i]);
-            }
+            ++count;
         }
 
-        return CollectionsMarshal.AsSpan(upcoming);
+        return aoes[..count];
     }
     public override void OnActorEAnim(Actor actor, uint state)
     {
@@ -422,6 +414,6 @@ sealed class SunkenTreasure(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.DaryaTheSeaMaid, Contributors = "", Category = BossModuleInfo.Category.VariantCriterion,
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.DaryaTheSeaMaid, Contributors = "LTS, gynorhino", Category = BossModuleInfo.Category.VariantCriterion,
 GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1084u, NameID = 14291u, SortOrder = 2)]
 public sealed class Ad012DaryaTheSeamaid(WorldState ws, Actor primary) : BossModule(ws, primary, new(375f, 530f), new ArenaBoundsSquare(20f));

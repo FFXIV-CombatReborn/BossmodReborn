@@ -1,225 +1,233 @@
 ﻿namespace BossMod.Dawntrail.Criterion.C01AMT.C013PariOfPlenty;
 
-class WitchHunt(BossModule module) : Components.GenericBaitAway(module, (uint)AID.FellFirework)
+sealed class FourLongNightsSide(BossModule module) : Components.GenericAOEs(module)
 {
-    private enum Proximity { Close, Far }
-    private readonly List<Proximity> Order = [];
-    private readonly DateTime[] Vulns = new DateTime[PartyState.MaxPartySize];
-    private DateTime NextActivation;
-    public bool Active => Order.Count > 0;
+    private static readonly AOEShapeCone _cone = new(40f, 90f.Degrees());
+    private static readonly int[] _rotateL = [3, 0, 1, 2];
+    private static readonly int[] _rotateR = [1, 2, 3, 0];
+    private static readonly int[] _invert = [2, 3, 0, 1];
+    private static readonly Angle[] _angles = [180f.Degrees(), 90f.Degrees(), default, -90f.Degrees()];
+    private static readonly string[] _names = ["N", "E", "S", "W"];
+    private readonly List<AOEInstance> _aoes = [];
+    private readonly List<int> _sides = [];
+    private string _hint = "";
+    private int _prev;
+    private DateTime _start;
 
-    public override void OnStatusGain(Actor actor, ref ActorStatus status)
-    {
-        if (actor.OID == (uint)OID.PariOfPlenty && status.ID == (uint)SID.WitchHunt)
-        {
-            Order.Add(status.Extra == 0x3F4 ? Proximity.Close : Proximity.Far);
-        }
-        else if (status.ID == (uint)SID.DarkResistanceDown)
-        {
-            var slot = Raid.FindSlot(actor.InstanceID);
-            Vulns[slot] = status.ExpireAt;
-        }
-    }
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoes.Count != 0 ? CollectionsMarshal.AsSpan(_aoes)[..1] : [];
 
     public override void AddGlobalHints(Actor actor, GlobalHints hints)
     {
-        if (Order.Count > 0)
+        if (_hint.Length != 0)
         {
-            var hintString = new StringBuilder();
-
-            for (var i = 0; i < Order.Count; ++i)
-            {
-                if (i > 0)
-                {
-                    hintString.Append(" -> ");
-                }
-                hintString.Append(Order[i].ToString());
-            }
-
-            hints.Add(hintString.ToString());
+            hints.Add(_hint);
         }
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID is (uint)AID.FireflightFourLongNightsRight or (uint)AID.FireflightFourLongNightsLeft)
+        switch (spell.Action.ID)
         {
-            NextActivation = WorldState.FutureTime(19.2d);
-        }
-    }
-
-    public override void OnEventCast(Actor caster, ActorCastEvent spell)
-    {
-        if (spell.Action.ID == WatchedAction)
-        {
-            if (++NumCasts > 0 && Order.Count > 0)
-            {
-                Order.RemoveAt(0);
-                if (Order.Count > 0)
-                {
-                    NextActivation = WorldState.FutureTime(3.1d);
-                    NumCasts++;
-                }
-            }
-        }
-    }
-
-    public override void Update()
-    {
-        CurrentBaits.Clear();
-
-        if (!Active)
-        {
-            return;
-        }
-
-        var targets = Raid.WithoutSlot(false, true, true).SortedByRange(Module.PrimaryActor.Position);
-        targets = Order[0] == Proximity.Close ? targets.Take(1) : targets.TakeLast(1);
-        foreach (var t in targets)
-        {
-            CurrentBaits.Add(new(t, t, new AOEShapeCircle(3f), NextActivation));
-        }
-
-        ForbiddenPlayers = Raid.WithSlot(false, true, true).Where(p => Vulns[p.Item1] > NextActivation).Mask();
-    }
-}
-
-class WitchHuntStack(BossModule module) : Components.GenericBaitStack(module, (uint)AID.FellFirework, true)
-{
-    private DateTime NextActivation;
-    private int RemainingStacks;
-    public bool Active => RemainingStacks > 0;
-
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
-    {
-        if (spell.Action.ID is (uint)AID.FireflightFourLongNightsRight or (uint)AID.FireflightFourLongNightsLeft)
-        {
-            NextActivation = WorldState.FutureTime(17.0f + 2.2f);
-        }
-    }
-
-    public override void OnStatusGain(Actor actor, ref ActorStatus status)
-    {
-        if (actor.OID == (uint)OID.PariOfPlenty && status.ID == (uint)SID.WitchHunt)
-        {
-            RemainingStacks++;
-        }
-    }
-
-    public override void OnEventCast(Actor caster, ActorCastEvent spell)
-    {
-        if (spell.Action.ID == (uint)AID.FireWell)
-        {
-            if (RemainingStacks > 0)
-            {
-                RemainingStacks--;
-            }
-        }
-    }
-
-    public override void Update()
-    {
-        CurrentBaits.Clear();
-
-        if (!Active)
-        {
-            return;
-        }
-
-        var targets = Raid.WithoutSlot().SortedByRange(Module.PrimaryActor.Position);
-        var target = targets.ElementAt(1);
-        CurrentBaits.Add(new(target, target, new AOEShapeCircle(3), NextActivation));
-    }
-
-    public override void AddHints(int slot, Actor actor, TextHints hints) { }
-}
-
-class FireFlightFourLongNight(BossModule module) : Components.GenericAOEs(module)
-{
-    private readonly List<AOEInstance> aoes = [];
-    private readonly List<Angle> rotations = [];
-    public bool startLeft = false;
-    private IconID lastAction = 0;
-    private Angle bossAngle;
-
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
-    {
-        if (spell.Action.ID is var id && id == (uint)AID.FireflightFourLongNightsRight)
-        {
-            startLeft = false;
-        }
-        else if (id == (uint)AID.FireflightFourLongNightsLeft)
-        {
-            startLeft = true;
-        }
-    }
-
-    public override void OnEventCast(Actor caster, ActorCastEvent spell)
-    {
-        if (spell.Action.ID is (uint)AID.WheelOfFireflight or (uint)AID.WheelOfFireflight1 or (uint)AID.WheelOfFireflight2 or (uint)AID.WheelOfFireflight3)
-        {
-            if (rotations.Count > 0)
-            {
-                rotations.RemoveAt(0);
-                ++NumCasts;
-            }
+            case (uint)AID.FireflightFourLongNightsE:
+            case (uint)AID.FireflightFourLongNightsW:
+                SetStart(Module.CastFinishAt(spell, 2.2d));
+                break;
+            case (uint)AID.CharmdFlightFourNightsE:
+            case (uint)AID.CharmdFlightFourNightsW:
+                SetStart(Module.CastFinishAt(spell, 2.1d));
+                break;
         }
     }
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
-        if (iconID is (uint)IconID.TurnLeft or (uint)IconID.TurnRight or (uint)IconID.TurnRLeft or (uint)IconID.TurnRRight)
+        switch (iconID)
         {
-            if (lastAction == 0)
-            {
-                if (startLeft)
-                {
-                    bossAngle = iconID is (uint)IconID.TurnRight or (uint)IconID.TurnRRight ? 180.Degrees() : default;
-                }
-
-                if (!startLeft)
-                {
-                    bossAngle = iconID is (uint)IconID.TurnRight or (uint)IconID.TurnRRight ? default : 180.Degrees();
-                }
-            }
-
-            if (lastAction == (IconID)iconID)
-            {
-                bossAngle += 180.Degrees();
-            }
-
-            rotations.Add(bossAngle);
-            lastAction = (IconID)iconID;
+            case (uint)IconID.LeftToRight3Sec:
+                AddSide(3, _rotateR);
+                break;
+            case (uint)IconID.RightToRight3Sec:
+                AddSide(1, _rotateR);
+                break;
+            case (uint)IconID.LeftToLeft3Sec:
+                AddSide(3, _rotateL);
+                break;
+            case (uint)IconID.RightToLeft3Sec:
+                AddSide(1, _rotateL);
+                break;
         }
     }
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        aoes.Clear();
-
-        var shown = 0;
-        foreach (var rotation in rotations.Take(2))
+        if (spell.Action.ID is (uint)AID.WheelOfFireflightLTRBack or (uint)AID.WheelOfFireflightLTRFront or (uint)AID.WheelOfFireflightRTLFront or (uint)AID.WheelOfFireflightRTLBack)
         {
-            var color = (shown == 0) ? Colors.Danger : default;
-            aoes.Add(new AOEInstance(new AOEShapeCone(40f, 90f.Degrees()), Module.PrimaryActor.Position, rotation, default, color, shown == 0));
-            shown++;
+            ++NumCasts;
+            if (_aoes.Count != 0)
+            {
+                _aoes.RemoveAt(0);
+                _sides.RemoveAt(0);
+                UpdateHint();
+            }
         }
+    }
 
-        return CollectionsMarshal.AsSpan(aoes);
+    private void SetStart(DateTime start)
+    {
+        _start = start;
+        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        var len = aoes.Length;
+        for (var i = 0; i < len; ++i)
+        {
+            aoes[i].Activation = start.AddSeconds(3d * i);
+        }
+    }
+
+    private void AddSide(int initial, int[] rotation)
+    {
+        if (_aoes.Count == 0 && NumCasts == 0)
+        {
+            _prev = initial;
+        }
+        var side = rotation[_prev];
+        _aoes.Add(new(_cone, Module.PrimaryActor.Position, _angles[side], _start.AddSeconds(3d * (_aoes.Count + NumCasts))));
+        _sides.Add(side);
+        _prev = _invert[_prev];
+        UpdateHint();
+    }
+
+    private void UpdateHint()
+    {
+        var count = _sides.Count;
+        if (count == 0)
+        {
+            _hint = "";
+            return;
+        }
+        var sb = new StringBuilder("Side: ");
+        for (var i = 0; i < count; ++i)
+        {
+            if (i != 0)
+            {
+                sb.Append(", ");
+            }
+            sb.Append(_names[_sides[i]]);
+        }
+        _hint = sb.ToString();
     }
 }
 
-class CharmedFlightFourNights(BossModule module) : FireFlightFourLongNight(module)
+sealed class FourLongNightsBait(BossModule module) : Components.UniformStackSpread(module, 3f, 3f, 3)
 {
+    private readonly List<(bool Close, DateTime Activation)> _baits = [];
+    private string _hint = "";
+    private DateTime _start;
+    public int NumStacks;
+    public int NumSpreads;
+
+    public override void AddGlobalHints(Actor actor, GlobalHints hints)
+    {
+        if (_hint.Length != 0)
+        {
+            hints.Add(_hint);
+        }
+    }
+
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID is var id && id == (uint)AID.CharmedFlightFourNightsRight)
+        if (spell.Action.ID is (uint)AID.FireflightFourLongNightsE or (uint)AID.FireflightFourLongNightsW)
         {
-            startLeft = false;
+            _start = Module.CastFinishAt(spell, 2.2d);
         }
-        else if (id == (uint)AID.CharmedFlightFourNightsLeft)
+    }
+
+    public override void OnStatusGain(Actor actor, ref ActorStatus status)
+    {
+        if (status.ID == (uint)SID.WitchHunt && status.Extra is 0x3F4 or 0x3F5)
         {
-            startLeft = true;
+            _baits.Add((status.Extra == 0x3F4, _start.AddSeconds(3d * (_baits.Count + NumSpreads))));
+            UpdateHint();
         }
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        switch (spell.Action.ID)
+        {
+            case (uint)AID.FellFirework:
+                ++NumSpreads;
+                Advance();
+                break;
+            case (uint)AID.FireWell:
+                ++NumStacks;
+                Advance();
+                break;
+        }
+    }
+
+    public override void Update()
+    {
+        Stacks.Clear();
+        Spreads.Clear();
+        if (_baits.Count == 0)
+        {
+            return;
+        }
+        var party = Raid.WithoutSlot(false, true, true);
+        var len = party.Length;
+        if (len < 2)
+        {
+            return;
+        }
+        var origin = Module.PrimaryActor.Position;
+        Actor closest = party[0], farthest = party[0];
+        float minDist = float.MaxValue, maxDist = float.MinValue;
+        for (var i = 0; i < len; ++i)
+        {
+            var p = party[i];
+            var dist = (p.Position - origin).LengthSq();
+            if (dist < minDist)
+            {
+                minDist = dist;
+                closest = p;
+            }
+            if (dist > maxDist)
+            {
+                maxDist = dist;
+                farthest = p;
+            }
+        }
+        var (close, activation) = _baits[0];
+        AddSpread(close ? closest : farthest, activation);
+        AddStack(close ? farthest : closest, activation);
+    }
+
+    private void Advance()
+    {
+        if (NumStacks == NumSpreads && _baits.Count != 0)
+        {
+            _baits.RemoveAt(0);
+            UpdateHint();
+        }
+    }
+
+    private void UpdateHint()
+    {
+        var count = _baits.Count;
+        if (count == 0)
+        {
+            _hint = "";
+            return;
+        }
+        var sb = new StringBuilder("Bait: ");
+        for (var i = 0; i < count; ++i)
+        {
+            if (i != 0)
+            {
+                sb.Append(", ");
+            }
+            sb.Append(_baits[i].Close ? "Close" : "Far");
+        }
+        _hint = sb.ToString();
     }
 }

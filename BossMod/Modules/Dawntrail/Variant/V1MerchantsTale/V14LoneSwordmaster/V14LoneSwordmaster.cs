@@ -511,7 +511,7 @@ sealed class UnyieldingWill(BossModule module) : Components.GenericBaitAway(modu
             _tethers.Add((source, target));
             CurrentBaits.Add(new(source, target, new AOEShapeRect(default, 2f)));
 
-            var isTargetPlayer = Raid.WithoutSlot().Contains(target);
+            var isTargetPlayer = Raid.FindSlot(target.InstanceID) >= 0;
 
             if (!isTargetPlayer)
                 return;

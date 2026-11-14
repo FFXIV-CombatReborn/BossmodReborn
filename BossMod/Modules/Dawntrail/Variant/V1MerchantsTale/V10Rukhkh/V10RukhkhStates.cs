@@ -13,6 +13,7 @@ class V10RukhkhStates : StateMachineBuilder
             .ActivateOnEnter<WindborneSeeds>()
             .ActivateOnEnter<StreamingSands>()
             .ActivateOnEnter<BitingScratch>()
+            .ActivateOnEnter<Beaksbane>()
             .ActivateOnEnter<BigBurst>()
             .ActivateOnEnter<FallingRock>();
     }

@@ -1,89 +1,164 @@
 ﻿namespace BossMod.Dawntrail.Criterion.C01AMT.C011DaryaTheSeaMaid;
 
-// TODO rewrite this class -> there is a better way to do tiles rather than making your own grid map
-class AquaSpear(BossModule module) : Components.GenericAOEs(module)
+sealed class AquaSpearCast(BossModule module) : Components.SimpleAOEs(module, (uint)AID.WaterZone1, new AOEShapeRect(8f, 4f));
+
+sealed class AquaSpearPlayer(BossModule module) : Components.GenericAOEs(module, (uint)AID.WaterZone3)
 {
-    private readonly List<AOEInstance> aoes = [];
+    private static readonly AOEShapeRect _tile = new(4f, 4f, 4f);
+    private readonly List<AOEInstance> _aoes = [];
+    private DateTime _activation;
 
-    private const float cellSize = 8f;
-    private const int gridSize = 5;
-    private readonly AOEShapeRect cellShape = new(4f, 4f, 4f);
-
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(aoes);
-
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        if (spell.Action.ID == (uint)AID.WaterZone1)
+        if (_activation == default)
         {
-            var idx = PositionToIndex(caster.Position);
-            var pos = IndexToPosition(idx);
-            aoes.Add(new AOEInstance(cellShape, pos, default, WorldState.CurrentTime, Colors.Danger));
+            return [];
+        }
+        _aoes.Clear();
+        var party = Raid.WithoutSlot(false, true, true);
+        var len = party.Length;
+        for (var i = 0; i < len; ++i)
+        {
+            var p = party[i];
+            if (p != actor)
+            {
+                _aoes.Add(new(_tile, C011DaryaTheSeaMaid.TileCenter(p.Position), default, _activation));
+            }
+        }
+        return CollectionsMarshal.AsSpan(_aoes);
+    }
+
+    public override void DrawArenaForeground(int pcSlot, Actor pc)
+    {
+        if (_activation != default)
+        {
+            _tile.Outline(Arena, C011DaryaTheSeaMaid.TileCenter(pc.Position), default, Colors.Danger);
         }
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID is (uint)AID.WaterZone3 or (uint)AID.WaterZone2)
+        if (spell.Action.ID == WatchedAction)
         {
-            var idx = PositionToIndex(caster.Position);
-            var pos = IndexToPosition(idx);
-            aoes.Add(new AOEInstance(cellShape, pos, default, WorldState.CurrentTime, Colors.Danger));
-            NumCasts++;
+            ++NumCasts;
+            _activation = default;
         }
+    }
+
+    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
+    {
+        if (iconID == (uint)IconID.YellowTile)
+        {
+            _activation = WorldState.FutureTime(6d);
+        }
+    }
+}
+
+sealed class AquaSpearTile(BossModule module) : Components.GenericAOEs(module)
+{
+    private static readonly AOEShapeRect _tile = new(4f, 4f, 4f);
+    private readonly List<(Actor Actor, DateTime Activation)> _tiles = [];
+    private readonly List<AOEInstance> _aoes = [];
+
+    public bool Active => _tiles.Count != 0;
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        var count = _tiles.Count;
+        if (count == 0)
+        {
+            return [];
+        }
+        _aoes.Clear();
+        for (var i = 0; i < count; ++i)
+        {
+            var (tile, activation) = _tiles[i];
+            if (tile.EventState != 7)
+            {
+                _aoes.Add(new(_tile, tile.Position, default, activation));
+            }
+        }
+        return CollectionsMarshal.AsSpan(_aoes);
+    }
+
+    public override void OnActorCreated(Actor actor)
+    {
+        if (actor.OID == (uint)OID.WaterTile)
+        {
+            _tiles.Add((actor, WorldState.FutureTime(2d)));
+        }
+    }
+
+    public override void OnActorEAnim(Actor actor, uint state)
+    {
+        if (state == (uint)STATE.ThirdState && actor.OID == (uint)OID.WaterTile)
+        {
+            for (var i = _tiles.Count - 1; i >= 0; --i)
+            {
+                if (_tiles[i].Actor == actor)
+                {
+                    _tiles.RemoveAt(i);
+                    break;
+                }
+            }
+        }
+    }
+}
+
+sealed class CrossCurrent(BossModule module) : Components.GenericAOEs(module, (uint)AID.CrossCurrent, "GTFO from bait!")
+{
+    private static readonly AOEShapeCross _cross = new(36f, 4f);
+    private readonly List<AOEInstance> _aoes = [];
+    private BitMask _targets;
+    private DateTime _activation;
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        if (!_targets.Any())
+        {
+            return [];
+        }
+        _aoes.Clear();
+        var party = Raid.WithSlot(false, true, true);
+        var len = party.Length;
+        for (var i = 0; i < len; ++i)
+        {
+            ref var p = ref party[i];
+            if (_targets[p.Item1] && p.Item2 != actor)
+            {
+                _aoes.Add(new(_cross, C011DaryaTheSeaMaid.TileCenter(p.Item2.Position), default, _activation));
+            }
+        }
+        return CollectionsMarshal.AsSpan(_aoes);
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
-        base.DrawArenaBackground(pcSlot, pc);
-
-        var center = Arena.Center;
-
-        const float total = gridSize * cellSize;
-        const float half = total * 0.5f;
-        const float halfcell = cellSize * 0.5f;
-        var startX = center.X - half + halfcell;
-        var startZ = center.Z - half + halfcell;
-        const uint white = 0xFFFFFFFF;
-
-        var dir = new WDir(1, 0);
-
-        for (var iz = 0; iz < gridSize; ++iz)
+        if (_targets[pcSlot])
         {
-            for (var ix = 0; ix < gridSize; ++ix)
+            _cross.Outline(Arena, C011DaryaTheSeaMaid.TileCenter(pc.Position), default, Colors.Danger);
+        }
+    }
+
+    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
+    {
+        if (iconID == (uint)IconID.CrossCurrent)
+        {
+            var slot = Raid.FindSlot(targetID);
+            if (slot >= 0)
             {
-                var pos = new WPos(startX + ix * cellSize, startZ + iz * cellSize);
-                Arena.AddRect(pos, dir, halfcell, halfcell, halfcell, white, 2f);
+                _targets.Set(slot);
+                _activation = WorldState.FutureTime(6.1d);
             }
         }
     }
 
-    private WPos IndexToPosition(int index)
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        const float halftotal = gridSize * cellSize * 0.5f;
-        const float halfcell = cellSize * 0.5f;
-        var startX = Arena.Center.X - halftotal + halfcell;
-        var startZ = Arena.Center.Z - halftotal + halfcell;
-        var x = startX + index % gridSize * cellSize;
-        var z = startZ + index / gridSize * cellSize;
-        return new WPos(x, z);
-    }
-
-    private int PositionToIndex(WPos pos)
-    {
-        const float halftotal = gridSize * cellSize * 0.5f;
-        const float halfcell = cellSize * 0.5f;
-        const float invCellSize = 1f / cellSize;
-
-        var startX = Arena.Center.X - halftotal + halfcell;
-        var startZ = Arena.Center.Z - halftotal + halfcell;
-        var relX = pos.X - startX;
-        var relZ = pos.Z - startZ;
-
-        var x = (int)MathF.Round(relX * invCellSize);
-        var z = (int)MathF.Round(relZ * invCellSize);
-
-        x = Math.Clamp(x, 0, gridSize - 1);
-        z = Math.Clamp(z, 0, gridSize - 1);
-        return z * gridSize + x;
+        if (spell.Action.ID == WatchedAction)
+        {
+            ++NumCasts;
+            _targets.Reset();
+        }
     }
 }
