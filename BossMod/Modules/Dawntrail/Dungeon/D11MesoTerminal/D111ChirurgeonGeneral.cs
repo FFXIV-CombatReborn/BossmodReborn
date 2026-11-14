@@ -95,7 +95,8 @@ sealed class SterileSphere(BossModule module) : Components.GenericAOEs(module)
         {
             var aoes = CollectionsMarshal.AsSpan(AOEs);
             var act = Module.CastFinishAt(spell);
-            for (var i = 0; i < 4; ++i)
+            var len = aoes.Length;
+            for (var i = 0; i < len; ++i)
             {
                 ref var aoe = ref aoes[i];
                 aoe.Activation = act;

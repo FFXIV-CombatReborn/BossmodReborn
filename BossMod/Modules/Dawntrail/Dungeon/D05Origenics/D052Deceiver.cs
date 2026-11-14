@@ -165,10 +165,15 @@ sealed class Surge(BossModule module) : Components.GenericKnockback(module)
         if (KBs.Count != 0)
         {
             ref readonly var kb = ref KBs.Ref(0);
-            var forbidden = new ShapeDistance[4];
             var safewalls = kb.SafeWalls;
+            var len = safewalls.Length;
+            if (len == 0) // unknown arena layout, an empty intersection would forbid the whole arena
+            {
+                return;
+            }
+            var forbidden = new ShapeDistance[len];
             var centerX = Arena.Center.X;
-            for (var i = 0; i < 4; ++i)
+            for (var i = 0; i < len; ++i)
             {
                 ref readonly var safeWall = ref safewalls[i];
                 var v1 = safeWall.Vertex1;
@@ -189,12 +194,13 @@ sealed class SurgeHint(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.Surge)
+        if (spell.Action.ID == (uint)AID.Surge && _kb.KBs.Count != 0)
         {
             ref readonly var kb = ref _kb.KBs.Ref(0);
             var safewalls = kb.SafeWalls;
+            var len = safewalls.Length;
             var centerX = Arena.Center.X;
-            for (var i = 0; i < 4; ++i)
+            for (var i = 0; i < len; ++i)
             {
                 ref readonly var safewall = ref safewalls[i];
                 var v1 = safewall.Vertex1;

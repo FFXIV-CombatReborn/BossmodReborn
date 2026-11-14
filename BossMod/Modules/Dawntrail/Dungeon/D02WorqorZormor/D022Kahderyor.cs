@@ -147,6 +147,11 @@ sealed class WindShotStack(BossModule module) : Components.DonutStack(module, (u
         {
             return;
         }
+        if (_aoe.AOE.Length == 0) // crystal AOE not (or no longer) active, fall back to generic stack hints
+        {
+            base.AddAIHints(slot, actor, assignment, hints);
+            return;
+        }
 
         ref var aoe = ref _aoe.AOE[0];
         var forbidden = new List<ShapeDistance>(3);
@@ -160,12 +165,7 @@ sealed class WindShotStack(BossModule module) : Components.DonutStack(module, (u
                 continue;
             }
 
-            var addForbidden = false;
             if (aoe.Shape is AOEShapeDonut && !aoe.Check(p.Position) || aoe.Shape is AOEShapeCustom && aoe.Check(p.Position))
-            {
-                addForbidden = true;
-            }
-            if (addForbidden)
             {
                 forbidden.Add(new SDInvertedCircle(p.Position, 1.66f));
             }

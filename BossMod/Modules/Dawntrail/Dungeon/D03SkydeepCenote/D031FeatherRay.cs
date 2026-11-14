@@ -235,7 +235,11 @@ sealed class WorrisomeWavePlayer(BossModule module) : Components.GenericBaitAway
             var lenP = party.Length;
             for (var j = 0; j < lenP; ++j)
             {
-                hints.ForbiddenDirections.Add((Angle.FromDirection(party[j].Position - pos), angle, act));
+                var p = party[j];
+                if (p != actor) // direction to self is undefined and would forbid facing north
+                {
+                    hints.ForbiddenDirections.Add((Angle.FromDirection(p.Position - pos), angle, act));
+                }
             }
         }
     }

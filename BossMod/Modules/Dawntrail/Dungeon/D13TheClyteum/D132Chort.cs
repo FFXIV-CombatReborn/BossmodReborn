@@ -82,7 +82,7 @@ sealed class BodyweightTower(BossModule module) : Components.CastTowers(module, 
     }
 }
 
-sealed class EvilEmission(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.EvilEmissionSpread, (uint)AID.EvilEmission1, 4, 5);
+sealed class EvilEmission(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.EvilEmissionSpread, (uint)AID.EvilEmission1, 5f, 5d);
 
 sealed class ProfanePressure(BossModule module) : Components.StackWithCastTargets(module, (uint)AID.ProfanePressure1, 6f, 4);
 

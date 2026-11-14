@@ -113,7 +113,7 @@ sealed class EnforcementRay(BossModule module) : Components.GenericAOEs(module)
         if (count == 3)
         {
             if ((aoes[0].Origin - center).LengthSq() > (aoes[2].Origin - center).LengthSq())
-                (aoes[0], _aoes[2]) = (aoes[2], aoes[0]);
+                (aoes[0], aoes[2]) = (aoes[2], aoes[0]);
 
             if ((aoes[1].Origin - center).LengthSq() > (aoes[2].Origin - center).LengthSq())
                 (aoes[1], aoes[2]) = (aoes[2], aoes[1]);

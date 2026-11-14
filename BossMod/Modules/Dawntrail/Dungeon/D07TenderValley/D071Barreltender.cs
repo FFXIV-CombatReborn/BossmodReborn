@@ -99,14 +99,10 @@ sealed class NeedleStormSuperstorm(BossModule module) : Components.GenericAOEs(m
         }
         var aoes = CollectionsMarshal.AsSpan(AOEs);
 
-        var kb = _kb;
-        var isKnockback = kb.Casters.Count != 0;
-        var isKnockbackImmune = isKnockback && _kb.IsImmune(slot, _kb.Casters.Ref(0).Activation);
-        var isKnockbackButImmune = isKnockback && isKnockbackImmune;
+        var risky = _kb.Casters.Count == 0 || _kb.IsImmune(slot, _kb.Casters.Ref(0).Activation);
         for (var i = 0; i < max; ++i)
         {
-            ref var aoe = ref aoes[i];
-            aoe.Risky = !isKnockback || isKnockbackButImmune;
+            aoes[i].Risky = risky;
         }
         return aoes[..max];
     }

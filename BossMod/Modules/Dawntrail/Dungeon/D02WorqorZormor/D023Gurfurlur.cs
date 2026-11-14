@@ -90,10 +90,16 @@ sealed class AuraSphere(BossModule module) : BossComponent(module)
 
     public override void AddGlobalHints(Actor actor, GlobalHints hints)
     {
-        var orbs = GetOrbs(Module);
+        var orbs = Module.Enemies((uint)OID.AuraSphere);
         var count = orbs.Count;
-        if (count != 0)
-            hints.Add("Soak the orbs!");
+        for (var i = 0; i < count; ++i)
+        {
+            if (!orbs[i].IsDead)
+            {
+                hints.Add("Soak the orbs!");
+                return;
+            }
+        }
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
@@ -115,10 +121,16 @@ sealed class AuraSphere(BossModule module) : BossComponent(module)
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
-        var orbs = GetOrbs(Module);
+        var orbs = Module.Enemies((uint)OID.AuraSphere);
         var count = orbs.Count;
         for (var i = 0; i < count; ++i)
-            Arena.ZoneCircleOutline(orbs[i].Position, 1f, Colors.Safe);
+        {
+            var o = orbs[i];
+            if (!o.IsDead)
+            {
+                Arena.ZoneCircleOutline(o.Position, 1f, Colors.Safe);
+            }
+        }
     }
 }
 

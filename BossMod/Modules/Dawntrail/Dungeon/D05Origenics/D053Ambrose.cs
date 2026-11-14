@@ -119,20 +119,23 @@ sealed class ExtrasensoryExpulsion(BossModule module) : Components.GenericKnockb
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         var count = KBs.Count;
-        if (KBs.Count != 0)
+        if (count != 0)
         {
-            var forbidden = new List<ShapeDistance>(2);
+            var forbidden = new ShapeDistance[count];
+            var index = 0;
             var kbs = CollectionsMarshal.AsSpan(KBs);
             for (var i = 0; i < count; ++i)
             {
                 ref var recti = ref kbs[i];
-                if (recti.Shape is AOEShapeRect rect && rect == RectNS)
+                if (recti.Shape == RectNS)
                 {
-                    forbidden.Add(new SDInvertedRect(recti.Origin, recti.Direction, 19f, default, 7f));
+                    forbidden[index++] = new SDInvertedRect(recti.Origin, recti.Direction, 19f, default, 7f);
                 }
             }
-
-            hints.AddForbiddenZone(new SDIntersection([.. forbidden]), kbs[0].Activation);
+            if (index != 0) // an empty intersection would forbid the whole arena
+            {
+                hints.AddForbiddenZone(new SDIntersection(forbidden[..index]), kbs[0].Activation);
+            }
         }
     }
 }

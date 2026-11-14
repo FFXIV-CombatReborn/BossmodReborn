@@ -71,7 +71,7 @@ public sealed class D90ForestBat : BossModule
         return (arena.Center, arena);
     }
 
-    public static readonly uint[] Trash = [(uint)OID.Boss, (uint)OID.Electrogolem1, (uint)OID.Electrogolem1, (uint)OID.ForestWoolback];
+    public static readonly uint[] Trash = [(uint)OID.Boss, (uint)OID.Electrogolem1, (uint)OID.Electrogolem2, (uint)OID.ForestWoolback];
 
     protected override bool CheckPull() => IsAnyActorInCombat(Trash);
 

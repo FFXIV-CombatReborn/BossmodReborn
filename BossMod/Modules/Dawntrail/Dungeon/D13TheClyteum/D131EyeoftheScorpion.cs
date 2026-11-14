@@ -78,19 +78,28 @@ sealed class MotionTracker(BossModule module) : Components.StayMove(module)
         }
     }
 
+    public override void Update()
+    {
+        if (TrackingBeam == null)
+        {
+            return;
+        }
+        var pos = TrackingBeam.Position;
+        var rot = TrackingBeam.Rotation;
+        var party = Raid.WithSlot(false, true, true);
+        var len = party.Length;
+        for (var i = 0; i < len; ++i)
+        {
+            var (slot, player) = party[i];
+            PlayerStates[slot] = player.Position.InRect(pos, rot, 10f, 10f, 20f) ? new(Requirement.Stay, WorldState.CurrentTime) : default;
+        }
+    }
+
     public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
         if (TrackingBeam != null)
         {
             rect.Draw(Arena, TrackingBeam.Position, TrackingBeam.Rotation);
-            if (pc.Position.InRect(TrackingBeam.Position, TrackingBeam.Rotation, 10f, 10f, 20f))
-            {
-                PlayerStates[pcSlot] = new(Requirement.Stay, WorldState.CurrentTime);
-            }
-            else
-            {
-                PlayerStates[pcSlot] = default; // In theory the status should have fallen off by this point but better safe than sorry.
-            }
         }
     }
     public override void AddHints(int slot, Actor actor, TextHints hints)

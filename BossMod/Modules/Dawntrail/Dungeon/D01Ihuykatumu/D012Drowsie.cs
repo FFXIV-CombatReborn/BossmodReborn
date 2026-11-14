@@ -13,7 +13,7 @@ public enum OID : uint
     Mimiclot4 = 0x41A1, // R1.2
     Mimiclot5 = 0x419A, // R1.2
     Mimiclot6 = 0x419F, // R1.75
-    Helper = 0x233
+    Helper = 0x233C
 }
 
 public enum AID : uint
