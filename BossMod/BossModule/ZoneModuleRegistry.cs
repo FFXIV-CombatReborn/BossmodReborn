@@ -28,5 +28,16 @@ public static class ZoneModuleRegistry
         _modulesByCFC[info.Desc.CFCID] = info;
     }
 
+    public static IEnumerable<(uint CFCID, BossModuleInfo.Maturity Maturity)> RegisteredCFCs()
+    {
+        foreach (var (cfcId, info) in _modulesByCFC)
+        {
+            if (cfcId != 0)
+            {
+                yield return (cfcId, info.Desc.Maturity);
+            }
+        }
+    }
+
     public static ZoneModule? CreateModule(WorldState ws, uint cfcId, BossModuleInfo.Maturity minMaturity) => cfcId != 0 && _modulesByCFC.TryGetValue(cfcId, out var info) && info.Desc.Maturity >= minMaturity ? info.Factory(ws) : null;
 }

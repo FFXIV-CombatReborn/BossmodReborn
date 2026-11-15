@@ -29,6 +29,9 @@ public sealed class BossModuleConfig : ConfigNode
     [PropertyDisplay("Allow modules to automatically use actions", tooltip: "Example: modules can automatically use anti-knockback abilities before a knockback happens")]
     public bool AllowAutomaticActions = true;
 
+    [PropertyDisplay("Mark supported duties in the Duty Finder", tooltip: "Shows a \"BMR\" label next to the level requirement of duties that have module support (Regular and High-end Duty).\nColor shows the lowest maturity among the duty's loadable boss modules: red = WIP, blue = Contributed, green = Verified, gold = AI support.")]
+    public bool ShowDutyFinderIndicator = true;
+
     [PropertyDisplay("Show testing radar and hint window", tooltip: "Useful for configuring your radar and hint windows without being inside of a boss encounter", separator: true, depends: nameof(EnableRadar))]
     public bool ShowDemo = false;
 
