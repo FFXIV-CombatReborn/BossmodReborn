@@ -126,7 +126,20 @@ sealed class TeaAwhirl : Components.GenericAOEs
             }
     }
 
-    private bool CheckPositions(WPos pos1, WPos? pos2) => pos2 != null ? _cups.Any(x => x.Position == pos1) && _cups.Any(x => x.Position == pos2) : _cups.Any(x => x.Position == pos1);
+    private bool CheckPositions(WPos pos1, WPos? pos2) => HasCupAt(pos1) && (pos2 is not WPos p2 || HasCupAt(p2));
+
+    private bool HasCupAt(WPos pos)
+    {
+        var count = _cups.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            if (_cups[i].Position == pos)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 
     private void AddAOEs(DateTime activation, WPos[] positions)
     {

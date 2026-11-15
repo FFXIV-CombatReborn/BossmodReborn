@@ -98,7 +98,12 @@ sealed class GhostlyGuise(BossModule module) : Components.GenericAOEs(module)
         {
             return [];
         }
+        UpdateState(slot);
+        return circles;
+    }
 
+    private void UpdateState(int slot)
+    {
         if (_avoid.Spreads.Count != 0)
         {
             risky = !Ghostly[slot];
@@ -116,15 +121,6 @@ sealed class GhostlyGuise(BossModule module) : Components.GenericAOEs(module)
         else
         {
             risky = true;
-        }
-        return circles;
-    }
-
-    public override void Update()
-    {
-        if (!activated)
-        {
-            return;
         }
         var color = risky ? default : Colors.SafeFromAOE;
         for (var i = 0; i < 4; ++i)
@@ -164,17 +160,17 @@ sealed class GhostlyGuise(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnStatusGain(Actor actor, ref ActorStatus status)
     {
-        if (status.ID == (uint)SID.GhostlyGuise)
+        if (status.ID == (uint)SID.GhostlyGuise && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0)
         {
-            Ghostly.Set(Raid.FindSlot(actor.InstanceID));
+            Ghostly.Set(slot);
         }
     }
 
     public override void OnStatusLose(Actor actor, ref ActorStatus status)
     {
-        if (status.ID == (uint)SID.GhostlyGuise)
+        if (status.ID == (uint)SID.GhostlyGuise && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0)
         {
-            Ghostly.Clear(Raid.FindSlot(actor.InstanceID));
+            Ghostly.Clear(slot);
         }
     }
 
@@ -200,6 +196,11 @@ sealed class GhostlyGuise(BossModule module) : Components.GenericAOEs(module)
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
+        if (!activated)
+        {
+            return;
+        }
+        UpdateState(slot);
         if (!risky && shapeDistances != null)
         {
             hints.AddForbiddenZone(shapeDistances, activation);

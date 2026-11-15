@@ -119,16 +119,14 @@ public abstract class RaidwideInstant(BossModule module, uint aid, double delay 
             for (var i = 0; i < count; ++i)
             {
                 var p = raid[i];
+                if (ArenaProjectionLayerParticipantApplies(p.Item2, ArenaProjectionLayer, RestrictToArenaProjectionLayer))
                 {
-                    if (ArenaProjectionLayerParticipantApplies(p.Item2, ArenaProjectionLayer, RestrictToArenaProjectionLayer))
-                    {
-                        affected.Set(p.Item1);
-                    }
+                    affected.Set(p.Item1);
                 }
-                if (affected != default)
-                {
-                    hints.AddPredictedDamage(affected, Activation);
-                }
+            }
+            if (affected != default)
+            {
+                hints.AddPredictedDamage(affected, Activation);
             }
         }
     }

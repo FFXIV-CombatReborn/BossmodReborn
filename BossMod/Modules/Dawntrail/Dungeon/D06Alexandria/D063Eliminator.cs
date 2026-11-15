@@ -110,14 +110,13 @@ sealed class Electray(BossModule module) : Components.SpreadFromCastTargets(modu
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (_aoe1.Casters.Count != 0 || _aoe2.Casters.Count != 0)
-        { }
-        else
         {
-            base.AddAIHints(slot, actor, assignment, hints);
-            if (Spreads.Count != 0)
-            {
-                hints.AddForbiddenZone(new SDCircle(Arena.Center - new WDir(default, 15f), 15f), Spreads.Ref(0).Activation);
-            }
+            return;
+        }
+        base.AddAIHints(slot, actor, assignment, hints);
+        if (Spreads.Count != 0)
+        {
+            hints.AddForbiddenZone(new SDCircle(Arena.Center - new WDir(default, 15f), 15f), Spreads.Ref(0).Activation);
         }
     }
 }
@@ -164,9 +163,9 @@ sealed class LightOfSalvation(BossModule module) : Components.GenericBaitAway(mo
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.LightOfSalvationMarker)
+        if (spell.Action.ID == (uint)AID.LightOfSalvationMarker && WorldState.Actors.Find(spell.TargetID) is Actor target)
         {
-            CurrentBaits.Add(new(caster, WorldState.Actors.Find(spell.TargetID)!, rect, Module.CastFinishAt(spell, 0.2d)));
+            CurrentBaits.Add(new(caster, target, rect, Module.CastFinishAt(spell, 0.2d)));
         }
     }
 
@@ -188,9 +187,7 @@ sealed class LightOfSalvation(BossModule module) : Components.GenericBaitAway(mo
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (_kb.Casters.Count != 0)
-        { }
-        else
+        if (_kb.Casters.Count == 0)
         {
             base.AddAIHints(slot, actor, assignment, hints);
         }

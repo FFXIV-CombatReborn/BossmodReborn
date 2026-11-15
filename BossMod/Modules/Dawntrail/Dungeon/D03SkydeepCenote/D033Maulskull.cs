@@ -100,8 +100,6 @@ sealed class Stonecarver(BossModule module) : Components.GenericAOEs(module)
                 AOEs.Add(new(rect, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell), risky: false));
                 if (AOEs.Count == 2)
                 {
-                    _kb ??= Module.FindComponent<Impact2>();
-
                     var aoes = CollectionsMarshal.AsSpan(AOEs);
                     ref var aoe1 = ref aoes[0];
                     ref var aoe2 = ref aoes[1];
@@ -135,7 +133,9 @@ sealed class Stonecarver(BossModule module) : Components.GenericAOEs(module)
         base.AddAIHints(slot, actor, assignment, hints);
         if (AOEs.Count != 0)
         {
-            hints.AddForbiddenZone(new SDInvertedRect(Arena.Center, new WDir(1f, default), 1.5f, 1.5f, 40f), _kb!.Casters.Count != 0 ? _kb.Casters.Ref(0).Activation : AOEs.Ref(0).Activation);
+            _kb ??= Module.FindComponent<Impact2>();
+            var act = _kb != null && _kb.Casters.Count != 0 ? _kb.Casters.Ref(0).Activation : AOEs.Ref(0).Activation;
+            hints.AddForbiddenZone(new SDInvertedRect(Arena.Center, new WDir(1f, default), 1.5f, 1.5f, 40f), act);
         }
     }
 }
@@ -262,7 +262,9 @@ sealed class DestructiveHeat(BossModule module) : Components.SpreadFromCastTarge
                 hints.AddForbiddenZone(new SDInvertedCircle(origin, 15f), Spreads.Ref(0).Activation);
             }
             else
-            { }
+            {
+                base.AddAIHints(slot, actor, assignment, hints);
+            }
         }
     }
 }

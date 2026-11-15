@@ -111,7 +111,7 @@ sealed class PathoCircuitCrossPurge(BossModule module) : Components.GenericAOEs(
     {
         if (spell.Action.ID is (uint)AID.ImmuneResponseBig or (uint)AID.ImmuneResponseSmall)
         {
-            var coneType = spell.Action.ID == (int)AID.ImmuneResponseBig ? coneBig : coneSmall;
+            var coneType = spell.Action.ID == (uint)AID.ImmuneResponseBig ? coneBig : coneSmall;
             AddAOE(coneType, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell));
         }
     }
@@ -120,7 +120,7 @@ sealed class PathoCircuitCrossPurge(BossModule module) : Components.GenericAOEs(
     {
         if (actor.OID is (uint)OID.InterferonR or (uint)OID.InterferonC)
         {
-            AOEShape shape = actor.OID == (int)OID.InterferonR ? donut : cross;
+            AOEShape shape = actor.OID == (uint)OID.InterferonR ? donut : cross;
             var act = _aoes.Count == 0 ? WorldState.FutureTime(9.9d) : _aoes.Ref(0).Activation.AddSeconds(2.5d * _aoes.Count);
             AddAOE(shape, actor.Position.Quantized(), default, act);
         }
@@ -180,8 +180,6 @@ sealed class Disinfection(BossModule module) : Components.BaitAwayIcon(module, 6
                 {
                     hints.GoalZones.Add(AIHints.GoalSingleTarget(new WPos(852f, 808f), 3f, 1f));
                 }
-                else
-                { }
             }
             else
             {
@@ -192,7 +190,7 @@ sealed class Disinfection(BossModule module) : Components.BaitAwayIcon(module, 6
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
-        if (iconID == IID && Raid.FindSlot(targetID) is var slot)
+        if (iconID == IID && Raid.FindSlot(targetID) is var slot && slot >= 0)
         {
             if (_stack.Stacks.Count != 0)
             {

@@ -122,7 +122,7 @@ sealed class CellShock(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnMapEffect(byte index, uint state)
     {
-        if (state is 0x00020001u or 0x00200010u)
+        if (index is >= 0x0D and <= 0x10 && state is 0x00020001u or 0x00200010u)
         {
             if (state == 0x00200010u)
                 index = index switch

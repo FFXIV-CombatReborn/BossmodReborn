@@ -87,9 +87,9 @@ sealed class SectorBisector(BossModule module) : Components.GenericAOEs(module)
         {
             ++cloneCount;
         }
-        else if (tether.ID == (uint)TetherID.BisectorEnd)
+        else if (tether.ID == (uint)TetherID.BisectorEnd && WorldState.Actors.Find(tether.Target) is Actor target)
         {
-            tethers.Add((source, WorldState.Actors.Find(tether.Target)!));
+            tethers.Add((source, target));
         }
     }
 

@@ -76,9 +76,6 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
         (24, 8), (0, 22), (0, 4), (2, 10), (22, 13),
     ];
 
-    private readonly Polygon[] circles = new Polygon[26];
-    private readonly RectangleSE[] rectangles = new RectangleSE[28];
-
     private AOEInstance[] _aoe = [];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
@@ -90,26 +87,6 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
             var center = Arena.Center;
             var shape = new AOEShapeCustom(center, [new Rectangle(center, 14.5f, 22.5f)], [new Rectangle(center, 12f, 20f)]);
             _aoe = [new(shape, center, default, Module.CastFinishAt(spell, 0.4d), shapeDistance: shape.Distance(center, default))];
-
-            // initialize shapes for later
-            CreateCircles(circlePositions, Radius, 12);
-            CreateRectangles(rectanglePairs, circlePositions, Radius);
-            void CreateCircles(WPos[] positions, float radius, int edges)
-            {
-                for (var i = 0; i < 26; ++i)
-                {
-                    circles[i] = new Polygon(positions[i], radius, edges);
-                }
-            }
-
-            void CreateRectangles((int, int)[] pairs, WPos[] positions, float width)
-            {
-                for (var i = 0; i < 28; ++i)
-                {
-                    var pair = pairs[i];
-                    rectangles[i] = new RectangleSE(positions[pair.Item1], positions[pair.Item2], width);
-                }
-            }
         }
     }
 
