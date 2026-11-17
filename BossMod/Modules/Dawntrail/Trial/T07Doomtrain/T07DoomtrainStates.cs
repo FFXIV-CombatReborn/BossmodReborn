@@ -76,7 +76,7 @@ sealed class T07DoomtrainStates : StateMachineBuilder
             .ActivateOnEnter<UnlimitedExpress>();
         ComponentCondition<UnlimitedExpress>(id + 0x101, 5.9f, static comp => comp.NumCasts > 0)
             .DeactivateOnExit<UnlimitedExpress>();
-        Targetable(id + 0x110u, false, 0.2f, "Car 3 start");
+        Targetable(id + 0x110u, false, 0.2f, "Car 4 start");
     }
 
     void Car4_1(uint id, float delay)

@@ -64,15 +64,23 @@ sealed class ImpactArenaChange(BossModule module) : BossComponent(module)
             }
         }
     }
+    private static readonly ArenaBoundsSquare squareBounds = new(19.5f);
+    private ArenaBoundsCustom? crossBounds;
+
     public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
         if (active)
         {
             var isSquare = Arena.Bounds is ArenaBoundsSquare;
             var ghostly = ghost.Ghostly[pcSlot];
-            Arena.Bounds = ghostly && !isSquare ? new ArenaBoundsSquare(19.5f)
-            : !ghostly && isSquare ? new ArenaBoundsCustom([new Square(Arena.Center, 19.5f)], [new Cross(Arena.Center, 20f, 1.5f)])  // for some reason the obstacle cross is smaller than the AOE;
-            : Arena.Bounds;
+            if (ghostly && !isSquare)
+            {
+                Arena.Bounds = squareBounds;
+            }
+            else if (!ghostly && isSquare)
+            {
+                Arena.Bounds = crossBounds ??= new ArenaBoundsCustom([new Square(Arena.Center, 19.5f)], [new Cross(Arena.Center, 20f, 1.5f)]);
+            }
         }
     }
 }

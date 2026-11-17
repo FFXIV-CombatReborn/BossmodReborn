@@ -21,7 +21,8 @@ public enum AID : uint
     PartitionVisual3 = 36768, // Boss->self, 4.3+0.7s cast, single-target
     PartitionVisual4 = 36766, // Boss->self, no cast, single-target
     PartitionVisual5 = 36767, // Boss->self, no cast, single-target
-    Partition1 = 39007, // Helper->self, 5.0s cast, range 40 180-degree cone
+    Partition1 = 39007, // Helper->self, 5.0s cast, range 40 180-degree cone (cleave right)
+    Partition4 = 39008, // Helper->self, 5.0s cast, range 40 180-degree cone (cleave left)
     Partition2 = 39238, // Helper->self, 7.0s cast, range 40 180-degree cone
     Partition3 = 39249, // Helper->self, 7.0s cast, range 40 180-degree cone
 
@@ -98,7 +99,7 @@ sealed class DisruptionArenaChange(BossModule module) : Components.GenericAOEs(m
 
 sealed class Disruption(BossModule module) : Components.RaidwideCast(module, (uint)AID.Disruption);
 
-sealed class Partition(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.Partition1, (uint)AID.Partition2, (uint)AID.Partition3], new AOEShapeCone(40f, 90f.Degrees()));
+sealed class Partition(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.Partition1, (uint)AID.Partition2, (uint)AID.Partition3, (uint)AID.Partition4], new AOEShapeCone(40f, 90f.Degrees()));
 sealed class Terminate(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Terminate, new AOEShapeRect(40f, 5f));
 sealed class HaloOfDestruction(BossModule module) : Components.SimpleAOEs(module, (uint)AID.HaloOfDestruction, new AOEShapeDonut(6f, 40f));
 

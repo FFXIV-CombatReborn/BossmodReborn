@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Dawntrail.Trial.T02ZoraalJa;
 
-sealed class SoulOverflowCalamitysEdge(BossModule module) : Components.RaidwideCasts(module, [(uint)AID.SoulOverflow1, (uint)AID.SoulOverflow1, (uint)AID.CalamitysEdge]);
+sealed class SoulOverflowCalamitysEdge(BossModule module) : Components.RaidwideCasts(module, [(uint)AID.SoulOverflow1, (uint)AID.SoulOverflow2, (uint)AID.CalamitysEdge]);
 sealed class PatricidalPique(BossModule module) : Components.SingleTargetCast(module, (uint)AID.PatricidalPique);
 sealed class Burst(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Burst, 8f);
 

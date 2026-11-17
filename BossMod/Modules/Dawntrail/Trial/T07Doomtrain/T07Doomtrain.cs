@@ -15,7 +15,8 @@ sealed class LightningExpress(BossModule module) : Components.SimpleKnockbacks(m
  */
 class LevinSignal(BossModule module) : Components.GenericAOEs(module)
 {
-    private readonly List<(Actor Caster, bool Ground, DateTime Activation, float MaxLen, float Offset)> _casters = [];
+    private static readonly AOEShapeRect rect10 = new(10f, 2.5f), rect20 = new(20f, 2.5f), rect30 = new(30f, 2.5f);
+    private readonly List<(Actor Caster, DateTime Activation, AOEShapeRect Shape, float Offset)> _casters = [];
 
     public override void OnActorCreated(Actor actor)
     {
@@ -99,7 +100,10 @@ class LevinSignal(BossModule module) : Components.GenericAOEs(module)
                     }
                 }
             }
-            _casters.Add((actor, ground, WorldState.FutureTime(7), maxLen, offset));
+            if (maxLen != 0) // elevated signals that are not over a platform can't hit anyone
+            {
+                _casters.Add((actor, WorldState.FutureTime(7d), maxLen == 10 ? rect10 : maxLen == 20 ? rect20 : rect30, offset));
+            }
         }
     }
 
@@ -113,7 +117,7 @@ class LevinSignal(BossModule module) : Components.GenericAOEs(module)
         {
             var c = _casters[i];
 
-            aoes[i] = new(new AOEShapeRect(c.MaxLen, 2.5f), c.Caster.Position + new WDir(0, c.Offset), default, c.Activation);
+            aoes[i] = new(c.Shape, c.Caster.Position + new WDir(default, c.Offset), default, c.Activation);
         }
         return aoes;
     }
@@ -122,7 +126,13 @@ class LevinSignal(BossModule module) : Components.GenericAOEs(module)
     {
         if (spell.Action.ID is (uint)AID.PlasmaBeamLower or (uint)AID.PlasmaBeamMedium or (uint)AID.PlasmaBeamShort or (uint)AID.PlasmaBeamUpper)
         {
-            _casters.RemoveAll(c => c.Caster == caster);
+            for (var i = _casters.Count - 1; i >= 0; --i)
+            {
+                if (_casters[i].Caster == caster)
+                {
+                    _casters.RemoveAt(i);
+                }
+            }
             ++NumCasts;
         }
     }
@@ -135,8 +145,8 @@ sealed class WindpipeDrawIn(BossModule module) : Components.SimpleKnockbacks(mod
     private List<Knockback> _kb = [];
 
     // need safe walls for car 2 and car 5
-    private readonly List<SafeWall> safeWalls2 = [new(new(100.1f, 150.1f), new(104.9f, 150.1f)), new(new(95.1f, 160.1f), new(99.9f, 160.1f))];
-    private readonly List<SafeWall> safeWalls5 = [new(new(105.1f, 305.1f), new(109.9f, 305.1f))];
+    private static readonly SafeWall[] safeWalls2 = [new(new(100.1f, 150.1f), new(104.9f, 150.1f)), new(new(95.1f, 160.1f), new(99.9f, 160.1f))];
+    private static readonly SafeWall[] safeWalls5 = [new(new(105.1f, 305.1f), new(109.9f, 305.1f))];
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
@@ -166,22 +176,13 @@ sealed class WindpipeDrawIn(BossModule module) : Components.SimpleKnockbacks(mod
     {
         if (_kb.Count != 0)
         {
-            var kb = _kb[slot];
+            var kb = _kb[0]; // single knockback source, not indexed by player slot
             if (!IsImmune(slot, WorldState.CurrentTime))
             {
                 // It is a draw in, we use mirrorZ to make safe zones to keep us from moving towards boss.
                 var dir = kb.Direction.ToDirection().MirrorZ();
-                var _walls = _car.Car == 2 ? safeWalls2 : safeWalls5;
-                var len = _walls.Count;
-                if (len > 0)
-                {
-                    var swalls = new SafeWall[len];
-                    for (var i = 0; i < _walls.Count; ++i)
-                    {
-                        swalls[i] = _walls[i];
-                    }
-                    hints.AddForbiddenZone(new SDKnockbackFixedDirectionAgainstSafewalls(dir, swalls, 20f, len), WorldState.CurrentTime);
-                }
+                var walls = _car.Car == 2 ? safeWalls2 : safeWalls5;
+                hints.AddForbiddenZone(new SDKnockbackFixedDirectionAgainstSafewalls(dir, walls, 20f, walls.Length), WorldState.CurrentTime);
             }
         }
     }
@@ -200,26 +201,7 @@ sealed class HeadOnEmission(BossModule module) : Components.GenericAOEs(module)
     private readonly List<AOEInstance> _aoes = [];
     //private DateTime _activation;
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
-    {
-        var count = _aoes.Count;
-        if (count == 0)
-            return [];
-
-        var aoes = CollectionsMarshal.AsSpan(_aoes);
-        var color = Colors.AOE;
-
-        for (var i = 0; i < count; ++i)
-        {
-            ref var aoe = ref aoes[i];
-            if (count > 0)
-            {
-                aoe.Color = color;
-                aoe.Risky = true;
-            }
-        }
-        return aoes;
-    }
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
@@ -306,7 +288,15 @@ class AetherialRay(BossModule module) : Components.GenericBaitAway(module, (uint
 }
 
 //RunawayTrainRaidwide = 45645, // 233C->self, no cast, range 20 circle
-sealed class RunawayTrainRaidwide(BossModule module) : Components.RaidwideCast(module, (uint)AID.RunawayTrainRaidwide);
+sealed class RunawayTrainRaidwide(BossModule module) : Components.RaidwideInstant(module, (uint)AID.RunawayTrainRaidwide, 15.2d)
+{
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        base.OnEventCast(caster, spell);
+        if (spell.Action.ID == (uint)AID.RunawayTrainVisual)
+            Activation = WorldState.FutureTime(Delay);
+    }
+}
 
 // arcane revelation. This is the spell with the diamond pattern on the floor and the lightning
 // traverses n points to cast Hail of thunder.  Use the actor OID.ArcaneRevelation to mark the indicator for hail of thunder.
@@ -326,8 +316,20 @@ sealed class ArcaneRevelation(BossModule module) : Components.GenericBaitAway(mo
     //when arcane revelation mob is gone, remove it.
     public override void Update()
     {
-        if (CurrentBaits.Count > 0 && Module.Enemies((uint)OID.ArcaneRevelation).All(static comp => comp.IsDead)) // if adds die baits get cancelled
-            CurrentBaits.Clear();
+        if (CurrentBaits.Count == 0)
+        {
+            return;
+        }
+        var adds = Module.Enemies((uint)OID.ArcaneRevelation);
+        var count = adds.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            if (!adds[i].IsDead)
+            {
+                return;
+            }
+        }
+        CurrentBaits.Clear(); // if adds die baits get cancelled
     }
 }
 
@@ -339,6 +341,7 @@ sealed class Electray3(BossModule module) : Components.SimpleAOEs(module, (uint)
 
 sealed class ElectrayUpper(BossModule module) : Components.GenericAOEs(module)
 {
+    private static readonly AOEShapeRect rect = new(10f, 2.5f);
     private readonly List<AOEInstance> _aoes = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
 
@@ -347,7 +350,7 @@ sealed class ElectrayUpper(BossModule module) : Components.GenericAOEs(module)
         if (spell.Action.ID == (uint)AID.ElectrayUpper)
         {
             // make the rectangle lengthFront shorter because it only needs cover the platform from edge of arena.
-            _aoes.Add(new(new AOEShapeRect(10f, 2.5f), caster.CastInfo!.LocXZ, caster.CastInfo!.Rotation, Module.CastFinishAt(caster.CastInfo)));
+            _aoes.Add(new(rect, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell)));
         }
     }
 
@@ -362,7 +365,15 @@ sealed class ElectrayUpper(BossModule module) : Components.GenericAOEs(module)
 
 sealed class RunawayTrain(BossModule module) : Components.RaidwideCast(module, (uint)AID.RunawayTrain);
 
-sealed class Shockwave(BossModule module) : Components.RaidwideCast(module, (uint)AID.Shockwave);
+sealed class Shockwave(BossModule module) : Components.RaidwideInstant(module, (uint)AID.Shockwave, 5.8d)
+{
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        base.OnEventCast(caster, spell);
+        if (spell.Action.ID == (uint)AID.ShockwaveVisual)
+            Activation = WorldState.FutureTime(Delay);
+    }
+}
 
 // Rectangle that covers all of car 4, portal opens in the back to escape to car 5
 sealed class Derail(BossModule module) : Components.GenericAOEs(module)

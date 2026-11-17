@@ -43,17 +43,17 @@ sealed class ArenaChanges(BossModule module) : BossComponent(module)
 
     public override void OnStatusGain(Actor actor, ref ActorStatus status)
     {
-        if (status.ID == (uint)SID.GravitationalAnomaly)
+        if (status.ID == (uint)SID.GravitationalAnomaly && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0)
         {
-            gravity.Set(Raid.FindSlot(actor.InstanceID));
+            gravity.Set(slot);
         }
     }
 
     public override void OnStatusLose(Actor actor, ref ActorStatus status)
     {
-        if (status.ID == (uint)SID.GravitationalAnomaly)
+        if (status.ID == (uint)SID.GravitationalAnomaly && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0)
         {
-            gravity.Clear(Raid.FindSlot(actor.InstanceID));
+            gravity.Clear(slot);
         }
     }
 

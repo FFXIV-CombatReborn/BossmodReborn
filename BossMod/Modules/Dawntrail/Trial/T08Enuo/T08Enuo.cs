@@ -19,10 +19,10 @@ public enum OID : uint
 public enum AID : uint
 {
     _AutoAttack_ = 49936, // Enuo->player, no cast, single-target
-    Meteorain = 49971, // Enuo->self, no cast, range 40 circle
+    Meteorain = 49971, // Enuo->self, 5.0s cast, range 40 circle, raidwide
     _Ability_ = 49927, // Enuo->location, no cast, single-target
     NaughtGrowsCastVisual = 49931, // Enuo->self, no cast, single-target
-    NaughtGrowsAOE = 49933, // 4DBA (Yawning Void)->self, no cast, range 40 circle
+    NaughtGrowsAOE = 49933, // 4DBA (Yawning Void)->self, 6.7s cast, range 40 circle
     NaughtWakes = 49929, // Enuo->self, no cast, single-target melee hit
     _Weaponskill_ = 49930, // YawningVoid->location, no cast, single-target
     GazeOfTheVoidVisual = 49950, // Enuo->self, 7.0+1.0s cast, single-target
@@ -159,23 +159,7 @@ sealed class NaughtHunts(BossModule module) : Components.StandardChasingAOEs(mod
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == ActionFirst)
-        {
-            var pos = spell.LocXZ;
-            var minDistance = float.MaxValue;
-
-            var count = Targets.Count;
-            for (var i = 0; i < count; ++i)
-            {
-                var t = Targets[i];
-                var distanceSq = (t.Position - pos).LengthSq();
-                if (distanceSq < minDistance)
-                {
-                    minDistance = distanceSq;
-                }
-            }
-            // Overriding to remove the 'add' behaviour here.
-        }
+        // Overriding to remove the 'add' behaviour here, chasers are added from tethers instead.
     }
     public override void OnEventCast(Actor caster, ActorCastEvent spell) // Don't count the first action so that we can have the same count between the two.
     {
@@ -257,7 +241,7 @@ class Almagest(BossModule module) : Components.RaidwideCast(module, (uint)AID.Al
 
 sealed class NaughtGrows(BossModule module) : Components.SimpleAOEs(module, (uint)AID.NaughtGrowsAOESmall, 12f);
 
-sealed class DimensionZero(BossModule module) : Components.LineStack(module, iconID: (uint)IconID.DimensionZeroIcon, (uint)AID.DimensionZeroRect, 0d, 60f, 4f, 8);
+sealed class DimensionZero(BossModule module) : Components.LineStack(module, iconID: (uint)IconID.DimensionZeroIcon, (uint)AID.DimensionZeroMarker, 5d, 60f, 4f, 8, PartyState.MaxPartySize, 3);
 
 sealed class EnuoStates : StateMachineBuilder
 {
