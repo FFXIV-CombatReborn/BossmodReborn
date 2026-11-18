@@ -50,7 +50,7 @@ sealed class BigWave(BossModule module) : Components.SimpleKnockbacks(module, (u
         var kb = kbs[0];
         var dir = kb.Direction.ToDirection() * kb.Distance;
 
-        var aquaballs = CollectionsMarshal.AsSpan(_aquapos).ToArray();
+        var aquaballs = _aquapos.ToArray();
         var len = aquaballs.Length;
         hints.AddForbiddenZone(new SDKnockbackInAABBRectFixedDirectionPlusAOECircles(Arena.Center, dir, 20f, 20f, aquaballs, 5f, len), _activation);
     }
@@ -193,6 +193,7 @@ sealed class Hydrofall(BossModule module) : Components.GenericAOEs(module)
 }
 sealed class EchoedSerenade(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _upcomingBuffer = [];
     // serenade casts are same, order by VFX?
     private const uint _steedvfx = 2741;
     private const uint _stalwartvfx = 2742;
@@ -210,7 +211,8 @@ sealed class EchoedSerenade(BossModule module) : Components.GenericAOEs(module)
         if (len == 0)
             return [];
 
-        List<AOEInstance> upcoming = [];
+        var upcoming = _upcomingBuffer;
+        upcoming.Clear();
         var firstAct = aoes[0].Activation;
 
         for (var i = 0; i < len; ++i)
@@ -292,6 +294,7 @@ sealed class EchoedSerenade(BossModule module) : Components.GenericAOEs(module)
 }
 sealed class SunkenTreasure(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _upcomingBuffer = [];
     // spawns 4 orbs
     // 2-3 explode at a time
     // EObjAnim 00100020 -> shatter 1, 3s
@@ -307,7 +310,8 @@ sealed class SunkenTreasure(BossModule module) : Components.GenericAOEs(module)
         if (len == 0)
             return [];
 
-        List<AOEInstance> upcoming = [];
+        var upcoming = _upcomingBuffer;
+        upcoming.Clear();
         var firstAct = aoes[0].Activation;
 
         for (var i = 0; i < len; ++i)

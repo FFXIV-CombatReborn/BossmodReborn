@@ -100,5 +100,5 @@ public sealed class Ttokrrone(WorldState ws, Actor primary) : BossModule(ws, pri
 {
     private static readonly ArenaBoundsCustom arena = new([new Polygon(new(53f, -820f), 29.5f, 48)]);
 
-    protected override bool CheckPull() => base.CheckPull() && (arena.Center - Raid.Player()!.Position).LengthSq() < 900f;
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && (arena.Center - player.Position).LengthSq() < 900f;
 }

@@ -287,5 +287,5 @@ sealed class MicaTheMagicalMuStates : StateMachineBuilder
 [ModuleInfo(BossModuleInfo.Maturity.Verified, GroupType = BossModuleInfo.GroupType.Fate, GroupID = 1922, NameID = 13049)]
 public sealed class MicaTheMagicalMu(WorldState ws, Actor primary) : BossModule(ws, primary, new(791f, 593f), new ArenaBoundsRect(20.5f, 19.5f))
 {
-    protected override bool CheckPull() => base.CheckPull() && (Center - Raid.Player()!.Position).LengthSq() < 420f;
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && (Center - player.Position).LengthSq() < 420f;
 }

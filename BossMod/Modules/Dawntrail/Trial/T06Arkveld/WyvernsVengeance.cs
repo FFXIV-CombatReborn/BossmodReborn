@@ -48,6 +48,7 @@ sealed class WyvernsWeal(BossModule module) : Components.GenericAOEs(module)
     private static readonly AOEShapeRect rect = new(60f, 3f);
     private static readonly Angle maxStep = 11.25f.Degrees();
     private readonly List<(Angle Rotation, DateTime Activation)> _rotations = [with(16)];
+    private readonly AOEInstance[] _aoes = new AOEInstance[2];
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
@@ -130,7 +131,7 @@ sealed class WyvernsWeal(BossModule module) : Components.GenericAOEs(module)
         }
         var origin = Module.PrimaryActor.Position;
         var (rot, act) = _rotations[current];
-        var cur = new AOEInstance(rect, origin, rot, act);
+        _aoes[0] = new(rect, origin, rot, act);
         if (previous >= 0)
         {
             var nextTime = act.AddSeconds(0.7d);
@@ -138,9 +139,10 @@ sealed class WyvernsWeal(BossModule module) : Components.GenericAOEs(module)
             {
                 var delta = (rot - _rotations[previous].Rotation).Normalized().Rad;
                 var step = Math.Clamp(delta, -maxStep.Rad, maxStep.Rad);
-                return new AOEInstance[2] { cur, new(rect, origin, rot + new Angle(step), nextTime) };
+                _aoes[1] = new(rect, origin, rot + new Angle(step), nextTime);
+                return _aoes;
             }
         }
-        return new AOEInstance[1] { cur };
+        return _aoes.AsSpan(0, 1);
     }
 }
