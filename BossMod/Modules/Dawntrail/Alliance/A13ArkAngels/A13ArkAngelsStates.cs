@@ -18,6 +18,7 @@ sealed class A13ArkAngelsStates : StateMachineBuilder
             .ActivateOnEnter<LightsChain>()
             .ActivateOnEnter<Meteor>()
             .ActivateOnEnter<Utsusemi>()
+            .ActivateOnEnter<MijinGakure>()
             .ActivateOnEnter<HavokSpiral>()
             .ActivateOnEnter<SpiralFinish>()
             .ActivateOnEnter<Dragonfall>()

@@ -9,7 +9,11 @@ sealed class SynchronizedStrikeSmite(BossModule module) : Components.GenericAOEs
 
     private int index;
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes)[..index];
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        return aoes[..Math.Min(index, aoes.Length)];
+    }
 
     public override void Update()
     {

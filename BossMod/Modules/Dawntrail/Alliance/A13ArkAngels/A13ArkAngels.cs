@@ -8,6 +8,7 @@ sealed class TachiGekko(BossModule module) : Components.CastGaze(module, (uint)A
 sealed class TachiKasha(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TachiKasha, 20f);
 sealed class TachiYukikaze(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TachiYukikaze, new AOEShapeRect(50f, 2.5f));
 sealed class Raiton(BossModule module) : Components.RaidwideCast(module, (uint)AID.Raiton);
+sealed class MijinGakure(BossModule module) : Components.InvincibleStatus(module, (uint)SID.Invincibility);
 sealed class Utsusemi(BossModule module) : Components.StretchTetherSingle(module, (uint)TetherID.Utsusemi, 10f, needToKite: true);
 
 [ModuleInfo(BossModuleInfo.Maturity.AISupport, PrimaryActorOID = (uint)OID.BossGK, Contributors = "The Combat Reborn Team (Malediktus, LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1015, NameID = 13640, SortOrder = 7, PlanLevel = 100)]

@@ -17,10 +17,38 @@ sealed class Dragonfall(BossModule module) : Components.UniformStackSpread(modul
         if (spell.Action.ID == (uint)AID.DragonfallAOE)
         {
             ++NumCasts;
-            Stacks.RemoveAll(s => s.Target.InstanceID == spell.MainTargetID);
-            var forbidden = Raid.WithSlot(false, false, true).WhereActor(a => spell.Targets.Any(t => t.ID == a.InstanceID)).Mask();
-            foreach (ref var s in Stacks.AsSpan())
-                s.ForbiddenPlayers |= forbidden;
+            var mainTarget = spell.MainTargetID;
+            for (var i = Stacks.Count - 1; i >= 0; --i)
+            {
+                if (Stacks[i].Target.InstanceID == mainTarget)
+                {
+                    Stacks.RemoveAt(i);
+                }
+            }
+            BitMask forbidden = default;
+            var party = Raid.WithSlot(false, false, true);
+            var lenP = party.Length;
+            var targets = CollectionsMarshal.AsSpan(spell.Targets);
+            var lenT = targets.Length;
+            for (var i = 0; i < lenT; ++i)
+            {
+                var id = targets[i].ID;
+                for (var j = 0; j < lenP; ++j)
+                {
+                    ref readonly var p = ref party[j];
+                    if (p.Item2.InstanceID == id)
+                    {
+                        forbidden.Set(p.Item1);
+                        break;
+                    }
+                }
+            }
+            var stacks = CollectionsMarshal.AsSpan(Stacks);
+            var lenS = stacks.Length;
+            for (var i = 0; i < lenS; ++i)
+            {
+                stacks[i].ForbiddenPlayers |= forbidden;
+            }
         }
     }
 }

@@ -66,7 +66,17 @@ sealed class DiagrammaticDoorway(BossModule module) : Components.GenericAOEs(mod
     /*
      * convert _predicted to ReadOnlySpan. If empty return empty span, else return only 0th index so aoe does not overlap.
      */
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_predicted.Count() == 0 ? _predicted : _predicted[..1]);
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _predicted.Count != 0 ? CollectionsMarshal.AsSpan(_predicted)[..1] : [];
+
+    private static readonly AOEShapeDonut donut = new(6f, 70f);
+
+    private void AddNext(ulong targetID)
+    {
+        if (_predicted.Count != 0 && WorldState.Actors.Find(targetID) is Actor target)
+        {
+            _predicted.Add(new(donut, target.Position, default, _predicted[^1].Activation.AddSeconds(3.1d)));
+        }
+    }
 
     public override void OnTethered(Actor source, in ActorTetherInfo tether)
     {
@@ -76,15 +86,12 @@ sealed class DiagrammaticDoorway(BossModule module) : Components.GenericAOEs(mod
                 // First cast is a long cast, else normal short cast.
                 if (_predicted.Count == 0)
                 {
-                    _predicted.Add(new(new AOEShapeDonut(6, 70), source.Position, default, WorldState.FutureTime(10.1f)));
+                    _predicted.Add(new(donut, source.Position, default, WorldState.FutureTime(10.1d)));
                 }
-                _predicted.Add(new(new AOEShapeDonut(6, 70), WorldState.Actors.Find(tether.Target)!.Position, default, _predicted[^1].Activation.AddSeconds(3.1f)));
+                AddNext(tether.Target);
                 break;
             case (uint)TetherID.PurpleCircle:
-                {
-                    _predicted.Add(new(new AOEShapeDonut(6, 70), WorldState.Actors.Find(tether.Target)!.Position,
-                        default, _predicted[^1].Activation.AddSeconds(3.1f)));
-                }
+                AddNext(tether.Target);
                 break;
         }
     }
@@ -120,7 +127,27 @@ sealed class FallingRubble2(BossModule module) : Components.SimpleAOEs(module, (
 
 sealed class FallingRubble3(BossModule module) : Components.SimpleAOEs(module, (uint)AID.FallingRubble3, new AOEShapeRect(25f, 3f));
 
-sealed class FinalExam(BossModule module) : Components.StackWithCastTargets(module, (uint)AID.FinalExam1, 6f);
+sealed class FinalExam(BossModule module) : Components.UniformStackSpread(module, 6f, default)
+{
+    public int NumCasts;
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.FinalExam1 && WorldState.Actors.Find(spell.TargetID) is Actor target)
+        {
+            NumCasts = 0;
+            AddStack(target, Module.CastFinishAt(spell));
+        }
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID is (uint)AID.FinalExam1 or (uint)AID.FinalExam2 && ++NumCasts >= 3)
+        {
+            Stacks.Clear();
+        }
+    }
+}
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team, HerStolenLight", PrimaryActorOID = (uint)OID.ShantottoTheDemon, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1117u, NameID = 14778u)]
 public sealed class A30Shantoto(WorldState ws, Actor primary) : BossModule(ws, primary, ArenaCenter, new ArenaBoundsRect(24f, 30f))

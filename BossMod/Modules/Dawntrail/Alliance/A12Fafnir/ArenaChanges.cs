@@ -31,6 +31,7 @@ sealed class DragonBreathArenaChange(BossModule module) : BossComponent(module)
 
     private Angle initialRot;
     private DateTime started;
+    private int lastStep = -1;
     private static readonly Circle circle = new(A12Fafnir.ArenaCenter, 16f);
 
     public override void OnActorEAnim(Actor actor, uint state)
@@ -54,9 +55,16 @@ sealed class DragonBreathArenaChange(BossModule module) : BossComponent(module)
         if (started != default)
         {
             var time = (WorldState.CurrentTime - started).TotalSeconds;
-            var angle = initialRot - ((float)time * 30f).Degrees(); // 30° of the outer arena turn safe again per second
+            var step = (int)(time * 4d);
+            if (step == lastStep && time < 12d)
+            {
+                return;
+            }
+            lastStep = step;
+            var angle = initialRot - (step * 7.5f).Degrees(); // 30° of the outer arena turn safe again per second
             if (time >= 12d)
             {
+                lastStep = -1;
                 started = default;
                 Arena.Bounds = A12Fafnir.DefaultBounds;
                 Arena.Center = A12Fafnir.ArenaCenter;

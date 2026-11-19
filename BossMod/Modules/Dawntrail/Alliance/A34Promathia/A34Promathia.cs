@@ -6,56 +6,87 @@ sealed class Explosion(BossModule module) : Components.SimpleAOEs(module, (uint)
 
 sealed class WheelofImpregnability(BossModule module) : Components.GenericAOEs(module, (uint)AID.WheelOfImpregnabilityFire)
 {
-    private bool _on = false;
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    private static readonly AOEShapeCircle circle = new(13f);
+    private AOEInstance[] _aoe = [];
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
+
+    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
-        if (!_on)
+        if (iconID == (uint)IconID.WheelOfImpregnability)
         {
-            return [];
+            _aoe = [new(circle, Module.PrimaryActor.Position, default, WorldState.FutureTime(9.9d))];
         }
-        AOEInstance[]? _aoes = [new(new AOEShapeCircle(13f), Module.PrimaryActor.Position, default, WorldState.FutureTime(10.5d))];
-        return _aoes;
     }
+
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.WheelOfImpregnabilityCast)
+        if (_aoe.Length == 0 && spell.Action.ID == (uint)AID.WheelOfImpregnabilityCast)
         {
-            _on = true;
+            _aoe = [new(circle, Module.PrimaryActor.Position, default, WorldState.FutureTime(10.5d))];
         }
     }
+
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID == (uint)AID.WheelOfImpregnabilityFire)
+        if (spell.Action.ID == WatchedAction)
         {
-            _on = false;
+            ++NumCasts;
+            _aoe = [];
         }
     }
 }
 
-sealed class BastionOfTwilight(BossModule module) : Components.GenericAOEs(module, (uint)AID.WheelOfImpregnabilityFire)
+sealed class BastionOfTwilight(BossModule module) : Components.GenericAOEs(module, (uint)AID.BastionOfTwilightFire)
 {
-    private bool _on = false;
+    private static readonly AOEShapeDonut donut = new(8f, 50f);
+    private AOEInstance[] _aoe = [];
+    private int _pendingExplosions;
+
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        if (!_on)
+        if (_aoe.Length != 0)
         {
-            return [];
+            _aoe[0].Risky = _pendingExplosions == 0;
         }
-        AOEInstance[]? _aoes = [new(new AOEShapeDonut(8f, 50f), Module.PrimaryActor.Position, default, WorldState.FutureTime(10.5d))];
-        return _aoes;
+        return _aoe;
     }
+
+    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
+    {
+        if (iconID == (uint)IconID.BastionOfTwilight)
+        {
+            _aoe = [new(donut, Module.PrimaryActor.Position, default, WorldState.FutureTime(9.9d))];
+        }
+    }
+
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.BastionOfTwilightCast)
+        var id = spell.Action.ID;
+        if (id == (uint)AID.Explosion)
         {
-            _on = true;
+            ++_pendingExplosions;
+        }
+        else if (_aoe.Length == 0 && id == (uint)AID.BastionOfTwilightCast)
+        {
+            _aoe = [new(donut, Module.PrimaryActor.Position, default, WorldState.FutureTime(10.5d))];
         }
     }
+
+    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.Explosion && _pendingExplosions > 0)
+        {
+            --_pendingExplosions;
+        }
+    }
+
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID == (uint)AID.BastionOfTwilightFire)
+        if (spell.Action.ID == WatchedAction)
         {
-            _on = false;
+            ++NumCasts;
+            _aoe = [];
         }
     }
 }
@@ -95,7 +126,7 @@ sealed class FalseGenesis(BossModule module) : BossComponent(module)
             return;
         }
         var pos = actor.Position;
-        if (!pos.InRect(new(-820f, -807f), default(Angle), 6.5f, 6.5f, 6.5f) || pos.InRect(new(-808.724f, -826.5f), 120.Degrees(), 6.5f, 6.5f, 6.5f) || pos.InRect(new(-831.258f, -826.5f), -120.Degrees(), 6.5f, 6.5f, 6.5f))
+        if (!(pos.InRect(new(-820f, -807f), default(Angle), 6.5f, 6.5f, 6.5f) || pos.InRect(new(-808.724f, -826.5f), 120.Degrees(), 6.5f, 6.5f, 6.5f) || pos.InRect(new(-831.258f, -826.5f), -120.Degrees(), 6.5f, 6.5f, 6.5f)))
         {
             hints.Add("Move to platform spawn!");
         }
@@ -213,7 +244,7 @@ sealed class EmptySeed(BossModule module) : Components.SimpleKnockbacks(module, 
                 walls[z + 1] = new(corner, end2);
             }
 
-            var minDist = KnockbackKind == Kind.TowardsOrigin ? (MinDistance + (MinDistanceBetweenHitboxes ? Raid.Player()!.HitboxRadius + caster.HitboxRadius : default)) : MinDistance;
+            var minDist = KnockbackKind == Kind.TowardsOrigin ? (MinDistance + (MinDistanceBetweenHitboxes ? (Raid.Player()?.HitboxRadius ?? 0.5f) + caster.HitboxRadius : default)) : MinDistance;
             Casters.Add(new(spell.LocXZ, Distance, Module.CastFinishAt(spell), Shape, spell.Rotation, KnockbackKind, minDist, walls, caster.InstanceID, IgnoreImmunes));
         }
     }
@@ -248,6 +279,32 @@ sealed class InfernalDeliveranceAOE(BossModule module) : Components.SimpleAOEs(m
 sealed class Meteor(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.Meteor, (uint)AID.Meteor2, 6f, 5f);  // this is the regular spreads only, Tankbuster is handled in Comet.
 
 sealed class DeadlyRebirth(BossModule module) : Components.RaidwideCast(module, (uint)AID.DeadlyRebirth);
+
+sealed class DeadlyRebirthKB(BossModule module) : Components.GenericKnockback(module, (uint)AID.DeadlyRebirth)
+{
+    private Knockback[] _kb = [];
+
+    public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor) => _kb;
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.DeadlyRebirthCast)
+        {
+            _kb = [new(Arena.Center, 20f, Module.CastFinishAt(spell, 2d), direction: default, kind: Kind.DirForward)];
+        }
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID == WatchedAction)
+        {
+            ++NumCasts;
+            _kb = [];
+        }
+    }
+}
+
+sealed class FalseGenesisRaidwide(BossModule module) : Components.RaidwideCastDelay(module, (uint)AID.FalseGenesis, (uint)AID.FalseGenesis1, 0.6d);
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, Contributors = "The Combat Reborn Team, HerStolenLight", PrimaryActorOID = (uint)OID.Promathia, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1117u, NameID = 14779u)]
 

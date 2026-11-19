@@ -8,13 +8,16 @@ sealed class ThirdArtOfDarknessCleave(BossModule module) : Components.GenericAOE
     public BitMask PlatformPlayers;
 
     private static readonly AOEShapeCone _shape = new(15f, 90f.Degrees());
+    private AOEInstance[] _aoesBuffer = [];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = Mechanics.Count;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        if (_aoesBuffer.Length < count)
+            _aoesBuffer = new AOEInstance[count];
+        var aoes = _aoesBuffer;
         var index = 0;
         foreach (var (caster, m) in Mechanics)
         {
@@ -110,9 +113,18 @@ sealed class ThirdArtOfDarknessCleave(BossModule module) : Components.GenericAOE
         };
         if (mechanic != Mechanic.None)
         {
-            var (a, m) = Mechanics.FirstOrDefault(kv => kv.Key.Position.AlmostEqual(caster.Position, 1f) && kv.Value.Count > 0 && kv.Value[0].mechanic == mechanic);
+            Actor? a = null;
+            foreach (var kv in Mechanics)
+            {
+                if (kv.Key.Position.AlmostEqual(caster.Position, 1f) && kv.Value.Count > 0 && kv.Value[0].mechanic == mechanic)
+                {
+                    a = kv.Key;
+                    break;
+                }
+            }
             if (a != null)
             {
+                var m = Mechanics[a];
                 ++NumCasts;
                 m.RemoveAt(0);
                 if (m.Count == 0)
@@ -128,14 +140,19 @@ sealed class ThirdArtOfDarknessHyperFocusedParticleBeam(BossModule module) : Com
 
     private static readonly AOEShapeRect _shape = new(22, 2.5f);
 
+    private readonly List<Actor> _sorted = new(PartyState.MaxPartySize);
+
     public override void Update()
     {
         CurrentBaits.Clear();
         if (_main != null)
             foreach (var (a, m) in _main.Mechanics)
                 if (m.Count > 0 && m[0].mechanic == ThirdArtOfDarknessCleave.Mechanic.Spread)
-                    foreach (var p in Raid.WithoutSlot(false, false, true).SortedByRange(a.Position).Take(6))
-                        CurrentBaits.Add(new(a, p, _shape, m[0].activation));
+                {
+                    Raid.WithoutSlot(false, false, true).SortedByRange(a.Position, _sorted);
+                    for (var i = 0; i < _sorted.Count && i < 6; ++i)
+                        CurrentBaits.Add(new(a, _sorted[i], _shape, m[0].activation));
+                }
     }
 }
 
@@ -143,14 +160,19 @@ sealed class ThirdArtOfDarknessMultiProngedParticleBeam(BossModule module) : Com
 {
     private readonly ThirdArtOfDarknessCleave? _main = module.FindComponent<ThirdArtOfDarknessCleave>();
 
+    private readonly List<Actor> _sorted = new(PartyState.MaxPartySize);
+
     public override void Update()
     {
         Stacks.Clear();
         if (_main != null)
             foreach (var (a, m) in _main.Mechanics)
                 if (m.Count > 0 && m[0].mechanic == ThirdArtOfDarknessCleave.Mechanic.Stack)
-                    foreach (var p in Raid.WithoutSlot(false, false, true).SortedByRange(a.Position).Take(3))
-                        AddStack(p, m[0].activation, ~_main.PlatformPlayers);
+                {
+                    Raid.WithoutSlot(false, false, true).SortedByRange(a.Position, _sorted);
+                    for (var i = 0; i < _sorted.Count && i < 3; ++i)
+                        AddStack(_sorted[i], m[0].activation, ~_main.PlatformPlayers);
+                }
         base.Update();
     }
 }

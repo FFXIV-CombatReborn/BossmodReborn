@@ -38,6 +38,20 @@ sealed class AeroDynamics(BossModule module) : Components.GenericKnockback(modul
 
     private readonly List<StatusKB> _statuskbs = [];
 
+    private StatusKB? FindStatusKB(int slot)
+    {
+        var count = _statuskbs.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            var k = _statuskbs[i];
+            if (k.Slot == slot)
+            {
+                return k;
+            }
+        }
+        return null;
+    }
+
     public override void OnStatusGain(Actor actor, ref ActorStatus status)
     {
         if (status.ID is var id && id == (uint)SID.WesterlyWinds)
@@ -78,7 +92,7 @@ sealed class AeroDynamics(BossModule module) : Components.GenericKnockback(modul
         {
             return [];
         }
-        var kb = _statuskbs.Find(k => k.Slot == slot);
+        var kb = FindStatusKB(slot);
         if (kb != null)
         {
             var _knockbacks = new Knockback[1];
@@ -93,24 +107,16 @@ sealed class AeroDynamics(BossModule module) : Components.GenericKnockback(modul
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (_statuskbs.Count != 0)
+        var kb = FindStatusKB(slot);
+        if (kb == null || kb.Direction == Direction.None || IsImmune(slot, WorldState.CurrentTime))
         {
-            var kb = _statuskbs[slot];
-            if (!IsImmune(slot, WorldState.CurrentTime))
-            {
-                var dir = ((float)kb.Direction).Degrees().ToDirection();
-                var walls = _walls;
-                var len = walls.Count;
-                if (len > 0)
-                {
-                    var swalls = new SafeWall[len];
-                    for (var i = 0; i < walls.Count; ++i)
-                    {
-                        swalls[i] = walls[i];
-                    }
-                    hints.AddForbiddenZone(new SDKnockbackFixedDirectionAgainstSafewalls(dir, swalls, 60f, len), WorldState.CurrentTime);
-                }
-            }
+            return;
+        }
+        var len = _walls.Count;
+        if (len > 0)
+        {
+            var dir = ((float)kb.Direction).Degrees().ToDirection();
+            hints.AddForbiddenZone(new SDKnockbackFixedDirectionAgainstSafewalls(dir, [.. _walls], 60f, len), WorldState.CurrentTime);
         }
     }
 }

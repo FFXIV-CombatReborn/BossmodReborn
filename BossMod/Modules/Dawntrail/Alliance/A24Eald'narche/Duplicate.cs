@@ -43,17 +43,10 @@ sealed class Duplicate(BossModule module) : Components.GenericAOEs(module)
         }
     }
 
+    private static readonly (int dr, int dc)[] offsets = [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)];
+
     private void AddAOEs(int row, int col)
     {
-        (int dr, int dc)[] offsets =
-        [
-            (0, 0),
-            (-1, 0),
-            (1, 0),
-            (0, -1),
-            (0, 1),
-        ];
-
         for (var i = 0; i < 5; ++i)
         {
             var nRow = row + offsets[i].dr;

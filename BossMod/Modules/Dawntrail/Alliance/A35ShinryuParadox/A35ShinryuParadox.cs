@@ -21,16 +21,22 @@ sealed class FloorAOEs(BossModule module) : Components.GenericAOEs(module)
             {
                 return []; // player must have died during debuff application and doesn't care
             }
+            _topHoleSD ??= topHole.Distance(holePos, default);
+            _topHoleInvSD ??= topHole.InvertedDistance(holePos, default);
+            _bottomSD ??= bottomTeleporter.Distance(holePos, default);
+            _bottomInvSD ??= bottomTeleporter.InvertedDistance(holePos, default);
             ref var aoe0 = ref _aoes[0];
             var safeColor = Colors.SafeFromAOE;
-            aoe0.ShapeDistance = shouldBeTop ? topHole.Distance(holePos, default) : topHole.InvertedDistance(holePos, default);
+            aoe0.ShapeDistance = shouldBeTop ? _topHoleSD : _topHoleInvSD;
             aoe0.Color = shouldBeTop ? safeColor : default;
             ref var aoe1 = ref _aoes[1];
-            aoe1.ShapeDistance = !shouldBeTop ? bottomTeleporter.Distance(holePos, default) : bottomTeleporter.InvertedDistance(holePos, default);
+            aoe1.ShapeDistance = !shouldBeTop ? _bottomSD : _bottomInvSD;
             aoe1.Color = !shouldBeTop ? safeColor : default;
         }
         return _aoes;
     }
+
+    private ShapeDistance? _topHoleSD, _topHoleInvSD, _bottomSD, _bottomInvSD;
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
@@ -232,6 +238,14 @@ sealed class CelestialTrail(BossModule module) : Components.CastTowers(module, (
         if (status.ID == (uint)SID.HPRecoveryDown)
         {
             _forbidden.Set(Raid.FindSlot(actor.InstanceID));
+        }
+    }
+
+    public override void OnStatusLose(Actor actor, ref ActorStatus status)
+    {
+        if (status.ID == (uint)SID.HPRecoveryDown)
+        {
+            _forbidden.Clear(Raid.FindSlot(actor.InstanceID));
         }
     }
 

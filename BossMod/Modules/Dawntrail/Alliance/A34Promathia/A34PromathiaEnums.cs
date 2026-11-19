@@ -87,8 +87,8 @@ public enum SID : uint
 
 public enum IconID : uint
 {
-    Icon_m1001_lockon_c0w = 687, // Promathia->self
-    Icon_m1001_lockon_c1w = 688, // Promathia->self
+    WheelOfImpregnability = 687, // Promathia->self
+    BastionOfTwilight = 688, // Promathia->self
     Comet = 344, // player->self
     WindsLeft = 690, // EmptyThinker1->self
     WindsRight = 689, // EmptyThinker1->self

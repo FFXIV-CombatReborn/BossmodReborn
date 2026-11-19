@@ -13,7 +13,7 @@ sealed class ArenaChanges(BossModule module) : Components.SimpleAOEs(module, (ui
             {
                 case 0x02000004u: // teleporting tile disappears
                 case 0x00040004u: // initial removed tile
-                    RemovedTiles.Add(tile);
+                    AddTile(tile);
                     UpdateArena();
                     break;
                 case 0x01000001u: // tile unfreezes
@@ -38,10 +38,18 @@ sealed class ArenaChanges(BossModule module) : Components.SimpleAOEs(module, (ui
                 var center = new WPos(784f + i % 3 * 16f, -816f + i / 3 * 16f);
                 if (center.InRect(pos, dir, 16f, default, 24f))
                 {
-                    RemovedTiles.Add(i);
+                    AddTile(i);
                 }
             }
             UpdateArena();
+        }
+    }
+
+    private void AddTile(int tile)
+    {
+        if (!RemovedTiles.Contains(tile))
+        {
+            RemovedTiles.Add(tile);
         }
     }
 
