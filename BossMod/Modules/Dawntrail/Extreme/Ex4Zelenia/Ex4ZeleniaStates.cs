@@ -6,6 +6,8 @@ sealed class Ex4ZeleniaStates : StateMachineBuilder
     {
         // splitting fight into 3 parts since you will likely be able to skip mechs in phase 1 once item lvl goes up
         SimplePhase(default, Phase1, "P1")
+            .ActivateOnEnter<ThornedCatharsisRaidwide>()
+            .ActivateOnEnter<PerfumedQuietusRaidwide>()
             .Raw.Update = () => Module.PrimaryActor.IsDeadOrDestroyed || (Module.PrimaryActor.CastInfo?.Action.ID ?? 0u) == (uint)AID.BlessedBarricade;
         SimplePhase(1u, BlessedBarricade, "Blessed Barricade")
             .ActivateOnEnter<RosebloodDrop>()

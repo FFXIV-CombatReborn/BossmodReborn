@@ -438,6 +438,7 @@ sealed class MaleficPortent(BossModule module) : Components.CastCounter(module, 
 }
 sealed class MaleficAlignment(BossModule module) : Components.SimpleAOEs(module, (uint)AID.MaleficAlignment, new AOEShapeCone(40f, 45f.Degrees()))
 {
+    private readonly List<AOEInstance> _unsafeAoesBuffer = [];
     // safe spot depends on player Malefic debuff
     private readonly DebuffTracker _debuffs = module.FindComponent<DebuffTracker>()!;
 
@@ -449,7 +450,8 @@ sealed class MaleficAlignment(BossModule module) : Components.SimpleAOEs(module,
             return [];
         }
 
-        List<AOEInstance> unsafeAoes = [];
+        var unsafeAoes = _unsafeAoesBuffer;
+        unsafeAoes.Clear();
         var angles = _debuffs.GetUnsafeAngles(slot);
         var angleLen = angles.Length;
 
@@ -474,6 +476,7 @@ sealed class MaleficAlignment(BossModule module) : Components.SimpleAOEs(module,
 /*
 sealed class WillOfTheUnderworld(BossModule module) : Components.SimpleAOEs(module, (uint)AID.WillOfTheUnderworld, new AOEShapeRect(40f, 10f))
 {
+    private readonly List<AOEInstance> _unsafeAoesBuffer = [];
     private readonly DebuffTracker _debuffs = module.FindComponent<DebuffTracker>()!;
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
@@ -483,7 +486,8 @@ sealed class WillOfTheUnderworld(BossModule module) : Components.SimpleAOEs(modu
             return [];
         }
 
-        List<AOEInstance> unsafeAoes = [];
+        var unsafeAoes = _unsafeAoesBuffer;
+        unsafeAoes.Clear();
         var angles = _debuffs.GetUnsafeAngles(slot);
         var angleLen = angles.Length;
 
@@ -509,6 +513,7 @@ sealed class WillOfTheUnderworld(BossModule module) : Components.SimpleAOEs(modu
 */
 class GenericWillUnderworld(BossModule module, uint aid, AOEShape shape) : Components.SimpleAOEs(module, aid, shape)
 {
+    private readonly List<AOEInstance> _unsafeAoesBuffer = [];
     private readonly DebuffTracker _debuffs = module.FindComponent<DebuffTracker>()!;
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
@@ -518,7 +523,8 @@ class GenericWillUnderworld(BossModule module, uint aid, AOEShape shape) : Compo
             return [];
         }
 
-        List<AOEInstance> unsafeAoes = [];
+        var unsafeAoes = _unsafeAoesBuffer;
+        unsafeAoes.Clear();
         var angles = _debuffs.GetUnsafeAngles(slot);
         var angleLen = angles.Length;
 

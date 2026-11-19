@@ -13,7 +13,15 @@ sealed class Aetherblight(BossModule module) : Components.GenericAOEs(module)
     private bool rectSidesRemoved;
     private int index;
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => Show ? CollectionsMarshal.AsSpan(_aoes)[..index] : [];
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        if (!Show)
+        {
+            return [];
+        }
+        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        return aoes[..Math.Min(index, aoes.Length)];
+    }
 
     public override void Update()
     {

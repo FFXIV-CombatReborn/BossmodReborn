@@ -17,7 +17,34 @@ sealed class ForgedTrack(BossModule module) : Components.GenericAOEs(module)
     private readonly AOEShapeRect _shape = new(10f, 2.5f, 10f);
     private readonly AOEShapeRect _shapeWide = new(10f, 7.5f, 10f);
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan([.. NarrowAOEs, .. WideAOEs, .. KnockbackAOEs]);
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        var countN = NarrowAOEs.Count;
+        var countW = WideAOEs.Count;
+        var countK = KnockbackAOEs.Count;
+        var total = countN + countW + countK;
+        if (total == 0)
+        {
+            return [];
+        }
+        if (total == countN)
+        {
+            return CollectionsMarshal.AsSpan(NarrowAOEs);
+        }
+        if (total == countW)
+        {
+            return CollectionsMarshal.AsSpan(WideAOEs);
+        }
+        if (total == countK)
+        {
+            return CollectionsMarshal.AsSpan(KnockbackAOEs);
+        }
+        var aoes = new AOEInstance[total];
+        NarrowAOEs.CopyTo(aoes, 0);
+        WideAOEs.CopyTo(aoes, countN);
+        KnockbackAOEs.CopyTo(aoes, countN + countW);
+        return aoes;
+    }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {

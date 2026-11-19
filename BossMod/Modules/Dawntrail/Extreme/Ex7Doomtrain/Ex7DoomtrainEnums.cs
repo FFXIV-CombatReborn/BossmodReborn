@@ -9,7 +9,7 @@ public enum OID : uint
     KinematicTurret = 0x4A39, // R1.2
     Aether = 0x4A3A, // R1.5
     GhostTrain = 0x4B81, // R2.72
-    _Gen_ = 0x4A36, // R1.0
+    ArcaneRevelation = 0x4A36, // R1.0, hail of thunder indicator
     DoomtrainHelper = 0x4A3B, // R1.0
     Helper = 0x233C
 }
@@ -18,7 +18,7 @@ public enum AID : uint
 {
     AutoAttack = 45716, // Helper->player, no cast, single-target
     Teleport1 = 45641, // Doomtrain->location, no cast, single-target
-    Teleport2 = 45655, // Doomtrain->location, no cast, single-target
+    Zoom = 45655, // Doomtrain->location, no cast, single-target
 
     DeadMansOverdraughtSpread = 45663, // Doomtrain->self, 4.0+1,0s cast, single-target
     DeadMansOverdraughtStack = 45664, // Doomtrain->self, 4.0+1,0s cast, single-target
@@ -105,23 +105,23 @@ public enum SID : uint
     _Gen_DeadMansOverdraught = 4720, // none->Doomtrain, extra=0x0
     _Gen_MagicVulnerabilityUp = 2941, // Helper->player, extra=0x0
     _Gen_VulnerabilityUp = 1789, // Helper/LevinSignal/KinematicTurret/DoomtrainHelper->player, extra=0x1/0x2/0x3
-    _Gen_ = 4541, // none->GhostTrain, extra=0x578/0x960
+    Distance = 4541, // none->GhostTrain, extra=0x578/0x960
     _Gen_1 = 2056, // none->Doomtrain1, extra=0x400
     _Gen_2 = 2552, // none->GhostTrain, extra=0x42B
-    _Gen_3 = 4176, // none->GhostTrain, extra=0x0
+    Stop = 4176, // none->GhostTrain, extra=0x0
     _Gen_SystemLock = 2578, // none->player, extra=0x0
-    _Gen_4 = 4721, // none->player, extra=0x0
+    UpHigh = 4721, // none->player, extra=0x0
     _Gen_5 = 3913, // none->Doomtrain, extra=0x3D7/0x3D8
-    _Gen_DesignatedConductor = 4719, // none->player, extra=0x0
+    DesignatedConductor = 4719, // none->player, extra=0x0
     _Gen_PhysicalVulnerabilityUp = 2940, // Helper->player, extra=0x0
 }
 
 public enum IconID : uint
 {
     LightningBurst = 343, // player->self
-    _Gen_Icon_m0969_mrt_sht_se_c0k2 = 639, // Doomtrain1->self
+    Horn = 639, // Doomtrain1->self
     AetherialRay = 412, // player->self
     Aetherochar = 638, // Doomtrain1->self
     Aetherosote = 637, // Doomtrain1->self
-    _Gen_Icon_loc08sp_05a_se_c2 = 499, // player->self
+    Plummet = 499, // player->self
 }

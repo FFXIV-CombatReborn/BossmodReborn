@@ -13,6 +13,7 @@ sealed class Ex8EnuoStates : StateMachineBuilder
             .ActivateOnEnter<LoomingShadowAdd>()
             .ActivateOnEnter<AggressiveShadowAdd>()
             .ActivateOnEnter<SupportShadowAdds>()
+            .ActivateOnEnter<Gauntlet>()
             .ActivateOnEnter<LoomingEmptinessKB>()
             .ActivateOnEnter<LoomingEmptinessKillZone>()
             .ActivateOnEnter<EmptyShadowTower>()

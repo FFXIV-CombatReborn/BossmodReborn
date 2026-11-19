@@ -27,6 +27,10 @@ sealed class PlasmaBeam(BossModule module) : Components.GenericAOEs(module)
                     rect = rectShort;
                 }
             }
+            else if (arena.Car == 6u && pos.X < 95f)
+            {
+                rect = rectShort;
+            }
             var rot = actor.Rotation;
             _aoes.Add(new(rect, origin, rot, WorldState.FutureTime(6.9d), shapeDistance: rect.Distance(origin, rot)));
         }

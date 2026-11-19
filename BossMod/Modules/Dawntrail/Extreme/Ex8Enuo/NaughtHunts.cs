@@ -36,23 +36,7 @@ sealed class NaughtHunts(BossModule module) : Components.StandardChasingAOEs(mod
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == ActionFirst)
-        {
-            var pos = spell.LocXZ;
-            var minDistance = float.MaxValue;
-
-            var count = Targets.Count;
-            for (var i = 0; i < count; ++i)
-            {
-                var t = Targets[i];
-                var distanceSq = (t.Position - pos).LengthSq();
-                if (distanceSq < minDistance)
-                {
-                    minDistance = distanceSq;
-                }
-            }
-            // Overriding to remove the 'add' behaviour here.
-        }
+        // Overriding to remove the 'add' behaviour here, chasers are added from tethers instead.
     }
     public override void OnEventCast(Actor caster, ActorCastEvent spell) // Don't count the first action so that we can have the same count between the two.
     {
@@ -95,24 +79,17 @@ sealed class NaughtHuntsJumps(BossModule module) : BossComponent(module)
             var p = WorldState.Actors.Find(tether.Target);
             if (p != null)
             {
-                for (var i = 0; i < _targets.Count; ++i)
-                {
-                    _targets.Clear();
-                    _sources.Clear();
-                }
+                _targets.Clear();
+                _sources.Clear();
             }
         }
     }
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
-        if (_targets.Count() > 0 && _sources.Count > 0)
+        var count = _targets.Count; // sources and targets are always added and cleared together
+        for (var i = 0; i < count; ++i)
         {
-            for (var i = 0; i < _targets.Count; ++i)
-            {
-                var s = _sources[i];
-                var t = _targets[i];
-                Arena.AddLine(s.Position, t.Position);
-            }
+            Arena.AddLine(_sources[i].Position, _targets[i].Position);
         }
     }
 }

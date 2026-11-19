@@ -52,16 +52,16 @@ sealed class DeepFreeze(BossModule module) : Components.StayMove(module)
     }
     public override void OnStatusGain(Actor actor, ref ActorStatus status)
     {
-        if (status.ID == (uint)SID.FreezingUp)
+        if (status.ID == (uint)SID.FreezingUp && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0)
         {
-            PlayerStates[Raid.FindSlot(actor.InstanceID)] = new(Requirement.Move, WorldState.CurrentTime, finish: status.ExpireAt);
+            PlayerStates[slot] = new(Requirement.Move, WorldState.CurrentTime, finish: status.ExpireAt);
         }
     }
     public override void OnStatusLose(Actor actor, ref ActorStatus status)
     {
-        if (status.ID == (uint)SID.FreezingUp)
+        if (status.ID == (uint)SID.FreezingUp && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0)
         {
-            PlayerStates[Raid.FindSlot(actor.InstanceID)] = default;
+            PlayerStates[slot] = default;
         }
     }
 }

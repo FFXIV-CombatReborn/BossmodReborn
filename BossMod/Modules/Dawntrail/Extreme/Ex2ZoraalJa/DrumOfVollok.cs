@@ -35,6 +35,7 @@ sealed class DrumOfVollok(BossModule module) : Components.StackWithCastTargets(m
 
 sealed class DrumOfVollokKnockback(BossModule module) : Components.GenericKnockback(module)
 {
+    private readonly List<Knockback> _sourcesBuffer = [];
     private readonly DrumOfVollok? _main = module.FindComponent<DrumOfVollok>();
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
@@ -51,7 +52,8 @@ sealed class DrumOfVollokKnockback(BossModule module) : Components.GenericKnockb
                 return [];
             }
         }
-        var sources = new List<Knockback>();
+        var sources = _sourcesBuffer;
+        sources.Clear();
         for (var i = 0; i < count; ++i)
         {
             var s = _main.Stacks[i];

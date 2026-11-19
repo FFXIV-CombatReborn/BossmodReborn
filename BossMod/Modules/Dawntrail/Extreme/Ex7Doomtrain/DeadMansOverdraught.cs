@@ -15,11 +15,25 @@ sealed class DeadMansOverdraught(BossModule module) : Components.GenericStackSpr
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID is (uint)AID.DeadMansOverdraughtSpread or (uint)AID.DeadMansOverdraughtStack)
+        switch (spell.Action.ID)
         {
-            partnerStack = spell.Action.ID == (uint)AID.DeadMansOverdraughtStack;
+            case (uint)AID.DeadMansOverdraughtSpread:
+                partnerStack = false;
+                break;
+            case (uint)AID.DeadMansOverdraughtStack:
+                partnerStack = true;
+                break;
+            case (uint)AID.DeadMansExpress:
+            case (uint)AID.DeadMansWindpipeVisual:
+                if (AutoActivate && Stacks.Count == 0 && Spreads.Count == 0)
+                {
+                    AddStackSpread(11.1d);
+                }
+                break;
         }
     }
+
+    public bool AutoActivate;
 
     public void AddStackSpread(double delay)
     {

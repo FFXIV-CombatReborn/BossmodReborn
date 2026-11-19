@@ -40,6 +40,7 @@ sealed class Prisons(BossModule module) : BossComponent(module)
     private BitMask activeTeleporters;
     public override bool KeepOnPhaseChange => true;
 
+    private readonly ArenaBoundsCustom?[] prisonArenas = new ArenaBoundsCustom?[8];
     private readonly WPos[] prisonPositions = [new(100f, -100f), new(300f, -100f), new(300f, 100f), new(300f, 300f),
     new(100f, 300f), new(-100f, 300f), new(-100f, 100f), new(-100f, -100f)];
 
@@ -114,10 +115,13 @@ sealed class Prisons(BossModule module) : BossComponent(module)
                 var pos = prisonPositions[i];
                 if (playerPos.InSquare(pos, 50f))
                 {
-                    var arena = new ArenaBoundsCustom([new Polygon(pos, 9.5f, 32), new Polygon(pos + new WDir(-5f, -21f), 4.5f, 32),
+                    var arena = prisonArenas[i] ??= new ArenaBoundsCustom([new Polygon(pos, 9.5f, 32), new Polygon(pos + new WDir(-5f, -21f), 4.5f, 32),
                         new Polygon(pos + new WDir(14f, -14f), 4.5f, 32), new Polygon(pos + new WDir(20f, default), 3.25f, 32)]);
-                    Arena.Bounds = arena;
-                    Arena.Center = arena.Center;
+                    if (Arena.Bounds != arena)
+                    {
+                        Arena.Bounds = arena;
+                        Arena.Center = arena.Center;
+                    }
                     return;
                 }
             }

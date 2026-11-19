@@ -1,7 +1,5 @@
-using BossMod.ReplayVisualization;
 
 namespace BossMod.Dawntrail.Extreme.Ex7Doomtrain;
-
 
 // // // Technically I've seen two survive aetherosote, but we want the highlighting for fewer than 3 in a stack
 sealed class AetherocharAetherosote(BossModule module) : Components.IconStackSpread(module, stackIcon: (uint)IconID.Aetherosote, spreadIcon: (uint)IconID.Aetherochar, stackAID: (uint)AID.Aetherosote, spreadAID: (uint)AID.Aetherochar, stackRadius: 6f, spreadRadius: 6f, minStackSize: 3, maxStackSize: 3, activationDelay: 6.5d)
@@ -43,9 +41,9 @@ sealed class AetherocharAetherosote(BossModule module) : Components.IconStackSpr
         if (aid == StackAction)
         {
             var id = spell.MainTargetID;
-            if (MaxCasts != 1 && Stacks.Count == 1 && Stacks.Ref(0).Target.InstanceID != id) // multi hit stack target died and new target got selected
+            if (MaxCasts != 1 && Stacks.Count == 1 && Stacks.Ref(0).Target.InstanceID != id && WorldState.Actors.Find(id) is Actor newTarget) // multi hit stack target died and new target got selected
             {
-                Stacks.Ref(0).Target = WorldState.Actors.Find(id)!;
+                Stacks.Ref(0).Target = newTarget;
             }
             if (++CastCounter == MaxCasts)
             {
@@ -77,9 +75,67 @@ sealed class AetherocharAetherosote(BossModule module) : Components.IconStackSpr
     }
 }
 
-sealed class AetherialRay(BossModule module) : Components.BaitAwayIcon(module, shape: new AOEShapeCone(50f, 22.5f.Degrees()), iconID: (uint)IconID.AetherialRay, aid: (uint)AID.AetherialRay, activationDelay: 7.6d, centerAtTarget: false, tankbuster: true, damageType: AIHints.PredictedDamageType.Tankbuster)
+sealed class AetherialRay(BossModule module) : Components.GenericBaitAway(module, (uint)AID.AetherialRay, tankbuster: true, damageType: AIHints.PredictedDamageType.Tankbuster)
 {
-    public override Actor? BaitSource(Actor target) => Module.Enemies((uint)OID.GhostTrain).First();
+    private static readonly AOEShapeCone cone = new(50f, 22.5f.Degrees());
+    private readonly List<Actor> _trains = module.Enemies((uint)OID.GhostTrain);
+    private Angle _nextRotation;
+    private WPos? _nextSource;
+    private DateTime _nextActivation;
+
+    public override void OnStatusGain(Actor actor, ref ActorStatus status)
+    {
+        if (status.ID == (uint)SID.Distance)
+        {
+            _nextRotation = status.Extra switch
+            {
+                0x578 => 170f.Degrees(),
+                0x960 => 106f.Degrees(),
+                _ => default
+            };
+            if (_nextRotation == default)
+            {
+                ReportError($"Unrecognized status extra {status.Extra:X} on Ghost Train, can't predict its final position");
+            }
+        }
+    }
+
+    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
+    {
+        if (iconID == (uint)IconID.Horn)
+        {
+            if (_trains.Count != 0)
+            {
+                var center = Arena.Center;
+                var angle = Angle.FromDirection(_trains[0].Position - center) + _nextRotation;
+                _nextSource = center + 25f * angle.ToDirection();
+            }
+            _nextActivation = WorldState.FutureTime(9.7d);
+        }
+        else if (iconID == (uint)IconID.AetherialRay && _nextSource is WPos source)
+        {
+            CurrentBaits.Add(new(source, actor, cone, _nextActivation));
+        }
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID == WatchedAction)
+        {
+            ++NumCasts;
+            CurrentBaits.Clear();
+        }
+    }
 }
 
-sealed class RunawayTrain(BossModule module) : Components.RaidwideCastDelay(module, actionVisual: (uint)AID.RunawayTrainVisual2, actionAOE: (uint)AID.RunawayTrain, delay: 15d, hint: "Choo choo, the train is coming! (Raidwide)");
+sealed class RunawayTrain(BossModule module) : Components.RaidwideInstant(module, (uint)AID.RunawayTrain, 15.2d, "Choo choo, the train is coming! (Raidwide)")
+{
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        base.OnEventCast(caster, spell);
+        if (spell.Action.ID == (uint)AID.RunawayTrainVisual2)
+        {
+            Activation = WorldState.FutureTime(Delay);
+        }
+    }
+}

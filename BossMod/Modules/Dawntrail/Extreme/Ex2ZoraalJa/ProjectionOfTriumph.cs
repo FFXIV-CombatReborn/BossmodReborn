@@ -2,6 +2,7 @@
 
 sealed class ProjectionOfTriumph(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
     private record struct Line(WDir Direction, AOEShape Shape);
 
     private readonly List<Line> _lines = [];
@@ -14,7 +15,8 @@ sealed class ProjectionOfTriumph(BossModule module) : Components.GenericAOEs(mod
     {
         var nextOrder = NextOrder();
         var count = _lines.Count;
-        var aoes = new List<AOEInstance>();
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         for (var i = 0; i < count; ++i)
         {
             var order = i >= 2 ? nextOrder - 2 : nextOrder;

@@ -1,5 +1,14 @@
 namespace BossMod.Dawntrail.Extreme.Ex4Zelenia;
 
+sealed class ThornedCatharsisRaidwide(BossModule module) : Components.RaidwideCast(module, (uint)AID.ThornedCatharsis)
+{
+    public override bool KeepOnPhaseChange => true;
+}
+sealed class PerfumedQuietusRaidwide(BossModule module) : Components.RaidwideCast(module, (uint)AID.PerfumedQuietus1)
+{
+    public override bool KeepOnPhaseChange => true;
+}
+
 sealed class SpecterOfTheLost(BossModule module) : Components.TankbusterTether(module, (uint)AID.SpecterOfTheLost, (uint)TetherID.SpecterOfTheLost, new AOEShapeCone(48f, 22.5f.Degrees()), 7.8d);
 sealed class AlexandrianThunderIIISpread(BossModule module) : Components.SpreadFromCastTargets(module, (uint)AID.AlexandrianThunderIIISpread, 4f);
 sealed class AlexandrianBanishII(BossModule module) : Components.StackWithIcon(module, (uint)IconID.AlexandrianBanishII, (uint)AID.AlexandrianBanishII, 4f, 5.8f, 4, 4);

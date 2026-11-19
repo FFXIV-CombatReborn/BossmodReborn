@@ -103,8 +103,8 @@ public enum TetherID : uint
     NaughtGrowsWildCharge = 430, // player->Enuo
     Tether_chn_z5fd11_0a1 = 395, // 4DB8->Enuo
     Tether_chn_z5fd09_0a1 = 393, // 4DB8->Enuo
-    Tether_chn_z5fd16_0a1 = 406, // 4DC5/4DC6->Enuo
-    Tether_chn_z5fd17_0a1 = 407, // 4DC5/4DC6->Enuo
+    ClockSlow = 406, // VoidSoakSmall/VoidSoakLarge->Enuo, orb resolves later
+    ClockFast = 407, // VoidSoakSmall/VoidSoakLarge->Enuo, orb resolves first
     Tether_chn_tergetfix1f = 284, // 4DC9/4DCA/4DC8->player
     Tether_chn_z5fd10_0a1 = 394, // 4DB8->Enuo
     Tether_chn_z5fd12_0a1 = 396, // 4DB8->Enuo

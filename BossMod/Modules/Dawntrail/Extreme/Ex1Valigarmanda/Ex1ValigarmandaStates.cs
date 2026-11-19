@@ -404,7 +404,7 @@ sealed class Ex1ValigarmandaStates : StateMachineBuilder
         Cast(id, AID.RuinForetold, delay, 5f, "Raidwide")
             .SetHint(StateMachine.StateHint.Raidwide);
         Targetable(id + 0x10u, false, 0.9f, "Boss disappears");
-        ComponentCondition<Beacons>(id + 0x11, 1.0f, static comp => comp.ActiveActors.Any(), "Adds appear")
+        ComponentCondition<Beacons>(id + 0x11, 1.0f, static comp => comp.AnyActive(), "Adds appear")
             .ActivateOnEnter<Beacons>()
             .SetHint(StateMachine.StateHint.DowntimeEnd);
         Targetable(id + 0x100u, true, 50f, "Adds enrage") // boss becomes targetable immediately when last adds becomes untargetable
