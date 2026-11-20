@@ -210,13 +210,13 @@ sealed class BrawlEnder(BossModule module) : Components.GenericKnockback(module,
     {
         if (spell.Action.ID == WatchedAction)
         {
-            activation = Module.CastFinishAt(spell, 0.9d);
+            activation = Module.CastFinishAt(spell, 2.6d);
         }
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID == WatchedAction)
+        if (spell.Action.ID == (uint)AID.BrawlEnderKB)
         {
             activation = default;
         }

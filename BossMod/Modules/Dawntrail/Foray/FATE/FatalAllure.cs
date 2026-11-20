@@ -1,4 +1,4 @@
-namespace BossMod.Dawntrail.Foray.FATE.FatalAllure;
+﻿namespace BossMod.Dawntrail.Foray.FATE.FatalAllure;
 
 public enum OID : uint
 {
@@ -55,9 +55,8 @@ sealed class DarkMistVoidFireIII(BossModule module) : Components.GenericAOEs(mod
     public override void Update()
     {
         // this AOE should wait for Effect Results, since they can be delayed by over 0.7s, which would cause unknowning players and AI to run back into the death zone
-        if (done)
+        if (done && Module.Raid.Player() is Actor player)
         {
-            var player = Module.Raid.Player()!;
             var statuses = CollectionsMarshal.AsSpan(player.PendingStatuses);
             var len = statuses.Length;
             for (var i = 0; i < len; ++i)

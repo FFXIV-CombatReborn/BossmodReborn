@@ -78,7 +78,7 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
                 SetArena(ApyaahiTheArchitect.DefaultArena);
                 _aoe = [];
             }
-            else if (state == 0x0008004u)
+            else if (state == 0x00080004u)
                 SetArena(ApyaahiTheArchitect.StartingArena);
         }
     }
@@ -218,11 +218,12 @@ public sealed class ApyaahiTheArchitect(WorldState ws, Actor primary) : BossModu
 {
     public static readonly ArenaBoundsCustom StartingArena = new([new Polygon(new(default, 379.27f), 24.5f, 20)]);
     public static readonly ArenaBoundsCustom DefaultArena = new([new Polygon(new(default, 379.241f), 20f, 64)]);
+    private static readonly uint[] adds = [(uint)OID.Mycotender, (uint)OID.MycotenderArms];
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         Arena.Actor(PrimaryActor);
-        Arena.Actors(this, [(uint)OID.Mycotender, (uint)OID.MycotenderArms]);
+        Arena.Actors(this, adds);
     }
 
     protected override bool CheckPull() => Enemies((uint)OID.Mycotender) is var mycotender && mycotender.Count != 0 && mycotender[0].InCombat;

@@ -26,6 +26,11 @@ public enum AID : uint
     ProwlingDeath = 43475 // ForgivenProfanity->self, 3.0s cast, range 40 circle, applies Nowhere to Run or Shadow of Death
 }
 
+public enum TetherID : uint
+{
+    Lightning = 21 // BallOfLevin->BallOfLevin
+}
+
 public enum SID : uint
 {
     NowhereToRun = 4519, // none->player, extra=0x1/0x2/0x3/0x4/0x5/0x6/0x7
@@ -42,28 +47,63 @@ sealed class StalkingStaticShock(BossModule module) : Components.GenericAOEs(mod
     private readonly List<AOEInstance> _aoes = [with(9)];
     private readonly AOEShapeCircle circle = new(30f);
     private readonly List<Actor> levins = module.Enemies((uint)OID.BallOfLevin);
+    private readonly Dictionary<ulong, ulong> _next = [];
+    private readonly HashSet<ulong> _targets = [];
+    private DateTime _spawnTime;
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
 
     public override void OnActorCreated(Actor actor)
     {
         if (actor.OID == (uint)OID.BallOfLevin && levins.Count == 9)
-        {
-            SortHelpers.SortActorsByIDDescending(levins);
-            var activation = WorldState.CurrentTime;
+            _spawnTime = WorldState.CurrentTime;
+    }
 
-            for (var i = 0; i < 8; ++i)
+    public override void OnTethered(Actor source, in ActorTetherInfo tether)
+    {
+        if (tether.ID != (uint)TetherID.Lightning)
+            return;
+        _next[source.InstanceID] = tether.Target;
+        _targets.Add(tether.Target);
+        if (_next.Count == 8)
+            BuildChain();
+    }
+
+    private void BuildChain()
+    {
+        ulong start = default;
+        foreach (var src in _next.Keys)
+        {
+            if (!_targets.Contains(src))
             {
-                var pos = levins[i].Position;
-                var dir = levins[i + 1].Position.Quantized() - pos;
-                var rot = Angle.FromDirection(dir);
-                var shape = new AOEShapeRect(dir.Length(), 2f);
-                _aoes.Add(new(shape, pos, rot, activation.AddSeconds(7.5d + 0.4d * i), shapeDistance: shape.Distance(pos, rot)));
+                start = src;
+                break;
             }
-            var loc = levins[^1].Position.Quantized();
+        }
+        var activation = _spawnTime != default ? _spawnTime : WorldState.CurrentTime;
+        _aoes.Clear();
+        var current = WorldState.Actors.Find(start);
+        for (var i = 0; current != null && _next.TryGetValue(current.InstanceID, out var nextID) && i < 8; ++i)
+        {
+            var next = WorldState.Actors.Find(nextID);
+            if (next == null)
+                break;
+            var pos = current.Position;
+            var dir = next.Position.Quantized() - pos;
+            var rot = Angle.FromDirection(dir);
+            var shape = new AOEShapeRect(dir.Length(), 2f);
+            _aoes.Add(new(shape, pos, rot, activation.AddSeconds(7.5d + 0.4d * i), shapeDistance: shape.Distance(pos, rot)));
+            current = next;
+        }
+        if (current != null && _aoes.Count != 0)
+        {
+            var loc = current.Position.Quantized();
             _aoes.Add(new(circle, loc, default, activation.AddSeconds(11.7d), shapeDistance: circle.Distance(loc, default)));
             _aoes.Ref(0).Color = Colors.Danger;
         }
+        _next.Clear();
+        _targets.Clear();
+        _spawnTime = default;
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)

@@ -98,6 +98,7 @@ sealed class Breath(BossModule module) : Components.GenericRotatingAOE(module)
 
 sealed class GlacipotentOrb(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
     private readonly List<Actor> iceOrbs = [];
     private readonly AOEShapeCircle shape = new(12f);
     private bool active = false;
@@ -138,7 +139,8 @@ sealed class GlacipotentOrb(BossModule module) : Components.GenericAOEs(module)
             return [];
         }
 
-        List<AOEInstance> aoes = [];
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         foreach (var orb in iceOrbs)
         {
             aoes.Add(new(shape, orb.Position, orb.Rotation));
@@ -185,7 +187,18 @@ sealed class TheDragonsVoiceBoss(BossModule module) : Components.SimpleAOEs(modu
         var bestDistance = float.MinValue;
         foreach (var orb in orbs)
         {
-            var distance = orbs.Where(o => o != orb).Min(o => (o.Position - orb.Position).LengthSq());
+            var distance = float.MaxValue;
+            var countO = orbs.Count;
+            for (var i = 0; i < countO; ++i)
+            {
+                var o = orbs[i];
+                if (o != orb)
+                {
+                    var d = (o.Position - orb.Position).LengthSq();
+                    if (d < distance)
+                        distance = d;
+                }
+            }
             if (distance > bestDistance)
             {
                 bestDistance = distance;
@@ -206,6 +219,7 @@ sealed class TheDragonsVoiceBoss(BossModule module) : Components.SimpleAOEs(modu
 
 sealed class Cacophony(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
     private readonly List<Actor> orbs = [];
     private readonly AOEShapeCircle shape = new(6f);
 
@@ -232,7 +246,8 @@ sealed class Cacophony(BossModule module) : Components.GenericAOEs(module)
             return [];
         }
 
-        List<AOEInstance> aoes = [];
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         foreach (var orb in orbs)
         {
             aoes.Add(new(shape, orb.Position, orb.Rotation, WorldState.FutureTime(1.5f)));

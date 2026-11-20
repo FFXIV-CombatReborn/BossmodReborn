@@ -130,7 +130,7 @@ sealed class RoaringBoltKB(BossModule module) : Components.SimpleKnockbacks(modu
             {
                 ref var aoe = ref aoes[i];
                 var origin = aoe.Origin;
-                hints.AddForbiddenZone(new SDCone(pos, 100f, Angle.FromDirection(origin - pos), Angle.Asin(6f / (origin - pos).Length())), act);
+                hints.AddForbiddenZone(new SDCone(pos, 100f, Angle.FromDirection(origin - pos), Angle.Asin(Math.Min(1f, 6f / (origin - pos).Length()))), act);
             }
         }
     }

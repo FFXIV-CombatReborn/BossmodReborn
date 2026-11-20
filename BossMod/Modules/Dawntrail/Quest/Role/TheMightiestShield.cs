@@ -115,7 +115,10 @@ sealed class Fractures(BossModule module) : Components.DirectionalParry(module, 
                 first = pair;
                 break;
             }
-            var target = WorldState.Actors.Find(first.Key)!;
+            if (WorldState.Actors.Find(first.Key) is not Actor target)
+            {
+                return;
+            }
             var dir = first.Value == sideR ? target.Rotation - a90 : first.Value == sideL ? target.Rotation + a90 : target.Rotation + a180;
             hints.AddForbiddenZone(new SDInvertedDonutSector(target.Position, target.HitboxRadius, 20f, dir, a20));
         }
@@ -219,7 +222,10 @@ sealed class HomingLaser(BossModule module) : Components.GenericBaitAway(module)
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.HomingLaserMarker)
-            CurrentBaits.Add(new(caster, WorldState.Actors.Find(spell.TargetID)!, rect, WorldState.FutureTime(5.7d)));
+            if (WorldState.Actors.Find(spell.TargetID) is Actor target)
+            {
+                CurrentBaits.Add(new(caster, target, rect, WorldState.FutureTime(5.7d)));
+            }
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
@@ -260,5 +266,5 @@ public sealed class TheMightiestShield(WorldState ws, Actor primary) : BossModul
         Arena.Actors(this, all);
     }
 
-    protected override bool CheckPull() => Raid.Player()!.InCombat;
+    protected override bool CheckPull() => Raid.Player() is Actor { InCombat: true };
 }

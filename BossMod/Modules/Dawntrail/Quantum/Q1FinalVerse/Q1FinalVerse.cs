@@ -2,7 +2,7 @@ namespace BossMod.Dawntrail.Quantum.Q1FinalVerse;
 
 sealed class TerrorEyeVoidTrapBallOfFire(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.TerrorEye, (uint)AID.BallOfFire, (uint)AID.VoidTrap], 6f);
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.EminentGrief, Contributors = "", Category = BossModuleInfo.Category.Quantum, GroupType = BossModuleInfo.GroupType.CFC,
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.EminentGrief, Contributors = "LTS, with ported work from upstream", Category = BossModuleInfo.Category.Quantum, GroupType = BossModuleInfo.GroupType.CFC,
     GroupID = 1063u, NameID = 14037u, SortOrder = 1, PlanLevel = 0)]
 public sealed class Q1FinalVerse : BossModule
 {
