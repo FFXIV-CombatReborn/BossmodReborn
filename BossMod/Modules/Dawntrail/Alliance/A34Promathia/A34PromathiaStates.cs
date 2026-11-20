@@ -26,6 +26,7 @@ sealed class A34PromathiaStates : StateMachineBuilder
             .ActivateOnEnter<PestilentPenanceLink>()
             .ActivateOnEnter<InfernalDeliveranceTower>()
             .ActivateOnEnter<InfernalDeliveranceAOE>()
+            .ActivateOnEnter<HeavyPuddles>()
             .ActivateOnEnter<Meteor>();
     }
 }

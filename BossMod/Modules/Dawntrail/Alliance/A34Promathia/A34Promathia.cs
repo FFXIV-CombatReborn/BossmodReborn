@@ -11,11 +11,26 @@ sealed class WheelofImpregnability(BossModule module) : Components.GenericAOEs(m
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
 
+    public override void Update()
+    {
+        if (_aoe.Length != 0)
+        {
+            var pos = Module.PrimaryActor.Position;
+            ref var aoe = ref _aoe[0];
+            if (aoe.Origin != pos)
+            {
+                aoe.Origin = pos;
+                aoe.ShapeDistance = circle.Distance(pos, default);
+            }
+        }
+    }
+
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
         if (iconID == (uint)IconID.WheelOfImpregnability)
         {
-            _aoe = [new(circle, Module.PrimaryActor.Position, default, WorldState.FutureTime(9.9d))];
+            var pos = Module.PrimaryActor.Position;
+            _aoe = [new(circle, pos, default, WorldState.FutureTime(9.9d), shapeDistance: circle.Distance(pos, default))];
         }
     }
 
@@ -23,7 +38,8 @@ sealed class WheelofImpregnability(BossModule module) : Components.GenericAOEs(m
     {
         if (_aoe.Length == 0 && spell.Action.ID == (uint)AID.WheelOfImpregnabilityCast)
         {
-            _aoe = [new(circle, Module.PrimaryActor.Position, default, WorldState.FutureTime(10.5d))];
+            var pos = Module.PrimaryActor.Position;
+            _aoe = [new(circle, pos, default, WorldState.FutureTime(12.6d), shapeDistance: circle.Distance(pos, default))];
         }
     }
 
@@ -52,11 +68,26 @@ sealed class BastionOfTwilight(BossModule module) : Components.GenericAOEs(modul
         return _aoe;
     }
 
+    public override void Update()
+    {
+        if (_aoe.Length != 0)
+        {
+            var pos = Module.PrimaryActor.Position;
+            ref var aoe = ref _aoe[0];
+            if (aoe.Origin != pos)
+            {
+                aoe.Origin = pos;
+                aoe.ShapeDistance = donut.Distance(pos, default);
+            }
+        }
+    }
+
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
         if (iconID == (uint)IconID.BastionOfTwilight)
         {
-            _aoe = [new(donut, Module.PrimaryActor.Position, default, WorldState.FutureTime(9.9d))];
+            var pos = Module.PrimaryActor.Position;
+            _aoe = [new(donut, pos, default, WorldState.FutureTime(9.9d), risky: _pendingExplosions == 0, shapeDistance: donut.Distance(pos, default))];
         }
     }
 
@@ -69,7 +100,8 @@ sealed class BastionOfTwilight(BossModule module) : Components.GenericAOEs(modul
         }
         else if (_aoe.Length == 0 && id == (uint)AID.BastionOfTwilightCast)
         {
-            _aoe = [new(donut, Module.PrimaryActor.Position, default, WorldState.FutureTime(10.5d))];
+            var pos = Module.PrimaryActor.Position;
+            _aoe = [new(donut, pos, default, WorldState.FutureTime(12.6d), risky: _pendingExplosions == 0, shapeDistance: donut.Distance(pos, default))];
         }
     }
 
@@ -275,6 +307,106 @@ sealed class PestilentPenanceLink(BossModule module) : Components.SimpleAOEs(mod
 sealed class InfernalDeliveranceTower(BossModule module) : Components.CastTowers(module, (uint)AID.InfernalDeliveranceTower, 4f, 1, 8);
 
 sealed class InfernalDeliveranceAOE(BossModule module) : Components.SimpleAOEs(module, (uint)AID.InfernalDeliveranceAOE, 8f);
+
+sealed class HeavyPuddles(BossModule module) : Components.GenericAOEs(module, warningText: "GTFO from slow puddle!")
+{
+    private static readonly AOEShapeCircle _smallCircle = new(2.5f);
+    private static readonly AOEShapeCircle _largeCircle = new(8f);
+    private readonly List<AOEInstance> _aoes = [];
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        var count = _aoes.Count;
+        if (count == 0)
+        {
+            return;
+        }
+
+        var now = WorldState.CurrentTime;
+        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        for (var i = 0; i < count; ++i)
+        {
+            ref readonly var aoe = ref aoes[i];
+            if (aoe.ShapeDistance == null)
+            {
+                continue;
+            }
+            if (now >= aoe.Activation)
+            {
+                hints.TemporaryObstacles.Add(aoe.ShapeDistance);
+            }
+            else
+            {
+                hints.AddForbiddenZone(aoe.ShapeDistance, aoe.Activation);
+            }
+        }
+    }
+
+    public override void OnActorEAnim(Actor actor, uint state)
+    {
+        if (actor.OID is not ((uint)OID.Actor1ec097 or (uint)OID.Actor1ec098))
+        {
+            return;
+        }
+
+        switch (state)
+        {
+            case 0x00010002u:
+                SetPuddle(actor, _smallCircle, 2.5f, WorldState.FutureTime(2.0d));
+                break;
+            case 0x04000800u:
+                SetPuddle(actor, _largeCircle, 8f, WorldState.CurrentTime);
+                break;
+            case 0x00011000u:
+                SetPuddle(actor, _smallCircle, 2.5f, WorldState.CurrentTime);
+                break;
+            case 0x00040008u:
+            case 0x00042000u:
+                RemovePuddle(actor.InstanceID);
+                break;
+        }
+    }
+
+    public override void OnActorDestroyed(Actor actor)
+    {
+        if (actor.OID is (uint)OID.Actor1ec097 or (uint)OID.Actor1ec098)
+        {
+            RemovePuddle(actor.InstanceID);
+        }
+    }
+
+    private void SetPuddle(Actor actor, AOEShapeCircle shape, float radius, DateTime activation)
+    {
+        var pos = actor.Position;
+        var id = actor.InstanceID;
+        var instance = new AOEInstance(shape, pos, default, activation, Colors.Danger, true, id, new SDCircle(pos, radius));
+        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        for (var i = 0; i < aoes.Length; ++i)
+        {
+            if (aoes[i].ActorID == id)
+            {
+                aoes[i] = instance;
+                return;
+            }
+        }
+        _aoes.Add(instance);
+    }
+
+    private void RemovePuddle(ulong instanceID)
+    {
+        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        for (var i = 0; i < aoes.Length; ++i)
+        {
+            if (aoes[i].ActorID == instanceID)
+            {
+                _aoes.RemoveAt(i);
+                return;
+            }
+        }
+    }
+}
 
 sealed class Meteor(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.Meteor, (uint)AID.Meteor2, 6f, 5f);  // this is the regular spreads only, Tankbuster is handled in Comet.
 
