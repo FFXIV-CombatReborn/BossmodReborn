@@ -106,6 +106,7 @@ sealed class M07SBruteAbombinatorStates : StateMachineBuilder
             .ActivateOnEnter<RootsOfEvil>()
             .ActivateOnExit<CrossingCrosswinds>()
             .ActivateOnExit<AddInterruptHint>()
+            .ActivateOnExit<HurricaneForce>()
             .ActivateOnExit<WindingWildwinds>()
             .DeactivateOnExit<RootsOfEvil>();
         ComponentCondition<CrossingCrosswinds>(id + 0xB0u, 0.7f, static comp => comp.Casters.Count != 0, $"Interruptible add casts appear");
@@ -175,6 +176,8 @@ sealed class M07SBruteAbombinatorStates : StateMachineBuilder
         ComponentCondition<GlowerPower>(id + 0x30u, 0.1f, static comp => comp.AOE.Length == 0, "Line AOE resolves")
             .DeactivateOnExit<GlowerPower>();
         Cast(id + 0x40, AID.RevengeOfTheVines1, 0.9f, 5f, "Raidwide")
+            .ActivateOnEnter<RevengeOfTheVines1>()
+            .DeactivateOnExit<RevengeOfTheVines1>()
             .SetHint(StateMachine.StateHint.Raidwide);
     }
 
@@ -208,6 +211,8 @@ sealed class M07SBruteAbombinatorStates : StateMachineBuilder
         ComponentCondition<GlowerPower>(id + 0x80u, 0.2f, static comp => comp.AOE.Length == 0, "Line AOE resolves")
             .DeactivateOnExit<GlowerPower>();
         Cast(id + 0x90, AID.RevengeOfTheVines1, 0.8f, 5f, "Raidwide")
+            .ActivateOnEnter<RevengeOfTheVines1>()
+            .DeactivateOnExit<RevengeOfTheVines1>()
             .SetHint(StateMachine.StateHint.Raidwide);
     }
 
@@ -265,9 +270,13 @@ sealed class M07SBruteAbombinatorStates : StateMachineBuilder
         ComponentCondition<GlowerPower>(id + 0x150u, 0.2f, static comp => comp.AOE.Length == 0, "Line AOE resolves")
             .DeactivateOnExit<GlowerPower>();
         Cast(id + 0x160, AID.RevengeOfTheVines1, 0.9f, 5f, "Raidwide")
+            .ActivateOnEnter<RevengeOfTheVines1>()
+            .DeactivateOnExit<RevengeOfTheVines1>()
             .SetHint(StateMachine.StateHint.Raidwide);
         Cast(id + 0x170, AID.Powerslam, 6.2f, 6f, "Raidwide")
             .ActivateOnEnter<ArenaChanges>()
+            .ActivateOnEnter<Powerslam>()
+            .DeactivateOnExit<Powerslam>()
             .SetHint(StateMachine.StateHint.Raidwide);
     }
 

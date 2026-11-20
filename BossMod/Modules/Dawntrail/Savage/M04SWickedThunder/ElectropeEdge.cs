@@ -74,6 +74,7 @@ sealed class LightningCage(BossModule module) : Components.GenericAOEs(module, (
     ];
 
     private static readonly AOEShapeRect _cell = new(4f, 4f, 4f);
+    private readonly List<AOEInstance> _cells = [];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
@@ -81,12 +82,12 @@ sealed class LightningCage(BossModule module) : Components.GenericAOEs(module, (
         var safeCells = SafeCells(slot);
         var len = patternAOE.Length;
         var count = safeCells.Count;
-        var aoes = new AOEInstance[len + count];
+        _cells.Clear();
         for (var i = 0; i < len; ++i)
-            aoes[i] = new(_cell, CellCenter(patternAOE[i]), default, _activation);
+            _cells.Add(new(_cell, CellCenter(patternAOE[i]), default, _activation));
         for (var i = 0; i < count; ++i)
-            aoes[i + len] = new(_cell, CellCenter(safeCells[i]), default, _activation, Colors.SafeFromAOE, false);
-        return aoes;
+            _cells.Add(new(_cell, CellCenter(safeCells[i]), default, _activation, Colors.SafeFromAOE, false));
+        return CollectionsMarshal.AsSpan(_cells);
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)

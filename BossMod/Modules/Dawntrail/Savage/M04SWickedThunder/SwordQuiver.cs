@@ -45,8 +45,20 @@ sealed class SwordQuiverLaceration(BossModule module) : Components.CastCounter(m
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         var dir = Angle.FromDirection(actor.Position - Arena.Center);
-        var clipped = Raid.WithoutSlot(false, true, true).Exclude(actor).InShape(_shape, Arena.Center, dir).CountByCondition(p => p.Class.IsSupport() == actor.Class.IsSupport());
-        if (clipped.match != 0 || clipped.mismatch != 1)
+        int match = 0, mismatch = 0;
+        var party = Raid.WithoutSlot(false, true, true);
+        var isSupport = actor.Class.IsSupport();
+        for (var i = 0; i < party.Length; ++i)
+        {
+            var p = party[i];
+            if (p == actor || !_shape.Check(p.Position, Arena.Center, dir))
+                continue;
+            if (p.Class.IsSupport() == isSupport)
+                ++match;
+            else
+                ++mismatch;
+        }
+        if (match != 0 || mismatch != 1)
             hints.Add("Spread by roles!");
     }
 

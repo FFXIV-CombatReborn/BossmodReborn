@@ -31,18 +31,20 @@ sealed class Fracture(BossModule module) : Components.CastTowers(module, (uint)A
         var count = Towers.Count;
         if (count == 0)
             return;
-        var party = Raid.WithoutSlot(false, true, true);
+        var party = Raid.WithSlot(false, true, true);
         var len = party.Length;
         BitMask forbidden = default;
         for (var i = 0; i < len; ++i)
         {
-            ref readonly var statuses = ref party[i].Statuses;
+            ref readonly var p = ref party[i];
+            ref readonly var statuses = ref p.Item2.Statuses;
             var lenStatuses = statuses.Length;
             for (var j = 0; j < lenStatuses; ++j)
             {
                 if (statuses[j].ID is ((uint)SID.HeadOverHeels) or ((uint)SID.HopelessDevotion))
                 {
-                    forbidden[i] = true;
+                    forbidden[p.Item1] = true;
+                    break;
                 }
             }
         }

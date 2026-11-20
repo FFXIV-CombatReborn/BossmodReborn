@@ -11,10 +11,10 @@ public enum OID : uint
     _Gen_ = 0x4AE7,
     Actor1ea1a1 = 0x1EA1A1,
     Exit = 0x1E850B,
-    Actor1ebf31 = 0x1EBF31,
-    Actor1ebf34 = 0x1EBF34,
-    Actor1ebf32 = 0x1EBF32,
-    Actor1ebf35 = 0x1EBF35,
+    InfernoVoidzone = 0x1EBF31, // Alley-oop Inferno puddle
+    CutbackBlazeVoidzone = 0x1EBF34,
+    HotAerialVoidzone = 0x1EBF32,
+    BlastingSnapVoidzone = 0x1EBF35,
 }
 
 public enum AID : uint

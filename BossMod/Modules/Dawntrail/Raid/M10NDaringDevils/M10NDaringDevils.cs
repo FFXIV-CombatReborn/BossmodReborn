@@ -19,6 +19,7 @@ sealed class DeepImpact(BossModule module) : Components.BaitAwayCast(
 
 sealed class DiversDare(BossModule module) : Components.RaidwideCast(module, (uint)AID.DiversDare);
 sealed class DiversDareBlue(BossModule module) : Components.RaidwideCast(module, (uint)AID.DiversDare1);
+sealed class FiresnakingWatersnaking(BossModule module) : Components.RaidwideCasts(module, [(uint)AID.Firesnaking, (uint)AID.Watersnaking]);
 
 sealed class DeepVarialCone(BossModule module) : Components.SimpleAOEs(
     module,
@@ -173,10 +174,4 @@ public sealed class M10NDaringDevils(WorldState ws, Actor primary) : BossModule(
             Arena.Actor(DeepBlue);
         Arena.Actor(PrimaryActor);
     }
-}
-
-static class ActorExt
-{
-    public static bool HasStatus(this Actor a, uint sid) => a.FindStatus(sid) != null;
-    public static bool HasIcon(this Actor a, uint iconID) => a.IncomingEffects.Any(e => e.Action.ID == iconID);
 }

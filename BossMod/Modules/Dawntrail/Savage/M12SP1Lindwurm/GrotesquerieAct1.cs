@@ -16,7 +16,11 @@ sealed class BurstingGrotesquerieAct1(BossModule module) : Components.UniformSta
         if (status.ID == (uint)SID.BurstingGrotesquerie)
         {
             _targets.Remove(actor);
-            Spreads.RemoveAll(s => s.Target == actor);
+            for (var i = Spreads.Count - 1; i >= 0; --i)
+            {
+                if (Spreads[i].Target == actor)
+                    Spreads.RemoveAt(i);
+            }
         }
     }
 
@@ -29,7 +33,7 @@ sealed class BurstingGrotesquerieAct1(BossModule module) : Components.UniformSta
                 continue;
 
             var remaining = (status.Value.ExpireAt - WorldState.CurrentTime).TotalSeconds;
-            if (remaining <= ShowThreshold && remaining > 0 && !Spreads.Any(s => s.Target == actor))
+            if (remaining <= ShowThreshold && remaining > 0 && !HasSpread(actor))
                 AddSpread(actor, status.Value.ExpireAt);
         }
         base.Update();
@@ -39,9 +43,29 @@ sealed class BurstingGrotesquerieAct1(BossModule module) : Components.UniformSta
     {
         if (spell.Action.ID == (uint)AID.DramaticLysis0)
         {
-            Spreads.RemoveAll(s => s.Target.InstanceID == spell.MainTargetID);
-            _targets.RemoveAll(t => t.InstanceID == spell.MainTargetID);
+            var id = spell.MainTargetID;
+            for (var i = Spreads.Count - 1; i >= 0; --i)
+            {
+                if (Spreads[i].Target.InstanceID == id)
+                    Spreads.RemoveAt(i);
+            }
+            for (var i = _targets.Count - 1; i >= 0; --i)
+            {
+                if (_targets[i].InstanceID == id)
+                    _targets.RemoveAt(i);
+            }
         }
+    }
+
+    private bool HasSpread(Actor actor)
+    {
+        var count = Spreads.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            if (Spreads[i].Target == actor)
+                return true;
+        }
+        return false;
     }
 }
 
@@ -73,8 +97,8 @@ sealed class SharedGrotesquerieAct1(BossModule module) : Components.UniformStack
             if (status != null)
             {
                 var remaining = (status.Value.ExpireAt - WorldState.CurrentTime).TotalSeconds;
-                if (remaining <= ShowThreshold && remaining > 0 && !Stacks.Any(s => s.Target == _target))
-                    AddStack(_target, status.Value.ExpireAt);
+                if (remaining <= ShowThreshold && remaining > 0 && Stacks.Count == 0)
+                    AddStack(_target, status.Value.ExpireAt); // only one shared target is tracked, so any existing stack is this one
             }
         }
         base.Update();
@@ -113,8 +137,16 @@ sealed class DirectedGrotesquerieAct1(BossModule module) : Components.GenericBai
     {
         if (status.ID == (uint)SID._Gen_Direction)
         {
-            _pending.RemoveAll(p => p.Actor == actor);
-            CurrentBaits.RemoveAll(b => b.Target == actor);
+            for (var i = _pending.Count - 1; i >= 0; --i)
+            {
+                if (_pending[i].Actor == actor)
+                    _pending.RemoveAt(i);
+            }
+            for (var i = CurrentBaits.Count - 1; i >= 0; --i)
+            {
+                if (CurrentBaits[i].Target == actor)
+                    CurrentBaits.RemoveAt(i);
+            }
         }
     }
 
@@ -127,13 +159,24 @@ sealed class DirectedGrotesquerieAct1(BossModule module) : Components.GenericBai
                 continue;
 
             var remaining = (status.Value.ExpireAt - WorldState.CurrentTime).TotalSeconds;
-            if (remaining <= ShowThreshold && remaining > 0 && !CurrentBaits.Any(b => b.Target == pending.Actor))
+            if (remaining <= ShowThreshold && remaining > 0 && !HasBait(pending.Actor))
             {
                 var rotation = ((pending.DirectionExtra - ForwardDir) * -90f).Degrees();
                 AOEShapeCone cone = new(60f, 15f.Degrees(), rotation);
                 CurrentBaits.Add(new(pending.Actor, pending.Actor, cone, status.Value.ExpireAt));
             }
         }
+    }
+
+    private bool HasBait(Actor actor)
+    {
+        var count = CurrentBaits.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            if (CurrentBaits[i].Target == actor)
+                return true;
+        }
+        return false;
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)

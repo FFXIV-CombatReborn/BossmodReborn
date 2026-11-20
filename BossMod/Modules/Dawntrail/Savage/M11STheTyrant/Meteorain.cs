@@ -161,12 +161,13 @@ sealed class CosmicKissTowers(BossModule module) : Components.CastTowers(module,
         if (spell.Action.ID == WatchedAction)
         {
             var badsoakers = new BitMask();
-            var raid = Raid.WithoutSlot();
+            // mask must be indexed by party slot, not by position in a (dead-filtered) list
+            var raid = Raid.WithSlot(true);
             for (var i = 0; i < raid.Length; ++i)
             {
-                if (raid[i].Role != Role.Tank)
+                if (raid[i].Item2.Role != Role.Tank)
                 {
-                    badsoakers.Set(i);
+                    badsoakers.Set(raid[i].Item1);
                 }
             }
             Towers.Add(new(spell.LocXZ, Radius, MinSoakers, MaxSoakers, activation: Module.CastFinishAt(spell), actorID: caster.InstanceID, forbiddenSoakers: badsoakers));
@@ -180,12 +181,13 @@ sealed class WeightyImpactTowers(BossModule module) : Components.CastTowers(modu
         if (spell.Action.ID == WatchedAction)
         {
             var badsoakers = new BitMask();
-            var raid = Raid.WithoutSlot();
+            // mask must be indexed by party slot, not by position in a (dead-filtered) list
+            var raid = Raid.WithSlot(true);
             for (var i = 0; i < raid.Length; ++i)
             {
-                if (raid[i].Role == Role.Tank)
+                if (raid[i].Item2.Role == Role.Tank)
                 {
-                    badsoakers.Set(i);
+                    badsoakers.Set(raid[i].Item1);
                 }
             }
             Towers.Add(new(spell.LocXZ, Radius, MinSoakers, MaxSoakers, activation: Module.CastFinishAt(spell), actorID: caster.InstanceID, forbiddenSoakers: badsoakers));
@@ -221,6 +223,7 @@ sealed class ExplosionTowerKnockback(BossModule module) : Components.GenericKnoc
 {
     private readonly ExplosionTowers? _towers = module.FindComponent<ExplosionTowers>();
     private static readonly AOEShapeCircle Shape = new(4f);
+    private readonly List<Knockback> _sources = [];
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
@@ -232,18 +235,18 @@ sealed class ExplosionTowerKnockback(BossModule module) : Components.GenericKnoc
         if (count == 0)
             return [];
 
-        Span<Knockback> sources = new Knockback[count];
+        _sources.Clear();
         for (var i = 0; i < count; ++i)
         {
             var t = towers[i];
-            sources[i] = new(
+            _sources.Add(new(
                 t.Position,
                 distance: 20f,
                 activation: t.Activation,
                 shape: Shape
-            );
+            ));
         }
-        return sources;
+        return CollectionsMarshal.AsSpan(_sources);
     }
 }
 sealed class MeteorainPortals(BossModule module) : Components.GenericAOEs(module)
@@ -340,6 +343,8 @@ internal class TyrantFireballLines : Components.GenericBaitStack
         _active = true;
     }
 
+    private readonly List<Actor> _sorted = new(PartyState.MaxPartySize);
+
     public override void Update()
     {
         if (!_active)
@@ -349,14 +354,13 @@ internal class TyrantFireballLines : Components.GenericBaitStack
 
         CurrentBaits.Clear();
 
-        var count = 0;
-        foreach (var target in Raid.WithoutSlot(false, true, true)
-                                   .SortedByRange(boss.Position))
-        {
-            CurrentBaits.Add(new(boss, target, _shape, _activation));
-            if (++count == _numTargets)
-                break;
-        }
+        _sorted.Clear();
+        _sorted.AddRange(Raid.WithoutSlot(false, true, true));
+        var origin = boss.Position;
+        _sorted.Sort((a, b) => (a.Position - origin).LengthSq().CompareTo((b.Position - origin).LengthSq()));
+        var n = Math.Min(_numTargets, _sorted.Count);
+        for (var i = 0; i < n; ++i)
+            CurrentBaits.Add(new(boss, _sorted[i], _shape, _activation));
     }
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {

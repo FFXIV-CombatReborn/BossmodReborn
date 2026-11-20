@@ -12,17 +12,19 @@ sealed class LitFuse(BossModule module) : Components.GenericAOEs(module)
         var count = _aoes.Count;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        _visible.Clear();
         for (var i = 0; i < count; ++i)
         {
             var aoe = _aoes[i];
             if (i < 4)
-                aoes[i] = count > 4 ? aoe with { Color = Colors.Danger, Risky = _tower.Towers.Count == 0 } : aoe;
+                _visible.Add(count > 4 ? aoe with { Color = Colors.Danger, Risky = _tower.Towers.Count == 0 } : aoe);
             else
-                aoes[i] = aoe with { Risky = false };
+                _visible.Add(aoe with { Risky = false });
         }
-        return aoes;
+        return CollectionsMarshal.AsSpan(_visible);
     }
+
+    private readonly List<AOEInstance> _visible = [];
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {

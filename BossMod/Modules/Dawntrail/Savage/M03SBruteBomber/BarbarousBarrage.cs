@@ -86,6 +86,7 @@ sealed class BarbarousBarrageKnockback(BossModule module) : Components.GenericKn
 {
     private readonly BarbarousBarrageTowers? _towers = module.FindComponent<BarbarousBarrageTowers>();
     private static readonly AOEShapeCircle _shape = new(4f);
+    private readonly List<Knockback> _sources = [];
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
@@ -93,7 +94,7 @@ sealed class BarbarousBarrageKnockback(BossModule module) : Components.GenericKn
         {
             var towers = _towers.Towers;
             var count = towers.Count;
-            Span<Knockback> sources = new Knockback[count];
+            _sources.Clear();
             for (var i = 0; i < count; ++i)
             {
                 var t = towers[i];
@@ -104,9 +105,9 @@ sealed class BarbarousBarrageKnockback(BossModule module) : Components.GenericKn
                     8 => 15f,
                     _ => default
                 };
-                sources[i] = new(t.Position, dist, t.Activation, _shape);
+                _sources.Add(new(t.Position, dist, t.Activation, _shape));
             }
-            return sources;
+            return CollectionsMarshal.AsSpan(_sources);
         }
         return [];
     }

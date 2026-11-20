@@ -26,12 +26,33 @@ sealed class ElectrifyingWitchHuntResolve(BossModule module) : Components.Generi
     private BitMask _baits;
     private DateTime _activation;
 
+    // mask of the 4 players closest to (or farthest from) the arena center
+    private BitMask RangeMask(bool farthest)
+    {
+        var party = Raid.WithSlot(false, true, true);
+        var len = party.Length;
+        Span<(int slot, float distSq)> sorted = stackalloc (int, float)[len];
+        var center = Arena.Center;
+        for (var i = 0; i < len; ++i)
+        {
+            sorted[i] = (party[i].Item1, (party[i].Item2.Position - center).LengthSq());
+        }
+        sorted.Sort(static (a, b) => a.distSq.CompareTo(b.distSq));
+        BitMask mask = default;
+        var take = len < 4 ? len : 4;
+        for (var i = 0; i < take; ++i)
+        {
+            mask.Set(sorted[farthest ? len - 1 - i : i].slot);
+        }
+        return mask;
+    }
+
     public override void Update()
     {
         _baits = CurMechanic switch
         {
-            Mechanic.Near => Raid.WithSlot(false, true, true).SortedByRange(Arena.Center).Take(4).Mask(),
-            Mechanic.Far => Raid.WithSlot(false, true, true).SortedByRange(Arena.Center).TakeLast(4).Mask(),
+            Mechanic.Near => RangeMask(false),
+            Mechanic.Far => RangeMask(true),
             _ => default
         };
 

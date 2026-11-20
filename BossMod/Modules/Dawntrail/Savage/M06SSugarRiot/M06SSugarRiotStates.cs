@@ -121,7 +121,9 @@ sealed class M06SSugarRiotStates : StateMachineBuilder
     private void AddPhase(uint id, float delay)
     {
         Cast(id, AID.SoulSugar, delay, 3f, "Add Phase")
-            .ActivateOnEnter<Adds>();
+            .ActivateOnEnter<Adds>()
+            .ActivateOnEnter<HangryHiss>()
+            .ActivateOnEnter<HuffyCatHint>();
         ComponentCondition<Adds>(id + 0x10u, 10.2f, static comp => comp.ActiveActorsCount != 0, "2x Mu + 1x Yan targetable");
         ComponentCondition<Adds>(id + 0x20u, 2f, static comp => comp.ActiveActorsCount > 3, "GimmeCat targetable")
             .ActivateOnEnter<ICraveViolence>()
@@ -131,11 +133,13 @@ sealed class M06SSugarRiotStates : StateMachineBuilder
             .ActivateOnEnter<WaterIIIBait>();
         ComponentCondition<Adds>(id + 0x40u, 22.2f, static comp => comp.CountYan == 2 && comp.CountGimmeCat == 2 && comp.CountJabberwock == 1, "Yan, GimmeCat, Jabberwock spawn")
             .ActivateOnEnter<ManxomeWindersnatch>();
-        Cast(id + 0x40u, AID.ReadyOreNot, 22f, 7f, "Raidwide")
+        Cast(id + 0x45u, AID.ReadyOreNot, 22f, 7f, "Raidwide") // was 0x40, which duplicated the adds condition above
+            .ActivateOnEnter<ReadyOreNot>()
             .SetHint(StateMachine.StateHint.Raidwide);
         ComponentCondition<Adds>(id + 0x50u, 10.1f, static comp => comp.CountYan == 3 && comp.CountGimmeCat == 3 && comp.CountJabberwock == 2 && comp.CountMu == 6 && comp.CountFeatherRay == 4, "Yan, GimmeCat, Jabberwock, 2x Mu, 2x FeatherRay spawn");
         Cast(id + 0x60u, AID.ReadyOreNot, 66.1f, 7f, "Raidwide")
             .SetHint(StateMachine.StateHint.Raidwide)
+            .DeactivateOnExit<ReadyOreNot>()
             .ActivateOnExit<SingleDoubleStyle1>();
         ComponentCondition<SingleDoubleStyle1>(id + 0x70u, 13.3f, static comp => comp.NumCasts != 0, "Single Style resolves")
             .DeactivateOnExit<ICraveViolence>()

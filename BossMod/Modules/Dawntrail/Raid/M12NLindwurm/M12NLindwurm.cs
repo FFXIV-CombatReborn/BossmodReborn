@@ -55,7 +55,7 @@ sealed class RavenousReach(BossModule module) : Components.SimpleAOEs(module, (u
     }
 }
 
-sealed class Splattershed(BossModule module) : Components.RaidwideCastsDelay(module, [(uint)AID.Splattershed1Visual1, (uint)AID.Splattershed1Visual2],
+sealed class Splattershed(BossModule module) : Components.RaidwideCastsDelay(module, [(uint)AID.Splattershed1Visual1, (uint)AID.Splattershed1Visual2, (uint)AID.Splattershed2Visual],
 [(uint)AID.Splattershed1, (uint)AID.Splattershed2], 2.3d);
 sealed class BringDownTheHouse(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BringDownTheHouse, new AOEShapeRect(15f, 5f));
 sealed class SplitScourge(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SplitScourge, new AOEShapeRect(30f, 5f));

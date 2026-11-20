@@ -39,7 +39,7 @@ sealed class BreakdownWing(BossModule module) : Components.GenericAOEs(module)
             // action enum says 8-15 but inner radius more like 4 in replay; based on boss stacks?
             if (status.Extra is 0x426 or 0x427)
             {
-                for (var i = 0; i < _vamps.Count(); ++i)
+                for (var i = 0; i < _vamps.Count; ++i)
                 {
                     if (_vamps[i].Actor.InstanceID == actor.InstanceID)
                     {
@@ -85,7 +85,8 @@ sealed class BreakdownWing(BossModule module) : Components.GenericAOEs(module)
     public override void OnTethered(Actor source, in ActorTetherInfo tether)
     {
         // tethers practically same time as action timeline (0.0 - 0.1s)
-        if (tether.ID == (uint)TetherID.Chains)
+        // the bat tether uses the stretched id while the player is too far, including when it first appears (as handled upstream)
+        if (tether.ID is (uint)TetherID.Chains or (uint)TetherID.ChainsStretched)
         {
             var slot = Raid.FindSlot(source.InstanceID);
 

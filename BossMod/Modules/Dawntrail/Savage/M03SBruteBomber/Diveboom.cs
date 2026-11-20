@@ -21,7 +21,13 @@ class Diveboom(BossModule module) : Components.UniformStackSpread(module, 5f, 5f
             case (uint)AID.QuadroboomDiveProximityAOE:
             case (uint)AID.QuadroboomDiveKnockbackAOE:
                 // TODO: can target any role
-                AddStacks(Raid.WithoutSlot(true, true, true).Where(p => p.Class.IsSupport()), Module.CastFinishAt(spell));
+                var supports = Raid.WithoutSlot(true, true, true);
+                for (var i = 0; i < supports.Length; ++i)
+                {
+                    var p = supports[i];
+                    if (p.Class.IsSupport())
+                        AddStack(p, Module.CastFinishAt(spell));
+                }
                 break;
         }
     }

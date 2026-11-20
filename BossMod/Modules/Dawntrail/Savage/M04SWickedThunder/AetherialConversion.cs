@@ -42,23 +42,31 @@ sealed class AetherialConversionTailThrust(BossModule module) : Components.Gener
     private readonly AetherialConversion? _comp = module.FindComponent<AetherialConversion>();
 
     private static readonly AOEShapeCircle _shape = new(18f);
+    private readonly AOEInstance[] _aoe1 = new AOEInstance[1];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_comp?.CurMechanic == AetherialConversion.Mechanic.AOE && _comp.NumCasts < 2)
-            return new AOEInstance[1] { new(_shape, (Arena.Center + new WDir(_comp.NumCasts == 0 ? _comp.FirstOffsetX : -_comp.FirstOffsetX, default)).Quantized(), default) };
+        {
+            _aoe1[0] = new(_shape, (Arena.Center + new WDir(_comp.NumCasts == 0 ? _comp.FirstOffsetX : -_comp.FirstOffsetX, default)).Quantized(), default);
+            return _aoe1;
+        }
         return [];
     }
 }
 
 sealed class AetherialConversionSwitchOfTides(BossModule module) : Components.GenericKnockback(module, (uint)AID.SwitchOfTides)
 {
+    private readonly Knockback[] _kb = new Knockback[1];
     private readonly AetherialConversion? _comp = module.FindComponent<AetherialConversion>();
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (_comp?.CurMechanic == AetherialConversion.Mechanic.Knockback && _comp.NumCasts < 2)
-            return new Knockback[1] { new(Arena.Center + new WDir(_comp.NumCasts == 0 ? _comp.FirstOffsetX : -_comp.FirstOffsetX, 0), 25f, ignoreImmunes: true) };
+        {
+            _kb[0] = new(Arena.Center + new WDir(_comp.NumCasts == 0 ? _comp.FirstOffsetX : -_comp.FirstOffsetX, 0), 25f, ignoreImmunes: true);
+            return _kb;
+        }
         return [];
     }
 }

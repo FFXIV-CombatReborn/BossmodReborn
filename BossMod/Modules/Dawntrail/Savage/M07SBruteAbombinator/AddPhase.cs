@@ -1,5 +1,7 @@
 namespace BossMod.Dawntrail.Savage.M07SBruteAbombinator;
 
+sealed class HurricaneForce(BossModule module) : Components.CastHint(module, (uint)AID.HurricaneForce, "Plant enrage!", true);
+
 sealed class QuarrySwamp(BossModule module) : Components.CastLineOfSightAOE(module, (uint)AID.QuarrySwamp, 60f)
 {
     public override ReadOnlySpan<Actor> BlockerActors() => CollectionsMarshal.AsSpan(Module.Enemies((uint)OID.BloomingAbomination));

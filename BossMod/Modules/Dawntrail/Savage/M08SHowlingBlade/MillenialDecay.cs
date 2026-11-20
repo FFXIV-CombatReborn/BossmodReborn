@@ -1,5 +1,7 @@
 namespace BossMod.Dawntrail.Savage.M08SHowlingBlade;
 
+sealed class MillennialDecay(BossModule module) : Components.RaidwideCast(module, (uint)AID.MillennialDecay); // ported from upstream
+
 sealed class BreathOfDecay : Components.SimpleAOEs
 {
     public BreathOfDecay(BossModule module) : base(module, (uint)AID.BreathOfDecay, new AOEShapeRect(40f, 4f), 2)

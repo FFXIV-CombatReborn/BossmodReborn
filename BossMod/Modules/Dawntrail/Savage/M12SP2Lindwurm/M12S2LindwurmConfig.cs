@@ -266,10 +266,21 @@ public static class WurmExtensions
         public Angle Angle => AngleExtensions.Degrees(180 - (int)c * 45);
 
         public static Clockspot GetClosest(Angle input)
-            => typeof(Clockspot)
-                .GetEnumValues()
-                .Cast<Clockspot>()
-                .MinBy(c => Math.Abs(c.Angle.Rad - input.Rad));
+        {
+            var values = Enum.GetValues<Clockspot>();
+            var best = values[0];
+            var bestDist = float.MaxValue;
+            for (var i = 0; i < values.Length; ++i)
+            {
+                var d = Math.Abs(values[i].Angle.Rad - input.Rad);
+                if (d < bestDist)
+                {
+                    bestDist = d;
+                    best = values[i];
+                }
+            }
+            return best;
+        }
     }
 
     extension(Replication2Role r)

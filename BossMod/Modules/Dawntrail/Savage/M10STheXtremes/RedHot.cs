@@ -2,39 +2,23 @@
 
 public class VoidzoneShape(BossModule module, uint OID, AOEShape shape) : Components.GenericAOEs(module, default, "GTFO from voidzone!")
 {
+    private readonly List<AOEInstance> _aoesBuffer = []; // reused every call to avoid per-frame allocations
     public VoidzoneShape(BossModule module, uint OID, float radius) : this(module, OID, new AOEShapeCircle(radius)) { }
     public readonly AOEShape Shape = shape;
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        var aoes = new List<AOEInstance>();
-        foreach (var source in GetVoidActors())
+        var aoes = _aoesBuffer;
+        aoes.Clear();
+        var enemies = Module.Enemies(OID);
+        var count = enemies.Count;
+        for (var i = 0; i < count; ++i)
         {
-            aoes.Add(new(Shape, source.Position, source.Rotation));
+            var enemy = enemies[i];
+            if (enemy.EventState != 7)
+                aoes.Add(new(Shape, enemy.Position, enemy.Rotation));
         }
         return CollectionsMarshal.AsSpan(aoes);
-    }
-
-    private ReadOnlySpan<Actor> GetVoidActors()
-    {
-        var enemies = Module.Enemies(OID);
-        var enemySpan = CollectionsMarshal.AsSpan(enemies);
-        var len = enemySpan.Length;
-
-        if (len == 0)
-            return [];
-
-        List<Actor> voids = [];
-        for (var i = 0; i < len; ++i)
-        {
-            var enemy = enemySpan[i];
-            if (enemy.EventState != 7)
-            {
-                voids.Add(enemy);
-            }
-        }
-
-        return CollectionsMarshal.AsSpan(voids);
     }
 }
 

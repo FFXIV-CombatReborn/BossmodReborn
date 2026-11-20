@@ -68,12 +68,28 @@ sealed class SunriseSabbathElectronStream(BossModule module) : Components.Generi
 
     private static readonly AOEShapeRect _shape = new(40f, 6f);
 
+    private static Actor? ClosestTo(Actor[] party, WPos origin)
+    {
+        Actor? best = null;
+        var bestDistSq = float.MaxValue;
+        for (var i = 0; i < party.Length; ++i)
+        {
+            var distSq = (party[i].Position - origin).LengthSq();
+            if (distSq < bestDistSq)
+            {
+                bestDistSq = distSq;
+                best = party[i];
+            }
+        }
+        return best;
+    }
+
     public override void Update()
     {
         CurrentBaits.Clear();
         foreach (var c in Cannons)
         {
-            var t = Raid.WithoutSlot(false, true, true).Closest(c.cannon.Position);
+            var t = ClosestTo(Raid.WithoutSlot(false, true, true), c.cannon.Position);
             if (t != null)
                 CurrentBaits.Add(new(c.cannon, t, _shape));
         }

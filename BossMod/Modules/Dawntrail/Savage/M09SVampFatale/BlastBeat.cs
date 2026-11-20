@@ -2,6 +2,8 @@
 
 sealed class BlastBeat(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _aoesBuffer = []; // reused every call to avoid per-frame allocations
+    private static readonly AOEShapeCircle circle = new(8.25f);
     class Vampette
     {
         public Actor Actor;
@@ -22,7 +24,8 @@ sealed class BlastBeat(BossModule module) : Components.GenericAOEs(module)
 
         var vamps = CollectionsMarshal.AsSpan(_vampettes);
         var len = vamps.Length;
-        List<AOEInstance> aoes = [];
+        var aoes = _aoesBuffer;
+        aoes.Clear();
 
         // delay displaying bat blast longer? for easier debuff popping
         for (var i = 0; i < len; ++i)
@@ -33,11 +36,11 @@ sealed class BlastBeat(BossModule module) : Components.GenericAOEs(module)
             if (vamps[i].Activation.AddSeconds(-1 * _blastDelay) <= WorldState.CurrentTime)
             {
                 //aoes.Add(new(new AOEShapeCircle(8f), vamps[i].EndPos, activation: vamps[i].Activation));
-                aoes.Add(new(new AOEShapeCircle(8.25f), vamps[i].EndPos, activation: vamps[i].Activation));
+                aoes.Add(new(circle, vamps[i].EndPos, activation: vamps[i].Activation));
             }
         }
 
-        return CollectionsMarshal.AsSpan([.. aoes]);
+        return CollectionsMarshal.AsSpan(aoes);
     }
 
     public override void OnActorPlayActionTimelineEvent(Actor actor, ushort id)

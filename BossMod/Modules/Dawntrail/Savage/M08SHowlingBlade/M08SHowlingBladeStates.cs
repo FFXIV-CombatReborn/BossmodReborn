@@ -130,6 +130,8 @@ sealed class M08SHowlingBladeStates : StateMachineBuilder
     private void MillennialDecay(uint id, float delay)
     {
         Cast(id, AID.MillennialDecay, delay, 5f, "Raidwide")
+            .ActivateOnEnter<MillennialDecay>()
+            .DeactivateOnExit<MillennialDecay>()
             .SetHint(StateMachine.StateHint.Raidwide)
             .ActivateOnExit<BreathOfDecay>()
             .ActivateOnExit<AeroIII>()
@@ -187,6 +189,7 @@ sealed class M08SHowlingBladeStates : StateMachineBuilder
             .SetHint(StateMachine.StateHint.Raidwide);
         ComponentCondition<Adds>(id + 0x30u, 0.5f, static comp => comp.Windpack != default, "Debuff assignment + donut arena", 3f)
             .ActivateOnEnter<EarthWindborneEnd>()
+            .ActivateOnEnter<ForlornWindStone>()
             .ActivateOnExit<StalkingStoneWind>()
             .ActivateOnExit<AlphaWindStone>();
         ComponentCondition<StalkingStoneWind>(id + 0x40u, 9.7f, static comp => comp.NumCasts != 0, "Baits and Line stacks 1");

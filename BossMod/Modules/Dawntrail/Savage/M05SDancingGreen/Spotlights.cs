@@ -183,6 +183,9 @@ class Spotlights1(BossModule module) : Components.GenericTowers(module)
 
     public override void DrawArenaBackground(int pcSlot, Actor pc) { }
 
+    private readonly List<ShapeDistance> _forbiddenInverted = [];
+    private readonly List<ShapeDistance> _forbidden = [];
+
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         var towers = CollectionsMarshal.AsSpan(Towers);
@@ -192,8 +195,10 @@ class Spotlights1(BossModule module) : Components.GenericTowers(module)
             return;
         }
         var now = WorldState.CurrentTime;
-        var forbiddenInverted = new List<ShapeDistance>(len);
-        var forbidden = new List<ShapeDistance>(len);
+        var forbiddenInverted = _forbiddenInverted;
+        var forbidden = _forbidden;
+        forbiddenInverted.Clear();
+        forbidden.Clear();
         var inTower = false;
         for (var i = 0; i < len; ++i)
         {

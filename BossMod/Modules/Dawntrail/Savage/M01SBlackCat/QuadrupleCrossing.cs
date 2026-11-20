@@ -10,6 +10,8 @@ sealed class QuadrupleCrossingProtean(BossModule module) : Components.GenericBai
 
     private static readonly AOEShapeCone cone = new(100f, 22.5f.Degrees());
 
+    private (Actor actor, float distSq)[] _distances = new (Actor, float)[PartyState.MaxPartySize];
+
     public override void Update()
     {
         CurrentBaits.Clear();
@@ -18,7 +20,9 @@ sealed class QuadrupleCrossingProtean(BossModule module) : Components.GenericBai
             var party = Raid.WithoutSlot(false, true, true);
             var len = party.Length;
 
-            (Actor actor, float distSq)[] distances = new (Actor, float)[len];
+            if (_distances.Length < len)
+                _distances = new (Actor, float)[len];
+            var distances = _distances;
 
             for (var i = 0; i < len; ++i)
             {

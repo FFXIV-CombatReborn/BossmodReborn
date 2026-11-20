@@ -1,5 +1,7 @@
 namespace BossMod.Dawntrail.Savage.M06SSugarRiot;
 
+sealed class HangryHiss(BossModule module) : Components.RaidwideCast(module, (uint)AID.HangryHiss, "Cat enrage!");
+
 sealed class Adds(BossModule module) : Components.AddsMulti(module, [(uint)OID.Mu, (uint)OID.Yan, (uint)OID.FeatherRay, (uint)OID.GimmeCat, (uint)OID.Jabberwock])
 {
     public int CountMu;
@@ -110,6 +112,30 @@ sealed class Adds(BossModule module) : Components.AddsMulti(module, [(uint)OID.M
 
 class ICraveViolence(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ICraveViolence, 6f);
 class OreRigato(BossModule module) : Components.RaidwideCast(module, (uint)AID.OreRigato);
+sealed class ReadyOreNot(BossModule module) : Components.RaidwideCast(module, (uint)AID.ReadyOreNot); // ported from upstream
+
+// ported from upstream: show how many Huffy Cat stacks the cats have (3 stacks = cat enrage)
+// reads the stack count straight from the cats' status each frame, so it never drifts
+sealed class HuffyCatHint(BossModule module) : BossComponent(module)
+{
+    private readonly List<Actor> _cats = module.Enemies((uint)OID.GimmeCat);
+
+    public override void AddGlobalHints(Actor actor, GlobalHints hints)
+    {
+        var max = 0;
+        var count = _cats.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            var cat = _cats[i];
+            if (cat.IsDead)
+                continue;
+            if (cat.FindStatus((uint)SID.HuffyCat) is ActorStatus status && status.Extra > max)
+                max = status.Extra;
+        }
+        if (max > 0)
+            hints.Add($"Cat stacks: {max}");
+    }
+}
 class WaterIIIBait(BossModule module) : Components.BaitAwayTethers(module, 8f, (uint)TetherID.WaterIII, (uint)AID.WaterIII, (uint)OID.FeatherRay, 7.3f);
 class WaterIIIVoidzone(BossModule module) : Components.VoidzoneAtCastTarget(module, 9f, (uint)AID.WaterIII, GetVoidzones, 1.6f) // apparently the voidzone is bigger than the AOE?
 {

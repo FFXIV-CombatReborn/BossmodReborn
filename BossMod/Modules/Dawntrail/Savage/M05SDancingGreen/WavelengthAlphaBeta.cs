@@ -91,6 +91,8 @@ sealed class WavelengthAlphaBeta(BossModule module) : BossComponent(module)
         if (status.ID is (uint)SID.WavelengthAlpha or (uint)SID.WavelengthBeta)
         {
             var slot = WorldState.Party.FindSlot(actor.InstanceID);
+            if (slot < 0)
+                return;
             if (firstActivation == default)
             {
                 firstActivation = WorldState.FutureTime(27.5d);
@@ -110,7 +112,9 @@ sealed class WavelengthAlphaBeta(BossModule module) : BossComponent(module)
     {
         if (status.ID is (uint)SID.WavelengthAlpha or (uint)SID.WavelengthBeta)
         {
-            expirationBySlot[WorldState.Party.FindSlot(actor.InstanceID)] = default;
+            var slot = WorldState.Party.FindSlot(actor.InstanceID);
+            if (slot >= 0)
+                expirationBySlot[slot] = default;
         }
     }
 

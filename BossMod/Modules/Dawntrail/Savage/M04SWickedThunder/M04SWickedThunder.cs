@@ -8,9 +8,12 @@ sealed class Cannonbolt(BossModule module) : Components.CastCounter(module, (uin
 
 sealed class CannonboltKB(BossModule module) : Components.GenericKnockback(module)
 {
+    private readonly Knockback[] _kb = new Knockback[1];
+
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
-        return new Knockback[1] { new(Module.PrimaryActor.Position, 50f, ignoreImmunes: true) };
+        _kb[0] = new(Module.PrimaryActor.Position, 50f, ignoreImmunes: true);
+        return _kb;
     }
 }
 

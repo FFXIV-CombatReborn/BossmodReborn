@@ -42,7 +42,12 @@ sealed class Highlightning(BossModule module) : Components.GenericAOEs(module)
         {
             return;
         }
-        var tempest = Module.Enemies((uint)OID.TempestPiece)[0];
+        var tempests = Module.Enemies((uint)OID.TempestPiece);
+        if (tempests.Count == 0)
+        {
+            return;
+        }
+        var tempest = tempests[0];
         var angle = (int)Angle.FromDirection(tempest.Position - lastPosition).Deg;
         if (angle == 0)
         {

@@ -6,11 +6,15 @@ sealed class Wingmark(BossModule module) : Components.GenericKnockback(module)
     private BitMask wingmark;
     public BitMask StunStatus;
     private SingleDoubleStyle1? _aoe = module.FindComponent<SingleDoubleStyle1>();
+    private readonly Knockback[] _kb = new Knockback[1];
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (wingmark[slot] && Math.Max(0d, (activation - WorldState.CurrentTime).TotalSeconds) < 8.7d)
-            return new Knockback[1] { new(actor.Position, 34f, activation, default, actor.Rotation, Kind.DirForward) };
+        {
+            _kb[0] = new(actor.Position, 34f, activation, default, actor.Rotation, Kind.DirForward);
+            return _kb;
+        }
         return [];
     }
 

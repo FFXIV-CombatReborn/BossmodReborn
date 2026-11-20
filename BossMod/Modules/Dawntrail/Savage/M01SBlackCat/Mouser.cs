@@ -166,8 +166,17 @@ sealed class SplinteringNails(BossModule module) : Components.CastCounter(module
         {
             var pcRole = EffectiveRole(actor);
             var pcDir = Angle.FromDirection(actor.Position - _source.Position);
-            if (Raid.WithoutSlot(false, true, true).Exclude(_jumps?.CurrentTarget).Any(a => EffectiveRole(a) != pcRole && _shape.Check(a.Position, _source.Position, pcDir)))
-                hints.Add("Spread by roles!");
+            var party = Raid.WithoutSlot(false, true, true);
+            var jumpTarget = _jumps?.CurrentTarget;
+            for (var i = 0; i < party.Length; ++i)
+            {
+                var a = party[i];
+                if (a != jumpTarget && EffectiveRole(a) != pcRole && _shape.Check(a.Position, _source.Position, pcDir))
+                {
+                    hints.Add("Spread by roles!");
+                    break;
+                }
+            }
         }
     }
 

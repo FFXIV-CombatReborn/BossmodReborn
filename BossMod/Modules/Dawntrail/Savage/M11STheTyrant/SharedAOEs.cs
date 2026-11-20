@@ -25,7 +25,7 @@ sealed class FireAndFury(BossModule module) : Components.SimpleAOEGroups(module,
 sealed class GreatWallOfFire(BossModule module) : Components.BaitAwayCast(module, (uint)AID.GreatWallOfFire, new AOEShapeRect(60f, 3f), false, true, true);
 sealed class GreatWallOfFireExplosion(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.GreatWallOfFire1, (uint)AID.GreatWallOfFire2, (uint)AID.GreatWallOfFireExplosion], new AOEShapeRect(60f, 3f));
 sealed class FearsomeFireball(BossModule module) : Components.LineStack(module, (uint)IconID.FearsomeFireballIcon, (uint)AID.FearsomeFireball1, 5d, 60f, 4f, 4, 6, 1, true, null);
-sealed class OneAndOnly(BossModule module) : Components.RaidwideCast(module, (uint)AID.OneAndOnly, "Raidwide");
+sealed class OneAndOnly(BossModule module) : Components.RaidwideCast(module, (uint)AID.OneAndOnly1, "Raidwide");
 sealed class Shockwave(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Shockwave, new AOEShapeCircle(1f)); //Just want to track casts; we actually use this AID in TripleTyrannhilation
 sealed class Flatliner(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Flatliner, new AOEShapeRect(30f, 5f, 30f));
 sealed class FlatlinerKB(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.Flatliner1, 15f, true, 1, new AOEShapeCircle(60f));
@@ -43,7 +43,29 @@ sealed class OrbitalOmen : Components.SimpleAOEs
     }
 }
 sealed class AtomicImpactVoidZones(BossModule module) :
-    Components.Voidzone(module, 5f, module => module.Enemies((uint)OID.AtomicImpactVoidZones).Where(z => z.EventState != 7));
+    Components.Voidzone(module, 5f, GetVoidzones)
+{
+    private static Actor[] GetVoidzones(BossModule module)
+    {
+        var enemies = module.Enemies((uint)OID.AtomicImpactVoidZones);
+        var count = enemies.Count;
+        if (count == 0)
+        {
+            return [];
+        }
+        var voidzones = new Actor[count];
+        var index = 0;
+        for (var i = 0; i < count; ++i)
+        {
+            var z = enemies[i];
+            if (z.EventState != 7)
+            {
+                voidzones[index++] = z;
+            }
+        }
+        return voidzones[..index];
+    }
+}
 sealed class DanceOfDomination(BossModule module) : Components.RaidwideCastsDelay(module, [(uint)AID.DanceOfDominationTrophy], [(uint)AID.DanceOfDomination, (uint)AID.DanceOfDomination1, (uint)AID.DanceOfDomination2, (uint)AID.DanceOfDomination3], 6f, "Multi-hit Raidwide");
 sealed class Charybdistopia(BossModule module) : Components.CastHint(module, (uint)AID.Charybdistopia, "Set hp to 1");
 sealed class MassiveMeteor(BossModule module) : Components.StackWithIcon(module, (uint)IconID.MassiveMeteorIcon, (uint)AID.MassiveMeteorHit, 6f, 5, 4, 4, 5);
@@ -52,25 +74,18 @@ sealed class MaelstromVoidZones(BossModule module) : Components.GenericAOEs(modu
     // Adjust radius to match the real danger zone
     private static readonly AOEShapeCircle VoidZone = new(4f);
 
+    private readonly List<AOEInstance> _aoes = new(4);
+
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        var maelstroms = WorldState.Actors.Where(a => (OID)a.OID == OID.Maelstrom);
-        if (!maelstroms.Any())
-            return default;
-
-        var aoes = new List<AOEInstance>();
-        foreach (var m in maelstroms)
+        _aoes.Clear();
+        var maelstroms = Module.Enemies((uint)OID.Maelstrom);
+        var count = maelstroms.Count;
+        for (var i = 0; i < count; ++i)
         {
-            aoes.Add(new AOEInstance(
-                VoidZone,
-                m.Position,
-                default,
-                default,
-                Colors.Danger
-            ));
+            _aoes.Add(new(VoidZone, maelstroms[i].Position, default, default, Colors.Danger));
         }
-
-        return aoes.ToArray();
+        return CollectionsMarshal.AsSpan(_aoes);
     }
 }
 sealed class MaelstromGustCones(BossModule module) : Components.GenericAOEs(module)
@@ -87,6 +102,8 @@ sealed class MaelstromGustCones(BossModule module) : Components.GenericAOEs(modu
             _resolved = true;
     }
 
+    private readonly List<Actor> _sortedParty = new(PartyState.MaxPartySize);
+
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_resolved)
@@ -94,10 +111,8 @@ sealed class MaelstromGustCones(BossModule module) : Components.GenericAOEs(modu
 
         _maelstroms.Clear();
 
-        // Gather maelstrom actors (no LINQ)
-        foreach (var a in WorldState.Actors)
-            if ((OID)a.OID == OID.Maelstrom)
-                _maelstroms.Add(a);
+        // gather maelstroms from the module's enemy list (previously scanned every actor in the world each frame)
+        _maelstroms.AddRange(Module.Enemies((uint)OID.Maelstrom));
 
         if (_maelstroms.Count < 4)
             return default;
@@ -105,18 +120,18 @@ sealed class MaelstromGustCones(BossModule module) : Components.GenericAOEs(modu
         _aoes.Clear();
 
         // For each maelstrom, find two closest players
+        var party = Raid.WithoutSlot(false, true, true);
         foreach (var m in _maelstroms)
         {
-            var found = 0;
-
-            foreach (var p in Raid.WithoutSlot(false, true, true)
-                                  .SortedByRange(m.Position))
+            var origin = m.Position;
+            _sortedParty.Clear();
+            _sortedParty.AddRange(party);
+            _sortedParty.Sort((a, b) => (a.Position - origin).LengthSq().CompareTo((b.Position - origin).LengthSq()));
+            var n = Math.Min(2, _sortedParty.Count);
+            for (var i = 0; i < n; ++i)
             {
-                var dir = Angle.FromDirection(p.Position - m.Position);
-                _aoes.Add(new AOEInstance(GustCone, m.Position, dir));
-
-                if (++found == 2)
-                    break;
+                var dir = Angle.FromDirection(_sortedParty[i].Position - origin);
+                _aoes.Add(new AOEInstance(GustCone, origin, dir));
             }
         }
 
@@ -372,4 +387,4 @@ sealed class AtomicImpactBaitPath(BossModule module) : BossComponent(module)
         var target = NextTarget(slot, actor);
         Module.Arena.ZoneCircleOutline(target, 1.2f, Colors.Safe);
     }
-}
+}

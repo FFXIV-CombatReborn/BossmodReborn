@@ -6,6 +6,8 @@ sealed class Moussacre(BossModule module) : Components.GenericBaitAway(module, d
 
     private static readonly AOEShapeCone cone = new(60f, 22.5f.Degrees());
 
+    private (Actor actor, float distSq)[] _distances = new (Actor, float)[PartyState.MaxPartySize];
+
     public override void Update()
     {
         CurrentBaits.Clear();
@@ -14,7 +16,9 @@ sealed class Moussacre(BossModule module) : Components.GenericBaitAway(module, d
             var party = Raid.WithoutSlot(false, true, true);
             var len = party.Length;
 
-            (Actor actor, float distSq)[] distances = new (Actor, float)[len];
+            if (_distances.Length < len)
+                _distances = new (Actor, float)[len];
+            var distances = _distances;
             var source = Module.PrimaryActor;
             var sourcePos = source.Position;
 

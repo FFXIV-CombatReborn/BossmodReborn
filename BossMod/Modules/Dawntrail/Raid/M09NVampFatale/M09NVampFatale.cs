@@ -20,7 +20,52 @@ sealed class DeadWake(BossModule module) : Components.SimpleAOEs(module, (uint)A
 
 sealed class PenetratingPitch(BossModule module) : Components.StackWithCastTargets(module, (uint)AID.PenetratingPitch1, 5f, 2, 4);
 
-sealed class BrutalRain(BossModule module) : Components.StackWithIcon(module, (uint)IconID.BrutalRain, (uint)AID.BrutalRain, 6f, 0d);  // Can't seem to make this wait for the BrutalRain1 casts and then vanish, so erring on the side of at least getting the stack in place for the first hit and hoping people will stay.
+sealed class BrutalRain(BossModule module) : Components.UniformStackSpread(module, 6f, default)
+{
+    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
+    {
+        if (iconID == (uint)IconID.BrutalRain)
+        {
+            AddStack(actor, WorldState.FutureTime(6d));
+        }
+    }
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.PulpingPulse)
+        {
+            Stacks.Clear();
+        }
+    }
+}
+
+sealed class FinaleFatale(BossModule module) : Components.GenericAOEs(module)
+{
+    private static readonly AOEShapeDonut donut = new(20f, 40f);
+    private AOEInstance[] _aoe = [];
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID is (uint)AID.FinaleFatale or (uint)AID.FinaleFatale2)
+        {
+            _aoe = [new(donut, Arena.Center, default, Module.CastFinishAt(spell))];
+        }
+    }
+
+    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID is (uint)AID.FinaleFatale or (uint)AID.FinaleFatale2)
+        {
+            _aoe = [];
+        }
+    }
+}
+
+sealed class FinaleFataleRaidwide(BossModule module) : Components.RaidwideCastsDelay(module, [(uint)AID.FinaleFatale, (uint)AID.FinaleFatale2],
+[(uint)AID.FinaleFatale1, (uint)AID.FinaleFatale3], 0d);
+sealed class BarbedBurst(BossModule module) : Components.CastHint(module, (uint)AID.BarbedBurst, "Kill the Fatal Flail!", true);
 
 sealed class CrowdKill(BossModule module) : Components.RaidwideCast(module, (uint)AID.CrowdKill); // Doesn't seem to like this, might need to do after yell?
 
@@ -76,4 +121,27 @@ sealed class CoffinMaker(BossModule module) : Components.Voidzone(module, 3f, Ge
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.VampFatale, Contributors = "HerStolenLight", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1068u, NameID = 14300u)]
-public sealed class M09NVampFatale(WorldState ws, Actor primary) : BossModule(ws, primary, new(100f, 100f), new ArenaBoundsSquare(20f));
+public sealed class M09NVampFatale(WorldState ws, Actor primary) : BossModule(ws, primary, new(100f, 100f), new ArenaBoundsSquare(20f))
+{
+    protected override void DrawEnemies(int pcSlot, Actor pc)
+    {
+        Arena.Actor(PrimaryActor);
+        Arena.Actors(Enemies((uint)OID.FatalFlail));
+        Arena.Actors(Enemies((uint)OID.Coffinmaker));
+    }
+
+    protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        var count = hints.PotentialTargets.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            var e = hints.PotentialTargets[i];
+            e.Priority = e.Actor.OID switch
+            {
+                (uint)OID.FatalFlail => 2,
+                (uint)OID.Coffinmaker => 1,
+                _ => 0
+            };
+        }
+    }
+}

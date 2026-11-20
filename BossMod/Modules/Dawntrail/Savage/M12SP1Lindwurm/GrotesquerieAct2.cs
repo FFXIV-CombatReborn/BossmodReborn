@@ -38,7 +38,6 @@ sealed class GrotesquerieAct2(BossModule module) : Components.GenericTowers(modu
         else if (status.ID == (uint)SID.FourthInLine)
             _position[slot] = 4;
 
-
         if (_alphaBeta[slot] >= 0 && _position[slot] > 0)
         {
             var spawnIndex = DetermineTowerIndex(_alphaBeta[slot] == 1, _position[slot]);
