@@ -42,6 +42,7 @@ public enum AID : uint
 }
 
 sealed class SonicHowl(BossModule module) : Components.RaidwideCast(module, (uint)AID.SonicHowl);
+sealed class RubyGlow(BossModule module) : Components.RaidwideCastDelay(module, (uint)AID.WeaponskillRubyGlow, (uint)AID.AbilityRubyGlow, 0.7d); // ported from upstream
 
 sealed class TailToClaw(BossModule module) : Components.GenericAOEs(module)
 {
@@ -380,6 +381,7 @@ sealed class CE201ABeastUnleashedStates : StateMachineBuilder
     {
         TrivialPhase()
             .ActivateOnEnter<SonicHowl>()
+            .ActivateOnEnter<RubyGlow>()
             .ActivateOnEnter<TopazRay>()
             .ActivateOnEnter<RubyReflection>()
             .ActivateOnEnter<TailToClaw>()
@@ -390,5 +392,5 @@ sealed class CE201ABeastUnleashedStates : StateMachineBuilder
 [ModuleInfo(BossModuleInfo.Maturity.Verified, PrimaryActorOID = (uint)OID.AtlasCarbuncle, Contributors = "gynorhino", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1093u, NameID = 56u)]
 public sealed class CE201ABeastUnleashed(WorldState ws, Actor primary) : BossModule(ws, primary, new(238f, 352f), new ArenaBoundsSquare(20f))
 {
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InSquare(Arena.Center, 20f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InSquare(Arena.Center, 20f);
 }

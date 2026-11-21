@@ -298,5 +298,5 @@ sealed class CE204AppallingBehaviorStates : StateMachineBuilder
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.Pallmagia, Contributors = "Gynorhino", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1093u, NameID = 59u)]
 public sealed class CE204AppallingBehavior(WorldState ws, Actor primary) : BossModule(ws, primary, new WPos(807f, -562f).Quantized(), new ArenaBoundsCircle(20f))
 {
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 20f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 20f);
 }

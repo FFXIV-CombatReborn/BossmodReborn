@@ -198,5 +198,5 @@ public sealed class CE107Unbridled(WorldState ws, Actor primary) : BossModule(ws
     private static readonly ArenaBoundsCustom startingArena = new([new Polygon(new(620f, 800f), 29.5f, 32)]);
     public static readonly ArenaBoundsCircle DefaultArena = new(25f); // default arena got no extra collision, just a donut aoe
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 30f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 30f);
 }

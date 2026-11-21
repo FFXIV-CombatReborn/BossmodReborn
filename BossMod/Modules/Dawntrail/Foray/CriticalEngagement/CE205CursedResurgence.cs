@@ -67,13 +67,12 @@ sealed class Catching(BossModule module) : Components.GenericAOEs(module)
     {
         if (spell.Action.ID == (uint)AID.Cauterize)
         {
-            var actors = WorldState.Actors.ToArray();
-            var count = actors.Length;
+            var actors = Module.Enemies((uint)OID.Necrohaze);
+            var count = actors.Count;
 
             for (var i = 0; i < count; ++i)
             {
-                ref var actor = ref actors[i];
-                if (actor.OID == (uint)OID.Necrohaze)
+                var actor = actors[i];
                 {
                     // does boss only cast from W/E, or cast it also happen N/S?
                     var offset = (actor.Position - spell.LocXZ).Rotate(spell.Rotation.ToDirection().MirrorX());
@@ -111,6 +110,7 @@ sealed class BreathInThrees(BossModule module) : Components.SimpleAOEGroups(modu
 
 sealed class Necrohaze(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
     // regular voidzone
     // when AetherialWard is up, starts moving
     // casts change from Necrohaze1 to Necrohaze4 when EObjAnim 0x00010002
@@ -123,7 +123,8 @@ sealed class Necrohaze(BossModule module) : Components.GenericAOEs(module)
             return [];
         }
 
-        List<AOEInstance> aoes = [];
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         var hazes = CollectionsMarshal.AsSpan(_hazes);
         var count = hazes.Length;
         for (var i = 0; i < count; ++i)
@@ -358,5 +359,5 @@ public sealed class CE205CursedResurgence(WorldState ws, Actor primary) : BossMo
         }
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InSquare(Arena.Center, 20f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InSquare(Arena.Center, 20f);
 }

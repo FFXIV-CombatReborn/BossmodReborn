@@ -181,5 +181,5 @@ public sealed class CE113ScourgeOfMind(WorldState ws, Actor primary) : BossModul
 {
     private static readonly ArenaBoundsCustom arena = new([new Polygon(new(300f, 730f), 29.5f, 32)]);
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 30f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 30f);
 }

@@ -149,5 +149,5 @@ public sealed class CE207DoubleTrouble : BossModule
         Arena.Actors(Enemies((uint)OID.Entanglement));
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 22f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 22f);
 }

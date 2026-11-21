@@ -1,4 +1,4 @@
-namespace BossMod.Dawntrail.Foray.ForkedTowerBlood.FTB4Magitaur;
+﻿namespace BossMod.Dawntrail.Foray.ForkedTowerBlood.FTB4Magitaur;
 
 sealed class ForkedFury(BossModule module) : Components.GenericAOEs(module)
 {
@@ -11,6 +11,8 @@ sealed class ForkedFury(BossModule module) : Components.GenericAOEs(module)
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
 
+    private readonly List<Actor> _playersBuffer = [];
+    private readonly List<Actor>[] _squareActors = [[with(16)], [with(16)], [with(16)]];
     public override void Update()
     {
         if (!active)
@@ -18,8 +20,11 @@ sealed class ForkedFury(BossModule module) : Components.GenericAOEs(module)
             return;
         }
         targets.Clear();
-        List<Actor>[] squareActors = [[with(16)], [with(16)], [with(16)]];
-        var players = new List<Actor>(48);
+        var squareActors = _squareActors;
+        for (var j = 0; j < 3; ++j)
+            squareActors[j].Clear();
+        var players = _playersBuffer;
+        players.Clear();
         var primaryPos = Module.PrimaryActor.Position;
 
         // note: this is problematic because player culling messes this up and leads to incorrect results (eg not finding the actual bait target)
@@ -139,7 +144,8 @@ sealed class ForkedFury(BossModule module) : Components.GenericAOEs(module)
                 return;
             }
 
-            var players = new List<Actor>(48);
+            var players = _playersBuffer;
+            players.Clear();
             // note: this is problematic because player culling messes this up and leads to incorrect results (eg not finding the actual bait target)
             // in any frame players can be removed or added to the object table and will likely never contain all 48 players at the same time
             // caching removed players is also pointless since the player position no longer gets updated when this happens
@@ -151,7 +157,8 @@ sealed class ForkedFury(BossModule module) : Components.GenericAOEs(module)
                 }
             }
 
-            List<Actor> squareActors = [with(16)];
+            var squareActors = _squareActors[0];
+            squareActors.Clear();
             var primaryPos = Module.PrimaryActor.Position;
             var count = players.Count;
             for (var i = 0; i < count; ++i)

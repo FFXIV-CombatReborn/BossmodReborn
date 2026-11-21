@@ -117,5 +117,5 @@ public sealed class CE108CalamityBound(WorldState ws, Actor primary) : BossModul
         }
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 25f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 25f);
 }

@@ -211,12 +211,13 @@ sealed class DivineArrowCircles(BossModule module) : Components.SimpleAOEGroups(
 sealed class DivineArrowLines(BossModule module) : Components.SimpleAOEGroupsByTimewindow(module, [(uint)AID.DivineArrowLines, (uint)AID.DivineArrowLines2], new AOEShapeRect(60f, 5f), 0.5d, 2)
 {
     private const float TileHalfSize = 5f;
-    private const float SafeZoneHalfSize = 4.5f;
+    private const float MinSliverInset = 0.6f;
+    private const float AISafetyInset = 0.5f;
 
     private DivineArrowCone? _cone;
-    private readonly List<WPos> _lineSafeSquares = new(25);
-    private readonly List<WPos> _safeSquares = new(9);
-    private SDInvertedUnion? _safeForbiddenZone;
+    private readonly List<Shape> _lineSafeShapes = [with(8)];
+    private RelSimplifiedComplexPolygon? _safePolygon;
+    private SDInvertedPolygonWithHoles? _safeForbiddenZone;
     private DateTime _cachedWaveEnd;
     private DateTime _cachedCutoff;
     private int _cachedConeSeqCount = -1;
@@ -275,9 +276,9 @@ sealed class DivineArrowLines(BossModule module) : Components.SimpleAOEGroupsByT
         _cone ??= Module.FindComponent<DivineArrowCone>();
         if (!TryGetCutoff(_cone, out var cutoff, out var waveEnd))
         {
-            if (_safeSquares.Count != 0)
+            if (_safePolygon != null || _safeForbiddenZone != null)
             {
-                _safeSquares.Clear();
+                _safePolygon = null;
                 _safeForbiddenZone = null;
                 _cachedWaveEnd = default;
                 _cachedCutoff = default;
@@ -298,24 +299,28 @@ sealed class DivineArrowLines(BossModule module) : Components.SimpleAOEGroupsByT
         _cachedCutoff = cutoff;
         _cachedConeSeqCount = seqCount;
         _cachedConeNumCasts = coneCasts;
-        RebuildSafeSquares(cutoff);
+        RebuildSafePolygon(cutoff);
     }
 
-    private void RebuildSafeSquares(DateTime cutoff)
+    private void RebuildSafePolygon(DateTime cutoff)
     {
-        _lineSafeSquares.Clear();
-        _safeSquares.Clear();
+        _lineSafeShapes.Clear();
+        _safePolygon = null;
         _safeForbiddenZone = null;
 
         var waveCount = GetCurrentWaveEndIndex();
         var wave = CollectionsMarshal.AsSpan(Casters)[..waveCount];
         var center = Arena.Center;
-        for (var iz = 0; iz < 5; ++iz)
+        for (var dzIdx = -1; dzIdx <= 1; ++dzIdx)
         {
-            var dz = (iz - 2) * 10f;
-            for (var ix = 0; ix < 5; ++ix)
+            var dz = dzIdx * 10f;
+            for (var dxIdx = -1; dxIdx <= 1; ++dxIdx)
             {
-                var sq = center + new WDir((ix - 2) * 10f, dz);
+                if (dxIdx == 0 && dzIdx == 0)
+                {
+                    continue;
+                }
+                var sq = center + new WDir(dxIdx * 10f, dz);
                 var hit = false;
                 for (var i = 0; i < wave.Length; ++i)
                 {
@@ -327,132 +332,133 @@ sealed class DivineArrowLines(BossModule module) : Components.SimpleAOEGroupsByT
                 }
                 if (!hit)
                 {
-                    _lineSafeSquares.Add(sq);
+                    _lineSafeShapes.Add(new Square(sq, TileHalfSize));
                 }
             }
         }
 
-        if (_lineSafeSquares.Count == 0)
+        if (_lineSafeShapes.Count == 0)
         {
             return;
         }
 
-        if (_cone != null && _cone.Sequences.Count != 0 && _cone.Sequences[0].NumRemainingCasts > 0)
+        var (visualPoly, rawPoly) = BuildClippedSafePolygon(center, cutoff.AddSeconds(0.35d));
+        if (visualPoly.Parts.Count == 0)
+        {
+            (visualPoly, rawPoly) = BuildClippedSafePolygon(center, cutoff);
+        }
+        if (visualPoly.Parts.Count == 0 && rawPoly.Parts.Count != 0)
+        {
+            visualPoly = rawPoly;
+        }
+        if (visualPoly.Parts.Count == 0)
+        {
+            visualPoly = PolygonClipper.GetCombinedPolygon(center, _lineSafeShapes);
+        }
+        if (visualPoly.Parts.Count == 0)
+        {
+            return;
+        }
+
+        visualPoly.InitPolygonIndex();
+        _safePolygon = visualPoly;
+
+        var aiPoly = visualPoly.Offset(-AISafetyInset);
+        if (aiPoly.Parts.Count == 0)
+        {
+            aiPoly = visualPoly;
+        }
+        aiPoly.InitPolygonIndex();
+        _safeForbiddenZone = new SDInvertedPolygonWithHoles(new SDPolygonWithHolesBase(center, aiPoly));
+    }
+
+    private (RelSimplifiedComplexPolygon Filtered, RelSimplifiedComplexPolygon Raw) BuildClippedSafePolygon(WPos center, DateTime maxConeTime)
+    {
+        List<Shape>? coneShapes = null;
+        if (_cone != null && _cone.Sequences.Count != 0)
         {
             ref readonly var seq = ref CollectionsMarshal.AsSpan(_cone.Sequences)[0];
-            FilterSquaresAgainstCones(in seq, cutoff.AddSeconds(0.35d), SafeZoneHalfSize);
-            if (_safeSquares.Count == 0)
+            var rem = seq.NumRemainingCasts;
+            if (rem > 0 && seq.Shape is AOEShapeCone coneShape)
             {
-                FilterSquaresAgainstCones(in seq, cutoff, 2.5f);
-            }
-            if (_safeSquares.Count == 0)
-            {
-                FilterSquaresAgainstCones(in seq, cutoff, 0f);
-            }
-        }
-
-        if (_safeSquares.Count == 0)
-        {
-            _safeSquares.AddRange(_lineSafeSquares);
-        }
-
-        var count = _safeSquares.Count;
-        var rects = new ShapeDistance[count];
-        for (var i = 0; i < count; ++i)
-        {
-            rects[i] = new SDRect(_safeSquares[i], default(Angle), SafeZoneHalfSize, SafeZoneHalfSize, SafeZoneHalfSize);
-        }
-        _safeForbiddenZone = new SDInvertedUnion(rects);
-    }
-
-    private void FilterSquaresAgainstCones(in Components.GenericRotatingAOE.Sequence seq, DateTime maxConeTime, float sampleHalf)
-    {
-        var curTime = WorldState.CurrentTime;
-        var baseTime = seq.NextActivation > curTime ? seq.NextActivation : curTime;
-        var lineSafeCount = _lineSafeSquares.Count;
-        for (var i = 0; i < lineSafeCount; ++i)
-        {
-            var sq = _lineSafeSquares[i];
-            if (!IsSquareHitByCones(sq, in seq, baseTime, maxConeTime, sampleHalf))
-            {
-                _safeSquares.Add(sq);
-            }
-        }
-    }
-
-    private static bool IsSquareHitByCones(WPos sq, in Components.GenericRotatingAOE.Sequence seq, DateTime baseTime, DateTime maxConeTime, float sampleHalf)
-    {
-        var rem = seq.NumRemainingCasts;
-        var stepTime = seq.SecondsBetweenActivations;
-        var shape = seq.Shape;
-        var origin = seq.Origin;
-
-        for (var k = 0; k < rem; ++k)
-        {
-            var coneTime = k == 0 ? seq.NextActivation : baseTime.AddSeconds(k * stepTime);
-            if (coneTime > maxConeTime)
-            {
-                break;
-            }
-            var rot = seq.Rotation + k * seq.Increment;
-            if (IsSampleGridHit(sq, sampleHalf, shape, origin, rot))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static bool IsSampleGridHit(WPos sq, float sampleHalf, AOEShape shape, WPos origin, Angle rot)
-    {
-        if (sampleHalf <= 0f)
-        {
-            return shape.Check(sq, origin, rot);
-        }
-        for (var sz = -1; sz <= 1; ++sz)
-        {
-            var oz = sz * sampleHalf;
-            for (var sx = -1; sx <= 1; ++sx)
-            {
-                if (shape.Check(sq + new WDir(sx * sampleHalf, oz), origin, rot))
+                var curTime = WorldState.CurrentTime;
+                var baseTime = seq.NextActivation > curTime ? seq.NextActivation : curTime;
+                var stepTime = seq.SecondsBetweenActivations;
+                var coneCount = 0;
+                for (var k = 0; k < rem; ++k)
                 {
-                    return true;
+                    var coneTime = k == 0 ? seq.NextActivation : baseTime.AddSeconds(k * stepTime);
+                    if (coneTime > maxConeTime)
+                    {
+                        break;
+                    }
+                    ++coneCount;
+                }
+
+                if (coneCount > 0)
+                {
+                    var lastOffset = (coneCount - 1) * seq.Increment;
+                    var startAngle = seq.Increment.Rad >= 0f ? seq.Rotation - coneShape.HalfAngle : seq.Rotation + lastOffset - coneShape.HalfAngle;
+                    var endAngle = seq.Increment.Rad >= 0f ? seq.Rotation + lastOffset + coneShape.HalfAngle : seq.Rotation + coneShape.HalfAngle;
+                    if ((endAngle - startAngle).Rad >= Angle.DoublePI - 0.01f)
+                    {
+                        coneShapes = [new Circle(seq.Origin, coneShape.Radius)];
+                    }
+                    else if (seq.Increment.Abs() <= coneShape.HalfAngle * 2f)
+                    {
+                        coneShapes = [new Cone(seq.Origin, coneShape.Radius, startAngle, endAngle)];
+                    }
+                    else
+                    {
+                        coneShapes = [with(coneCount)];
+                        for (var k = 0; k < coneCount; ++k)
+                        {
+                            coneShapes.Add(new ConeHA(seq.Origin, coneShape.Radius, seq.Rotation + k * seq.Increment, coneShape.HalfAngle));
+                        }
+                    }
                 }
             }
         }
-        return false;
+
+        var raw = PolygonClipper.GetCombinedPolygon(center, _lineSafeShapes, coneShapes);
+        var rawCount = raw.Parts.Count;
+        var filteredParts = new List<RelPolygonWithHoles>(rawCount);
+        for (var i = 0; i < rawCount; ++i)
+        {
+            var part = raw.Parts[i];
+            if (new RelSimplifiedComplexPolygon([part]).Offset(-MinSliverInset).Parts.Count > 0)
+            {
+                filteredParts.Add(part);
+            }
+        }
+        return (new RelSimplifiedComplexPolygon(filteredParts), raw);
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
         base.DrawArenaBackground(pcSlot, pc);
-        var count = _safeSquares.Count;
-        for (var i = 0; i < count; ++i)
+        if (_safePolygon != null && _safePolygon.Parts.Count != 0)
         {
-            Arena.ZoneRect(_safeSquares[i], default(Angle), TileHalfSize, TileHalfSize, TileHalfSize, Colors.SafeFromAOE);
+            Arena.ZoneRelPoly(_safePolygon, Colors.SafeFromAOE);
         }
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         base.AddHints(slot, actor, hints);
-        var count = _safeSquares.Count;
-        if (count == 0)
+        if (_safePolygon == null || _safePolygon.Parts.Count == 0)
         {
             return;
         }
 
-        var pos = actor.Position;
-        for (var i = 0; i < count; ++i)
+        if (_safePolygon.Contains(actor.Position - Arena.Center))
         {
-            var d = pos - _safeSquares[i];
-            if (Math.Abs(d.X) <= TileHalfSize && Math.Abs(d.Z) <= TileHalfSize)
-            {
-                hints.Add("Stay in safe square!", false);
-                return;
-            }
+            hints.Add("Stay in safe zone!", false);
         }
-        hints.Add("Move to safe square!");
+        else
+        {
+            hints.Add("Move to safe zone!");
+        }
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)

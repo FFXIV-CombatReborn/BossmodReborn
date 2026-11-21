@@ -121,11 +121,13 @@ sealed class ElementaryChemistry(BossModule module) : BossComponent(module)
 #endif
     }
 
+    private readonly List<string> _colorsBuffer = [];
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         if (actor.FindStatus((uint)SID.ElementaryDeficiency) != null)
         {
-            List<string> colors = [];
+            var colors = _colorsBuffer;
+            colors.Clear();
             if (actor.FindStatus((uint)SID.FireResistanceDownII) == null)
             {
                 colors.Add("fire");

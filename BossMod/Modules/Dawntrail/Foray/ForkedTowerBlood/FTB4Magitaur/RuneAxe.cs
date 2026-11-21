@@ -219,6 +219,8 @@ sealed class RuneAxeSmallSpreadAOEs(BossModule module) : Components.GenericAOEs(
     private readonly WDir[] squareDirs = FTB4Magitaur.GetSquareAnglesDirs();
     private readonly Angle[] squareAngles = FTB4Magitaur.GetSquareAngles();
 
+    private readonly List<Actor> _playersWithSameOrderBuffer = [];
+    private readonly List<AOEInstance> _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (!Show)
@@ -245,7 +247,8 @@ sealed class RuneAxeSmallSpreadAOEs(BossModule module) : Components.GenericAOEs(
             {
                 return [];
             }
-            var playersWithSameOrder = new List<Actor>();
+            var playersWithSameOrder = _playersWithSameOrderBuffer;
+            playersWithSameOrder.Clear();
             for (var i = 0; i < count; ++i)
             {
                 var s = _status.StatusSmall[i];
@@ -255,7 +258,8 @@ sealed class RuneAxeSmallSpreadAOEs(BossModule module) : Components.GenericAOEs(
                 }
             }
 
-            var aoes = new List<AOEInstance>(3);
+            var aoes = _aoesBuffer;
+            aoes.Clear();
             var countP = playersWithSameOrder.Count;
             for (var i = 0; i < countP; ++i)
             {
@@ -270,7 +274,8 @@ sealed class RuneAxeSmallSpreadAOEs(BossModule module) : Components.GenericAOEs(
         }
         else
         {
-            var aoes = new List<AOEInstance>(3);
+            var aoes = _aoesBuffer;
+            aoes.Clear();
             var countP = _status.StatusSmall.Count;
             for (var i = 0; i < countP; ++i)
             {

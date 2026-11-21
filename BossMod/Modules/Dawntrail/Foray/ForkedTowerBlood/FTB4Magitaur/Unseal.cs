@@ -1,4 +1,4 @@
-namespace BossMod.Dawntrail.Foray.ForkedTowerBlood.FTB4Magitaur;
+﻿namespace BossMod.Dawntrail.Foray.ForkedTowerBlood.FTB4Magitaur;
 
 sealed class Unseal(BossModule module) : Components.GenericAOEs(module)
 {
@@ -11,6 +11,8 @@ sealed class Unseal(BossModule module) : Components.GenericAOEs(module)
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
 
+    private readonly List<Actor> _playersBuffer = [];
+    private readonly List<Actor>[] _squareActors = [[with(16)], [with(16)], [with(16)]];
     public override void Update()
     {
         if (isClose is not bool close)
@@ -18,11 +20,14 @@ sealed class Unseal(BossModule module) : Components.GenericAOEs(module)
             return;
         }
         targets.Clear();
-        List<Actor>[] squareActors = [[with(16)], [with(16)], [with(16)]];
+        var squareActors = _squareActors;
+        for (var j = 0; j < 3; ++j)
+            squareActors[j].Clear();
 
         var primaryPos = Module.PrimaryActor.Position;
 
-        var players = new List<Actor>(48);
+        var players = _playersBuffer;
+        players.Clear();
         // note: this is problematic because player culling messes this up and leads to incorrect results (eg not finding the actual bait target)
         // in any frame players can be removed or added to the object table and will likely never contain all 48 players at the same time
         // caching removed players is also pointless since the player position no longer gets updated when this happens
@@ -134,6 +139,7 @@ sealed class Unseal(BossModule module) : Components.GenericAOEs(module)
         Arena.Actors(targets, Colors.Vulnerable, drawWorld: true);
     }
 
+    private readonly List<Actor> _targetsOnSquareBuffer = [];
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         if (isClose is not bool close || actor.IsDead)
@@ -155,10 +161,12 @@ sealed class Unseal(BossModule module) : Components.GenericAOEs(module)
             {
                 return;
             }
-            List<Actor> squareActors = [with(16)];
+            var squareActors = _squareActors[0];
+            squareActors.Clear();
             var primaryPos = Module.PrimaryActor.Position;
 
-            var players = new List<Actor>(48);
+            var players = _playersBuffer;
+            players.Clear();
             // note: this is problematic because player culling messes this up and leads to incorrect results (eg not finding the actual bait target)
             // in any frame players can be removed or added to the object table and will likely never contain all 48 players at the same time
             // caching removed players is also pointless since the player position no longer gets updated when this happens
@@ -184,7 +192,8 @@ sealed class Unseal(BossModule module) : Components.GenericAOEs(module)
             if (countS < 2)
                 return;
 
-            var targetsOnSquare = new List<Actor>(2);
+            var targetsOnSquare = _targetsOnSquareBuffer;
+            targetsOnSquare.Clear();
 
             (Actor actor, float distSq)[] distances = new (Actor, float)[countS];
 

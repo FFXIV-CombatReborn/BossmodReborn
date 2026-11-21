@@ -10,7 +10,7 @@ sealed class VengefulBioIIIBlizzardIIIFireIII(BossModule module) : Components.Si
 sealed class DeltaAttack(BossModule module) : Components.CastCounterMulti(module, [(uint)AID.DeltaAttackFirst, (uint)AID.DeltaAttackRepeat]);
 sealed class DeltaAttackRaidwide(BossModule module) : Components.RaidwideCastDelay(module, (uint)AID.DeltaAttackVisual1, (uint)AID.DeltaAttackFirst, 0.5d);
 sealed class Avalaunch(BossModule module) : Components.StackWithIcon(module, (uint)IconID.Avalaunch, (uint)AID.Avalaunch, 8f, 7.8d, 24, 24);
-sealed class SelfDestruct(BossModule module) : Components.CastHints(module, [(uint)AID.SelfDestructVisual1, (uint)AID.SelfDestruct2], "Enrage!", true);
+sealed class SelfDestruct(BossModule module) : Components.CastHints(module, [(uint)AID.SelfDestructVisual1, (uint)AID.SelfDestructVisual2], "Enrage!", true);
 sealed class GeothermalRupture(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GeothermalRupture, 8f);
 sealed class FlameThrower(BossModule module) : Components.LineStack(module, aidMarker: (uint)AID.FlameThrowerMarker, (uint)AID.FlameThrower, 5d, 40f, 4f, 24, 24, 1, false);
 

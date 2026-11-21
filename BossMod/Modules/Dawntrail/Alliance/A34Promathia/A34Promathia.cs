@@ -138,43 +138,76 @@ sealed class Comet(BossModule module) : Components.SpreadFromIcon(module, (uint)
 
 sealed class FalseGenesis(BossModule module) : BossComponent(module)
 {
-    private bool _casting = false;
+    private const float PlatformHalfSize = 6.5f;
+    private const float AISafeHalfSize = 5.5f;
+
+    private static readonly (WPos Center, Angle Rotation)[] _platforms =
+    [
+        (new(-820f, -807f), default),
+        (new(-808.724f, -826.5f), 120.Degrees()),
+        (new(-831.258f, -826.5f), -120.Degrees()),
+    ];
+
+    private static readonly SDInvertedUnion _platformsForbidden = new([
+        new SDRect(_platforms[0].Center, _platforms[0].Rotation, AISafeHalfSize, AISafeHalfSize, AISafeHalfSize),
+        new SDRect(_platforms[1].Center, _platforms[1].Rotation, AISafeHalfSize, AISafeHalfSize, AISafeHalfSize),
+        new SDRect(_platforms[2].Center, _platforms[2].Rotation, AISafeHalfSize, AISafeHalfSize, AISafeHalfSize),
+    ]);
+
+    private DateTime _activation;
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
-        if (!_casting)
+        if (_activation == default)
         {
             return;
         }
-        Arena.ZoneRect(new(-820f, -807f), default(Angle), 6.5f, 6.5f, 6.5f, Colors.SafeFromAOE);
-        Arena.ZoneRect(new(-808.724f, -826.5f), 120.Degrees(), 6.5f, 6.5f, 6.5f, Colors.SafeFromAOE);
-        Arena.ZoneRect(new(-831.258f, -826.5f), -120.Degrees(), 6.5f, 6.5f, 6.5f, Colors.SafeFromAOE);
+        for (var i = 0; i < _platforms.Length; ++i)
+        {
+            ref readonly var p = ref _platforms[i];
+            Arena.ZoneRect(p.Center, p.Rotation, PlatformHalfSize, PlatformHalfSize, PlatformHalfSize, Colors.SafeFromAOE);
+        }
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (!_casting)
+        if (_activation == default)
         {
             return;
         }
         var pos = actor.Position;
-        if (!(pos.InRect(new(-820f, -807f), default(Angle), 6.5f, 6.5f, 6.5f) || pos.InRect(new(-808.724f, -826.5f), 120.Degrees(), 6.5f, 6.5f, 6.5f) || pos.InRect(new(-831.258f, -826.5f), -120.Degrees(), 6.5f, 6.5f, 6.5f)))
+        for (var i = 0; i < _platforms.Length; ++i)
         {
-            hints.Add("Move to platform spawn!");
+            ref readonly var p = ref _platforms[i];
+            if (pos.InRect(p.Center, p.Rotation, PlatformHalfSize, PlatformHalfSize, PlatformHalfSize))
+            {
+                return;
+            }
+        }
+        hints.Add("Move to platform spawn!");
+    }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        if (_activation != default)
+        {
+            hints.AddForbiddenZone(_platformsForbidden, _activation);
         }
     }
+
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.FalseGenesis)
         {
-            _casting = true;
+            _activation = Module.CastFinishAt(spell);
         }
     }
+
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.FalseGenesis)
         {
-            _casting = false;
+            _activation = default;
         }
     }
 }
@@ -246,16 +279,7 @@ sealed class EmptySeed(BossModule module) : Components.SimpleKnockbacks(module, 
 {
     private Angle PlatformOrientation(WPos p)
     {
-        if (p.Z > Arena.Center.Z)
-        {
-            return default;
-        }
-        if (p.X < Arena.Center.X)
-        {
-            return -120.Degrees();
-        }
-
-        return 120.Degrees();
+        return p.Z > Arena.Center.Z ? default : p.X < Arena.Center.X ? -120.Degrees() : 120.Degrees();
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

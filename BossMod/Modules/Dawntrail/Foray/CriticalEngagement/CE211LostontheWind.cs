@@ -303,5 +303,5 @@ sealed class CE211LostontheWindStates : StateMachineBuilder
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.Abductor, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1093u, NameID = 61u)]
 public sealed class CE211LostontheWind(WorldState ws, Actor primary) : BossModule(ws, primary, new WPos(-150f, -860f).Quantized(), new ArenaBoundsCircle(24f))
 {
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 24f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 24f);
 }

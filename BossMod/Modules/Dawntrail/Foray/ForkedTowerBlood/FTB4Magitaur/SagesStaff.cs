@@ -12,6 +12,7 @@ sealed class SagesStaff(BossModule module) : Components.GenericBaitStack(module,
         }
     }
 
+    private readonly List<Actor> _playersBuffer = [];
     public override void Update()
     {
         var count = CurrentBaits.Count;
@@ -20,7 +21,8 @@ sealed class SagesStaff(BossModule module) : Components.GenericBaitStack(module,
             return;
         }
         var baits = CollectionsMarshal.AsSpan(CurrentBaits);
-        var players = new List<Actor>(48);
+        var players = _playersBuffer;
+        players.Clear();
         // note: this is problematic because player culling messes this up and leads to incorrect results (eg not finding the actual bait target)
         // in any frame players can be removed or added to the object table and will likely never contain all 48 players at the same time
         // caching removed players is also pointless since the player position no longer gets updated when this happens
