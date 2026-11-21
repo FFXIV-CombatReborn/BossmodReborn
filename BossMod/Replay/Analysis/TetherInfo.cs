@@ -68,8 +68,13 @@ sealed class TetherInfo : CommonEnumInfo
         _tidType = moduleInfo?.TetherIDType;
         foreach (var replay in replays)
         {
-            foreach (var enc in replay.Encounters.Where(enc => enc.OID == oid))
+            for (var i = 0; i < replay.Encounters.Count; ++i)
             {
+                var enc = replay.Encounters[i];
+                if (enc.OID != oid)
+                {
+                    continue;
+                }
                 foreach (var tether in replay.EncounterTethers(enc))
                 {
                     var data = _data.GetOrAdd(tether.ID);
@@ -122,9 +127,12 @@ sealed class TetherInfo : CommonEnumInfo
         if (ImGui.MenuItem("Generate missing enum values for boss module"))
         {
             var sb = new StringBuilder();
-            foreach (var (tid, data) in _data.Where(kv => _tidType?.GeneratedEnumName(kv.Key) == null))
+            foreach (var (tid, data) in _data)
             {
-                sb.AppendLine(EnumMemberString(tid, data));
+                if (_tidType?.GeneratedEnumName(tid) == null)
+                {
+                    sb.AppendLine(EnumMemberString(tid, data));
+                }
             }
 
             ImGui.SetClipboardText(sb.ToString());

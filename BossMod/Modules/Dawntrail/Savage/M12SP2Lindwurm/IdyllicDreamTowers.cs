@@ -934,6 +934,22 @@ sealed class IdyllicDreamLindwurmsDarkII(BossModule module) : Components.Generic
 
     static readonly AOEShapeRect DarkRect = new(50, 5);
 
+    private static Actor? ClosestTo(Actor[] party, WPos origin, bool farthest = false)
+    {
+        Actor? best = null;
+        var bestDistSq = farthest ? float.MinValue : float.MaxValue;
+        for (var i = 0; i < party.Length; ++i)
+        {
+            var distSq = (party[i].Position - origin).LengthSq();
+            if (farthest ? distSq > bestDistSq : distSq < bestDistSq)
+            {
+                bestDistSq = distSq;
+                best = party[i];
+            }
+        }
+        return best;
+    }
+
     public override void Update()
     {
         if (!_initialized)
@@ -967,12 +983,13 @@ sealed class IdyllicDreamLindwurmsDarkII(BossModule module) : Components.Generic
             return;
 
         var count = _sources.Count;
+        var party = Raid.WithoutSlot(true, true, true);
         for (var i = 0; i < count; ++i)
         {
             var (src, activation) = _sources[i];
 
             // closest player in 3y circle
-            var target = Raid.WithoutSlot(true, true, true).Closest(src.Position);
+            var target = ClosestTo(party, src.Position);
             if (target == null)
                 continue;
 

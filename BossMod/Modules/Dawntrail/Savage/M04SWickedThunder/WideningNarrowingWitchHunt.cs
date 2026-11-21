@@ -1,4 +1,4 @@
-namespace BossMod.Dawntrail.Savage.M04SWickedThunder;
+﻿namespace BossMod.Dawntrail.Savage.M04SWickedThunder;
 
 sealed class WideningNarrowingWitchHunt(BossModule module) : Components.GenericAOEs(module)
 {
@@ -47,6 +47,8 @@ sealed class WideningNarrowingWitchHuntBait(BossModule module) : Components.Gene
 
     private static readonly AOEShapeCircle _shape = new(6f);
 
+    private (Actor actor, float distSq)[] _distances = new (Actor, float)[PartyState.MaxPartySize];
+
     public override void Update()
     {
         if (CurMechanic == Mechanic.None)
@@ -57,7 +59,9 @@ sealed class WideningNarrowingWitchHuntBait(BossModule module) : Components.Gene
         var party = Raid.WithoutSlot(false, true, true);
         var len = party.Length;
 
-        (Actor actor, float distSq)[] distances = new (Actor, float)[len];
+        if (_distances.Length < len)
+            _distances = new (Actor, float)[len];
+        var distances = _distances;
         var center = Arena.Center;
 
         for (var i = 0; i < len; ++i)

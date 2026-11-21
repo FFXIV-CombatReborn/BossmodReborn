@@ -139,10 +139,15 @@ sealed class Rush(BossModule module) : Components.GenericBaitAway(module)
         if (spell.Action.ID is (uint)AID.RushFirst or (uint)AID.RushSecond)
         {
             Activation = Module.CastFinishAt(spell, 0.2d);
-            if (!CurrentBaits.Any(b => b.Source == caster))
+            var count = CurrentBaits.Count;
+            for (var i = 0; i < count; ++i)
             {
-                CurrentBaits.Add(new(caster, caster, _shapeUntethered, Activation));
+                if (CurrentBaits[i].Source == caster)
+                {
+                    return;
+                }
             }
+            CurrentBaits.Add(new(caster, caster, _shapeUntethered, Activation));
         }
     }
 
@@ -235,12 +240,13 @@ sealed class RaisedTribute(BossModule module) : Components.GenericWildCharge(mod
         if (iconID == (uint)IconID.RaisedTribute)
         {
             Source = actor;
-            var party = Raid.WithoutSlot(true, true, true);
+            var party = Raid.WithSlot(true, true, true);
             var len = party.Length;
             for (var i = 0; i < len; ++i)
             {
-                ref var member = ref party[i];
-                PlayerRoles[i] = member.InstanceID == targetID ? PlayerRole.Target : member.Tether.ID != 0 ? PlayerRole.Avoid : PlayerRole.Share;
+                ref readonly var p = ref party[i];
+                var member = p.Item2;
+                PlayerRoles[p.Item1] = member.InstanceID == targetID ? PlayerRole.Target : member.Tether.ID != 0 ? PlayerRole.Avoid : PlayerRole.Share;
             }
         }
     }

@@ -76,7 +76,29 @@ sealed class TongueOfFlame(BossModule module) : Components.SimpleAOEs(module, (u
 sealed class DarkDealing(BossModule module) : Components.SingleTargetCast(module, (uint)AID.DarkDealing);
 sealed class CyclonicRing(BossModule module) : Components.SimpleAOEs(module, (uint)AID.CyclonicRing, new AOEShapeDonut(10.0f, 30.0f));
 sealed class CycloneCrossing(BossModule module) : Components.SimpleAOEs(module, (uint)AID.CycloneCrossing1, new AOEShapeCross(60.0f, 8.0f));
-sealed class WindSphere(BossModule module) : Components.Voidzone(module, 17.5f, module => module.Enemies((uint)OID.WindSphere).Where(z => z.EventState != 7));
+sealed class WindSphere(BossModule module) : Components.Voidzone(module, 17.5f, GetVoidzones)
+{
+    private static Actor[] GetVoidzones(BossModule module)
+    {
+        var enemies = module.Enemies((uint)OID.WindSphere);
+        var count = enemies.Count;
+        if (count == 0)
+        {
+            return [];
+        }
+        var voidzones = new Actor[count];
+        var index = 0;
+        for (var i = 0; i < count; ++i)
+        {
+            var z = enemies[i];
+            if (z.EventState != 7)
+            {
+                voidzones[index++] = z;
+            }
+        }
+        return voidzones[..index];
+    }
+}
 
 sealed class HellfireFetch : Components.SimpleAOEs
 {
@@ -382,5 +404,5 @@ sealed class CE202AcceptNoImitatorsStates : StateMachineBuilder
 [ModuleInfo(BossModuleInfo.Maturity.Verified, PrimaryActorOID = (uint)OID.Metamorph, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1093u, NameID = 63u)]
 public sealed class CE202AcceptNoImitators(WorldState ws, Actor primary) : BossModule(ws, primary, new(500f, -310f), new ArenaBoundsCircle(25f))
 {
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 25f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 25f);
 }

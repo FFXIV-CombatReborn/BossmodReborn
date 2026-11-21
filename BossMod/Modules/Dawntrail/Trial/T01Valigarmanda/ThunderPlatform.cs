@@ -47,7 +47,8 @@ sealed class ThunderPlatform(BossModule module) : Components.GenericAOEs(module)
             {
                 ref readonly var p = ref party[i];
                 var slot = p.Item1;
-                requireHint[slot] = requireLevitating[slot];
+                requireHint.Set(slot);
+                requireLevitating.Set(slot);
             }
             activation = Module.CastFinishAt(spell);
         }
@@ -85,17 +86,17 @@ sealed class ThunderPlatform(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnStatusGain(Actor actor, ref ActorStatus status)
     {
-        if (status.ID == (uint)SID.Levitate)
+        if (status.ID == (uint)SID.Levitate && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0)
         {
-            levitating.Set(Raid.FindSlot(actor.InstanceID));
+            levitating.Set(slot);
         }
     }
 
     public override void OnStatusLose(Actor actor, ref ActorStatus status)
     {
-        if (status.ID == (uint)SID.Levitate)
+        if (status.ID == (uint)SID.Levitate && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0)
         {
-            levitating.Clear(Raid.FindSlot(actor.InstanceID));
+            levitating.Clear(slot);
         }
     }
 }
@@ -117,8 +118,12 @@ sealed class BlightedBolt1(BossModule module) : Components.GenericAOEs(module)
         var partyLen = party.Length;
         var levitateSpan = _levitate.ActiveAOEs(slot, actor);
         var levitateLen = levitateSpan.Length;
+        if (partyLen == 0 || levitateLen == 0)
+        {
+            return [];
+        }
         var index = 0;
-        var aoes = new AOEInstance[partyLen - 1];
+        var aoes = new AOEInstance[partyLen];
 
         for (var i = 0; i < partyLen; ++i)
         {

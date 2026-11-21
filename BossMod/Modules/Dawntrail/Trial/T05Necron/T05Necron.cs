@@ -17,18 +17,60 @@ sealed class Wipe(BossModule module) : BossComponent(module)
 sealed class DarknessOfEternity(BossModule module) : Components.RaidwideCastDelay(module, (uint)AID.DarknessOfEternityVisual, (uint)AID.DarknessOfEternity, 6.4d);
 sealed class FearOfDeathAOE2(BossModule module) : Components.SimpleAOEs(module, (uint)AID.FearOfDeathAOE2, 3f);
 sealed class FearOfDeathGrandCross(BossModule module) : Components.RaidwideCasts(module, [(uint)AID.FearOfDeath, (uint)AID.GrandCross, (uint)AID.GrandCrossProximity]);
-sealed class BlueShockwave(BossModule module) : Components.BaitAwayIcon(module, new AOEShapeCone(100f, 50f.Degrees()), (uint)IconID.BlueShockwave, (uint)AID.BlueShockwave, 7.2d)
+// tank swap: two cone hits ~4.1s apart, the second one on whoever holds aggro after the first (matches upstream)
+// previously the bait was cleared after the first hit, so the second hit was never shown
+sealed class BlueShockwave(BossModule module) : Components.GenericBaitAway(module, (uint)AID.BlueShockwave, tankbuster: true, damageType: AIHints.PredictedDamageType.Tankbuster)
 {
+    private static readonly AOEShapeCone cone = new(100f, 50f.Degrees());
+    private DateTime _lastHit;
+
+    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
+    {
+        if (iconID == (uint)IconID.BlueShockwave)
+        {
+            NumCasts = 0;
+            _lastHit = default;
+            CurrentBaits.Clear();
+            CurrentBaits.Add(new(Module.PrimaryActor, actor, cone, WorldState.FutureTime(7.2d)));
+        }
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID != WatchedAction || CurrentBaits.Count == 0)
+        {
+            return;
+        }
+        if (_lastHit != default && WorldState.CurrentTime < _lastHit.AddSeconds(0.5d))
+        {
+            return; // same hit reported more than once
+        }
+        _lastHit = WorldState.CurrentTime;
+        if (++NumCasts >= 2)
+        {
+            CurrentBaits.Clear();
+            return;
+        }
+        ref var b = ref CurrentBaits.Ref(0);
+        b.Activation = WorldState.FutureTime(4.1d);
+        b.Forbidden.Set(Raid.FindSlot(b.Target.InstanceID)); // the first target should not take the second hit
+    }
+
     public override void Update()
     {
-        if (CurrentBaits.Count != 0)
+        if (CurrentBaits.Count == 0)
         {
-            ref var b = ref CurrentBaits.Ref(0);
-            var t = b.Target;
-            if (t.IsDead || t.PosRot.Y < -100f) // target is dead or teleported into prison, not sure if new target gets selected, but it would probably be a random one anyway
-            {
-                CurrentBaits.Clear();
-            }
+            return;
+        }
+        ref var b = ref CurrentBaits.Ref(0);
+        if (NumCasts == 1 && WorldState.Actors.Find(Module.PrimaryActor.TargetID) is Actor t)
+        {
+            b.Target = t; // second hit follows the boss target
+        }
+        var target = b.Target;
+        if (target.IsDead || target.PosRot.Y < -100f) // target is dead or teleported into prison, not sure if new target gets selected, but it would probably be a random one anyway
+        {
+            CurrentBaits.Clear();
         }
     }
 }

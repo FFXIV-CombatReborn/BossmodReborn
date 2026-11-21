@@ -6,56 +6,119 @@ sealed class Explosion(BossModule module) : Components.SimpleAOEs(module, (uint)
 
 sealed class WheelofImpregnability(BossModule module) : Components.GenericAOEs(module, (uint)AID.WheelOfImpregnabilityFire)
 {
-    private bool _on = false;
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    private static readonly AOEShapeCircle circle = new(13f);
+    private AOEInstance[] _aoe = [];
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
+
+    public override void Update()
     {
-        if (!_on)
+        if (_aoe.Length != 0)
         {
-            return [];
+            var pos = Module.PrimaryActor.Position;
+            ref var aoe = ref _aoe[0];
+            if (aoe.Origin != pos)
+            {
+                aoe.Origin = pos;
+                aoe.ShapeDistance = circle.Distance(pos, default);
+            }
         }
-        AOEInstance[]? _aoes = [new(new AOEShapeCircle(13f), Module.PrimaryActor.Position, default, WorldState.FutureTime(10.5d))];
-        return _aoes;
     }
+
+    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
+    {
+        if (iconID == (uint)IconID.WheelOfImpregnability)
+        {
+            var pos = Module.PrimaryActor.Position;
+            _aoe = [new(circle, pos, default, WorldState.FutureTime(9.9d), shapeDistance: circle.Distance(pos, default))];
+        }
+    }
+
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.WheelOfImpregnabilityCast)
+        if (_aoe.Length == 0 && spell.Action.ID == (uint)AID.WheelOfImpregnabilityCast)
         {
-            _on = true;
+            var pos = Module.PrimaryActor.Position;
+            _aoe = [new(circle, pos, default, WorldState.FutureTime(12.6d), shapeDistance: circle.Distance(pos, default))];
         }
     }
+
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID == (uint)AID.WheelOfImpregnabilityFire)
+        if (spell.Action.ID == WatchedAction)
         {
-            _on = false;
+            ++NumCasts;
+            _aoe = [];
         }
     }
 }
 
-sealed class BastionOfTwilight(BossModule module) : Components.GenericAOEs(module, (uint)AID.WheelOfImpregnabilityFire)
+sealed class BastionOfTwilight(BossModule module) : Components.GenericAOEs(module, (uint)AID.BastionOfTwilightFire)
 {
-    private bool _on = false;
+    private static readonly AOEShapeDonut donut = new(8f, 50f);
+    private AOEInstance[] _aoe = [];
+    private int _pendingExplosions;
+
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        if (!_on)
+        if (_aoe.Length != 0)
         {
-            return [];
+            _aoe[0].Risky = _pendingExplosions == 0;
         }
-        AOEInstance[]? _aoes = [new(new AOEShapeDonut(8f, 50f), Module.PrimaryActor.Position, default, WorldState.FutureTime(10.5d))];
-        return _aoes;
+        return _aoe;
     }
+
+    public override void Update()
+    {
+        if (_aoe.Length != 0)
+        {
+            var pos = Module.PrimaryActor.Position;
+            ref var aoe = ref _aoe[0];
+            if (aoe.Origin != pos)
+            {
+                aoe.Origin = pos;
+                aoe.ShapeDistance = donut.Distance(pos, default);
+            }
+        }
+    }
+
+    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
+    {
+        if (iconID == (uint)IconID.BastionOfTwilight)
+        {
+            var pos = Module.PrimaryActor.Position;
+            _aoe = [new(donut, pos, default, WorldState.FutureTime(9.9d), risky: _pendingExplosions == 0, shapeDistance: donut.Distance(pos, default))];
+        }
+    }
+
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.BastionOfTwilightCast)
+        var id = spell.Action.ID;
+        if (id == (uint)AID.Explosion)
         {
-            _on = true;
+            ++_pendingExplosions;
+        }
+        else if (_aoe.Length == 0 && id == (uint)AID.BastionOfTwilightCast)
+        {
+            var pos = Module.PrimaryActor.Position;
+            _aoe = [new(donut, pos, default, WorldState.FutureTime(12.6d), risky: _pendingExplosions == 0, shapeDistance: donut.Distance(pos, default))];
         }
     }
+
+    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.Explosion && _pendingExplosions > 0)
+        {
+            --_pendingExplosions;
+        }
+    }
+
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID == (uint)AID.BastionOfTwilightFire)
+        if (spell.Action.ID == WatchedAction)
         {
-            _on = false;
+            ++NumCasts;
+            _aoe = [];
         }
     }
 }
@@ -75,43 +138,76 @@ sealed class Comet(BossModule module) : Components.SpreadFromIcon(module, (uint)
 
 sealed class FalseGenesis(BossModule module) : BossComponent(module)
 {
-    private bool _casting = false;
+    private const float PlatformHalfSize = 6.5f;
+    private const float AISafeHalfSize = 5.5f;
+
+    private static readonly (WPos Center, Angle Rotation)[] _platforms =
+    [
+        (new(-820f, -807f), default),
+        (new(-808.724f, -826.5f), 120.Degrees()),
+        (new(-831.258f, -826.5f), -120.Degrees()),
+    ];
+
+    private static readonly SDInvertedUnion _platformsForbidden = new([
+        new SDRect(_platforms[0].Center, _platforms[0].Rotation, AISafeHalfSize, AISafeHalfSize, AISafeHalfSize),
+        new SDRect(_platforms[1].Center, _platforms[1].Rotation, AISafeHalfSize, AISafeHalfSize, AISafeHalfSize),
+        new SDRect(_platforms[2].Center, _platforms[2].Rotation, AISafeHalfSize, AISafeHalfSize, AISafeHalfSize),
+    ]);
+
+    private DateTime _activation;
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
-        if (!_casting)
+        if (_activation == default)
         {
             return;
         }
-        Arena.ZoneRect(new(-820f, -807f), default(Angle), 6.5f, 6.5f, 6.5f, Colors.SafeFromAOE);
-        Arena.ZoneRect(new(-808.724f, -826.5f), 120.Degrees(), 6.5f, 6.5f, 6.5f, Colors.SafeFromAOE);
-        Arena.ZoneRect(new(-831.258f, -826.5f), -120.Degrees(), 6.5f, 6.5f, 6.5f, Colors.SafeFromAOE);
+        for (var i = 0; i < _platforms.Length; ++i)
+        {
+            ref readonly var p = ref _platforms[i];
+            Arena.ZoneRect(p.Center, p.Rotation, PlatformHalfSize, PlatformHalfSize, PlatformHalfSize, Colors.SafeFromAOE);
+        }
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (!_casting)
+        if (_activation == default)
         {
             return;
         }
         var pos = actor.Position;
-        if (!pos.InRect(new(-820f, -807f), default(Angle), 6.5f, 6.5f, 6.5f) || pos.InRect(new(-808.724f, -826.5f), 120.Degrees(), 6.5f, 6.5f, 6.5f) || pos.InRect(new(-831.258f, -826.5f), -120.Degrees(), 6.5f, 6.5f, 6.5f))
+        for (var i = 0; i < _platforms.Length; ++i)
         {
-            hints.Add("Move to platform spawn!");
+            ref readonly var p = ref _platforms[i];
+            if (pos.InRect(p.Center, p.Rotation, PlatformHalfSize, PlatformHalfSize, PlatformHalfSize))
+            {
+                return;
+            }
+        }
+        hints.Add("Move to platform spawn!");
+    }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        if (_activation != default)
+        {
+            hints.AddForbiddenZone(_platformsForbidden, _activation);
         }
     }
+
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.FalseGenesis)
         {
-            _casting = true;
+            _activation = Module.CastFinishAt(spell);
         }
     }
+
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.FalseGenesis)
         {
-            _casting = false;
+            _activation = default;
         }
     }
 }
@@ -183,16 +279,7 @@ sealed class EmptySeed(BossModule module) : Components.SimpleKnockbacks(module, 
 {
     private Angle PlatformOrientation(WPos p)
     {
-        if (p.Z > Arena.Center.Z)
-        {
-            return default;
-        }
-        if (p.X < Arena.Center.X)
-        {
-            return -120.Degrees();
-        }
-
-        return 120.Degrees();
+        return p.Z > Arena.Center.Z ? default : p.X < Arena.Center.X ? -120.Degrees() : 120.Degrees();
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
@@ -213,7 +300,7 @@ sealed class EmptySeed(BossModule module) : Components.SimpleKnockbacks(module, 
                 walls[z + 1] = new(corner, end2);
             }
 
-            var minDist = KnockbackKind == Kind.TowardsOrigin ? (MinDistance + (MinDistanceBetweenHitboxes ? Raid.Player()!.HitboxRadius + caster.HitboxRadius : default)) : MinDistance;
+            var minDist = KnockbackKind == Kind.TowardsOrigin ? (MinDistance + (MinDistanceBetweenHitboxes ? (Raid.Player()?.HitboxRadius ?? 0.5f) + caster.HitboxRadius : default)) : MinDistance;
             Casters.Add(new(spell.LocXZ, Distance, Module.CastFinishAt(spell), Shape, spell.Rotation, KnockbackKind, minDist, walls, caster.InstanceID, IgnoreImmunes));
         }
     }
@@ -245,9 +332,135 @@ sealed class InfernalDeliveranceTower(BossModule module) : Components.CastTowers
 
 sealed class InfernalDeliveranceAOE(BossModule module) : Components.SimpleAOEs(module, (uint)AID.InfernalDeliveranceAOE, 8f);
 
+sealed class HeavyPuddles(BossModule module) : Components.GenericAOEs(module, warningText: "GTFO from slow puddle!")
+{
+    private static readonly AOEShapeCircle _smallCircle = new(2.5f);
+    private static readonly AOEShapeCircle _largeCircle = new(8f);
+    private readonly List<AOEInstance> _aoes = [];
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        var count = _aoes.Count;
+        if (count == 0)
+        {
+            return;
+        }
+
+        var now = WorldState.CurrentTime;
+        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        for (var i = 0; i < count; ++i)
+        {
+            ref readonly var aoe = ref aoes[i];
+            if (aoe.ShapeDistance == null)
+            {
+                continue;
+            }
+            if (now >= aoe.Activation)
+            {
+                hints.TemporaryObstacles.Add(aoe.ShapeDistance);
+            }
+            else
+            {
+                hints.AddForbiddenZone(aoe.ShapeDistance, aoe.Activation);
+            }
+        }
+    }
+
+    public override void OnActorEAnim(Actor actor, uint state)
+    {
+        if (actor.OID is not ((uint)OID.Actor1ec097 or (uint)OID.Actor1ec098))
+        {
+            return;
+        }
+
+        switch (state)
+        {
+            case 0x00010002u:
+                SetPuddle(actor, _smallCircle, 2.5f, WorldState.FutureTime(2.0d));
+                break;
+            case 0x04000800u:
+                SetPuddle(actor, _largeCircle, 8f, WorldState.CurrentTime);
+                break;
+            case 0x00011000u:
+                SetPuddle(actor, _smallCircle, 2.5f, WorldState.CurrentTime);
+                break;
+            case 0x00040008u:
+            case 0x00042000u:
+                RemovePuddle(actor.InstanceID);
+                break;
+        }
+    }
+
+    public override void OnActorDestroyed(Actor actor)
+    {
+        if (actor.OID is (uint)OID.Actor1ec097 or (uint)OID.Actor1ec098)
+        {
+            RemovePuddle(actor.InstanceID);
+        }
+    }
+
+    private void SetPuddle(Actor actor, AOEShapeCircle shape, float radius, DateTime activation)
+    {
+        var pos = actor.Position;
+        var id = actor.InstanceID;
+        var instance = new AOEInstance(shape, pos, default, activation, Colors.Danger, true, id, new SDCircle(pos, radius));
+        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        for (var i = 0; i < aoes.Length; ++i)
+        {
+            if (aoes[i].ActorID == id)
+            {
+                aoes[i] = instance;
+                return;
+            }
+        }
+        _aoes.Add(instance);
+    }
+
+    private void RemovePuddle(ulong instanceID)
+    {
+        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        for (var i = 0; i < aoes.Length; ++i)
+        {
+            if (aoes[i].ActorID == instanceID)
+            {
+                _aoes.RemoveAt(i);
+                return;
+            }
+        }
+    }
+}
+
 sealed class Meteor(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.Meteor, (uint)AID.Meteor2, 6f, 5f);  // this is the regular spreads only, Tankbuster is handled in Comet.
 
 sealed class DeadlyRebirth(BossModule module) : Components.RaidwideCast(module, (uint)AID.DeadlyRebirth);
+
+sealed class DeadlyRebirthKB(BossModule module) : Components.GenericKnockback(module, (uint)AID.DeadlyRebirth)
+{
+    private Knockback[] _kb = [];
+
+    public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor) => _kb;
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.DeadlyRebirthCast)
+        {
+            _kb = [new(Arena.Center, 20f, Module.CastFinishAt(spell, 2d), direction: default, kind: Kind.DirForward)];
+        }
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID == WatchedAction)
+        {
+            ++NumCasts;
+            _kb = [];
+        }
+    }
+}
+
+sealed class FalseGenesisRaidwide(BossModule module) : Components.RaidwideCastDelay(module, (uint)AID.FalseGenesis, (uint)AID.FalseGenesis1, 0.6d);
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, Contributors = "The Combat Reborn Team, HerStolenLight", PrimaryActorOID = (uint)OID.Promathia, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1117u, NameID = 14779u)]
 

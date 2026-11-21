@@ -51,6 +51,7 @@ sealed class IceAegis(BossModule module) : Components.GenericAOEs(module)
         if (id == (uint)AID.IceAegis)
         {
             _aoe = [new(cone, caster.Position, caster.Rotation + 180f.Degrees(), default, Colors.SafeFromAOE)];
+            NumCasts = 0;
         }
         else if (id is (uint)AID.DirtySlashFirst or (uint)AID.DirtySlashRepeat)
         {

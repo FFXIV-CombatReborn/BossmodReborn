@@ -117,13 +117,22 @@ sealed class P1Explosion(BossModule module) : Components.GenericTowers(module)
             return;
 
         // init assignments
-        if (Towers.Sum(t => t.MinSoakers) != 6)
+        var totalSoakers = 0;
+        var towerOffsetX = 0f;
+        var countT = Towers.Count;
+        for (var i = 0; i < countT; ++i)
+        {
+            var t = Towers[i];
+            totalSoakers += t.MinSoakers;
+            towerOffsetX += t.Position.X - Arena.Center.X;
+        }
+        if (totalSoakers != 6)
         {
             ReportError($"Unexpected tower state");
             return;
         }
         Towers.Sort(static (a, b) => a.Position.Z.CompareTo(b.Position.Z));
-        var towerDirX = Towers.Sum(t => t.Position.X - Arena.Center.X) > 0 ? 1 : -1;
+        var towerDirX = towerOffsetX > 0 ? 1 : -1;
         TowerDir = new(towerDirX, TowerDir.Z);
 
         Span<int> slotByGroup = [-1, -1, -1, -1, -1, -1, -1, -1];

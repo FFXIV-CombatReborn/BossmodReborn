@@ -27,7 +27,7 @@ sealed class FeedingTime(BossModule module) : Components.InterceptTether(module,
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         base.OnCastStarted(caster, spell);
-        if (spell.Action.ID == (uint)AID.ToxicSpit)
+        if (spell.Action.ID == (uint)AID.ToxicSpitVisual)
             _activation = Module.CastFinishAt(spell, 1.2f);
     }
 

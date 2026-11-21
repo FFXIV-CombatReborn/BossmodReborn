@@ -43,12 +43,29 @@ sealed class RuthlessRegalia(BossModule module) : Components.GenericAOEs(module)
         if (_source == null)
             return;
 
-        if (_tethered.Count > 1 && _tethered.Contains(actor))
+        var count = _tethered.Count;
+        var isTethered = false;
+        Actor? partner = null;
+        if (count > 1)
+        {
+            for (var i = 0; i < count; ++i)
+            {
+                var t = _tethered[i];
+                if (t == actor)
+                {
+                    isTethered = true;
+                }
+                else
+                {
+                    partner ??= t;
+                }
+            }
+        }
+        if (isTethered && partner != null)
         {
             var s = _source.Value.Item1;
-            var t = _tethered.FirstOrDefault(x => x != actor);
             ref var sPosRot = ref s.PosRot;
-            hints.AddForbiddenZone(rectWide, new(sPosRot.X, t!.PosRot.Z), sPosRot.W.Degrees());
+            hints.AddForbiddenZone(rectWide, new(sPosRot.X, partner.PosRot.Z), sPosRot.W.Degrees());
         }
         else
         {

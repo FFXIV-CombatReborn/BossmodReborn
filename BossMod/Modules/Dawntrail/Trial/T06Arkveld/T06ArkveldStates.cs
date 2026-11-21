@@ -5,31 +5,34 @@ sealed class GuardianArkveldStates : StateMachineBuilder
     public GuardianArkveldStates(BossModule module) : base(module)
     {
         TrivialPhase()
-            // Raidwides
+            // raidwides
             .ActivateOnEnter<Roar>()
             .ActivateOnEnter<ForgedFury>()
-            // Major tells
-            .ActivateOnEnter<ChainbladeBlowLines>()
-            .ActivateOnEnter<WyvernsRadianceCleave>()
-            .ActivateOnEnter<GuardianResonanceRect>()
-            .ActivateOnEnter<Rush>()
-            .ActivateOnEnter<Concentric1>()
-            .ActivateOnEnter<Concentric2>()
-            .ActivateOnEnter<Concentric3>()
-            .ActivateOnEnter<Concentric4>()
+            // line and cone aoes
+            .ActivateOnEnter<ChainbladeBlow>()
+            .ActivateOnEnter<ChainbladeSide>()
+            .ActivateOnEnter<SiegeflightBoss>()
+            .ActivateOnEnter<SiegeflightCast>()
+            .ActivateOnEnter<SiegeflightFollowup>()
+            .ActivateOnEnter<WyvernsRadiance>()
             .ActivateOnEnter<WyvernsOuroblade>()
             .ActivateOnEnter<SteeltailThrust>()
-            // Player mechanics
-            .ActivateOnEnter<WildEnergy>()
-            .ActivateOnEnter<ChainbladeCharge>()
-            .ActivateOnEnter<ResonanceTowerSmall>()
-            .ActivateOnEnter<ResonanceTowerLarge>()
-            // Arena hazards
+            .ActivateOnEnter<Rush>()
+            .ActivateOnEnter<WyvernsWeal>()
+            // moving / sequential aoes
+            .ActivateOnEnter<WyvernsRadianceExawave>()
+            .ActivateOnEnter<WyvernsRadianceQuake>()
+            .ActivateOnEnter<WyveCannonMiddle>()
+            .ActivateOnEnter<WyveCannonEdge>()
+            .ActivateOnEnter<WyvernsVengeance>()
+            // crystals and puddles
             .ActivateOnEnter<CrackedCrystalSmall>()
             .ActivateOnEnter<CrackedCrystalLarge>()
-            .ActivateOnEnter<WyvernsVengeance>()
-            .ActivateOnEnter<WyvernsWealAOE>()  // the casted rect telegraph
-            .ActivateOnEnter<WyvernsWealPulses>()
-            .ActivateOnEnter<WyvernsWealIrregularCastLane>();
+            .ActivateOnEnter<GuardianResonancePuddle>()
+            // player mechanics
+            .ActivateOnEnter<WildEnergy>()
+            .ActivateOnEnter<ChainbladeCharge>()
+            .ActivateOnEnter<GuardianResonanceTowerSmall>()
+            .ActivateOnEnter<GuardianResonanceTowerLarge>();
     }
 }

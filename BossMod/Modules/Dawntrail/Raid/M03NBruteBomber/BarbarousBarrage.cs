@@ -34,13 +34,17 @@ sealed class BarbarousBarrageKnockback(BossModule module) : Components.GenericKn
     public override void Update()
     {
         var towers = CollectionsMarshal.AsSpan(_tower.Towers);
-        if (towers.Length == 0)
+        var len = towers.Length;
+        if (len == 0)
         {
             _kbs = [];
             return;
         }
-        _kbs = new Knockback[4];
-        for (var i = 0; i < 4; ++i)
+        if (_kbs.Length != len)
+        {
+            _kbs = new Knockback[len];
+        }
+        for (var i = 0; i < len; ++i)
         {
             ref var t = ref towers[i];
             _kbs[i] = new(t.Position, 22f, t.Activation, circle);

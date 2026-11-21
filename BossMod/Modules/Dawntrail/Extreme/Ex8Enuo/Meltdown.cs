@@ -8,16 +8,16 @@ sealed class MeltdownWait(BossModule module) : Components.StayMove(module)
 {
     public override void OnStatusGain(Actor actor, ref ActorStatus status)
     {
-        if (status.ID == (uint)SID.ChainsOfCondemnation)
+        if (status.ID == (uint)SID.ChainsOfCondemnation && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0)
         {
-            PlayerStates[Raid.FindSlot(actor.InstanceID)] = new(Requirement.Stay2, WorldState.CurrentTime, finish: status.ExpireAt);
+            PlayerStates[slot] = new(Requirement.Stay2, WorldState.CurrentTime, finish: status.ExpireAt);
         }
     }
     public override void OnStatusLose(Actor actor, ref ActorStatus status)
     {
-        if (status.ID == (uint)SID.ChainsOfCondemnation)
+        if (status.ID == (uint)SID.ChainsOfCondemnation && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0)
         {
-            PlayerStates[Raid.FindSlot(actor.InstanceID)] = default;
+            PlayerStates[slot] = default;
         }
     }
 }

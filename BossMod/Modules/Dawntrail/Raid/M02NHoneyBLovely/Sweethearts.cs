@@ -11,14 +11,16 @@ abstract class Sweethearts(BossModule module, uint oid, uint aid) : Components.G
         var count = _hearts.Count;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        _aoes.Clear();
         for (var i = 0; i < count; ++i)
         {
             var h = _hearts[i];
-            aoes[i] = new(capsule, h.Position, h.Rotation);
+            _aoes.Add(new(capsule, h.Position, h.Rotation));
         }
-        return aoes;
+        return CollectionsMarshal.AsSpan(_aoes);
     }
+
+    private readonly List<AOEInstance> _aoes = [];
 
     public override void OnActorPlayActionTimelineEvent(Actor actor, ushort id)
     {

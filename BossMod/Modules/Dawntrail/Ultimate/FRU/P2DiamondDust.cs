@@ -106,6 +106,17 @@ sealed class P2DiamondDustHouseOfLight(BossModule module) : Components.GenericBa
         }
     }
 
+    private bool IsClippedByOthers(Actor actor)
+    {
+        var baits = CollectionsMarshal.AsSpan(ActiveBaitsNotOn(actor));
+        for (var i = 0; i < baits.Length; ++i)
+        {
+            if (IsClippedBy(actor, ref baits[i]))
+                return true;
+        }
+        return false;
+    }
+
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         if (CurrentBaits.Count == 0)
@@ -125,7 +136,7 @@ sealed class P2DiamondDustHouseOfLight(BossModule module) : Components.GenericBa
                 hints.Add("Bait cone away from raid!");
         }
 
-        if (ActiveBaitsNotOn(actor).Any(b => IsClippedBy(actor, ref b)))
+        if (IsClippedByOthers(actor))
             hints.Add("GTFO from baited cone!");
     }
 
@@ -309,7 +320,22 @@ sealed class P2SinboundHoly(BossModule module) : Components.UniformStackSpread(m
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        var master = actor.Role != Role.Healer ? Stacks.MinBy(s => (s.Target.Position - actor.Position).LengthSq()).Target : null;
+        Actor? master = null;
+        if (actor.Role != Role.Healer)
+        {
+            var bestDistSq = float.MaxValue;
+            var count = Stacks.Count;
+            for (var i = 0; i < count; ++i)
+            {
+                var t = Stacks[i].Target;
+                var distSq = (t.Position - actor.Position).LengthSq();
+                if (distSq < bestDistSq)
+                {
+                    bestDistSq = distSq;
+                    master = t;
+                }
+            }
+        }
         if (master != null && ((master.Position - actor.Position).LengthSq() > 100f || (master.Position - Arena.Center).LengthSq() < 196f))
             master = null; // our closest healer is too far away or too close to center, something is wrong (maybe kb didn't finish yet, or healer fucked up)
 
@@ -354,7 +380,13 @@ sealed class P2SinboundHoly(BossModule module) : Components.UniformStackSpread(m
     {
         if (spell.Action.ID == (uint)AID.SinboundHoly)
         {
-            AddStacks(Raid.WithoutSlot(false, true, true).Where(p => p.Role == Role.Healer), Module.CastFinishAt(spell, 0.9d));
+            var stackParty = Raid.WithoutSlot(false, true, true);
+            for (var i = 0; i < stackParty.Length; ++i)
+            {
+                var p = stackParty[i];
+                if (p.Role == Role.Healer)
+                    AddStack(p, Module.CastFinishAt(spell, 0.9d));
+            }
         }
     }
 
@@ -469,7 +501,17 @@ sealed class P2TwinStillnessSilence(BossModule module) : Components.GenericAOEs(
 
             // now find closest allowed zone
             var actorDir = Angle.FromDirection(actor.Position - Arena.Center);
-            var closest = zoneList.Allowed(5f.Degrees()).MinBy(z => actorDir.DistanceToRange(z.min, z.max).Abs().Rad);
+            (Angle min, Angle max) closest = default;
+            var bestDist = float.MaxValue;
+            foreach (var z in zoneList.Allowed(5f.Degrees()))
+            {
+                var dist = actorDir.DistanceToRange(z.min, z.max).Abs().Rad;
+                if (dist < bestDist)
+                {
+                    bestDist = dist;
+                    closest = z;
+                }
+            }
             if (closest != default)
             {
                 var desiredDir = (closest.min + closest.max) * 0.5f;
@@ -519,7 +561,17 @@ sealed class P2TwinStillnessSilence(BossModule module) : Components.GenericAOEs(
             {
                 // if we're behind boss, slide over to the safe point as opposite to the boss as possible
                 var farthestDir = Angle.FromDirection(-sourceOffset);
-                var bestRange = zoneList.Allowed(5f.Degrees()).MinBy(r => farthestDir.DistanceToRange(r.min, r.max).Abs().Rad);
+                (Angle min, Angle max) bestRange = default;
+                var bestDist = float.MaxValue;
+                foreach (var r in zoneList.Allowed(5f.Degrees()))
+                {
+                    var dist = farthestDir.DistanceToRange(r.min, r.max).Abs().Rad;
+                    if (dist < bestDist)
+                    {
+                        bestDist = dist;
+                        bestRange = r;
+                    }
+                }
                 var dir = farthestDir.ClosestInRange(bestRange.min, bestRange.max);
                 hints.AddForbiddenZone(new SDInvertedCircle(actor.Position + SlideDistance * dir.ToDirection(), 1f), DateTime.MaxValue);
             }
@@ -534,7 +586,7 @@ sealed class P2TwinStillnessSilence(BossModule module) : Components.GenericAOEs(
                 {
                     hints.AddForbiddenZone(new SDInvertedCircle(_slideBackPos[slot], 1f), DateTime.MaxValue);
                 }
-                else if (zoneList.Allowed(1f.Degrees()).MaxBy(r => (r.max - r.min).Rad) is var best && best.max.Rad > best.min.Rad)
+                else if (WidestAllowed(zoneList) is var best && best.max.Rad > best.min.Rad)
                 {
                     var dir = 0.5f * (best.min + best.max);
                     hints.AddForbiddenZone(new SDInvertedCircle(actor.Position + SlideDistance * dir.ToDirection(), 1f), DateTime.MaxValue);
@@ -579,6 +631,22 @@ sealed class P2TwinStillnessSilence(BossModule module) : Components.GenericAOEs(
     {
         if (status.ID == (uint)SID.ThinIce)
             _thinIce[Raid.FindSlot(actor.InstanceID)] = true;
+    }
+
+    private static (Angle min, Angle max) WidestAllowed(ArcList zoneList)
+    {
+        (Angle min, Angle max) best = default;
+        var bestWidth = float.MinValue;
+        foreach (var r in zoneList.Allowed(1f.Degrees()))
+        {
+            var width = (r.max - r.min).Rad;
+            if (width > bestWidth)
+            {
+                bestWidth = width;
+                best = r;
+            }
+        }
+        return best;
     }
 }
 

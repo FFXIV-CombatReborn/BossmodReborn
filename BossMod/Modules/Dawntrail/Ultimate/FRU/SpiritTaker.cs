@@ -6,8 +6,9 @@ abstract class SpiritTaker(BossModule module) : Components.GenericStackSpread(mo
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        foreach (var spread in ActiveSpreads.Where(s => s.Target != actor))
-            hints.AddForbiddenZone(new SDCapsule(spread.Target.Position, spread.Target.LastFrameMovement.Normalized(), 2, spread.Radius + 1f), spread.Activation);
+        foreach (var spread in ActiveSpreads)
+            if (spread.Target != actor)
+                hints.AddForbiddenZone(new SDCapsule(spread.Target.Position, spread.Target.LastFrameMovement.Normalized(), 2, spread.Radius + 1f), spread.Activation);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

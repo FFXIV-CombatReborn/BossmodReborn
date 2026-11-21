@@ -73,12 +73,20 @@ sealed class Adds(BossModule module) : BossComponent(module)
         }
     }
 
+    // the aether fonts can be missing (not spawned yet / already gone), so never index blindly
+    private WPos? FontPosition(bool wind)
+    {
+        var fonts = Module.Enemies(wind ? (uint)OID.FontOfWindAether : (uint)OID.FontOfEarthAether);
+        return fonts.Count != 0 ? fonts[0].Position : null;
+    }
+
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
         Arena.Actors(Windpack[pcSlot] ? Module.Enemies((uint)OID.WolfOfStone2) : Module.Enemies((uint)OID.WolfOfWind2));
         if (pc.Role == Role.Tank && stonepack != default)
         {
-            Arena.ZoneCircleOutline(Windpack[pcSlot] ? Module.Enemies((uint)OID.FontOfWindAether)[0].Position : Module.Enemies((uint)OID.FontOfEarthAether)[0].Position, 1.5f, Colors.Vulnerable, 2f);
+            if (FontPosition(Windpack[pcSlot]) is WPos font)
+                Arena.ZoneCircleOutline(font, 1.5f, Colors.Vulnerable, 2f);
         }
     }
 
@@ -100,6 +108,8 @@ sealed class Adds(BossModule module) : BossComponent(module)
     }
 }
 
+sealed class ForlornWindStone(BossModule module) : Components.CastHints(module, [(uint)AID.ForlornWindVisual1, (uint)AID.ForlornStoneVisual1], "Wolf enrage!", true);
+
 sealed class EarthWindborneEnd(BossModule module) : BossComponent(module)
 {
     private readonly (int Order, Actor Actor, DateTime Expiration, bool wind)[] expirationBySlot = new (int, Actor, DateTime, bool)[8];
@@ -120,7 +130,9 @@ sealed class EarthWindborneEnd(BossModule module) : BossComponent(module)
         if (player != default)
         {
             var remaining = Math.Max(0d, (player.Expiration - WorldState.CurrentTime).TotalSeconds);
-            Arena.ZoneCircleOutline(player.wind ? Module.Enemies((uint)OID.FontOfWindAether)[0].Position : Module.Enemies((uint)OID.FontOfEarthAether)[0].Position, 1.5f, remaining < 9d && vulnerability == default ? Colors.Safe : default, 2f);
+            var fonts = Module.Enemies(player.wind ? (uint)OID.FontOfWindAether : (uint)OID.FontOfEarthAether);
+            if (fonts.Count != 0)
+                Arena.ZoneCircleOutline(fonts[0].Position, 1.5f, remaining < 9d && vulnerability == default ? Colors.Safe : default, 2f);
         }
     }
 

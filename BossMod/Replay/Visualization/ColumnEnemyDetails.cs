@@ -26,7 +26,8 @@ public sealed class ColumnEnemyDetails : Timeline.ColumnGroup
 
     public void DrawConfig(UITree tree)
     {
-        foreach (var n in tree.Node(ReplayUtils.ParticipantString(_enemy, _enemy.WorldExistence.FirstOrDefault().Start)))
+        var startTime = _enemy.WorldExistence.Count > 0 ? _enemy.WorldExistence[0].Start : default;
+        foreach (var n in tree.Node(ReplayUtils.ParticipantString(_enemy, startTime)))
         {
             DrawColumnToggle(_casts, "Casts");
             DrawColumnToggle(_hp, "HP");

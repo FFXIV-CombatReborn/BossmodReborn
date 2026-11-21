@@ -39,14 +39,15 @@ sealed class ArenaBounds
                         var iNextDead = p.DeadHistory.UpperBound(enc.Time.Start);
                         for (var i = iStart; i < iEnd; ++i)
                         {
-                            var t = p.PosRotHistory.Keys[i];
-                            var pos = p.PosRotHistory.Values[i].XYZ();
-                            if (iNextDead < p.DeadHistory.Count && p.DeadHistory.Keys[iNextDead] <= t)
+                            var entry = p.PosRotHistory[i];
+                            var t = entry.Key;
+                            var pos = entry.Value.XYZ();
+                            if (iNextDead < p.DeadHistory.Count && p.DeadHistory[iNextDead].Key <= t)
                             {
                                 ++iNextDead;
                             }
 
-                            var dead = iNextDead > 0 && p.DeadHistory.Values[iNextDead - 1];
+                            var dead = iNextDead > 0 && p.DeadHistory[iNextDead - 1].Value;
                             var color = dead ? Colors.TextColor13 : p.Type is ActorType.Enemy ? Colors.Danger : Colors.PlayerGeneric;
                             _points.Add((replay, p, t, pos, color));
                             _plot.DataMin.X = Math.Min(_plot.DataMin.X, pos.X);
@@ -203,7 +204,7 @@ public static class ConcaveHull
     {
         if (points.Count < 3)
         {
-            return [.. points]; // Not enough points to form a polygon
+            return new(points); // Not enough points to form a polygon
         }
 
         points = FilterClosePoints(points, epsilon);

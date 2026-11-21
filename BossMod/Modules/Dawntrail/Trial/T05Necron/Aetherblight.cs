@@ -47,12 +47,15 @@ sealed class Aetherblight(BossModule module) : Components.GenericAOEs(module)
             relentlessReaping = false;
             if (_aoes.Count != 0)
             {
-                Hints.RemoveAt(0);
                 _aoes.RemoveAt(0);
-                if (Hints.Count == 0)
-                {
-                    rotated = false;
-                }
+            }
+            if (Hints.Count != 0) // hints can exist without AOEs if the stored set was incomplete (player was in prison)
+            {
+                Hints.RemoveAt(0);
+            }
+            if (Hints.Count == 0)
+            {
+                rotated = false;
             }
         }
     }

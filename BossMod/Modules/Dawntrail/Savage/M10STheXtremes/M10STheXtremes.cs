@@ -67,13 +67,21 @@ sealed class DebuffTracker(BossModule module) : BossComponent(module)
         if (mask.None())
             return [];
 
-        var masked = Raid.WithSlot(false, true, true).IncludedInMask(mask).ToArray();
-        var len = masked.Length;
+        var party = Raid.WithSlot(false, true, true);
+        var len = 0;
+        for (var i = 0; i < party.Length; ++i)
+        {
+            if (mask[party[i].Item1])
+                ++len;
+        }
 
         var actors = new Actor[len];
-        for (var i = 0; i < len; ++i)
+        var index = 0;
+        for (var i = 0; i < party.Length && index < len; ++i)
         {
-            actors[i] = masked[i].Item2;
+            if (!mask[party[i].Item1])
+                continue;
+            actors[index++] = party[i].Item2;
         }
 
         return actors;

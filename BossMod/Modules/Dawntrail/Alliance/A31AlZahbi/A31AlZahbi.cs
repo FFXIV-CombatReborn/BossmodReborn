@@ -90,9 +90,21 @@ sealed class DanceToDust(BossModule module) : Components.Exaflare(module, 7f)
     {
         if (spell.Action.ID is (uint)AID.DanceToDustFirst or (uint)AID.DanceToDustRest)
         {
-            var ix = Lines.FindIndex(l => l.Next.AlmostEqual(caster.Position, 1));
-            if (ix >= 0)
-                AdvanceLine(Lines[ix], caster.Position);
+            var count = Lines.Count;
+            var pos = caster.Position;
+            for (var i = 0; i < count; ++i)
+            {
+                var line = Lines[i];
+                if (line.Next.AlmostEqual(pos, 1f))
+                {
+                    AdvanceLine(line, pos);
+                    if (line.ExplosionsLeft == 0)
+                    {
+                        Lines.RemoveAt(i);
+                    }
+                    break;
+                }
+            }
         }
     }
 }

@@ -11,64 +11,36 @@ sealed class CutbackBlazeBait(BossModule module) : Components.BaitAwayIcon(
     public static readonly AOEShapeCone Cone = new(60f, 30f.Degrees());
 }
 
-sealed class CutbackBlazePersistent(BossModule module) : Components.GenericAOEs(module, (uint)AID.CutbackBlaze1)
+sealed class CutbackBlazePersistent(BossModule module) : TrackedVoidzones(module, CutbackBlazeBait.Cone, (uint)OID.CutbackBlazeVoidzone)
 {
-    private readonly List<AOEInstance> _aoes = [];
-
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
-        => CollectionsMarshal.AsSpan(_aoes);
-
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        switch (spell.Action.ID)
+        base.OnEventCast(caster, spell);
+        if (spell.Action.ID == (uint)AID.CutbackBlaze1)
         {
-            case (uint)AID.CutbackBlaze1:
-                _aoes.Add(new(CutbackBlazeBait.Cone, caster.Position, caster.Rotation, WorldState.CurrentTime, Colors.AOE, true, caster.InstanceID));
-                break;
-
-            case (uint)AID.DiversDare:
-            case (uint)AID.DiversDare1:
-                _aoes.Clear();
-                break;
+            Predict(caster.Position, caster.Rotation, WorldState.CurrentTime);
         }
-    }
-
-    public override void OnActorDestroyed(Actor actor)
-    {
-        var id = actor.InstanceID;
-        _aoes.RemoveAll(a => a.ActorID == id);
     }
 }
 sealed class AlleyOopInfernoSpread(BossModule module)
     : Components.SpreadFromCastTargets(module, (uint)AID.AlleyOopInferno1, 5f);
 
-sealed class AlleyOopInfernoPuddles(BossModule module) : Components.GenericAOEs(module)
+sealed class AlleyOopInfernoPuddles(BossModule module) : TrackedVoidzones(module, new AOEShapeCircle(5f), (uint)OID.InfernoVoidzone)
 {
-    private readonly List<AOEInstance> _puddles = [];
-    private static readonly AOEShapeCircle Shape = new(5f);
-
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
-        => CollectionsMarshal.AsSpan(_puddles);
-
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        switch (spell.Action.ID)
+        base.OnEventCast(caster, spell);
+        if (spell.Action.ID == (uint)AID.AlleyOopInferno1)
         {
-            case (uint)AID.AlleyOopInferno1:
+            var targets = spell.Targets;
+            var count = targets.Count;
+            for (var i = 0; i < count; ++i)
+            {
+                if (WorldState.Actors.Find(targets[i].ID) is Actor target)
                 {
-                    foreach (var t in spell.Targets)
-                    {
-                        var target = WorldState.Actors.Find(t.ID);
-                        if (target != null)
-                            _puddles.Add(new(Shape, target.Position, default, WorldState.CurrentTime, Colors.AOE, true));
-                    }
-                    break;
+                    Predict(target.Position, default, WorldState.CurrentTime);
                 }
-
-            case (uint)AID.DiversDare:
-            case (uint)AID.DiversDare1:
-                _puddles.Clear();
-                break;
+            }
         }
     }
 }
@@ -114,7 +86,19 @@ sealed class AlleyOopMaelstromSequential(BossModule module) : Components.Generic
     {
         if (spell.Action.ID is (uint)AID.AlleyOopMaelstrom or (uint)AID.AlleyOopMaelstrom2)
         {
-            _tracked.RemoveAll(t => t.AOE.ActorID == caster.InstanceID && t.AID == spell.Action.ID);
+            Remove(caster.InstanceID, spell.Action.ID);
+        }
+    }
+
+    private void Remove(ulong actorID, uint aid = default)
+    {
+        for (var i = _tracked.Count - 1; i >= 0; --i)
+        {
+            var t = _tracked[i];
+            if (t.AOE.ActorID == actorID && (aid == default || t.AID == aid))
+            {
+                _tracked.RemoveAt(i);
+            }
         }
     }
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
@@ -136,12 +120,8 @@ sealed class AlleyOopMaelstromSequential(BossModule module) : Components.Generic
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID is (uint)AID.AlleyOopMaelstrom or (uint)AID.AlleyOopMaelstrom2)
-            _tracked.RemoveAll(t => t.AOE.ActorID == caster.InstanceID && t.AID == spell.Action.ID);
+            Remove(caster.InstanceID, spell.Action.ID);
     }
 
-    public override void OnActorDestroyed(Actor actor)
-    {
-        var id = actor.InstanceID;
-        _tracked.RemoveAll(t => t.AOE.ActorID == id);
-    }
+    public override void OnActorDestroyed(Actor actor) => Remove(actor.InstanceID);
 }

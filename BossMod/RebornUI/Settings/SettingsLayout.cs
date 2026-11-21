@@ -316,13 +316,14 @@ internal static class SettingsLayout
                 ]),
                 new("Packets", FontAwesomeIcon.NetworkWired,
                 [
-                    nameof(ReplayManagementConfig.RecordServerPackets), nameof(ReplayManagementConfig.DumpServerPackets), nameof(ReplayManagementConfig.DumpServerPacketsPlayerOnly),
+                    nameof(ReplayManagementConfig.RecordServerPackets), nameof(ReplayManagementConfig.FilterNoisyServerPackets), nameof(ReplayManagementConfig.DumpServerPackets), nameof(ReplayManagementConfig.DumpServerPacketsPlayerOnly),
                     nameof(ReplayManagementConfig.DumpClientPackets),
                 ]),
             ],
             Fields = new()
             {
                 [nameof(ReplayManagementConfig.MaxReplays)] = new(Tooltip: "0 keeps every replay."),
+                [nameof(ReplayManagementConfig.FilterNoisyServerPackets)] = new(Depends: nameof(ReplayManagementConfig.RecordServerPackets)),
                 [nameof(ReplayManagementConfig.DumpServerPacketsPlayerOnly)] = new(Depends: nameof(ReplayManagementConfig.DumpServerPackets)),
             },
         },

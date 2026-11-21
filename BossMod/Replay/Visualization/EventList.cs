@@ -343,7 +343,7 @@ sealed class EventList(Replay r, Action<DateTime> scrollTo, PlanDatabase planDB,
     {
         foreach (var n in _tree.Node("User markers", r.UserMarkers.Count == 0))
         {
-            _tree.LeafNodes(r.UserMarkers, kv => $"{kv.Key:O}: {kv.Value}");
+            _tree.LeafNodes(r.UserMarkers, kv => $"{kv.Timestamp:O}: {kv.Text}");
         }
     }
 
@@ -362,7 +362,7 @@ sealed class EventList(Replay r, Action<DateTime> scrollTo, PlanDatabase planDB,
         for (var i = 0; i < enc.PartyMembers.Count; ++i)
         {
             var (p, c, l) = enc.PartyMembers[i];
-            if (ImGui.Button($"{c}{l} {(p.NameHistory.Count > 0 ? p.NameHistory.Values[0].name : "")}"))
+            if (ImGui.Button($"{c}{l} {(p.NameHistory.Count > 0 ? p.NameHistory[0].Value.name : "")}"))
             {
                 OpenTimeline(enc, new(1u << i));
             }

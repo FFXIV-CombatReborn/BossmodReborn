@@ -1,6 +1,36 @@
 namespace BossMod.Dawntrail.Savage.M07SBruteAbombinator;
 
-sealed class BrutalImpact(BossModule module) : Components.CastCounter(module, (uint)AID.BrutalImpact);
+// multi-hit raidwide; predicted damage ported from upstream so the AI can mitigate/heal
+sealed class BrutalImpact(BossModule module) : Components.CastCounter(module, (uint)AID.BrutalImpact)
+{
+    private DateTime _activation;
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.BrutalImpactVisual)
+            _activation = Module.CastFinishAt(spell, 0.2d);
+    }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        if (_activation == default)
+            return;
+        BitMask mask = default;
+        var party = Raid.WithSlot(false, true, true);
+        for (var i = 0; i < party.Length; ++i)
+            mask.Set(party[i].Item1);
+        // once the hits have started, the next one is always imminent
+        hints.AddPredictedDamage(mask, NumCasts == 0 ? _activation : WorldState.FutureTime(1d));
+    }
+
+    public override void AddGlobalHints(Actor actor, GlobalHints hints)
+    {
+        if (_activation != default)
+            hints.Add("Raidwide");
+    }
+}
+sealed class RevengeOfTheVines1(BossModule module) : Components.RaidwideCast(module, (uint)AID.RevengeOfTheVines1); // ported from upstream
+sealed class Powerslam(BossModule module) : Components.RaidwideCast(module, (uint)AID.Powerslam); // ported from upstream
 sealed class RevengeOfTheVines2(BossModule module) : Components.CastCounter(module, (uint)AID.RevengeOfTheVines2);
 sealed class Slaminator(BossModule module) : Components.CastTowers(module, (uint)AID.Slaminator, 8f, 8, 8);
 

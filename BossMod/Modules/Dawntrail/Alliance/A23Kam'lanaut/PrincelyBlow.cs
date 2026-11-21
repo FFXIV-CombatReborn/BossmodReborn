@@ -46,13 +46,7 @@ sealed class PrincelyBlowKB(BossModule module) : Components.GenericKnockback(mod
             {
                 // if possible press Arms Length so there are more places to go with the tankbuster
                 hints.ActionsToExecute.Push(ActionDefinitions.Armslength, actor, ActionQueue.Priority.High);
-                if (!shieldBash.PolygonInit)
-                {
-                    shieldBash.Polygon = Arena.Bounds.Shape.Offset(-1f); // pretend polygon is 1y smaller than real for less suspect knockbacks
-                    shieldBash.PolygonInit = true;
-                }
-
-                hints.AddForbiddenZone(new SDKnockbackInComplexPolygonAwayFromOrigin(Arena.Center, kb.Origin, 30f, shieldBash.Polygon), act);
+                hints.AddForbiddenZone(new SDKnockbackInComplexPolygonAwayFromOrigin(Arena.Center, kb.Origin, 30f, shieldBash.GetPolygon()), act);
             }
         }
     }

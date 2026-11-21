@@ -24,15 +24,26 @@ sealed class BlazingLariat(BossModule module) : Components.CastCounter(module, d
         if (_source != null)
         {
             var pcDir = Angle.FromDirection(actor.Position - _source.Position);
-            var clipped = Raid.WithoutSlot(false, true, true).Exclude(actor).InShape(ActiveShape, _source.Position, pcDir);
+            int match = 0, mismatch = 0;
+            var party = Raid.WithoutSlot(false, true, true);
+            var isSupport = actor.Class.IsSupport();
+            for (var i = 0; i < party.Length; ++i)
+            {
+                var p = party[i];
+                if (p == actor || !ActiveShape.Check(p.Position, _source.Position, pcDir))
+                    continue;
+                if (p.Class.IsSupport() == isSupport)
+                    ++match;
+                else
+                    ++mismatch;
+            }
             if (_stack)
             {
-                var cond = clipped.CountByCondition(a => a.Class.IsSupport() == actor.Class.IsSupport());
-                hints.Add("Stack in pairs!", cond.match != 0 || cond.mismatch != 1);
+                hints.Add("Stack in pairs!", match != 0 || mismatch != 1);
             }
             else
             {
-                hints.Add("Spread!", clipped.Count != 0);
+                hints.Add("Spread!", match + mismatch != 0);
             }
         }
     }

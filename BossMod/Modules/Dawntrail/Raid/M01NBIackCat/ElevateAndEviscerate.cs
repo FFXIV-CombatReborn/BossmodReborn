@@ -9,11 +9,15 @@ sealed class ElevateAndEviscerate(BossModule module) : Components.GenericKnockba
     public WPos Cache;
     private ArenaBounds? bounds;
     private RelSimplifiedComplexPolygon poly = new();
+    private readonly Knockback[] _kb = new Knockback[1];
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (Tether != default && actor == Tether.target)
-            return new Knockback[1] { new(Tether.source.Position, 10f, Activation, ignoreImmunes: true) };
+        {
+            _kb[0] = new(Tether.source.Position, 10f, Activation, ignoreImmunes: true);
+            return _kb;
+        }
         return [];
     }
 
@@ -28,10 +32,7 @@ sealed class ElevateAndEviscerate(BossModule module) : Components.GenericKnockba
             if (bounds != Arena.Bounds)
             {
                 bounds = Arena.Bounds;
-                if (bounds is ArenaBoundsCustom arena)
-                {
-                    poly = arena.Shape.Offset(-1f); // pretend polygon is 1y smaller than real for less suspect knockbacks
-                }
+                poly = bounds.Shape.Offset(-1f); // pretend polygon is 1y smaller than real for less suspect knockbacks
             }
         }
     }
@@ -123,6 +124,7 @@ sealed class ElevateAndEviscerateHint(BossModule module) : Components.GenericAOE
     private readonly ElevateAndEviscerate _kb = module.FindComponent<ElevateAndEviscerate>()!;
     private readonly ArenaChanges _arena = module.FindComponent<ArenaChanges>()!;
     public static readonly AOEShapeRect Rect = new(5f, 5f, 5f);
+    private readonly List<AOEInstance> aoes = [];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
@@ -131,7 +133,7 @@ sealed class ElevateAndEviscerateHint(BossModule module) : Components.GenericAOE
         {
             var damagedCells = _arena.DamagedCells.SetBits();
             var tiles = ArenaChanges.Tiles;
-            var aoes = new List<AOEInstance>();
+            aoes.Clear();
             var len = damagedCells.Length;
             for (var i = 0; i < len; ++i)
             {
@@ -148,10 +150,11 @@ sealed class ElevateAndEviscerateImpact(BossModule module) : Components.GenericA
 {
     private readonly ElevateAndEviscerate _kb = module.FindComponent<ElevateAndEviscerate>()!;
     private AOEInstance[] _aoe = [];
+    private readonly List<AOEInstance> aoes = [with(2)];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        var aoes = new List<AOEInstance>();
+        aoes.Clear();
         if (_kb.Tether != default && _kb.Tether.target != actor && Arena.InBounds(_kb.Cache))
         {
             aoes.Add(new(ElevateAndEviscerateHint.Rect, ArenaChanges.CellCenter(ArenaChanges.CellIndex(_kb.Cache)), default, _kb.Activation.AddSeconds(3.6d)));

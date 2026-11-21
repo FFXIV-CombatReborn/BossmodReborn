@@ -7,6 +7,7 @@ class M07NBruteAbombinatorStates : StateMachineBuilder
         TrivialPhase()
             .ActivateOnEnter<ArenaChanges>()
             .ActivateOnEnter<BrutalImpactRevengeOfTheVines1NeoBombarianSpecial>()
+            .ActivateOnEnter<Stoneringer>()
             .ActivateOnEnter<BrutishSwingCircle2>()
             .ActivateOnEnter<BrutishSwingDonut>()
             .ActivateOnEnter<BrutishSwingCone>()

@@ -2,6 +2,7 @@
 
 sealed class Shockwave(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.Shockwave, 9f, shape: new AOEShapeCircle(15f), stopAfterWall: true)
 {
+    private readonly List<Knockback> _knockbacksBuffer = [];
     // on 48-man replay helpers cast x2 for each of the 3 KBs, any different for lower player runs?
     // shockwave resolves roughly 1.6s before 1st AOE from Quad
     // could show earlier using Jump but maybe not useful since need to wait for Quadrilogy/Sealed
@@ -16,7 +17,8 @@ sealed class Shockwave(BossModule module) : Components.SimpleKnockbacks(module, 
             return [];
         }
 
-        var knockbacks = new List<Knockback>();
+        var knockbacks = _knockbacksBuffer;
+        knockbacks.Clear();
         for (var i = 0; i < count; ++i)
         {
             // what happens if player standing in 2 circles?

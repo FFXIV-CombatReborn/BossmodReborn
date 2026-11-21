@@ -87,5 +87,5 @@ sealed class VacuumWave(BossModule module) : Components.SimpleAOEs(module, (uint
 [ModuleInfo(BossModuleInfo.Maturity.Verified, PrimaryActorOID = (uint)OID.Necrophobia, Contributors = "gynorhino", GroupType = BossModuleInfo.GroupType.TheForkedTowerMagicNormal, GroupID = 1093u, NameID = 14503u)]
 public sealed class FTMN3Necrophobia(WorldState ws, Actor primary) : BossModule(ws, primary, new WPos(100f, 800f).Quantized(), new ArenaBoundsCircle(24f))
 {
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 24f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 24f);
 }

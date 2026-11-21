@@ -31,14 +31,43 @@ sealed class FireScourgeOfFire(BossModule module) : Components.UniformStackSprea
     {
         if (spell.Action.ID == (uint)AID.FireScourgeOfFire)
         {
-            var index = Stacks.FindIndex(s => s.Target.InstanceID == spell.MainTargetID);
-            if (index >= 0)
-                --_remainingCasts[index];
+            var count = Stacks.Count;
+            var id = spell.MainTargetID;
+            for (var i = 0; i < count; ++i)
+            {
+                if (Stacks[i].Target.InstanceID == id)
+                {
+                    --_remainingCasts[i];
+                    break;
+                }
+            }
         }
     }
 }
 
-sealed class FireScourgeOfFireVoidzone(BossModule module) : Components.VoidzoneAtCastTarget(module, 5, (uint)AID.FireScourgeOfFire, module => module.Enemies((uint)OID.ScourgeOfFireVoidzone).Where(z => z.EventState != 7), 0.9f);
+sealed class FireScourgeOfFireVoidzone(BossModule module) : Components.VoidzoneAtCastTarget(module, 5f, (uint)AID.FireScourgeOfFire, GetVoidzones, 0.9d)
+{
+    private static Actor[] GetVoidzones(BossModule module)
+    {
+        var enemies = module.Enemies((uint)OID.ScourgeOfFireVoidzone);
+        var count = enemies.Count;
+        if (count == 0)
+        {
+            return [];
+        }
+        var voidzones = new Actor[count];
+        var index = 0;
+        for (var i = 0; i < count; ++i)
+        {
+            var z = enemies[i];
+            if (z.EventState != 7)
+            {
+                voidzones[index++] = z;
+            }
+        }
+        return voidzones[..index];
+    }
+}
 
 sealed class FireScourgeOfIce(BossModule module) : Components.StayMove(module)
 {

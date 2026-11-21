@@ -89,7 +89,8 @@ public enum SID : uint
     EpicHero = 4192, // none->player, extra=0x0
     EpicVillain = 4193, // none->BossMR, extra=0x334
     FatedHero = 4194, // none->player, extra=0x0
-    VauntedHero = 4196 // none->player, extra=0x0
+    VauntedHero = 4196, // none->player, extra=0x0
+    Invincibility = 4410 // none->BossHM, extra=0x0, Mijin Gakure
 }
 
 public enum IconID : uint

@@ -194,7 +194,8 @@ sealed class M10STheXtremesStates : StateMachineBuilder
             .DeactivateOnExit<AwesomeSplashSlabAerial>();
 
         CastStart(id + 0x60u, AID.HotAeriaCast, 3.8f, "Fire baits start") // 284.36
-            .ActivateOnEnter<HotAerial>();
+            .ActivateOnEnter<HotAerial>()
+            .ActivateOnEnter<PyrorotationPuddle>(); // hot aerial drops the same 6y fire puddles (same object id), ported from upstream's HotAerialPuddle
 
         // hot aerial 1 290.72 - water knockback 300.05 - cutback blaze start 303.09 - water stack/spread 304.68 - cutback actual 308.29
         ComponentCondition<SickSwell1>(id + 0x70u, 17.7f, static comp => comp.NumCasts > 0, "Knockback")
@@ -227,6 +228,7 @@ sealed class M10STheXtremesStates : StateMachineBuilder
             .DeactivateOnExit<DiversDareBlue>()
             .DeactivateOnExit<AlleyOopInfernoPuddle>()
             .DeactivateOnExit<CutbackBlazePuddle>()
+            .DeactivateOnExit<PyrorotationPuddle>()
             .DeactivateOnExit<SteamBurst>()
             .SetHint(StateMachine.StateHint.Raidwide);
     }

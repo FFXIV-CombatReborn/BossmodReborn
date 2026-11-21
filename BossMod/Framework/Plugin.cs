@@ -141,10 +141,10 @@ public sealed class Plugin : IAsyncDalamudPlugin
         _wndBossmodPrePullHints = new(_bossmod);
         _wndZone = new(_zonemod);
         var config = Service.Config.Get<ReplayManagementConfig>();
-        var replayDir = string.IsNullOrEmpty(config.ReplayFolder) ? _dalamud.ConfigDirectory.FullName + "/replays" : config.ReplayFolder;
-        _wndReplay = new ReplayManagementWindow(_ws, _bossmod, _rotationDB, new DirectoryInfo(replayDir));
+        var defaultReplayDir = new DirectoryInfo(_dalamud.ConfigDirectory.FullName + "/replays");
+        var replayDir = string.IsNullOrEmpty(config.ReplayFolder) ? defaultReplayDir.FullName : config.ReplayFolder;
+        _wndReplay = new ReplayManagementWindow(_ws, _bossmod, _rotationDB, defaultReplayDir);
         _configUI = new(Service.Config, _ws, new DirectoryInfo(replayDir), _rotationDB);
-        config.Modified.ExecuteAndSubscribe(() => _wndReplay.UpdateLogDirectory());
         _wndRotation = new(_rotation, _amex, () => OpenConfigUI("Autorotation presets"));
         _wndDebug = new(_ws, _rotation, _zonemod, _amex, _movementOverride, _hintsBuilder, _dalamud, _rsr);
         RebornUI.MaterialUI.Start(_dalamud, _ws, _rotationDB, _rotation, _ai, new DirectoryInfo(replayDir));
@@ -254,7 +254,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
             switch (messageData[1].ToUpperInvariant())
             {
                 case "ON":
-                    _wndReplay.StartRecording("");
+                    _wndReplay.StartRecording("", true);
                     break;
                 case "OFF":
                     _wndReplay.StopRecording();

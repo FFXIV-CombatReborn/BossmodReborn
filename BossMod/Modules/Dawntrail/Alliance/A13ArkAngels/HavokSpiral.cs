@@ -10,12 +10,11 @@ sealed class HavokSpiral(BossModule module) : Components.GenericRotatingAOE(modu
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
-        _increment = iconID switch
+        if (iconID is not ((uint)IconID.RotateCW or (uint)IconID.RotateCCW))
         {
-            (uint)IconID.RotateCW => -30f.Degrees(),
-            (uint)IconID.RotateCCW => 30f.Degrees(),
-            _ => default
-        };
+            return;
+        }
+        _increment = (iconID == (uint)IconID.RotateCW ? -30f : 30f).Degrees();
         _activation = WorldState.FutureTime(5.5d);
         InitIfReady();
     }

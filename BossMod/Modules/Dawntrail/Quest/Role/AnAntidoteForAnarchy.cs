@@ -74,9 +74,12 @@ sealed class StingingMaladyBait(BossModule module) : Components.GenericBaitAway(
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         if (spell.Action.ID == (uint)AID.StingingMaladyMarker)
-            CurrentBaits.Add(new(caster, WorldState.Actors.Find(spell.MainTargetID)!, Cone, WorldState.FutureTime(5d)));
-        else if (spell.Action.ID == (uint)AID.StingingMaladyBait)
-            CurrentBaits.Clear();
+            if (WorldState.Actors.Find(spell.MainTargetID) is Actor target)
+            {
+                CurrentBaits.Add(new(caster, target, Cone, WorldState.FutureTime(5d)));
+            }
+            else if (spell.Action.ID == (uint)AID.StingingMaladyBait)
+                CurrentBaits.Clear();
     }
 }
 
@@ -101,7 +104,10 @@ sealed class TriDisaster(BossModule module) : Components.StackWithCastTargets(mo
         if (spell.Action.ID == (uint)AID.TriDisasterRest)
         {
             if (++numCasts == 4)
+            {
                 Stacks.Clear();
+                numCasts = 0;
+            }
         }
     }
 }

@@ -4,13 +4,13 @@
 public sealed class ReplayPlayer(Replay r)
 {
     public Replay Replay = r;
-    public WorldState WorldState = new(r.QPF, r.GameVersion);
+    public WorldState WorldState = new(r.QPF, r.GameVersion) { UpdateGlobalRSV = false };
     private int _nextOp; // first unexecuted operation; note that it corresponds to first operation with timestamp > that worldstate's current
 
     // reset to empty state; note that world state is recreated
     public void Reset()
     {
-        WorldState = new(Replay.QPF, Replay.GameVersion);
+        WorldState = new(Replay.QPF, Replay.GameVersion) { UpdateGlobalRSV = false };
         _nextOp = 0;
     }
 

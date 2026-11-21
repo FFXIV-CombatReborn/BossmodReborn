@@ -21,7 +21,14 @@ sealed class DominionSlash(BossModule module) : Components.GenericAOEs(module)
         if (spell.Action.ID is (uint)AID.DivineDominion or (uint)AID.DivineDominionFail)
         {
             ++NumCasts;
-            AOEs.RemoveAll(aoe => aoe.Origin == caster.Position);
+            var pos = caster.Position;
+            for (var i = AOEs.Count - 1; i >= 0; --i)
+            {
+                if (AOEs[i].Origin == pos)
+                {
+                    AOEs.RemoveAt(i);
+                }
+            }
         }
     }
 }

@@ -142,9 +142,9 @@ sealed class ClamorousChaseBait(BossModule module) : Components.GenericBaitAway(
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
-        if (iconID is >= (uint)IconID.Icon1 and <= (uint)IconID.Icon8)
+        if (iconID is >= (uint)IconID.Icon1 and <= (uint)IconID.Icon8 && Raid.FindSlot(targetID) is var slot && (uint)slot < (uint)order.Length)
         {
-            order[Raid.FindSlot(targetID)] = iconID - (uint)IconID.Icon1 + 1u;
+            order[slot] = iconID - (uint)IconID.Icon1 + 1u;
             IconsAssigned = true;
         }
     }

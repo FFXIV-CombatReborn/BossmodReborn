@@ -186,7 +186,8 @@ public sealed class SDKnockbackInAABBRectFixedDirectionPlusAOECircles(WPos Cente
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
 }
 
-public sealed class SDKnockbackInAABBRectAwayFromOriginPlusAOERects(WPos Center, WPos Origin, float Distance, float HalfWidth, float HalfHeight, (WPos Origin, WDir Direction)[] AOEs, float LengthFront, float RectHalfWidth, int Length) : ShapeDistance {
+public sealed class SDKnockbackInAABBRectAwayFromOriginPlusAOERects(WPos Center, WPos Origin, float Distance, float HalfWidth, float HalfHeight, (WPos Origin, WDir Direction)[] AOEs, float LengthFront, float RectHalfWidth, int Length) : ShapeDistance
+{
     private readonly WPos center = Center;
     private readonly WPos origin = Origin;
     private readonly float halfWidth = HalfWidth;
@@ -198,15 +199,19 @@ public sealed class SDKnockbackInAABBRectAwayFromOriginPlusAOERects(WPos Center,
     private readonly int len = Length;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override bool Contains(in WPos p) {
+    public override bool Contains(in WPos p)
+    {
         var projected = p + distance * (p - origin).Normalized();
-        if (!projected.InRect(center, halfWidth, halfHeight)) {
+        if (!projected.InRect(center, halfWidth, halfHeight))
+        {
             return true;
         }
 
-        for (var i = 0; i < len; ++i) {
+        for (var i = 0; i < len; ++i)
+        {
             ref var aoe = ref aoes[i];
-            if (projected.InRect(aoe.origin, aoe.direction, lenFront, default, rectHalfWidth)) {
+            if (projected.InRect(aoe.origin, aoe.direction, lenFront, default, rectHalfWidth))
+            {
                 return true;
             }
         }
@@ -220,7 +225,8 @@ public sealed class SDKnockbackInAABBRectAwayFromOriginPlusAOERects(WPos Center,
     public override bool RowIntersectsShape(WPos rowStart, WDir dx, float width, float cushion = default) => true;
 }
 
-public sealed class SDKnockbackInAABBRectAwayFromOriginPlusIntersectAOECircles(WPos Center, WPos Origin, float Distance, float HalfWidth, float HalfHeight, WPos[] Origins, float Radius, int Length) : ShapeDistance {
+public sealed class SDKnockbackInAABBRectAwayFromOriginPlusIntersectAOECircles(WPos Center, WPos Origin, float Distance, float HalfWidth, float HalfHeight, WPos[] Origins, float Radius, int Length) : ShapeDistance
+{
     private readonly WPos center = Center;
     private readonly WPos origin = Origin;
     private readonly float halfWidth = HalfWidth;
@@ -231,15 +237,19 @@ public sealed class SDKnockbackInAABBRectAwayFromOriginPlusIntersectAOECircles(W
     private readonly int len = Length;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override bool Contains(in WPos p) {
+    public override bool Contains(in WPos p)
+    {
         var projected = p + distance * (p - origin).Normalized();
-        if (!projected.InRect(center, halfWidth, halfHeight)) {
+        if (!projected.InRect(center, halfWidth, halfHeight))
+        {
             return true;
         }
 
-        for (var i = 0; i < len; ++i) {
+        for (var i = 0; i < len; ++i)
+        {
             ref var circle = ref origins[i];
-            if (Intersect.RayCircle(p - circle, (p - origin).Normalized(), radius, distance)) {
+            if (Intersect.RayCircle(p - circle, (p - origin).Normalized(), radius, distance))
+            {
                 return true;
             }
         }

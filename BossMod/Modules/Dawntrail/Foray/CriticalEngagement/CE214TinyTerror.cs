@@ -280,6 +280,19 @@ sealed class Comet(BossModule module) : BossComponent(module)
         }
     }
 
+    private ArcaneSphere? MostMages()
+    {
+        ArcaneSphere? best = null;
+        var count = arcaneSpheres.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            var sphere = arcaneSpheres[i];
+            if (best == null || sphere.mages > best.mages)
+                best = sphere;
+        }
+        return best;
+    }
+
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
         if (arcaneSpheres.Count == 0)
@@ -287,7 +300,7 @@ sealed class Comet(BossModule module) : BossComponent(module)
             return;
         }
 
-        var firstArcaneSphere = arcaneSpheres.MaxBy(a => a.mages);
+        var firstArcaneSphere = MostMages();
         if (firstArcaneSphere != null)
         {
             Arena.ZoneCircleOutline(firstArcaneSphere.arcaneSphere.Position, 2.0f, Colors.Safe, 2.0f);
@@ -311,7 +324,7 @@ sealed class Comet(BossModule module) : BossComponent(module)
             return;
         }
 
-        var firstArcaneSphere = arcaneSpheres.MaxBy(a => a.mages);
+        var firstArcaneSphere = MostMages();
         if (firstArcaneSphere != null)
         {
             var arcane = firstArcaneSphere.arcaneSphere;
@@ -720,5 +733,5 @@ public sealed class CE214TinyTerror(WorldState ws, Actor primary) : BossModule(w
         Arena.Actors(Enemies((uint)OID.ArcaneSphereBig));
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 20f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 20f);
 }

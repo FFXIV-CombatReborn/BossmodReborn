@@ -6,9 +6,44 @@ sealed class BrutalCrown(BossModule module) : Components.SimpleAOEs(module, (uin
 sealed class DynasticDiadem(BossModule module) : Components.SimpleAOEs(module, (uint)AID.DynasticDiadem, new AOEShapeDonut(6f, 70f));
 sealed class RoyalBanishment(BossModule module) : Components.SimpleAOEGroupsByTimewindow(module, [(uint)AID.RoyalBanishment], new AOEShapeCone(100f, 15f.Degrees()));
 
-abstract class RaidwideMulti(BossModule module, uint aid) : Components.RaidwideCast(module, aid, "multiple Raidwides");
-sealed class RoyalBanishmentRaidwide(BossModule module) : RaidwideMulti(module, (uint)AID.RoyalBanishmentVisual);
-sealed class AbsoluteAuthorityRaidwide(BossModule module) : RaidwideMulti(module, (uint)AID.AbsoluteAuthorityRaidwide1);
+abstract class RepeatedRaidwide(BossModule module, uint aidStart, uint[] aidHits, double firstDelay, double interval, int numHits)
+    : Components.RaidwideInstant(module, default, firstDelay, $"Raidwide x{numHits}")
+{
+    private int _hits;
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == aidStart)
+        {
+            _hits = 0;
+            Activation = Module.CastFinishAt(spell, Delay);
+        }
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (Activation == default)
+        {
+            return;
+        }
+        var id = spell.Action.ID;
+        var len = aidHits.Length;
+        for (var i = 0; i < len; ++i)
+        {
+            if (aidHits[i] == id)
+            {
+                ++NumCasts;
+                Activation = ++_hits >= numHits ? default : WorldState.FutureTime(interval);
+                return;
+            }
+        }
+    }
+}
+
+sealed class RoyalBanishmentRaidwide(BossModule module) : RepeatedRaidwide(module, (uint)AID.RoyalBanishmentVisual, [(uint)AID.RoyalBanishmentRaidwide], 1d, 1.7d, 5);
+sealed class AbsoluteAuthorityRaidwide(BossModule module) : RepeatedRaidwide(module, (uint)AID.AbsoluteAuthorityRaidwide1,
+[(uint)AID.AbsoluteAuthorityRaidwide2, (uint)AID.AbsoluteAuthorityRaidwide3, (uint)AID.AbsoluteAuthorityRaidwide4, (uint)AID.AbsoluteAuthorityRaidwide5], 6.7d, 1.2d, 14);
+sealed class AethertitheRaidwide(BossModule module) : RepeatedRaidwide(module, (uint)AID.AethertitheVisual, [(uint)AID.AethertitheRaidwide], 0.8d, 1.07d, 24);
 
 sealed class T03QueenEternalStates : StateMachineBuilder
 {
@@ -19,6 +54,7 @@ sealed class T03QueenEternalStates : StateMachineBuilder
             .ActivateOnEnter<Besiegement>()
             .ActivateOnEnter<LegitimateForce>()
             .ActivateOnEnter<Aethertithe>()
+            .ActivateOnEnter<AethertitheRaidwide>()
             .ActivateOnEnter<WaltzOfTheRegalia>()
             .ActivateOnEnter<WaltzOfTheRegaliaBait>()
             .ActivateOnEnter<RuthlessRegalia>()

@@ -86,7 +86,13 @@ class ConcentratedScatteredBurst(BossModule module) : Components.UniformStackSpr
     private void ShowStacks(DateTime activation)
     {
         // TODO: can target any role
-        AddStacks(Raid.WithoutSlot(true, true, true).Where(p => p.Class.IsSupport()), activation);
+        var supports = Raid.WithoutSlot(true, true, true);
+        for (var i = 0; i < supports.Length; ++i)
+        {
+            var p = supports[i];
+            if (p.Class.IsSupport())
+                AddStack(p, activation);
+        }
     }
 
     private void ShowSpreads(DateTime activation) => AddSpreads(Raid.WithoutSlot(true, true, true), activation);

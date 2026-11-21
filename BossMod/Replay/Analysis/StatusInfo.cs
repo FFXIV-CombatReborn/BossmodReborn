@@ -24,10 +24,21 @@ sealed class StatusInfo : CommonEnumInfo
         _sidType = moduleInfo?.StatusIDType;
         foreach (var replay in replays)
         {
-            foreach (var enc in replay.Encounters.Where(enc => enc.OID == oid))
+            for (var i = 0; i < replay.Encounters.Count; ++i)
             {
-                foreach (var status in replay.EncounterStatuses(enc).Where(s => !ReplayVisualization.OpList.BoringSIDs.Contains(s.ID) && !(s.Source?.Type is ActorType.Player or ActorType.Pet or ActorType.Chocobo or ActorType.Buddy) && !(s.Target.Type is ActorType.Pet or ActorType.Chocobo)))
+                var enc = replay.Encounters[i];
+                if (enc.OID != oid)
                 {
+                    continue;
+                }
+                foreach (var status in replay.EncounterStatuses(enc))
+                {
+                    if (ReplayVisualization.OpList.BoringSIDs.Contains(status.ID) ||
+                        status.Source?.Type is ActorType.Player or ActorType.Pet or ActorType.Chocobo or ActorType.Buddy ||
+                        status.Target.Type is ActorType.Pet or ActorType.Chocobo)
+                    {
+                        continue;
+                    }
                     var data = _data.GetOrAdd(status.ID);
                     if (status.Source != null)
                     {
@@ -53,7 +64,7 @@ sealed class StatusInfo : CommonEnumInfo
         {
             tree.LeafNode($"Source IDs: {OIDListString(data.SourceOIDs)}");
             tree.LeafNode($"Target IDs: {OIDListString(data.TargetOIDs)}");
-            tree.LeafNode($"Extras: {string.Join(", ", data.Extras.Select(extra => $"{extra:X}"))}");
+            tree.LeafNode($"Extras: {FormatExtras(data.Extras, ", ", "")}");
             foreach (var n in tree.Node($"Instances ({data.Instances.Count})###instances"))
             {
                 tree.LeafNodes(data.Instances, i => $"{i.Replay.Path} @ {i.Status.Time.Start}: at {ReplayUtils.ParticipantString(i.Status.Target, i.Status.Time.Start)}");
@@ -78,18 +89,36 @@ sealed class StatusInfo : CommonEnumInfo
         if (ImGui.MenuItem("Generate missing enum values for boss module"))
         {
             var sb = new StringBuilder();
-            foreach (var (sid, data) in _data.Where(kv => _sidType?.GeneratedEnumName(kv.Key) == null))
+            foreach (var (sid, data) in _data)
             {
-                sb.AppendLine(EnumMemberString(sid, data));
+                if (_sidType?.GeneratedEnumName(sid) == null)
+                {
+                    sb.AppendLine(EnumMemberString(sid, data));
+                }
             }
 
             ImGui.SetClipboardText(sb.ToString());
         }
     }
 
+    private static string FormatExtras(HashSet<ushort> extras, string separator, string prefix)
+    {
+        var sb = new StringBuilder();
+        foreach (var extra in extras)
+        {
+            if (sb.Length > 0)
+            {
+                sb.Append(separator);
+            }
+            sb.Append(prefix).Append($"{extra:X}");
+        }
+        return sb.ToString();
+    }
+
     private string EnumMemberString(uint sid, StatusData data)
     {
         var name = _sidType?.GeneratedEnumName(sid) ?? $"_Gen_{Utils.StringToIdentifier(Service.LuminaRow<Lumina.Excel.Sheets.Status>(sid)?.Name.ToString() ?? $"Status{sid}")}";
-        return $"{name} = {sid}, // {OIDListString(data.SourceOIDs)}->{OIDListString(data.TargetOIDs)}, extra={JoinStrings(data.Extras.Select(extra => $"0x{extra:X}"))}";
+        var extrasStr = data.Extras.Count > 0 ? FormatExtras(data.Extras, "/", "0x") : "none";
+        return $"{name} = {sid}, // {OIDListString(data.SourceOIDs)}->{OIDListString(data.TargetOIDs)}, extra={extrasStr}";
     }
 }

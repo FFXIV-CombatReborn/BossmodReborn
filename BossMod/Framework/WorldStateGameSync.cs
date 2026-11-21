@@ -454,7 +454,7 @@ sealed class WorldStateGameSync : IDisposable
             act = _actorsByIndex[index] = _ws.Actors.Find(obj->EntityId)!;
 
             // note: for now, we continue relying on network messages for tether changes, since sometimes multiple changes can happen in a single frame, and some components rely on seeing all of them...
-            var tether = chr != null ? new ActorTetherInfo(chr->Vfx.Tethers[0].Id, chr->Vfx.Tethers[0].TargetId) : default;
+            var tether = chr != null ? new ActorTetherInfo(chr->Vfx.Tethers[0].Id, SanitizedObjectID(chr->Vfx.Tethers[0].TargetId)) : default;
             if (tether.ID != default)
             {
                 _ws.Execute(new ActorState.OpTether(act.InstanceID, tether));
@@ -1328,16 +1328,34 @@ sealed class WorldStateGameSync : IDisposable
 
     private unsafe ClientState.Gauge GaugeData()
     {
-        var curGauge = JobGaugeManager.Instance()->CurrentGauge;
-        return curGauge != null ? new(Utils.ReadField<ulong>(curGauge, 8), Utils.ReadField<ulong>(curGauge, 16)) : default;
+        var mgr = JobGaugeManager.Instance();
+        var curGauge = mgr->CurrentGauge;
+        if (curGauge == null)
+        {
+            return default;
+        }
+        var readHigh = (Class)mgr->ClassJobId is Class.DRK or Class.AST or Class.BLM or Class.RDM or Class.RPR or Class.VPR or Class.BST;
+        return new(Utils.ReadField<ulong>(curGauge, 8), readHigh ? Utils.ReadField<ulong>(curGauge, 16) : 0ul);
     }
+
+    private static bool IsNoisyServerPacket(Network.ServerIPC.PacketID id) => id is
+        Network.ServerIPC.PacketID.ActorMove or
+        Network.ServerIPC.PacketID.ActorSetPos or
+        Network.ServerIPC.PacketID.UpdateHate or
+        Network.ServerIPC.PacketID.UpdateHater or
+        Network.ServerIPC.PacketID.UpdateHpMpTp or
+        Network.ServerIPC.PacketID.UpdateClassInfo or
+        Network.ServerIPC.PacketID.PlayerStats or
+        Network.ServerIPC.PacketID.CharaVisualEffect or
+        Network.ServerIPC.PacketID.ItemInfo or
+        Network.ServerIPC.PacketID.ContainerInfo;
 
     private unsafe void ServerIPCReceived(DateTime sendTimestamp, uint sourceServerActor, uint targetServerActor, ushort opcode, uint epoch, Span<byte> payload)
     {
         var id = _opcodeMap.ID(opcode);
         // targetServerActor is always a player?..
         var ipc = new NetworkState.ServerIPC(id, opcode, epoch, sourceServerActor, sendTimestamp, [.. payload]);
-        if (_netConfig.Data.RecordServerPackets)
+        if (_netConfig.Data.RecordServerPackets && (!_netConfig.Data.FilterNoisyServerPackets || !IsNoisyServerPacket(id)))
         {
             _globalOps.Add(new NetworkState.OpServerIPC(ipc));
         }
@@ -1404,13 +1422,13 @@ sealed class WorldStateGameSync : IDisposable
         switch ((Network.ServerIPC.ActorControlCategory)category)
         {
             case Network.ServerIPC.ActorControlCategory.TargetIcon:
-                _actorOps.GetOrAdd(actorID).Add(new ActorState.OpIcon(actorID, p1 - Network.IDScramble.Delta, p2));
+                _actorOps.GetOrAdd(actorID).Add(new ActorState.OpIcon(actorID, p1 - Network.IDScramble.Delta, SanitizedObjectID(p2)));
                 break;
             case Network.ServerIPC.ActorControlCategory.TargetVFX:
                 _actorOps.GetOrAdd(actorID).Add(new ActorState.OpVFX(actorID, p1, p2));
                 break;
             case Network.ServerIPC.ActorControlCategory.Tether:
-                _actorOps.GetOrAdd(actorID).Add(new ActorState.OpTether(actorID, new(p2, p3)));
+                _actorOps.GetOrAdd(actorID).Add(new ActorState.OpTether(actorID, new(p2, SanitizedObjectID(p3))));
                 break;
             case Network.ServerIPC.ActorControlCategory.TetherCancel:
                 // note: this seems to clear tether only if existing matches p2

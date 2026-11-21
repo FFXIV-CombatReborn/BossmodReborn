@@ -29,7 +29,6 @@ public enum SID : uint
     MotionTracker = 5191, // none->41EF/41F0/41F1/player, extra=0x0
 }
 
-
 sealed class PetrifyingBeam(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.PetrifyingBeam, (uint)AID.PetrifyingBeam2], new AOEShapeCone(70f, 50f.Degrees()), maxCasts: 2);
 
 sealed class EyesOnMe(BossModule module) : Components.RaidwideCast(module, (uint)AID.EyesOnMe);

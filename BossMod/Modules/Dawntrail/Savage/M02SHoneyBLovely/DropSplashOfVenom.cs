@@ -41,7 +41,13 @@ sealed class DropSplashOfVenom(BossModule module) : Components.UniformStackSprea
                     case Mechanic.Pairs:
                         // note: it's random whether dd or supports are hit, select supports arbitrarily
                         Activation = WorldState.FutureTime(4.5f);
-                        AddStacks(Raid.WithoutSlot(true, true, true).Where(p => p.Class.IsSupport()), Activation);
+                        var supports = Raid.WithoutSlot(true, true, true);
+                        for (var i = 0; i < supports.Length; ++i)
+                        {
+                            var p = supports[i];
+                            if (p.Class.IsSupport())
+                                AddStack(p, Activation);
+                        }
                         break;
                     case Mechanic.Spread:
                         Activation = WorldState.FutureTime(4.5f);

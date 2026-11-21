@@ -8,55 +8,74 @@ sealed class DebuffTracker(BossModule module) : BossComponent(module)
     public uint[] Magnet = new uint[4];
     public BitMask Floating;
 
+    // indices into Angle.AnglesCardinals: [0] = W, [1] = S, [2] = N, [3] = E (as seen from the debuff's perspective)
+    private static readonly Angle[] _e = [Angle.AnglesCardinals[3]], _w = [Angle.AnglesCardinals[0]], _s = [Angle.AnglesCardinals[1]], _n = [Angle.AnglesCardinals[2]];
+    private static readonly Angle[] _ew = [Angle.AnglesCardinals[3], Angle.AnglesCardinals[0]], _se = [Angle.AnglesCardinals[1], Angle.AnglesCardinals[3]],
+        _sw = [Angle.AnglesCardinals[1], Angle.AnglesCardinals[0]], _ne = [Angle.AnglesCardinals[2], Angle.AnglesCardinals[3]],
+        _nw = [Angle.AnglesCardinals[2], Angle.AnglesCardinals[0]], _ns = [Angle.AnglesCardinals[2], Angle.AnglesCardinals[1]];
+    private static readonly Angle[] _sew = [Angle.AnglesCardinals[1], Angle.AnglesCardinals[3], Angle.AnglesCardinals[0]],
+        _new = [Angle.AnglesCardinals[2], Angle.AnglesCardinals[3], Angle.AnglesCardinals[0]],
+        _nse = [Angle.AnglesCardinals[2], Angle.AnglesCardinals[1], Angle.AnglesCardinals[3]],
+        _nsw = [Angle.AnglesCardinals[2], Angle.AnglesCardinals[1], Angle.AnglesCardinals[0]];
+    // unsafe angles are the opposite cardinals: E <-> W ([3] <-> [0]) and N <-> S ([2] <-> [1])
+    private static readonly Angle[] _uE = _w, _uW = _e, _uS = _n, _uN = _s;
+    private static readonly Angle[] _uEW = [Angle.AnglesCardinals[0], Angle.AnglesCardinals[3]], _uSE = [Angle.AnglesCardinals[2], Angle.AnglesCardinals[0]],
+        _uSW = [Angle.AnglesCardinals[2], Angle.AnglesCardinals[3]], _uNE = [Angle.AnglesCardinals[1], Angle.AnglesCardinals[0]],
+        _uNW = [Angle.AnglesCardinals[1], Angle.AnglesCardinals[3]], _uNS = [Angle.AnglesCardinals[1], Angle.AnglesCardinals[2]];
+    private static readonly Angle[] _uSEW = [Angle.AnglesCardinals[2], Angle.AnglesCardinals[0], Angle.AnglesCardinals[3]],
+        _uNEW = [Angle.AnglesCardinals[1], Angle.AnglesCardinals[0], Angle.AnglesCardinals[3]],
+        _uNSE = [Angle.AnglesCardinals[1], Angle.AnglesCardinals[2], Angle.AnglesCardinals[0]],
+        _uNSW = [Angle.AnglesCardinals[1], Angle.AnglesCardinals[2], Angle.AnglesCardinals[3]];
+
+    private static bool IsMalefic(uint id) => id is >= (uint)SID.MaleficE and <= (uint)SID.MaleficNSW;
+
     public Angle[] GetAngles(int slot)
     {
         if (slot is < 0 or > 3)
             return [];
 
-        if (Malefic[slot] == 0)
-            return [];
-
-        Angle[] angles = Malefic[slot] switch
+        return Malefic[slot] switch
         {
-            (uint)SID.MaleficE => [Angle.AnglesCardinals[3]],
-            (uint)SID.MaleficW => [Angle.AnglesCardinals[0]],
-            (uint)SID.MaleficEW => [Angle.AnglesCardinals[3], Angle.AnglesCardinals[0]],
-            (uint)SID.MaleficS => [Angle.AnglesCardinals[1]],
-            (uint)SID.MaleficSE => [Angle.AnglesCardinals[1], Angle.AnglesCardinals[3]],
-            (uint)SID.MaleficSW => [Angle.AnglesCardinals[1], Angle.AnglesCardinals[0]],
-            (uint)SID.MaleficN => [Angle.AnglesCardinals[2]],
-            (uint)SID.MaleficNE => [Angle.AnglesCardinals[2], Angle.AnglesCardinals[3]],
-            (uint)SID.MaleficNW => [Angle.AnglesCardinals[2], Angle.AnglesCardinals[0]],
-            (uint)SID.MaleficNS => [Angle.AnglesCardinals[2], Angle.AnglesCardinals[1]],
+            (uint)SID.MaleficE => _e,
+            (uint)SID.MaleficW => _w,
+            (uint)SID.MaleficEW => _ew,
+            (uint)SID.MaleficS => _s,
+            (uint)SID.MaleficSE => _se,
+            (uint)SID.MaleficSW => _sw,
+            (uint)SID.MaleficSEW => _sew,
+            (uint)SID.MaleficN => _n,
+            (uint)SID.MaleficNE => _ne,
+            (uint)SID.MaleficNW => _nw,
+            (uint)SID.MaleficNEW => _new,
+            (uint)SID.MaleficNS => _ns,
+            (uint)SID.MaleficNSE => _nse,
+            (uint)SID.MaleficNSW => _nsw,
             _ => []
         };
-
-        return angles;
     }
     public Angle[] GetUnsafeAngles(int slot)
     {
         if (slot is < 0 or > 3)
             return [];
 
-        if (Malefic[slot] == 0)
-            return [];
-
-        Angle[] angles = Malefic[slot] switch
+        return Malefic[slot] switch
         {
-            (uint)SID.MaleficE => [Angle.AnglesCardinals[0]],
-            (uint)SID.MaleficW => [Angle.AnglesCardinals[3]],
-            (uint)SID.MaleficEW => [Angle.AnglesCardinals[0], Angle.AnglesCardinals[3]],
-            (uint)SID.MaleficS => [Angle.AnglesCardinals[2]],
-            (uint)SID.MaleficSE => [Angle.AnglesCardinals[2], Angle.AnglesCardinals[0]],
-            (uint)SID.MaleficSW => [Angle.AnglesCardinals[2], Angle.AnglesCardinals[3]],
-            (uint)SID.MaleficN => [Angle.AnglesCardinals[1]],
-            (uint)SID.MaleficNE => [Angle.AnglesCardinals[1], Angle.AnglesCardinals[0]],
-            (uint)SID.MaleficNW => [Angle.AnglesCardinals[1], Angle.AnglesCardinals[3]],
-            (uint)SID.MaleficNS => [Angle.AnglesCardinals[1], Angle.AnglesCardinals[2]],
+            (uint)SID.MaleficE => _uE,
+            (uint)SID.MaleficW => _uW,
+            (uint)SID.MaleficEW => _uEW,
+            (uint)SID.MaleficS => _uS,
+            (uint)SID.MaleficSE => _uSE,
+            (uint)SID.MaleficSW => _uSW,
+            (uint)SID.MaleficSEW => _uSEW,
+            (uint)SID.MaleficN => _uN,
+            (uint)SID.MaleficNE => _uNE,
+            (uint)SID.MaleficNW => _uNW,
+            (uint)SID.MaleficNEW => _uNEW,
+            (uint)SID.MaleficNS => _uNS,
+            (uint)SID.MaleficNSE => _uNSE,
+            (uint)SID.MaleficNSW => _uNSW,
             _ => []
         };
-
-        return angles;
     }
 
     public Angle? GetUnyieldingAngle(int slot, bool sourceNorthSouth)
@@ -83,7 +102,7 @@ sealed class DebuffTracker(BossModule module) : BossComponent(module)
     {
         if (Raid.FindSlot(actor.InstanceID) is var slot && slot is >= 0 and <= 3)
         {
-            if (status.ID is var id && id is >= (uint)SID.MaleficE and <= (uint)SID.MaleficNS)
+            if (status.ID is var id && IsMalefic(id))
             {
                 Malefic[slot] = status.ID;
             }
@@ -102,7 +121,7 @@ sealed class DebuffTracker(BossModule module) : BossComponent(module)
     {
         if (Raid.FindSlot(actor.InstanceID) is var slot && slot is >= 0 and <= 3)
         {
-            if (status.ID is var id && id is (uint)SID.MaleficE or <= (uint)SID.MaleficNS)
+            if (status.ID is var id && IsMalefic(id))
             {
                 Malefic[slot] = default;
             }
@@ -176,9 +195,9 @@ sealed class ConcentravityMagnetFloor(BossModule module) : Components.GenericAOE
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.Concentrativity)
+        if (spell.Action.ID == (uint)AID.Concentrativity && Raid.Player() is Actor player)
         {
-            var slot = Raid.FindSlot(Raid.Player()!.InstanceID);
+            var slot = Raid.FindSlot(player.InstanceID);
             var isNegative = _debuffs.Magnet[slot] == (uint)SID.NegativeCharge;
             _aoes.Add(new(_shape, Arena.Center + new WDir(-10f, isNegative ? 10f : -10f)));
             _aoes.Add(new(_shape, Arena.Center + new WDir(10f, isNegative ? -10f : 10f)));
@@ -192,6 +211,8 @@ sealed class ConcentravityMagnetFloor(BossModule module) : Components.GenericAOE
         }
     }
 
+    private static readonly AOEShapeRect _outside = new(16f, 16f, 16f, invertForbiddenZone: true);
+
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         base.AddAIHints(slot, actor, assignment, hints);
@@ -199,7 +220,7 @@ sealed class ConcentravityMagnetFloor(BossModule module) : Components.GenericAOE
             return;
 
         // make outside of arena unsafe so there's leeway for knockback
-        hints.AddForbiddenZone(new AOEShapeRect(16f, 16f, 16f, invertForbiddenZone: true), Arena.Center);
+        hints.AddForbiddenZone(_outside, Arena.Center);
     }
 }
 sealed class ConcentrativityRocks(BossModule module) : Components.GenericKnockback(module)
@@ -215,7 +236,7 @@ sealed class ConcentrativityRocks(BossModule module) : Components.GenericKnockba
     {
         if (spell.Action.ID is (uint)AID.Repel or (uint)AID.Attract)
         {
-            if (spell.TargetID == Raid.Player()!.InstanceID)
+            if (spell.TargetID == Raid.Player()?.InstanceID)
             {
                 _finishAt = Module.CastFinishAt(spell);
                 Casters.Add(new(caster.Position, 20f, _finishAt, kind: spell.Action.ID == (uint)AID.Repel ? Kind.AwayFromOrigin : Kind.TowardsOrigin));
@@ -322,6 +343,7 @@ sealed class HeavensConfluence(BossModule module) : Components.GenericAOEs(modul
 }
 sealed class WillOfTheUnderworld(BossModule module) : Components.SimpleAOEs(module, (uint)AID.WillOfTheUnderworld, new AOEShapeRect(40f, 10f))
 {
+    private readonly List<AOEInstance> _unsafeAoesBuffer = [];
     // safe spot depends on player Malefic debuff
     // 1,2, or 4 at a time
     // in path 12, stand behind fallen rock with malefic in safe direction
@@ -335,7 +357,8 @@ sealed class WillOfTheUnderworld(BossModule module) : Components.SimpleAOEs(modu
             return [];
         }
 
-        List<AOEInstance> unsafeAoes = [];
+        var unsafeAoes = _unsafeAoesBuffer;
+        unsafeAoes.Clear();
         var angles = _debuffs.GetUnsafeAngles(slot);
         var angleLen = angles.Length;
 
@@ -427,6 +450,7 @@ sealed class WillOfTheUnderworldRocks(BossModule module) : Components.GenericAOE
 }
 sealed class CrusherOfLions(BossModule module) : Components.SimpleAOEs(module, (uint)AID.CrusherOfLions, new AOEShapeCone(40f, 45f.Degrees()))
 {
+    private readonly List<AOEInstance> _unsafeAoesBuffer = [];
     // safe spot depends on player Malefic debuff
     private readonly DebuffTracker _debuffs = module.FindComponent<DebuffTracker>()!;
 
@@ -438,7 +462,8 @@ sealed class CrusherOfLions(BossModule module) : Components.SimpleAOEs(module, (
             return [];
         }
 
-        List<AOEInstance> unsafeAoes = [];
+        var unsafeAoes = _unsafeAoesBuffer;
+        unsafeAoes.Clear();
         var angles = _debuffs.GetUnsafeAngles(slot);
         var angleLen = angles.Length;
 

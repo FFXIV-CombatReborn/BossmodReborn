@@ -12,14 +12,14 @@ sealed class AlexandrianThunderII(BossModule module) : Components.GenericRotatin
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
-        _increment = iconID switch
+        if (iconID is not ((uint)IconID.RotateCW or (uint)IconID.RotateCCW))
         {
-            (uint)IconID.RotateCW => -10f.Degrees(),
-            (uint)IconID.RotateCCW => 10f.Degrees(),
-            _ => default
-        };
+            return;
+        }
+        var cw = iconID == (uint)IconID.RotateCW;
+        _increment = (cw ? -10f : 10f).Degrees();
         _activation = WorldState.FutureTime(5.7d);
-        clockwise = iconID == (uint)IconID.RotateCW;
+        clockwise = cw;
         InitIfReady();
     }
 

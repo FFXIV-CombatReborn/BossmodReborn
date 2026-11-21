@@ -1,9 +1,11 @@
 ﻿namespace BossMod.Dawntrail.Ultimate.DMU;
 
-sealed class DMUStates : StateMachineBuilder {
+sealed class DMUStates : StateMachineBuilder
+{
     private readonly DMU _module;
 
-    public DMUStates(DMU module) : base(module) {
+    public DMUStates(DMU module) : base(module)
+    {
         _module = module;
 
         SimplePhase(0u, Phase1, "P1")
@@ -24,7 +26,8 @@ sealed class DMUStates : StateMachineBuilder {
             .Raw.Update = () => _module.KefkaP5()?.IsDeadOrDestroyed == true;
     }
 
-    private void Phase1(uint id) {
+    private void Phase1(uint id)
+    {
         Phase1RevoltingRuinIII(id, 10.1f);
         Phase1GravenImage1(id + 0x1000u, 7.8f);
         Phase1LightOfJudgement(id + 0x2000u, 4.1f);
@@ -33,7 +36,8 @@ sealed class DMUStates : StateMachineBuilder {
         Phase1TeleTrouncing(id + 0x5000u, 6.9f);
     }
 
-    void Phase1RevoltingRuinIII(uint id, float delay) {
+    void Phase1RevoltingRuinIII(uint id, float delay)
+    {
         CastStart(id, AID.RevoltingRuinIIIFirstHit, delay, "RevoltingRuinIII")
             .ExecOnEnter<RevoltingRuinIIIFirst>(static o => o.EnableHints = true);
         ComponentCondition<RevoltingRuinIIIFirst>(id + 0x10, 5.1f, static o => o.NumCasts > 0, "1st Tankbuster Resolve")
@@ -43,7 +47,8 @@ sealed class DMUStates : StateMachineBuilder {
             .DeactivateOnExit<RevoltingRuinIIISecond>();
     }
 
-    void Phase1GravenImage1(uint id, float delay) {
+    void Phase1GravenImage1(uint id, float delay)
+    {
         Cast(id + 0x10, AID.GravenImage, delay, 3.0f, "Graven Image 1")
             .ActivateOnEnter<PulseWave>();
         CastStart(id + 0x20, AID.MysteryMagic, 3.2f, "MysteryMagic")
@@ -81,7 +86,8 @@ sealed class DMUStates : StateMachineBuilder {
             .ActivateOnExit<HyperDrive>(); // Activated early for pre-position movement
     }
 
-    void Phase1LightOfJudgement(uint id, float delay) {
+    void Phase1LightOfJudgement(uint id, float delay)
+    {
         Cast(id + 0x10u, AID.P1LightOfJudgment, delay, 5.0f, "LightOfJudgment")
             .ActivateOnEnter<LightOfJudgment>()
             .DeactivateOnExit<LightOfJudgment>();
@@ -91,7 +97,8 @@ sealed class DMUStates : StateMachineBuilder {
             .DeactivateOnExit<HyperDrive>();
     }
 
-    void Phase1Gravitas(uint id, float delay) {
+    void Phase1Gravitas(uint id, float delay)
+    {
         CastStart(id + 0x10, AID.GravenImage, 7.3f, "Graven Image 2")
             .ActivateOnEnter<BlizzardIIIBlowout>()
             .ExecOnEnter<BlizzardIIIBlowout>(static o => o.Risky = true)
@@ -142,7 +149,8 @@ sealed class DMUStates : StateMachineBuilder {
             .ActivateOnExit<HyperDrive>(); // Activated early for pre-position movement
     }
 
-    void Phase1TeleTrouncing(uint id, float delay) {
+    void Phase1TeleTrouncing(uint id, float delay)
+    {
         Cast(id + 0x10u, AID.TeleTrouncing, delay, 5.0f, "TeleTrouncing")
             .ActivateOnEnter<TeleTrouncing>();
         ComponentCondition<TeleTrouncing>(id + 0x20, 7.8f, static o => o.NumCasts > 0, "First Arrows");
@@ -444,6 +452,7 @@ sealed class DMUStates : StateMachineBuilder {
 
         ActorCast(id + 0x30u, _module.ChaosP3, AID.TheDecisiveBattle, 0.2f, 3.0f, true)
             .ActivateOnEnter<TheDecisiveBattle>()
+            .ActivateOnEnter<P3Firewall>() // stays active for the whole phase, driven by statuses
             .DeactivateOnExit<TheDecisiveBattle>();
 
         ActorCast(id + 0x40u, _module.ChaosP3, AID.BowelsOfAgony, 14.4f, 5.0f, true, "Raidwide")

@@ -28,10 +28,9 @@ sealed class AbsoluteAuthorityDorito(BossModule module) : Components.GenericStac
 
     public override void Update()
     {
-        if (Stacks.Count != 0)
+        if (Stacks.Count != 0 && Raid.Player() is Actor player)
         {
             var party = Raid.WithoutSlot(false, true, true);
-            var player = Raid.Player()!;
             var pPos = player.Position;
             Actor? closest = null;
 
@@ -105,7 +104,8 @@ sealed class AuthoritysGaze(BossModule module) : Components.GenericGaze(module)
         {
             return [];
         }
-        var eyes = new List<Eye>(count);
+        var eyes = new Eye[count];
+        var index = 0;
         for (var i = 0; i < count; ++i)
         {
             var a = _affected[i];
@@ -114,9 +114,9 @@ sealed class AuthoritysGaze(BossModule module) : Components.GenericGaze(module)
                 continue;
             }
             var loc = a.Position.Quantized();
-            eyes.Add(new(loc, _activation, eyeCenter: loc));
+            eyes[index++] = new(loc, _activation, eyeCenter: loc);
         }
-        return CollectionsMarshal.AsSpan(eyes);
+        return eyes.AsSpan(0, index);
     }
 
     public override void OnStatusGain(Actor actor, ref ActorStatus status)

@@ -182,10 +182,10 @@ sealed class ChaoticFlood(BossModule module) : Components.SimpleAOEs(module, (ui
     {
         if (aoesHintsDisplayed < 8)
         {
-            return CollectionsMarshal.AsSpan(aoesHints.Take(2).ToList());
+            return CollectionsMarshal.AsSpan(aoesHints)[..Math.Min(2, aoesHints.Count)];
         }
 
-        return CollectionsMarshal.AsSpan(aoes.Take(4).ToList());
+        return CollectionsMarshal.AsSpan(aoes)[..Math.Min(4, aoes.Count)];
     }
 
     public override void Update()
@@ -193,11 +193,9 @@ sealed class ChaoticFlood(BossModule module) : Components.SimpleAOEs(module, (ui
         if (!firstWaveResolved && aoes.Count >= 2)
         {
             List<WPos> waymarks = [waymarkA, waymarkB, waymarkC, waymarkD];
-            var aoesFirstWave = aoes.Take(2).ToList();
-
             foreach (var waymark in waymarks)
             {
-                if (!aoesFirstWave.Any(aoe => aoe.Check(waymark)))
+                if (!DMUHelpers.AnyContains(aoes, waymark, 0, 2))
                 {
                     safeWaymarks.Add(waymark);
                 }
@@ -208,12 +206,22 @@ sealed class ChaoticFlood(BossModule module) : Components.SimpleAOEs(module, (ui
 
         if (firstWaveResolved && !secondWaveResolved && aoes.Count >= 4)
         {
-            var aoesSecondWave = aoes.Skip(2).Take(2).ToList();
             foreach (var waymark in safeWaymarks)
             {
-                if (!aoesSecondWave.Any(aoe => aoe.Check(waymark)))
+                if (!DMUHelpers.AnyContains(aoes, waymark, 2, 2))
                 {
-                    var otherWaymark = safeWaymarks.First(point => point != waymark) - Module.Center;
+                    var other = waymark;
+                    for (var i = 0; i < safeWaymarks.Count; ++i)
+                    {
+                        if (safeWaymarks[i] != waymark)
+                        {
+                            other = safeWaymarks[i];
+                            break;
+                        }
+                    }
+                    if (other == waymark)
+                        continue;
+                    var otherWaymark = other - Module.Center;
                     clockwise = otherWaymark.X * (waymark - Module.Center).Z - otherWaymark.Z * (waymark - Module.Center).X > 0;
                     currentDirection = (waymark - Module.Center).Normalized();
                     break;
@@ -257,6 +265,7 @@ sealed class ChaoticFloodStack(BossModule module) : Components.GenericStackSprea
 
 sealed class MaddeningOrchestra(DMU module) : Components.GenericBaitAway(module, centerAtTarget: true)
 {
+    private readonly List<Actor> _closest = new(PartyState.MaxPartySize);
     private bool active = false;
     private readonly DateTime[] magicVulnerability = new DateTime[PartyState.MaxPartySize];
     private bool firstWave = false;
@@ -304,22 +313,30 @@ sealed class MaddeningOrchestra(DMU module) : Components.GenericBaitAway(module,
             return;
         }
 
-        var targets = Raid.WithoutSlot(true, true, true).SortedByRange(boss.Position).ToList();
+        var targets = DMUHelpers.ClosestPlayers(Raid.WithoutSlot(true, true, true), boss.Position, _closest);
         if (!firstWave)
         {
             foreach (var player in targets)
             { // Tanks & rest of party are hit with different spells, but same size AOEs
-                CurrentBaits.Add(new(boss.Position, player, new AOEShapeCircle(5.0f)));
+                CurrentBaits.Add(new(boss.Position, player, DMUShapes.Circle5));
             }
 
             return;
         }
 
-        targets = [.. targets.Take(3)];
-        BitMask forbiddenPlayers = Raid.WithSlot(true, true, true).Where(p => magicVulnerability[p.Item1] > WorldState.CurrentTime || p.Item2.Role == Role.Tank).Mask();
+        if (targets.Count > 3)
+            targets.RemoveRange(3, targets.Count - 3);
+        BitMask forbiddenPlayers = default;
+        var party = Raid.WithSlot(true, true, true);
+        for (var i = 0; i < party.Length; ++i)
+        {
+            var p = party[i];
+            if (magicVulnerability[p.Item1] > WorldState.CurrentTime || p.Item2.Role == Role.Tank)
+                forbiddenPlayers.Set(p.Item1);
+        }
         foreach (var target in targets)
         {
-            CurrentBaits.Add(new(boss.Position, target, new AOEShapeCircle(5.0f), forbidden: forbiddenPlayers));
+            CurrentBaits.Add(new(boss.Position, target, DMUShapes.Circle5, forbidden: forbiddenPlayers));
         }
 
         ForbiddenPlayers = forbiddenPlayers;
@@ -395,7 +412,7 @@ sealed class ChaoticFlareTB(DMU module) : Components.GenericBaitStack(module, (u
             {
                 if (!addedTank)
                 {
-                    CurrentBaits.Add(new(p, boss, new AOEShapeCircle(5.0f), forbidden: ~allowedTanks));
+                    CurrentBaits.Add(new(p, boss, DMUShapes.Circle5, forbidden: ~allowedTanks));
                     addedTank = true;
                 }
             }
@@ -539,7 +556,13 @@ sealed class Celestriad(BossModule module) : Components.GenericTowers(module)
         }
 
         // If all 6 players have debuffs, we know the final two are the non-debuff players
-        if (debuffs.Count(d => d != Elements.NONE) == 6)
+        var numDebuffs = 0;
+        for (var i = 0; i < debuffs.Length; ++i)
+        {
+            if (debuffs[i] != Elements.NONE)
+                ++numDebuffs;
+        }
+        if (numDebuffs == 6)
         {
             for (var i = 0; i < debuffs.Length; ++i)
             {
@@ -702,8 +725,8 @@ sealed class StrayApocalypse(BossModule module) : Components.Exaflare(module, 6f
     {
         currentAOEs.Clear();
 
-        var exaFlares = Lines.Take(4).ToList();
-        for (var i = 0; i < exaFlares.Count; ++i)
+        var numLines = Math.Min(4, Lines.Count);
+        for (var i = 0; i < numLines; ++i)
         {
             var line = Lines[i];
             var pos = line.Next;
@@ -816,13 +839,25 @@ sealed class P5ForsakenBait(DMU module) : Components.GenericBaitProximity(module
         CurrentBaits.Clear();
         OnlyShowOutlines = true;
 
-        var target = Raid.WithoutSlot().SortedByRange(boss.Position).Closest(boss.Position);
+        Actor? target = null;
+        var bestDistSq = float.MaxValue;
+        var party = Raid.WithoutSlot();
+        for (var i = 0; i < party.Length; ++i)
+        {
+            var p = party[i];
+            var distSq = (p.Position - boss.Position).LengthSq();
+            if (distSq < bestDistSq)
+            {
+                bestDistSq = distSq;
+                target = p;
+            }
+        }
         if (target == null)
         {
             return;
         }
 
-        CurrentBaits.Add(new(target.Position, new AOEShapeCircle(8.0f)));
+        CurrentBaits.Add(new(target.Position, DMUShapes.Circle8));
     }
 }
 

@@ -152,5 +152,6 @@ public enum SID : uint
     MousseMine = 4453, // Helper->player, extra=0x0
     BurningUp = 4448, // none->player, extra=0x0
     Sweltering = 4449, // none->player, extra=0x0
-    HeatingUp = 4454 // none->player, extra=0x0
+    HeatingUp = 4454, // none->player, extra=0x0
+    HuffyCat = 4457 // none->GimmeCat, extra=0x1/0x2/0x3, 3 stacks = cat enrage (meteor)
 }

@@ -32,6 +32,8 @@ sealed class UltraviolentRay(BossModule module) : Components.GenericBaitAway(mod
         }
     }
 
+    private readonly List<Angle> _occupiedPlatforms = new(5);
+
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         var baits = CollectionsMarshal.AsSpan(CurrentBaits);
@@ -47,7 +49,8 @@ sealed class UltraviolentRay(BossModule module) : Components.GenericBaitAway(mod
                 break;
             }
         }
-        var occupiedPlatforms = new List<Angle>(5);
+        var occupiedPlatforms = _occupiedPlatforms;
+        occupiedPlatforms.Clear();
         for (var i = 0; i < len; ++i)
         {
             ref var b = ref baits[i];

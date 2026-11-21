@@ -122,10 +122,9 @@ sealed class DonutSectorTowers(BossModule module) : Components.GenericTowers(mod
 
                         shapes.Add(shape);
 
-                        var leftright = new int[2] { (j + 7) & 7, (j + 1) & 7 };
                         for (var k = 0; k < 2; ++k)
                         {
-                            var n = leftright[k];
+                            var n = (j + (k == 0 ? 7 : 1)) & 7;
                             var nid = r == 0 ? n : n + 8;
                             if (!visited[nid] && activeTiles[nid])
                             {

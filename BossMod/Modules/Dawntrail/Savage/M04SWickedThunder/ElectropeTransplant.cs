@@ -8,15 +8,15 @@ sealed class FulminousField(BossModule module) : Components.GenericAOEs(module)
     public bool Active => _activation != default;
 
     private static readonly AOEShapeCone _shape = new(30f, 15f.Degrees());
+    private readonly AOEInstance[] _aoes = new AOEInstance[8];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (Active)
         {
-            Span<AOEInstance> aoes = new AOEInstance[8];
             for (var i = 0; i < 8; ++i)
-                aoes[i] = new(_shape, _pos, _dir + i * 45f.Degrees(), _activation);
-            return aoes;
+                _aoes[i] = new(_shape, _pos, _dir + i * 45f.Degrees(), _activation);
+            return _aoes;
         }
         return [];
     }

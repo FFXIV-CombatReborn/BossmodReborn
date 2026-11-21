@@ -74,44 +74,37 @@ sealed class InsaneAirSnaps(BossModule module) : Components.GenericAOEs(module)
     {
         // When the snaps resolve, clear that color’s current pairs
         if (spell.Action.ID == (uint)AID.PlungingSnap1)      // water cone resolves
-            _pairs.RemoveAll(p => p.Icon == IconBlue);
+            RemoveIcon(IconBlue);
         else if (spell.Action.ID == (uint)AID.BlastingSnap1) // fire cone resolves
-            _pairs.RemoveAll(p => p.Icon == IconRed);
+            RemoveIcon(IconRed);
         else if (spell.Action.ID is (uint)AID.DiversDare or (uint)AID.DiversDare1)
             _pairs.Clear();
+    }
+
+    private void RemoveIcon(uint icon)
+    {
+        for (var i = _pairs.Count - 1; i >= 0; --i)
+        {
+            if (_pairs[i].Icon == icon)
+            {
+                _pairs.RemoveAt(i);
+            }
+        }
     }
 }
 
 // -----------------------------
 // Persistent fire cone "puddles"
 // -----------------------------
-sealed class BlastingSnapPersistent(BossModule module) : Components.GenericAOEs(module, (uint)AID.BlastingSnap1)
+sealed class BlastingSnapPersistent(BossModule module) : TrackedVoidzones(module, InsaneAirData.SnapCone, (uint)OID.BlastingSnapVoidzone)
 {
-    private readonly List<AOEInstance> _aoes = [];
-
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
-        => CollectionsMarshal.AsSpan(_aoes);
-
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        switch (spell.Action.ID)
+        base.OnEventCast(caster, spell);
+        // fire snap resolves -> persistent cone at the helper's pos/rot
+        if (spell.Action.ID == (uint)AID.BlastingSnap1)
         {
-            // Fire snap resolves -> leave a persistent cone at the helper's pos/rot
-            case (uint)AID.BlastingSnap1:
-                _aoes.Add(new(InsaneAirData.SnapCone, caster.Position, caster.Rotation, WorldState.CurrentTime, Colors.AOE, true, caster.InstanceID));
-                break;
-
-            // Cleanup at end of mechanic
-            case (uint)AID.DiversDare:
-            case (uint)AID.DiversDare1:
-                _aoes.Clear();
-                break;
+            Predict(caster.Position, caster.Rotation, WorldState.CurrentTime);
         }
-    }
-
-    public override void OnActorDestroyed(Actor actor)
-    {
-        var id = actor.InstanceID;
-        _aoes.RemoveAll(a => a.ActorID == id);
     }
 }

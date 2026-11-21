@@ -83,11 +83,13 @@ sealed class GuardianWyvernsSiegeflight(BossModule module) : Components.GenericA
                     {
                         var aoes = CollectionsMarshal.AsSpan(_aoes);
                         var offs = CollectionsMarshal.AsSpan(offsets);
+                        var lenA = aoes.Length;
+                        var lenO = offs.Length;
 
-                        for (var i = 0; i < 2; ++i)
+                        for (var i = 0; i < lenA; ++i)
                         {
                             ref var aoe = ref aoes[i];
-                            for (var j = 0; j < 2; ++j)
+                            for (var j = 0; j < lenO; ++j)
                             {
                                 ref var o = ref offs[j];
                                 if (o.actor == aoe.ActorID)
@@ -97,6 +99,10 @@ sealed class GuardianWyvernsSiegeflight(BossModule module) : Components.GenericA
                                 }
                             }
                         }
+                    }
+                    else if (count == 1)
+                    {
+                        offsets.Clear();
                     }
                 }
                 break;

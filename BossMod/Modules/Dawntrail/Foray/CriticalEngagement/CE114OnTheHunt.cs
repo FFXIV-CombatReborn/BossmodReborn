@@ -129,5 +129,5 @@ public sealed class CE114OnTheHunt(WorldState ws, Actor primary) : BossModule(ws
 {
     public static readonly WPos ArenaCenter = new(636f, -54f);
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 30f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 30f);
 }

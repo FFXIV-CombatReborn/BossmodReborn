@@ -1,7 +1,7 @@
 namespace BossMod.Dawntrail.Raid.M07NBruteAbombinator;
 
 sealed class BrutalImpactRevengeOfTheVines1NeoBombarianSpecial(BossModule module) : Components.RaidwideCasts(module,
-[(uint)AID.BrutalImpact, (uint)AID.RevengeOfTheVines1, (uint)AID.NeoBombarianSpecial]);
+[(uint)AID.BrutalImpactVisual, (uint)AID.RevengeOfTheVines1, (uint)AID.NeoBombarianSpecial]);
 
 sealed class Powerslam(BossModule module) : Components.RaidwideCast(module, (uint)AID.Powerslam);
 sealed class Slaminator(BossModule module) : Components.CastTowers(module, (uint)AID.Slaminator, 8f, 8, 8);
@@ -32,6 +32,39 @@ sealed class TheUnpotted(BossModule module) : Components.SimpleAOEs(module, (uin
 sealed class WindingWildwinds(BossModule module) : Components.SimpleAOEs(module, (uint)AID.WindingWildwinds, new AOEShapeDonut(5f, 60f));
 sealed class WindingWildwindsHint(BossModule module) : Components.CastInterruptHint(module, (uint)AID.WindingWildwinds, showNameInHint: true);
 sealed class GlowerPower(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GlowerPower, new AOEShapeRect(65f, 7f));
+
+sealed class Stoneringer(BossModule module) : Components.GenericAOEs(module)
+{
+    private static readonly AOEShapeCircle circle = new(12f);
+    private static readonly AOEShapeDonut donut = new(9f, 60f);
+    private AOEInstance[] _aoe = [];
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        if (_aoe.Length != 0)
+        {
+            _aoe[0].Origin = Module.PrimaryActor.Position;
+        }
+        return _aoe;
+    }
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        switch (spell.Action.ID)
+        {
+            case (uint)AID.StoneringerTheBludgeoning1:
+                _aoe = [new(circle, caster.Position, default, Module.CastFinishAt(spell, 10.8d), risky: false)];
+                break;
+            case (uint)AID.StoneringerTheStabbing1:
+                _aoe = [new(donut, caster.Position, default, Module.CastFinishAt(spell, 10.8d), risky: false)];
+                break;
+            case (uint)AID.BrutishSwingCircle2:
+            case (uint)AID.BrutishSwingDonut:
+                _aoe = [];
+                break;
+        }
+    }
+}
 
 sealed class BrutishSwingCircle2(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BrutishSwingCircle2, 12f);
 sealed class BrutishSwingDonut(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BrutishSwingDonut, new AOEShapeDonut(9f, 60f));

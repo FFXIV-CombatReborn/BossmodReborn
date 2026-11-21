@@ -112,6 +112,7 @@ sealed class Devour(BossModule module) : Components.GenericAOEs(module)
 
 sealed class StingingTentacle(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
     // initial tentacle rotation random
     // relative to boss rotation, roughly 10 deg outwards and 57 deg inwards
     // slows down slightly at max in/out rotation before moving back opposite way
@@ -129,7 +130,8 @@ sealed class StingingTentacle(BossModule module) : Components.GenericAOEs(module
         if (len == 0)
             return [];
 
-        List<AOEInstance> aoes = [];
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         for (var i = 0; i < len; ++i)
         {
             aoes.Add(new(new AOEShapeRect(50f, 7f), tentacles[i].Position, tentacles[i].Rotation, _activation));

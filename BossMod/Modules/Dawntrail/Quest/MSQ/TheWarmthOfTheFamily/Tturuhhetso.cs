@@ -76,7 +76,7 @@ sealed class CandescentRayTB(BossModule module) : Components.CastSharedTankbuste
         var wuk = wuks.Count != 0 ? wuks[0] : null;
         var primary = Module.PrimaryActor;
         if (koana != null)
-            hints.AddForbiddenZone(new SDCone(primary.Position, 100f, primary.AngleTo(koana), Angle.Asin(4f / (koana.Position - primary.Position).Length())), Activation);
+            hints.AddForbiddenZone(new SDCone(primary.Position, 100f, primary.AngleTo(koana), Angle.Asin(Math.Min(1f, 4f / (koana.Position - primary.Position).Length()))), Activation);
         if (wuk != null)
             hints.AddForbiddenZone(new SDInvertedRect(primary.Position, primary.AngleTo(wuk), 50f, default, 4f), Activation);
     }
@@ -211,7 +211,7 @@ sealed class TturuhhetsoStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.Quest, GroupID = 70785, NameID = 13593)]
+[ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.Quest, GroupID = 70785, NameID = 13594)]
 public sealed class Tturuhhetso(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly ArenaBoundsCustom arena = new([new Polygon(new(395.735f, -45.365f), 19.5f, 20)]);

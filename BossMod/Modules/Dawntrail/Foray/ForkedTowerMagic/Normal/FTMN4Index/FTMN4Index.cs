@@ -319,6 +319,7 @@ sealed class ElementaryExpansion(BossModule module) : Components.GenericAOEs(mod
 
 sealed class Shockwave(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.Shockwave, 9f, shape: new AOEShapeCircle(15f), stopAfterWall: true)
 {
+    private readonly List<Knockback> _knockbacksBuffer = [];
     private readonly Aim _aim = module.FindComponent<Aim>()!;
     private readonly RomeosBallad _romeo = module.FindComponent<RomeosBallad>()!;
     public RelSimplifiedComplexPolygon Polygon;
@@ -332,7 +333,8 @@ sealed class Shockwave(BossModule module) : Components.SimpleKnockbacks(module, 
             return [];
         }
 
-        var knockbacks = new List<Knockback>();
+        var knockbacks = _knockbacksBuffer;
+        knockbacks.Clear();
         for (var i = 0; i < count; ++i)
         {
             // what happens if player standing in 2 circles?
@@ -478,6 +480,7 @@ sealed class DuologyOfImplements(BossModule module) : Components.GenericAOEs(mod
 sealed class AllConsumingFlames(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.Spread, (uint)AID.AllConsumingFlames, 6f, 5d);
 sealed class Predict(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
     // sometimes tether goes out 1st before status, sometimes they happen on same timestamp
     // sometimes on same timestamp, tether goes out after status gained
     private readonly Dictionary<ulong, PredictAOE> _predict = [];
@@ -492,12 +495,10 @@ sealed class Predict(BossModule module) : Components.GenericAOEs(module)
             return [];
         }
 
-        List<AOEInstance> aoes = [];
-        var keys = _predict.Keys.ToArray();
-        var count = keys.Length;
-        for (var i = 0; i < count; ++i)
+        var aoes = _aoesBuffer;
+        aoes.Clear();
+        foreach (var value in _predict.Values)
         {
-            if (_predict.TryGetValue(keys[i], out var value))
             {
                 if (value.Position != default && value.Mechanic != Mechanic.None)
                 {
@@ -633,5 +634,5 @@ public sealed class FTMN4Index : BossModule
     public static PolygonCustom[] GetInnerHexagon() => [new PolygonCustom([new(-2.88752f, -623.00104f), new(0.62856f, -623.00043f), new(2.88607f, -623.00067f), new(5.77356f, -628.00012f),
         new(2.88633f, -633.00024f), new(-2.88692f, -633.00024f), new(-5.77374f, -628.00012f)])];
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 28f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 28f);
 }

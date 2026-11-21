@@ -7,13 +7,15 @@ sealed class FleshTele(BossModule module) : Components.GenericKnockback(module, 
     private DateTime _activation;
     private BitMask forwardKb;
     private BitMask backwardKb;
+    private readonly Knockback[] _kb = new Knockback[1];
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (forwardKb[slot] || backwardKb[slot])
         {
             var rot = actor.Rotation;
-            return new Knockback[1] { new(actor.Position, 15f, _activation, default, forwardKb[slot] ? rot : rot + 180f.Degrees(), Kind.DirForward) };
+            _kb[0] = new(actor.Position, 15f, _activation, default, forwardKb[slot] ? rot : rot + 180f.Degrees(), Kind.DirForward);
+            return _kb;
         }
         return [];
     }

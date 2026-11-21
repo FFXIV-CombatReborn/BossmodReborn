@@ -95,7 +95,12 @@ sealed class Daggerflight(BossModule module) : Components.InterceptTether(module
         if (Active)
         {
             var source = Module.PrimaryActor;
-            var target = Module.Enemies((uint)OID.TentoawaTheWideEye)[0];
+            var targets = Module.Enemies((uint)OID.TentoawaTheWideEye);
+            if (targets.Count == 0)
+            {
+                return;
+            }
+            var target = targets[0];
             hints.AddForbiddenZone(new SDInvertedRect(target.Position + (target.HitboxRadius + 0.1f) * target.DirectionTo(source), source.Position, 0.5f), _activation);
         }
     }
@@ -163,7 +168,7 @@ public abstract class DreamsOfANewDay(WorldState ws, Actor primary) : BossModule
         Arena.Actors(this, all);
     }
 
-    protected override bool CheckPull() => Raid.Player()!.InCombat;
+    protected override bool CheckPull() => Raid.Player() is Actor { InCombat: true };
 }
 
 sealed class DreamsOfANewDayP1States(BossModule module) : DreamsOfANewDayStates(module) { }

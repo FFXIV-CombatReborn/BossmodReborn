@@ -2,6 +2,7 @@ namespace BossMod.Dawntrail.Savage.M01SBlackCat;
 
 sealed class ElevateAndEviscerateShockwave(BossModule module) : Components.GenericAOEs(module, default, "GTFO from shockwave!")
 {
+    private readonly List<AOEInstance> _aoesBuffer = []; // reused every call to avoid per-frame allocations
     private AOEInstance[] _aoe = [];
     private static readonly AOEShapeCross cross = new(60f, 5f);
     private readonly ElevateAndEviscerate _kb = module.FindComponent<ElevateAndEviscerate>()!;
@@ -9,7 +10,8 @@ sealed class ElevateAndEviscerateShockwave(BossModule module) : Components.Gener
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        var aoes = new List<AOEInstance>();
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         if (_kb.CurrentTarget != null && _kb.CurrentTarget != actor)
         {
             aoes.Add(new(cross, ArenaChanges.CellCenter(ArenaChanges.CellIndex(_kb.CurrentTarget.Position)), default, _kb.CurrentDeadline.AddSeconds(3.2d)));
@@ -63,10 +65,15 @@ sealed class ElevateAndEviscerate(BossModule module) : Components.GenericKnockba
     public override PlayerPriority CalcPriority(int pcSlot, Actor pc, int playerSlot, Actor player, ref uint customColor)
         => player == CurrentTarget ? PlayerPriority.Danger : PlayerPriority.Irrelevant;
 
+    private readonly Knockback[] _kb = new Knockback[1];
+
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (CurrentTarget != null && actor == CurrentTarget && CurrentKnockbackDistance > 0)
-            return new Knockback[1] { new(Arena.Center, CurrentKnockbackDistance, CurrentDeadline, direction: actor.Rotation, kind: Kind.DirForward, ignoreImmunes: true) };
+        {
+            _kb[0] = new(Arena.Center, CurrentKnockbackDistance, CurrentDeadline, direction: actor.Rotation, kind: Kind.DirForward, ignoreImmunes: true);
+            return _kb;
+        }
         return [];
     }
 
@@ -148,6 +155,7 @@ sealed class ElevateAndEviscerateHint(BossModule module) : Components.GenericAOE
 {
     private readonly ElevateAndEviscerate _kb = module.FindComponent<ElevateAndEviscerate>()!;
     private readonly ArenaChanges _arena = module.FindComponent<ArenaChanges>()!;
+    private readonly List<AOEInstance> _aoes = [];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
@@ -156,14 +164,14 @@ sealed class ElevateAndEviscerateHint(BossModule module) : Components.GenericAOE
         {
             var damagedCells = _arena.DamagedCells.SetBits();
             var tiles = ArenaChanges.Tiles;
-            var aoes = new List<AOEInstance>();
+            _aoes.Clear();
             var len = damagedCells.Length;
             for (var i = 0; i < len; ++i)
             {
                 var tile = tiles[damagedCells[i]];
-                aoes.Add(new(ElevateAndEviscerateShockwave.Rect, tile.Center, color: Colors.FutureVulnerable, risky: false));
+                _aoes.Add(new(ElevateAndEviscerateShockwave.Rect, tile.Center, color: Colors.FutureVulnerable, risky: false));
             }
-            return CollectionsMarshal.AsSpan(aoes);
+            return CollectionsMarshal.AsSpan(_aoes);
         }
         return [];
     }

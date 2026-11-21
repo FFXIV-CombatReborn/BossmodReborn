@@ -50,10 +50,14 @@ sealed class TEASpecific
         _plotSuretyResolvesFar.TickAdvance = new(5, 10000);
         foreach (var replay in replays)
         {
-            foreach (var op in replay.Ops.OfType<ActorState.OpModelState>().Where(op => op.Value.ModelState is 19 or 20))
+            for (var i = 0; i < replay.Ops.Count; ++i)
             {
+                if (replay.Ops[i] is not ActorState.OpModelState op || op.Value.ModelState is not (19 or 20))
+                {
+                    continue;
+                }
                 var hand = replay.FindParticipant(op.InstanceID, op.Timestamp);
-                var boss = replay.Participants.First(p => p.OID == oid && p.ExistsInWorldAt(op.Timestamp));
+                var boss = FindBoss(replay, oid, op.Timestamp);
                 if (hand != null && boss != null)
                 {
                     var handPos = new WPos(hand.PosRotAt(op.Timestamp).XZ());
@@ -64,10 +68,15 @@ sealed class TEASpecific
 
             var aidParting = ActionID.MakeSpell(AID.HandOfParting);
             var aidPrayer = ActionID.MakeSpell(AID.HandOfPrayer);
-            foreach (var action in replay.Actions.Where(a => a.ID == aidParting || a.ID == aidPrayer))
+            for (var i = 0; i < replay.Actions.Count; ++i)
             {
+                var action = replay.Actions[i];
+                if (action.ID != aidParting && action.ID != aidPrayer)
+                {
+                    continue;
+                }
                 var hand = replay.FindParticipant(action.Source.InstanceID, action.Timestamp);
-                var boss = replay.Participants.First(p => p.OID == oid && p.ExistsInWorldAt(action.Timestamp));
+                var boss = FindBoss(replay, oid, action.Timestamp);
                 if (hand != null && boss != null)
                 {
                     var handPos = new WPos(hand.PosRotAt(action.Timestamp).XZ());
@@ -92,8 +101,13 @@ sealed class TEASpecific
             }
 
             var aidSurety = ActionID.MakeSpell(AID.PlaintOfSurety);
-            foreach (var action in replay.Actions.Where(a => a.ID == aidSurety && a.Targets.Count == 2))
+            for (var i = 0; i < replay.Actions.Count; ++i)
             {
+                var action = replay.Actions[i];
+                if (action.ID != aidSurety || action.Targets.Count != 2)
+                {
+                    continue;
+                }
                 var t1 = action.Targets[0].Target;
                 var t2 = action.Targets[1].Target;
                 var adjTS = action.Timestamp.AddSeconds(-2);
@@ -109,6 +123,19 @@ sealed class TEASpecific
                 list.Add(new() { Replay = replay, Timestamp = action.Timestamp, Distance = (p1 - p2).Length(), Damage = ReplayUtils.ActionDamage(action.Targets[0]) });
             }
         }
+    }
+
+    private static Replay.Participant? FindBoss(Replay replay, uint oid, DateTime timestamp)
+    {
+        for (var i = 0; i < replay.Participants.Count; ++i)
+        {
+            var p = replay.Participants[i];
+            if (p.OID == oid && p.ExistsInWorldAt(timestamp))
+            {
+                return p;
+            }
+        }
+        return null;
     }
 
     public void Draw(UITree tree)

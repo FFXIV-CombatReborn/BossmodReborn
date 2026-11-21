@@ -80,10 +80,14 @@ public enum SID : uint
     MaleficS = 4776, // none->player, extra=0x0
     MaleficSE = 4777, // none->player, extra=0x0
     MaleficSW = 4778, // none->player, extra=0x0
+    MaleficSEW = 4779, // none->player, extra=0x0
     MaleficN = 4780, // none->player, extra=0x0
     MaleficNE = 4781, // none->player, extra=0x0
     MaleficNW = 4782, // none->player, extra=0x0
+    MaleficNEW = 4783, // none->player, extra=0x0
     MaleficNS = 4784, // none->player, extra=0x0
+    MaleficNSE = 4785, // none->player, extra=0x0
+    MaleficNSW = 4786, // none->player, extra=0x0
     Bind = 2518, // none->player, extra=0x0
     PositiveCharge = 4821, // none->player, extra=0x0
     NegativeCharge = 4822, // none->player, extra=0x0

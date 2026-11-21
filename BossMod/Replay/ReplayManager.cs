@@ -22,23 +22,54 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
         public bool Disposing;
         public DateTime? InitialTime;
 
-        public ReplayEntry(string path, bool autoShow, DateTime? initialTime = null)
+        public ReplayEntry(string path, bool autoShow, SemaphoreSlim parseThrottle, DateTime? initialTime = null)
         {
             Path = path;
             AutoShowWindow = autoShow;
             InitialTime = initialTime;
-            Replay = Task.Run(() => ReplayParserLog.Parse(path, ref Progress, Cancel.Token));
+
+            var tcs = new TaskCompletionSource<Replay>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Replay = tcs.Task;
+            _ = parseThrottle.WaitAsync(Cancel.Token).ContinueWith(t =>
+            {
+                if (t.IsCanceled || Cancel.IsCancellationRequested)
+                {
+                    tcs.TrySetResult(new());
+                    return;
+                }
+
+                var result = new Replay();
+                try
+                {
+                    result = ReplayParserLog.Parse(path, ref Progress, Cancel.Token);
+                }
+                catch (Exception ex)
+                {
+                    Service.Log($"[ReplayManager] Parse failed for {path}: {ex}");
+                }
+                finally
+                {
+                    parseThrottle.Release();
+                }
+                tcs.TrySetResult(result);
+            }, TaskScheduler.Default);
         }
 
         public void Dispose()
         {
+            if (Disposing)
+            {
+                return;
+            }
             Disposing = true;
             Window?.Dispose();
             Cancel.Cancel();
-            Replay.Wait();
-            Replay.Dispose();
-            Cancel.Dispose();
             Disposed = true;
+            _ = Replay.ContinueWith(static (t, s) =>
+            {
+                ((CancellationTokenSource)s!).Dispose();
+                t.Dispose();
+            }, Cancel, TaskScheduler.Default);
         }
 
         public void Show(RotationDatabase rotationDB)
@@ -64,7 +95,19 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
 
         public void Show()
         {
-            Analysis ??= new([.. Replays.Where(r => r.Replay.IsCompletedSuccessfully && r.Replay.Result.Ops.Count > 0).Select(r => r.Replay.Result)]);
+            if (Analysis == null)
+            {
+                var loaded = new List<Replay>(Replays.Count);
+                for (var i = 0; i < Replays.Count; ++i)
+                {
+                    var r = Replays[i];
+                    if (r.Replay.IsCompletedSuccessfully && r.Replay.Result.Ops.Count > 0)
+                    {
+                        loaded.Add(r.Replay.Result);
+                    }
+                }
+                Analysis = new(loaded);
+            }
             Window ??= new($"Multiple logs: {Identifier}", Analysis.Draw, false, new(1200f, 800f));
             Window.IsOpen = true;
         }
@@ -72,7 +115,9 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
 
     private readonly List<ReplayEntry> _replayEntries = [];
     private readonly List<AnalysisEntry> _analysisEntries = [];
+    private readonly SemaphoreSlim _parseThrottle = new(Math.Max(1, Environment.ProcessorCount / 2));
     private int _nextAnalysisId;
+    private int _activeConversions;
     private string _path = "";
     private bool _convertAnonymize;
     private FileDialog? _fileDialog;
@@ -83,35 +128,52 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
 
     public void Dispose()
     {
-        foreach (var e in _analysisEntries)
+        for (var i = 0; i < _analysisEntries.Count; ++i)
         {
-            e.Dispose();
+            _analysisEntries[i].Dispose();
         }
 
-        foreach (var e in _replayEntries)
+        var pending = new List<Task>(_replayEntries.Count);
+        for (var i = 0; i < _replayEntries.Count; ++i)
         {
+            var e = _replayEntries[i];
+            pending.Add(e.Replay);
             e.Dispose();
         }
+        if (pending.Count > 0)
+        {
+            try
+            {
+                Task.WhenAll(pending).Wait(TimeSpan.FromSeconds(5));
+            }
+            catch (Exception ex)
+            {
+                Service.Log($"[ReplayManager] Error waiting for replay parse shutdown: {ex}");
+            }
+        }
+        _parseThrottle.Dispose();
     }
 
     public void Update()
     {
         // remove disposed entries
-        _replayEntries.RemoveAll(e => e.Disposed);
-        _analysisEntries.RemoveAll(e => e.Disposed);
+        _replayEntries.RemoveAll(static e => e.Disposed);
+        _analysisEntries.RemoveAll(static e => e.Disposed);
 
         // auto-show replay windows that are now ready
-        foreach (var e in _replayEntries)
+        for (var i = 0; i < _replayEntries.Count; ++i)
         {
+            var e = _replayEntries[i];
             if (e.AutoShowWindow && e.Window == null && e.Replay.IsCompletedSuccessfully && e.Replay.Result.Ops.Count > 0)
             {
                 e.Show(_rotationDB);
             }
         }
         // auto-show analysis windows that are now ready, auto dispose entries that had their windows closed
-        foreach (var e in _analysisEntries)
+        for (var i = 0; i < _analysisEntries.Count; ++i)
         {
-            if (e.Analysis == null && e.Replays.All(r => r.Replay.IsCompleted))
+            var e = _analysisEntries[i];
+            if (e.Analysis == null && AllReplaysCompleted(e.Replays))
             {
                 e.Show();
             }
@@ -125,6 +187,10 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
     public void Draw()
     {
         DrawNewEntry();
+        if (_activeConversions > 0)
+        {
+            ImGui.TextUnformatted($"Converting {_activeConversions} replay(s) in background...");
+        }
         DrawEntries();
         DrawEntriesOperations();
 
@@ -132,7 +198,8 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
         {
             if (_fileDialog.GetIsOk())
             {
-                _path = _fileDialog.GetResults().FirstOrDefault() ?? "";
+                var results = _fileDialog.GetResults();
+                _path = results.Count > 0 ? results[0] : "";
                 _logDirectory = _fileDialog.GetCurrentPath();
             }
             _fileDialog.Hide();
@@ -153,8 +220,9 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
         ImGui.TableSetupColumn("op", ImGuiTableColumnFlags.WidthFixed, 100f);
         ImGui.TableSetupColumn("unload", ImGuiTableColumnFlags.WidthFixed, 70f);
 
-        foreach (var e in _replayEntries)
+        for (var i = 0; i < _replayEntries.Count; ++i)
         {
+            var e = _replayEntries[i];
             using var idScope = ImRaii.PushId(e.Path);
 
             ImGui.TableNextColumn();
@@ -213,9 +281,13 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
             if (ImGui.Button(e.Replay.IsCompleted ? "Unload" : "Cancel"))
             {
                 e.Dispose();
-                foreach (var a in _analysisEntries.Where(a => !a.Disposed && a.Replays.Contains(e)))
+                for (var ai = 0; ai < _analysisEntries.Count; ++ai)
                 {
-                    a.Dispose();
+                    var a = _analysisEntries[ai];
+                    if (!a.Disposed && a.Replays.Contains(e))
+                    {
+                        a.Dispose();
+                    }
                 }
                 dispose = true;
             }
@@ -223,7 +295,7 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
             ImGui.TableNextColumn();
             ImGui.Checkbox($"{e.Path}", ref e.Selected);
         }
-        if (dispose) //  replays somehow don't get cleaned up correctly without this?
+        if (dispose) // replays somehow don't get cleaned up correctly without this?
         {
             Plugin.GarbageCollection();
         }
@@ -237,13 +309,20 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
         }
 
         var dispose = false;
-        var numSelected = _replayEntries.Count(e => e.Selected);
+        var numSelected = 0;
+        for (var i = 0; i < _replayEntries.Count; ++i)
+        {
+            if (_replayEntries[i].Selected)
+            {
+                ++numSelected;
+            }
+        }
         var shouldSelectAll = _replayEntries.Count == 0 || numSelected < _replayEntries.Count;
         if (ImGui.Button(shouldSelectAll ? "Select all" : "Unselect all"))
         {
-            foreach (var e in _replayEntries)
+            for (var i = 0; i < _replayEntries.Count; ++i)
             {
-                e.Selected = shouldSelectAll;
+                _replayEntries[i].Selected = shouldSelectAll;
             }
         }
         using (ImRaii.Disabled(numSelected == 0))
@@ -251,38 +330,58 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
             ImGui.SameLine();
             if (ImGui.Button("Analyze selected"))
             {
-                _analysisEntries.Add(new((++_nextAnalysisId).ToString(), [.. _replayEntries.Where(e => e.Selected)]));
+                var selected = new List<ReplayEntry>(numSelected);
+                for (var i = 0; i < _replayEntries.Count; ++i)
+                {
+                    if (_replayEntries[i].Selected)
+                    {
+                        selected.Add(_replayEntries[i]);
+                    }
+                }
+                _analysisEntries.Add(new((++_nextAnalysisId).ToString(), selected));
             }
             ImGui.SameLine();
             if (ImGui.Button("Unload selected"))
             {
-                foreach (var e in _replayEntries.Where(e => e.Selected))
+                for (var i = 0; i < _analysisEntries.Count; ++i)
                 {
-                    e.Dispose();
+                    var a = _analysisEntries[i];
+                    for (var j = 0; j < a.Replays.Count; ++j)
+                    {
+                        if (a.Replays[j].Selected)
+                        {
+                            a.Dispose();
+                            break;
+                        }
+                    }
                 }
 
-                foreach (var e in _analysisEntries.Where(e => e.Replays.Any(r => r.Selected)))
+                for (var i = 0; i < _replayEntries.Count; ++i)
                 {
-                    e.Dispose();
+                    if (_replayEntries[i].Selected)
+                    {
+                        _replayEntries[i].Dispose();
+                        dispose = true;
+                    }
                 }
             }
         }
         ImGui.SameLine();
         if (ImGui.Button("Unload all"))
         {
-            foreach (var e in _replayEntries)
+            for (var i = 0; i < _replayEntries.Count; ++i)
             {
-                e.Dispose();
+                _replayEntries[i].Dispose();
             }
 
-            foreach (var e in _analysisEntries)
+            for (var i = 0; i < _analysisEntries.Count; ++i)
             {
-                e.Dispose();
+                _analysisEntries[i].Dispose();
             }
 
             dispose = true;
         }
-        if (dispose) //  replays somehow don't get cleaned up correctly without this?
+        if (dispose) // replays somehow don't get cleaned up correctly without this?
         {
             Plugin.GarbageCollection();
         }
@@ -297,48 +396,80 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
             _fileDialog ??= new FileDialog("select_log", "Select file or directory", "Log files{.log},All files{.*}", _logDirectory, "", ".log", 1, false, ImGuiFileDialogFlags.SelectOnly);
             // work around an oversight(?) in dalamud
             // TODO: we should use FileDialogManager instead
-            _fileDialog.SelectionChanged += (e, s) => { };
+            _fileDialog.SelectionChanged += static (e, s) => { };
             _fileDialog.Show();
         }
+
+        var cleanPath = GetCleanPath();
         ImGui.SameLine();
-        using (ImRaii.Disabled(_path.Length == 0 || _replayEntries.Any(e => e.Path == _path)))
+        using (ImRaii.Disabled(cleanPath.Length == 0 || HasReplayEntry(cleanPath)))
         {
             if (ImGui.Button("Open"))
             {
-                CleanPath();
-                _replayEntries.Add(new(_path, true));
+                _path = cleanPath;
+                _replayEntries.Add(new(cleanPath, true, _parseThrottle));
             }
         }
         ImGui.SameLine();
-        using (ImRaii.Disabled(_path.Length == 0 || _analysisEntries.Any(e => e.Identifier == _path)))
+        using (ImRaii.Disabled(cleanPath.Length == 0 || HasAnalysisEntry(cleanPath)))
         {
             if (ImGui.Button("Analyze all"))
             {
-                CleanPath();
-                var replays = LoadAll(_path);
+                _path = cleanPath;
+                var replays = LoadAll(cleanPath);
                 if (replays.Count > 0)
                 {
-                    _analysisEntries.Add(new(_path, replays));
+                    _analysisEntries.Add(new(cleanPath, replays));
                 }
             }
         }
         ImGui.SameLine();
-        using (ImRaii.Disabled(_path.Length == 0))
+        using (ImRaii.Disabled(cleanPath.Length == 0))
         {
             if (ImGui.Button("Load all"))
             {
-                CleanPath();
-                LoadAll(_path);
+                _path = cleanPath;
+                LoadAll(cleanPath);
             }
         }
     }
 
-    private void CleanPath()
+    private string GetCleanPath() => _path.Length >= 2 && _path.StartsWith('"') && _path.EndsWith('"') ? _path[1..^1] : _path;
+
+    private bool HasReplayEntry(string path)
     {
-        if (_path.StartsWith('"') && _path.EndsWith('"'))
+        for (var i = 0; i < _replayEntries.Count; ++i)
         {
-            _path = _path[1..^1];
+            if (_replayEntries[i].Path == path)
+            {
+                return true;
+            }
         }
+        return false;
+    }
+
+    private bool HasAnalysisEntry(string identifier)
+    {
+        for (var i = 0; i < _analysisEntries.Count; ++i)
+        {
+            if (_analysisEntries[i].Identifier == identifier)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool AllReplaysCompleted(List<ReplayEntry> replays)
+    {
+        for (var i = 0; i < replays.Count; ++i)
+        {
+            if (!replays[i].Replay.IsCompleted)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private List<ReplayEntry> LoadAll(string path)
@@ -355,10 +486,18 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
             }
             foreach (var fi in di.EnumerateFiles(pattern, new EnumerationOptions { RecurseSubdirectories = true }))
             {
-                var r = _replayEntries.Find(e => e.Path == fi.FullName);
+                ReplayEntry? r = null;
+                for (var i = 0; i < _replayEntries.Count; ++i)
+                {
+                    if (_replayEntries[i].Path == fi.FullName)
+                    {
+                        r = _replayEntries[i];
+                        break;
+                    }
+                }
                 if (r == null)
                 {
-                    r = new ReplayEntry(fi.FullName, false);
+                    r = new ReplayEntry(fi.FullName, false, _parseThrottle);
                     _replayEntries.Add(r);
                 }
                 res.Add(r);
@@ -379,9 +518,25 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
             return;
         }
 
-        var player = new ReplayPlayer(r);
-        player.WorldState.Frame.Timestamp = r.Ops[0].Timestamp; // so that we get correct name etc.
-        using var relogger = new ReplayRecorder(player.WorldState, format, false, new DirectoryInfo(_logDirectory), format.ToString(), anonymize);
-        player.AdvanceTo(DateTime.MaxValue, () => { });
+        var outDir = new DirectoryInfo(_logDirectory);
+        Interlocked.Increment(ref _activeConversions);
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var player = new ReplayPlayer(r);
+                player.WorldState.Frame.Timestamp = r.Ops[0].Timestamp; // so that we get correct name etc.
+                using var relogger = new ReplayRecorder(player.WorldState, format, false, outDir, format.ToString(), anonymize);
+                player.AdvanceTo(DateTime.MaxValue, static () => { });
+            }
+            catch (Exception ex)
+            {
+                Service.Log($"Failed to convert replay {r.Path}: {ex}");
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _activeConversions);
+            }
+        });
     }
 }

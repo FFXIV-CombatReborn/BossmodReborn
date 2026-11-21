@@ -31,7 +31,13 @@ sealed class P1CyclonicBreakSpreadStack(BossModule module) : Components.UniformS
             case (uint)AID.CyclonicBreakImageStack:
                 // TODO: this can target either supports or dd
                 Activation = Module.CastFinishAt(spell, 2.7d);
-                AddStacks(Raid.WithoutSlot(true, true, true).Where(p => p.Class.IsSupport()), Activation);
+                var stackParty = Raid.WithoutSlot(true, true, true);
+                for (var i = 0; i < stackParty.Length; ++i)
+                {
+                    var p = stackParty[i];
+                    if (p.Class.IsSupport())
+                        AddStack(p, Activation);
+                }
                 break;
             case (uint)AID.CyclonicBreakBossSpread:
             case (uint)AID.CyclonicBreakImageSpread:
@@ -144,14 +150,33 @@ sealed class P1CyclonicBreakAIDodgeSpreadStack(BossModule module) : BossComponen
         {
             if (_spreadStack.Stacks.Count > 0)
             {
-                var closestPartner = Module.Raid.WithoutSlot(false, true, true).Where(p => p.Class.IsSupport() != isSupport).Closest(actor.Position);
+                Actor? closestPartner = null;
+                var bestDistSq = float.MaxValue;
+                var party = Module.Raid.WithoutSlot(false, true, true);
+                for (var i = 0; i < party.Length; ++i)
+                {
+                    var p = party[i];
+                    if (p.Class.IsSupport() == isSupport)
+                        continue;
+                    var d = (p.Position - actor.Position).LengthSq();
+                    if (d < bestDistSq)
+                    {
+                        bestDistSq = d;
+                        closestPartner = p;
+                    }
+                }
                 if (closestPartner != null)
                     hints.AddForbiddenZone(new SDInvertedCircle(closestPartner.Position, _spreadStack.StackRadius), _spreadStack.Activation);
             }
             else
             {
-                foreach (var p in Raid.WithoutSlot(false, true, true).Exclude(actor))
-                    hints.AddForbiddenZone(new SDCircle(p.Position, _spreadStack.SpreadRadius), _spreadStack.Activation);
+                var party = Raid.WithoutSlot(false, true, true);
+                for (var i = 0; i < party.Length; ++i)
+                {
+                    var p = party[i];
+                    if (p != actor)
+                        hints.AddForbiddenZone(new SDCircle(p.Position, _spreadStack.SpreadRadius), _spreadStack.Activation);
+                }
             }
         }
     }

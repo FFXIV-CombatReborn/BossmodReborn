@@ -9,8 +9,13 @@ sealed class MapEffectInfo
         var moduleInfo = BossModuleRegistry.FindByOID(oid);
         foreach (var replay in replays)
         {
-            foreach (var enc in replay.Encounters.Where(enc => enc.OID == oid))
+            for (var i = 0; i < replay.Encounters.Count; ++i)
             {
+                var enc = replay.Encounters[i];
+                if (enc.OID != oid)
+                {
+                    continue;
+                }
                 foreach (var envc in replay.EncounterMapEffects(enc))
                 {
                     _data.GetOrAdd(envc.Index).GetOrAdd(envc.State).Add((replay, enc, envc.Timestamp));

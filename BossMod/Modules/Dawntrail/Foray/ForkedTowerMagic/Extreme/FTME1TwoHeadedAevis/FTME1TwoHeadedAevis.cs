@@ -221,5 +221,5 @@ public sealed class FTME1TwoHeadedAevis(WorldState ws, Actor primary) : BossModu
         Arena.Actor(_blueHead);
     }
 
-    protected override bool CheckPull() => (PrimaryActor.InCombat || (_blueHead?.InCombat ?? false)) && Raid.Player()!.Position.InSquare(Arena.Center, 20f);
+    protected override bool CheckPull() => (PrimaryActor.InCombat || (_blueHead?.InCombat ?? false)) && Raid.Player() is Actor player && player.Position.InSquare(Arena.Center, 20f);
 }

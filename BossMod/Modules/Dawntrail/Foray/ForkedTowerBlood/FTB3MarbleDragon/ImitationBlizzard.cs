@@ -247,6 +247,7 @@ sealed class ImitationBlizzard(BossModule module) : Components.GenericAOEs(modul
         }
     }
 
+    private readonly List<ShapeDistance> _forbiddenBuffer = [];
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (gelidGaol[slot])
@@ -257,7 +258,8 @@ sealed class ImitationBlizzard(BossModule module) : Components.GenericAOEs(modul
         {
             var aoes = ActiveAOEs(slot, actor);
             var len = aoes.Length;
-            var forbidden = new List<ShapeDistance>(len);
+            var forbidden = _forbiddenBuffer;
+            forbidden.Clear();
             for (var i = 0; i < len; ++i)
             {
                 ref readonly var aoe = ref aoes[i];

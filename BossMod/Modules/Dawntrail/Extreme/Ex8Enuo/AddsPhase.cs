@@ -14,7 +14,7 @@ sealed class LoomingEmptinessKillZone(BossModule module) : Components.SimpleAOEs
 
 sealed class EmptyShadowTower(BossModule module) : Components.CastTowers(module, (uint)AID.EmptyShadow, 7f)
 {
-    private static BitMask badsoakers;
+    private BitMask badsoakers;
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {

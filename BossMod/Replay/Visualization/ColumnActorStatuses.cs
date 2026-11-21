@@ -25,9 +25,25 @@ public sealed class ColumnActorStatuses : Timeline.ColumnGroup
         _enc = enc;
         _target = actor;
         _sep = Add(new ColumnSeparator(timeline, width: 0));
-        foreach (var s in replay.EncounterStatuses(enc).Where(s => s.Target == actor && !_columns.Any(c => c.sid == s.ID && c.source == s.Source)))
+        foreach (var s in replay.EncounterStatuses(enc))
         {
-            _columns.Add((s.ID, s.Source, null));
+            if (s.Target != actor)
+            {
+                continue;
+            }
+            var seen = false;
+            for (var i = 0; i < _columns.Count; ++i)
+            {
+                if (_columns[i].sid == s.ID && _columns[i].source == s.Source)
+                {
+                    seen = true;
+                    break;
+                }
+            }
+            if (!seen)
+            {
+                _columns.Add((s.ID, s.Source, null));
+            }
         }
     }
 
@@ -36,13 +52,23 @@ public sealed class ColumnActorStatuses : Timeline.ColumnGroup
         foreach (ref var c in _columns.AsSpan())
         {
             var visible = c.col?.Width > 0;
-            if (ImGui.Checkbox($"{Utils.StatusString(c.sid)} from {ReplayUtils.ParticipantString(c.source, c.source?.WorldExistence.FirstOrDefault().Start ?? default)}", ref visible))
+            var srcTime = c.source != null && c.source.WorldExistence.Count > 0 ? c.source.WorldExistence[0].Start : default;
+            if (ImGui.Checkbox($"{Utils.StatusString(c.sid)} from {ReplayUtils.ParticipantString(c.source, srcTime)}", ref visible))
             {
                 c.col ??= BuildColumn(c.sid, c.source);
                 c.col.Width = visible ? ColumnGenericHistory.DefaultWidth : 0;
             }
         }
-        _sep.Width = Columns.Any(c => c != _sep && c.Width > 0) ? 1 : 0;
+        var anyVisible = false;
+        for (var i = 0; i < Columns.Count; ++i)
+        {
+            if (Columns[i] != _sep && Columns[i].Width > 0)
+            {
+                anyVisible = true;
+                break;
+            }
+        }
+        _sep.Width = anyVisible ? 1 : 0;
     }
 
     private ColumnGenericHistory BuildColumn(uint statusID, Replay.Participant? source)
@@ -51,8 +77,21 @@ public sealed class ColumnActorStatuses : Timeline.ColumnGroup
         DateTime prevEnd = default;
 
         var minTime = _enc.Time.Start.AddSeconds(Timeline.MinTime);
-        foreach (var s in _replay.Statuses.SkipWhile(s => s.Time.Start < minTime).TakeWhile(s => s.Time.Start <= _enc.Time.End).Where(s => s.ID == statusID && s.Source == source && s.Target == _target))
+        for (var i = 0; i < _replay.Statuses.Count; ++i)
         {
+            var s = _replay.Statuses[i];
+            if (s.Time.Start < minTime)
+            {
+                continue;
+            }
+            if (s.Time.Start > _enc.Time.End)
+            {
+                break;
+            }
+            if (s.ID != statusID || s.Source != source || s.Target != _target)
+            {
+                continue;
+            }
             var e = res.AddHistoryEntryRange(_enc.Time.Start, s.Time, $"{Utils.StatusString(statusID)} ({s.StartingExtra:X}) on {ReplayUtils.ParticipantString(_target, s.Time.Start)} from {ReplayUtils.ParticipantString(s.Source, s.Time.Start)}", 0x80808080);
             e.TooltipExtra = (res, t) =>
             {

@@ -53,6 +53,7 @@ public enum TetherID : uint
 sealed class Implosion(BossModule module) : Components.RaidwideCast(module, (uint)AID.Implosion);
 sealed class ArachnidFunnel(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
     // boss tethers to next add after each jump
     // casts web to next add / aoe order
     // any pattern to positions? able to predict based on add rotation towards location?
@@ -65,7 +66,8 @@ sealed class ArachnidFunnel(BossModule module) : Components.GenericAOEs(module)
             return [];
         }
 
-        List<AOEInstance> aoes = [];
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         var actors = CollectionsMarshal.AsSpan(_actors);
         var count = actors.Length;
 
@@ -134,6 +136,7 @@ sealed class Conformity(BossModule module) : Components.SimpleAOEs(module, (uint
 
 sealed class ConformityAdds(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
     // any pattern to how adds move after being assigned status?
     // loses status little before reaching final spot
     // get angle on status gain, get final angle after rotation to predict final position?
@@ -148,7 +151,8 @@ sealed class ConformityAdds(BossModule module) : Components.GenericAOEs(module)
             return [];
         }
 
-        List<AOEInstance> aoes = [];
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         var conformities = CollectionsMarshal.AsSpan(_conformities);
         var count = conformities.Length;
         for (var i = 0; i < count; ++i)
@@ -288,26 +292,6 @@ sealed class BedrockUplift(BossModule module) : Components.ConcentricAOEs(module
 
 sealed class ArachneDaughter(BossModule module) : Components.Adds(module, (uint)OID.ArachneDaughter, 2);
 sealed class VenomEruption(BossModule module) : Components.RaidwideCast(module, (uint)AID.VenomEruption, "Kill adds before they cast!");
-sealed class Debug(BossModule module) : BossComponent(module)
-{
-    public override void DrawArenaForeground(int pcSlot, Actor pc)
-    {
-        var adds = WorldState.Actors.Where(x => x.OID == (uint)OID.ArachneDaughter).ToList();
-        for (var i = 0; i < adds.Count; ++i)
-        {
-            Arena.ZoneCircle(adds[i].Position, 2f, Colors.SafeFromAOE);
-        }
-
-        var compass = Angle.AnglesCardinals.Concat(Angle.AnglesIntercardinals).ToArray();
-        for (var i = 0; i < compass.Length; ++i)
-        {
-            var edgeDistance = Arena.Bounds.IntersectRay(default, compass[i].ToDirection());
-            var edgePosition = Arena.Center + compass[i].ToDirection() * edgeDistance;
-            Arena.ZoneCircleOutline(edgePosition, 3f, default);
-        }
-    }
-}
-
 sealed class CE215WebofTerrorStates : StateMachineBuilder
 {
     public CE215WebofTerrorStates(BossModule module) : base(module)
@@ -326,5 +310,5 @@ sealed class CE215WebofTerrorStates : StateMachineBuilder
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.CrescentArachne, Contributors = "gynorhino", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1093u, NameID = 55u)]
 public sealed class CE215WebofTerror(WorldState ws, Actor primary) : BossModule(ws, primary, new(170f, -136f), new ArenaBoundsCircle(20f))
 {
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 25f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 25f);
 }

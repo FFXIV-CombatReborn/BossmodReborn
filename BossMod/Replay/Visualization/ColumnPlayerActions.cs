@@ -32,8 +32,21 @@ public sealed class ColumnPlayerActions : Timeline.ColumnGroup
 
         var iCast = 0;
         var minTime = enc.Time.Start.AddSeconds(timeline.MinTime);
-        foreach (var a in replay.Actions.SkipWhile(a => a.Timestamp < minTime).TakeWhile(a => a.Timestamp <= enc.Time.End).Where(a => a.Source == player))
+        for (var ai = 0; ai < replay.Actions.Count; ++ai)
         {
+            var a = replay.Actions[ai];
+            if (a.Timestamp < minTime)
+            {
+                continue;
+            }
+            if (a.Timestamp > enc.Time.End)
+            {
+                break;
+            }
+            if (a.Source != player)
+            {
+                continue;
+            }
             // note: we assume autoattacks are never casted... in fact, I think only GCDs can be casted
             var actionName = $"{a.ID} -> {ReplayUtils.ParticipantString(a.MainTarget, a.Timestamp)} #{a.GlobalSequence}";
             if (a.ID == ActionDefinitions.IDAutoAttack || a.ID == ActionDefinitions.IDAutoShot)
@@ -101,7 +114,7 @@ public sealed class ColumnPlayerActions : Timeline.ColumnGroup
                                 var statuses = replay.Statuses;
                                 Replay.Status? status = null;
                                 var countS = statuses.Count;
-                                for (var k = 0; k < count; ++k)
+                                for (var k = 0; k < countS; ++k)
                                 {
                                     var s = statuses[k];
                                     if (s.ID == eff.Value && s.Target == target && s.Source == source)
@@ -203,7 +216,16 @@ public sealed class ColumnPlayerActions : Timeline.ColumnGroup
             }
         }
 
-        _sep.Width = Columns.Any(c => c.Width > 0) ? 1 : 0;
+        var anyVisible = false;
+        for (var i = 0; i < Columns.Count; ++i)
+        {
+            if (Columns[i].Width > 0)
+            {
+                anyVisible = true;
+                break;
+            }
+        }
+        _sep.Width = anyVisible ? 1 : 0;
     }
 
     private void SetupClass(Class playerClass)
@@ -343,5 +365,20 @@ public sealed class ColumnPlayerActions : Timeline.ColumnGroup
         data.CooldownAction = aid;
     }
 
-    private bool ActionConfirmed(Replay.Action a) => a.Targets.Count == 0 || a.Targets.Any(t => t.ConfirmationSource != default || t.ConfirmationTarget != default);
+    private static bool ActionConfirmed(Replay.Action a)
+    {
+        if (a.Targets.Count == 0)
+        {
+            return true;
+        }
+        for (var i = 0; i < a.Targets.Count; ++i)
+        {
+            var t = a.Targets[i];
+            if (t.ConfirmationSource != default || t.ConfirmationTarget != default)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 }

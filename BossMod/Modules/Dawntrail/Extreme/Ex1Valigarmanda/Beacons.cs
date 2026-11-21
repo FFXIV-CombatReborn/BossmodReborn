@@ -3,7 +3,19 @@
 sealed class Beacons(BossModule module) : BossComponent(module)
 {
     public readonly List<Actor> Actors = [];
-    public IEnumerable<Actor> ActiveActors => Actors.Where(a => a.IsTargetable && !a.IsDead);
+    public bool AnyActive()
+    {
+        var count = Actors.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            var a = Actors[i];
+            if (a.IsTargetable && !a.IsDead)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public override void OnActorCreated(Actor actor)
     {

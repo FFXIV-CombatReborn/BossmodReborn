@@ -2,7 +2,8 @@
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.Kefka, Contributors = "Equilius", Expansion = BossModuleInfo.Expansion.Dawntrail,
     Category = BossModuleInfo.Category.Ultimate, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1094u, NameID = 7131u, SortOrder = 1, PlanLevel = 100)]
-public sealed class DMU : BossModule {
+public sealed class DMU : BossModule
+{
     public DMU(WorldState ws, Actor primary) : this(ws, primary, BuildArena()) { }
 
     private DMU(WorldState ws, Actor primary, (WPos center, ArenaBounds arena) a) : base(ws, primary, a.center, a.arena) { }
@@ -14,9 +15,13 @@ public sealed class DMU : BossModule {
         return (arena.Center, arena);
     }*/
 
-    public static (WPos center, ArenaBounds arena) BuildArena() {
-        var arena = new ArenaBoundsCircle(20.0f) {
-            WorldProjectionHeight = 0f, Y = 0.1f, BorderY = 0f
+    public static (WPos center, ArenaBounds arena) BuildArena()
+    {
+        var arena = new ArenaBoundsCircle(20.0f)
+        {
+            WorldProjectionHeight = 0f,
+            Y = 0.1f,
+            BorderY = 0f
         }; // looks ugly if we use any projection height due to weird floor geometry
         return (new WPos(100f, 100f), arena);
     }
@@ -43,8 +48,10 @@ public sealed class DMU : BossModule {
     private Actor? kefkaP5;
     public Actor? KefkaP5() => kefkaP5;
 
-    protected override void DrawEnemies(int pcSlot, Actor pc) {
-        switch (StateMachine.ActivePhaseIndex) {
+    protected override void DrawEnemies(int pcSlot, Actor pc)
+    {
+        switch (StateMachine.ActivePhaseIndex)
+        {
             case -1:
             case 0:
                 Arena.Actor(PrimaryActor);
@@ -66,8 +73,10 @@ public sealed class DMU : BossModule {
         }
     }
 
-    protected override void UpdateModule() {
-        switch (StateMachine.ActivePhaseIndex) {
+    protected override void UpdateModule()
+    {
+        switch (StateMachine.ActivePhaseIndex)
+        {
             case 1:
                 bossP2 ??= GetActor((uint)OID.BossP2);
                 break;

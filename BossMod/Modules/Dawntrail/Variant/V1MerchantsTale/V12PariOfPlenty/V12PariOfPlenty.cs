@@ -172,6 +172,7 @@ sealed class GaleForce(BossModule module) : Components.GenericAOEs(module)
         }
     }
 
+    private readonly List<AOEInstance> _survivorsBuffer = [];
     public override void Update()
     {
         // bird isn't finished rotating at start of cast
@@ -188,7 +189,8 @@ sealed class GaleForce(BossModule module) : Components.GenericAOEs(module)
             var origin = _bird.Position;
             var rotation = _bird.Rotation;
 
-            List<AOEInstance> survivors = [];
+            var survivors = _survivorsBuffer;
+            survivors.Clear();
             var aoes = CollectionsMarshal.AsSpan(_aoes);
             var len = aoes.Length;
 
@@ -265,6 +267,7 @@ sealed class StrongWind(BossModule module) : Components.GenericAOEs(module)
 
 sealed class ThievesWeaves(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
     // gems spawn in 3 of 4 -775 to -745 with 10f between
     // could just track safe carpet and fill unsafe later with AOE
     private bool _start = false;
@@ -280,7 +283,8 @@ sealed class ThievesWeaves(BossModule module) : Components.GenericAOEs(module)
         if (_safeCarpet == null)
             return [];
 
-        List<AOEInstance> aoes = [];
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         var carpets = CollectionsMarshal.AsSpan(_carpets);
         var len = carpets.Length;
 

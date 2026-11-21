@@ -6,61 +6,34 @@ sealed class NaughtGrowsWildCharge(BossModule module) : Components.InverseWildCh
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
         Source = null;
-        switch (iconID)
+        if (iconID is not ((uint)IconID.NaughtGrowsWildChargeSingle or (uint)IconID.NaughtGrowsWildChargeDouble))
         {
-            case (uint)IconID.NaughtGrowsWildChargeSingle:
-                Source = actor;
-                var party = Raid.WithoutSlot(true, false, false);
-                for (var i = 0; i < party.Length; ++i)
-                {
-                    var p = party[i];
-                    if (p.InstanceID != targetID)
-                    {
-                        if (p.Role == Role.Tank)
-                        {
-                            PlayerRoles[Raid.FindSlot(p.InstanceID)] = PlayerRole.Share;
-                        }
-                        else
-                        {
-                            PlayerRoles[Raid.FindSlot(p.InstanceID)] = PlayerRole.ShareNotFirst;
-                        }
-                    }
-                }
-                PlayerRoles[Raid.FindSlot(targetID)] = PlayerRole.TargetNotFirst;
-                break;
-            //NOTE: This won't work if a healer is dead or unavailable.
-            //There's probably a better way?
-            case (uint)IconID.NaughtGrowsWildChargeDouble:
-                Source = actor;
-                var partya = Raid.WithoutSlot(true, false, false);
-                for (var i = 0; i < partya.Length; ++i)
-                {
-                    var p = partya[i];
-                    PlayerRoles[Raid.FindSlot(p.InstanceID)] = p.Role switch
-                    {
-                        Role.Healer => PlayerRole.TargetNotFirst,
-                        Role.Tank => PlayerRole.Share,
-                        _ => PlayerRole.ShareNotFirst,
-                    };
-                }
-                break;
+            return;
+        }
+
+        var single = iconID == (uint)IconID.NaughtGrowsWildChargeSingle;
+        Source = actor;
+        var party = Raid.WithSlot(true, false, false);
+        var len = party.Length;
+        var max = PlayerRoles.Length;
+        for (var i = 0; i < len; ++i)
+        {
+            ref readonly var p = ref party[i];
+            var slot = p.Item1;
+            if (slot >= max)
+            {
+                continue;
+            }
+            var member = p.Item2;
+            var isTarget = single ? member.InstanceID == targetID : member.Role == Role.Healer;
+            PlayerRoles[slot] = isTarget ? PlayerRole.TargetNotFirst : member.Role == Role.Tank ? PlayerRole.Share : PlayerRole.ShareNotFirst;
         }
     }
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID == (uint)AID.GreatReturnToNothing)
+        if (spell.Action.ID is (uint)AID.GreatReturnToNothing or (uint)AID.ReturnToNothing)
         {
-            for (var i = 0; i < PlayerRoles.Length; ++i)
-            {
-                PlayerRoles[i] = default;
-            }
-        }
-        if (spell.Action.ID == (uint)AID.ReturnToNothing)
-        {
-            for (var i = 0; i < PlayerRoles.Length; ++i)
-            {
-                PlayerRoles[i] = default;
-            }
+            Array.Clear(PlayerRoles);
         }
     }
 }

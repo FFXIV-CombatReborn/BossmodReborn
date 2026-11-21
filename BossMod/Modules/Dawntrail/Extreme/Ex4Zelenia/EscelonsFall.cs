@@ -98,7 +98,10 @@ sealed class EscelonsFall(BossModule module) : Components.GenericBaitAway(module
             ++NumCasts;
             if ((NumCasts & 3) == 0)
             {
-                order.RemoveAt(0);
+                if (order.Count != 0)
+                {
+                    order.RemoveAt(0);
+                }
                 ForbiddenPlayers = default;
                 CurMechanic = order.Count != 0 ? order[0] : Mechanic.None;
             }

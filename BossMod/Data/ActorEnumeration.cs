@@ -374,4 +374,290 @@ public static class ActorEnumeration
         }
         return array;
     }
+
+    // ---- allocation-free helpers for party arrays (Raid.WithoutSlot / Raid.WithSlot) and actor lists, BMR shit ----
+    public static BitMask Mask(this (int, Actor)[] range)
+    {
+        BitMask mask = default;
+        for (var i = 0; i < range.Length; ++i)
+            mask.Set(range[i].Item1);
+        return mask;
+    }
+
+    public static BitMask MaskExcluding(this (int, Actor)[] range, Actor? exclude)
+    {
+        BitMask mask = default;
+        for (var i = 0; i < range.Length; ++i)
+        {
+            if (range[i].Item2 != exclude)
+                mask.Set(range[i].Item1);
+        }
+        return mask;
+    }
+
+    public static BitMask MaskInRadius(this (int, Actor)[] range, WPos origin, float radius)
+    {
+        BitMask mask = default;
+        for (var i = 0; i < range.Length; ++i)
+        {
+            if (range[i].Item2.Position.InCircle(origin, radius))
+                mask.Set(range[i].Item1);
+        }
+        return mask;
+    }
+
+    public static BitMask MaskInRadiusExcluding(this (int, Actor)[] range, Actor origin, float radius)
+    {
+        BitMask mask = default;
+        var pos = origin.Position;
+        for (var i = 0; i < range.Length; ++i)
+        {
+            var a = range[i].Item2;
+            if (a != origin && a.Position.InCircle(pos, radius))
+                mask.Set(range[i].Item1);
+        }
+        return mask;
+    }
+
+    public static BitMask MaskInShape(this (int, Actor)[] range, AOEShape shape, WPos origin, Angle rotation, Actor? exclude = null)
+    {
+        BitMask mask = default;
+        for (var i = 0; i < range.Length; ++i)
+        {
+            var a = range[i].Item2;
+            if (a != exclude && shape.Check(a.Position, origin, rotation))
+                mask.Set(range[i].Item1);
+        }
+        return mask;
+    }
+
+    public static BitMask MaskByRole(this (int, Actor)[] range, Role role)
+    {
+        BitMask mask = default;
+        for (var i = 0; i < range.Length; ++i)
+        {
+            if (range[i].Item2.Role == role)
+                mask.Set(range[i].Item1);
+        }
+        return mask;
+    }
+
+    public static bool AnyInRadius(this Actor[] range, WPos origin, float radius)
+    {
+        for (var i = 0; i < range.Length; ++i)
+        {
+            if (range[i].Position.InCircle(origin, radius))
+                return true;
+        }
+        return false;
+    }
+
+    public static bool AnyInRadius(this List<Actor> range, WPos origin, float radius)
+    {
+        var count = range.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            if (range[i].Position.InCircle(origin, radius))
+                return true;
+        }
+        return false;
+    }
+
+    public static bool AnyInRadiusExcluding(this Actor[] range, Actor origin, float radius)
+    {
+        var pos = origin.Position;
+        for (var i = 0; i < range.Length; ++i)
+        {
+            var a = range[i];
+            if (a != origin && a.Position.InCircle(pos, radius))
+                return true;
+        }
+        return false;
+    }
+
+    public static int CountInRadius(this Actor[] range, WPos origin, float radius)
+    {
+        var n = 0;
+        for (var i = 0; i < range.Length; ++i)
+        {
+            if (range[i].Position.InCircle(origin, radius))
+                ++n;
+        }
+        return n;
+    }
+
+    public static int CountInRadius(this List<Actor> range, WPos origin, float radius)
+    {
+        var n = 0;
+        var count = range.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            if (range[i].Position.InCircle(origin, radius))
+                ++n;
+        }
+        return n;
+    }
+
+    public static int CountInRadius(this Actor[] range, WPos origin, float radius, Role role)
+    {
+        var n = 0;
+        for (var i = 0; i < range.Length; ++i)
+        {
+            var a = range[i];
+            if (a.Role == role && a.Position.InCircle(origin, radius))
+                ++n;
+        }
+        return n;
+    }
+
+    public static bool AnyInShape(this Actor[] range, AOEShape shape, WPos origin, Angle rotation, Actor? exclude = null)
+    {
+        for (var i = 0; i < range.Length; ++i)
+        {
+            var a = range[i];
+            if (a != exclude && shape.Check(a.Position, origin, rotation))
+                return true;
+        }
+        return false;
+    }
+
+    public static int CountInShape(this Actor[] range, AOEShape shape, WPos origin, Angle rotation, Actor? exclude = null)
+    {
+        var n = 0;
+        for (var i = 0; i < range.Length; ++i)
+        {
+            var a = range[i];
+            if (a != exclude && shape.Check(a.Position, origin, rotation))
+                ++n;
+        }
+        return n;
+    }
+
+    public static Actor? ClosestTo(this Actor[] range, WPos origin, Actor? exclude = null)
+    {
+        Actor? best = null;
+        var bestDistSq = float.MaxValue;
+        for (var i = 0; i < range.Length; ++i)
+        {
+            var a = range[i];
+            if (a == exclude)
+                continue;
+            var distSq = (a.Position - origin).LengthSq();
+            if (distSq < bestDistSq)
+            {
+                bestDistSq = distSq;
+                best = a;
+            }
+        }
+        return best;
+    }
+
+    public static Actor? ClosestTo(this List<Actor> range, WPos origin, Actor? exclude = null)
+    {
+        Actor? best = null;
+        var bestDistSq = float.MaxValue;
+        var count = range.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            var a = range[i];
+            if (a == exclude)
+                continue;
+            var distSq = (a.Position - origin).LengthSq();
+            if (distSq < bestDistSq)
+            {
+                bestDistSq = distSq;
+                best = a;
+            }
+        }
+        return best;
+    }
+
+    public static Actor? FarthestFrom(this Actor[] range, WPos origin, Actor? exclude = null)
+    {
+        Actor? best = null;
+        var bestDistSq = float.MinValue;
+        for (var i = 0; i < range.Length; ++i)
+        {
+            var a = range[i];
+            if (a == exclude)
+                continue;
+            var distSq = (a.Position - origin).LengthSq();
+            if (distSq > bestDistSq)
+            {
+                bestDistSq = distSq;
+                best = a;
+            }
+        }
+        return best;
+    }
+
+    public static ReadOnlySpan<Actor> SpanRange(this List<Actor> list, int start, int count = int.MaxValue)
+    {
+        var total = list.Count;
+        if (start >= total)
+            return [];
+        return CollectionsMarshal.AsSpan(list).Slice(start, Math.Min(count, total - start));
+    }
+
+    public static bool AnyInRadius(this ReadOnlySpan<Actor> range, WPos origin, float radius)
+    {
+        for (var i = 0; i < range.Length; ++i)
+        {
+            if (range[i].Position.InCircle(origin, radius))
+                return true;
+        }
+        return false;
+    }
+
+    public static Actor? FirstInRadius(this ReadOnlySpan<Actor> range, WPos origin, float radius)
+    {
+        for (var i = 0; i < range.Length; ++i)
+        {
+            if (range[i].Position.InCircle(origin, radius))
+                return range[i];
+        }
+        return null;
+    }
+
+    public static Actor? FirstInRadius(this List<Actor> range, WPos origin, float radius) => FirstInRadius(CollectionsMarshal.AsSpan(range), origin, radius);
+
+    public static void SortedByRange(this Actor[] range, WPos origin, List<Actor> result, Actor? exclude = null)
+    {
+        result.Clear();
+        for (var i = 0; i < range.Length; ++i)
+        {
+            var a = range[i];
+            if (a == exclude)
+                continue;
+            var distSq = (a.Position - origin).LengthSq();
+            var j = result.Count;
+            result.Add(a);
+            while (j > 0 && (result[j - 1].Position - origin).LengthSq() > distSq)
+            {
+                result[j] = result[j - 1];
+                --j;
+            }
+            result[j] = a;
+        }
+    }
+
+    public static void SortedByRange(this (int, Actor)[] range, WPos origin, List<(int, Actor)> result, int excludeSlot = -1)
+    {
+        result.Clear();
+        for (var i = 0; i < range.Length; ++i)
+        {
+            var e = range[i];
+            if (e.Item1 == excludeSlot)
+                continue;
+            var distSq = (e.Item2.Position - origin).LengthSq();
+            var j = result.Count;
+            result.Add(e);
+            while (j > 0 && (result[j - 1].Item2.Position - origin).LengthSq() > distSq)
+            {
+                result[j] = result[j - 1];
+                --j;
+            }
+            result[j] = e;
+        }
+    }
 }

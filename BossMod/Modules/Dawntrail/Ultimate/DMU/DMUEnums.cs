@@ -1,6 +1,7 @@
 ﻿namespace BossMod.Dawntrail.Ultimate.DMU;
 
-public enum OID : uint {
+public enum OID : uint
+{
     // Phase 1
     Kefka = 0x4C30, // R6.000, x1
     Helper = 0x233C, // R0.500, x37, Helper type
@@ -12,7 +13,6 @@ public enum OID : uint {
     TeleTrouncingArrow = 0x1EC023, // R0.500, x0 (spawn during fight), EventObj type
     StatuePurpleEye = 0x1EBFBE, // R0.500, x2, EventObj type // Purple eye for sleep
     StatueYellowEye = 0x1EBFBF, // R0.500, x2, EventObj type // Yellow eye for confusion
-
 
     Actor1e8536 = 0x1E8536, // R0.500-2.000, x1, EventObj type
     Actor1ebfb4 = 0x1EBFB4, // R0.500, x1, EventObj type
@@ -47,7 +47,8 @@ public enum OID : uint {
     FireTower = 0x1EC03E, // R0.500, x0 (spawn during fight), EventObj type
 }
 
-public enum AID : uint {
+public enum AID : uint
+{
     // Phase 1
     P1AutoAttack = 49746, // Kefka->player, no cast, single-target
     P1Teleport = 50173, // Kefka->location, no cast, single-target
@@ -286,7 +287,8 @@ public enum AID : uint {
     _Ability_ForsakenNull = 47930, // KefkaP5->self, 26.0s cast, range 100 circle - Enrage
 }
 
-public enum SID : uint {
+public enum SID : uint
+{
     // Default
     DamageDown = 2911, // Helper->player, extra=0x0
     MagicVulnerabilityUp = 2941, // Helper/4C31->player, extra=0x0
@@ -363,7 +365,8 @@ public enum SID : uint {
     LightningResistanceDownII = 2998, // Helper->player, extra=0x0 - Used for TB in other phases as well
 }
 
-public enum IconID : uint {
+public enum IconID : uint
+{
     // Phase 1
     TankBuster = 218, // player->self
     P1SpreadIcon = 127, // player->self
@@ -394,7 +397,8 @@ public enum IconID : uint {
 
 }
 
-public enum Animations : uint {
+public enum Animations : uint
+{
     // Phase 1
     PulseOrbStart = 0x400080,
     PulseOrbEnd = 0x1000200,
@@ -413,7 +417,8 @@ public enum Animations : uint {
     TowerExplosion = 0x10040,
 }
 
-public enum TetherID : uint {
+public enum TetherID : uint
+{
     // Phase 1
     GravenImageTether = 45, // 4C31->player
 

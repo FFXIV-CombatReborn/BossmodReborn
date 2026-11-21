@@ -8,6 +8,7 @@ sealed class Quicksand(BossModule module) : Components.GenericAOEs(module)
     public AOEInstance[] AOE = [];
     private readonly QuicksandDoubleStyleHeavenBomb _baits1 = module.FindComponent<QuicksandDoubleStyleHeavenBomb>()!;
     private readonly QuicksandDoubleStylePaintBomb _baits2 = module.FindComponent<QuicksandDoubleStylePaintBomb>()!;
+    private readonly AOEInstance[] _invertedAOE = new AOEInstance[1];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
@@ -24,7 +25,8 @@ sealed class Quicksand(BossModule module) : Components.GenericAOEs(module)
         else if (_baits2.Targets[slot])
         {
             ref var aoe = ref AOE[0];
-            return new AOEInstance[1] { aoe with { Shape = circleInvert, Color = Colors.SafeFromAOE, Risky = false } };
+            _invertedAOE[0] = aoe with { Shape = circleInvert, Color = Colors.SafeFromAOE, Risky = false };
+            return _invertedAOE;
         }
         return [];
     }
@@ -88,12 +90,14 @@ sealed class QuicksandDoubleStyleHeavenBomb(BossModule module) : Components.Gene
 {
     public BitMask Targets;
     private Quicksand? _qs = module.FindComponent<Quicksand>();
+    private readonly Knockback[] _kb = new Knockback[1];
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (Targets[slot])
         {
-            return new Knockback[1] { new(actor.Position, 16f, default, default, actor.Rotation, Kind.DirForward, ignoreImmunes: true) };
+            _kb[0] = new(actor.Position, 16f, default, default, actor.Rotation, Kind.DirForward, ignoreImmunes: true);
+            return _kb;
         }
         return [];
     }

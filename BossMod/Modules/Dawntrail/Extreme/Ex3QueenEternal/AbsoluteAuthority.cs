@@ -44,9 +44,8 @@ sealed class AbsoluteAuthorityHeel(BossModule module) : Components.GenericStackS
 
     public override void Update()
     {
-        if (Stacks.Count != 0)
+        if (Stacks.Count != 0 && Raid.Player() is Actor player)
         {
-            var player = Raid.Player()!;
             var party = Raid.WithoutSlot(false, true, true);
             var len = party.Length;
 

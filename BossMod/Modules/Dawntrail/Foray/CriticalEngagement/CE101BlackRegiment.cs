@@ -125,5 +125,5 @@ public sealed class CE101BlackRegiment(WorldState ws, Actor primary) : BossModul
         Arena.Actor(BossBlackStar);
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InSquare(Arena.Center, 20f); // not targetable at start
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InSquare(Arena.Center, 20f); // not targetable at start
 }

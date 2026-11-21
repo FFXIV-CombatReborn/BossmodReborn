@@ -83,7 +83,7 @@ public sealed class OtisOathbroken(WorldState ws, Actor primary) : BossModule(ws
     public static readonly WPos ArenaCenter = new(349f, -14f);
     public static readonly ArenaBoundsCustom ArenaBounds = new([new Polygon(ArenaCenter, 19.5f, 20)]);
 
-    protected override bool CheckPull() => Raid.Player()!.InCombat;
+    protected override bool CheckPull() => Raid.Player() is Actor { InCombat: true };
 
     private static readonly uint[] all = [(uint)OID.Boss, (uint)OID.EverkeepTurret, (uint)OID.EverkeepAerostat, (uint)OID.EverkeepAerostat2, (uint)OID.EverkeepSentryG10,
     (uint)OID.EverkeepSentryR10];

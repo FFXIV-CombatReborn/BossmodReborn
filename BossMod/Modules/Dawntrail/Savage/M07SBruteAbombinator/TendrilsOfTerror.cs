@@ -11,7 +11,8 @@ sealed class TendrilsOfTerrorBait(BossModule module) : Components.GenericBaitAwa
     {
         if (spell.Action.ID is (uint)AID.SinisterSeedsSpread or (uint)AID.StrangeSeeds or (uint)AID.KillerSeeds)
         {
-            var target = WorldState.Actors.Find(spell.TargetID)!;
+            if (WorldState.Actors.Find(spell.TargetID) is not Actor target)
+                return;
             AddBait();
             AddBait(45f.Degrees());
             void AddBait(Angle rotation = default) => CurrentBaits.Add(new(target, target, TendrilsOfTerror.Cross, Module.CastFinishAt(spell, 4.6f), default, rotation));

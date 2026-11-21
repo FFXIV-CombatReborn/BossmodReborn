@@ -51,15 +51,17 @@ sealed class GuardianResonanceTowers(BossModule module) : Components.GenericTowe
                 aoesStarted = true;
                 var towers = CollectionsMarshal.AsSpan(Towers);
                 var f = ~(BitMask)default;
-                for (var i = 0; i < 6; ++i)
+                var len = towers.Length;
+                for (var i = 0; i < len; ++i)
                 {
                     towers[i].ForbiddenSoakers = f;
                 }
             }
-            else if (!aoesEnded && (Towers.Ref(0).Activation - WorldState.CurrentTime).TotalSeconds < 4d)
+            else if (!aoesEnded && Towers.Count != 0 && (Towers.Ref(0).Activation - WorldState.CurrentTime).TotalSeconds < 4d)
             {
                 var towers = CollectionsMarshal.AsSpan(Towers);
-                for (var i = 0; i < 6; ++i)
+                var len = towers.Length;
+                for (var i = 0; i < len; ++i)
                 {
                     ref var t = ref towers[i];
                     t.ForbiddenSoakers = t.ActorID == 2ul ? forbidden : ~forbidden;

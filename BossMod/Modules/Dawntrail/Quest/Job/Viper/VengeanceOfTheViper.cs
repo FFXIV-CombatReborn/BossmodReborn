@@ -71,7 +71,7 @@ sealed class SwoopingFrenzy2(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID is var id && id == (uint)AID.SwoopingFrenzy2 || id == (uint)AID.SwoopingFrenzyTelegraph && !HasMatchingAOE(spell.LocXZ))
+        if (spell.Action.ID is (uint)AID.SwoopingFrenzy2 or (uint)AID.SwoopingFrenzyTelegraph && !HasMatchingAOE(spell.LocXZ))
         {
             _aoes.Add(new(circle, spell.LocXZ, default, Module.CastFinishAt(spell, 1.5d)));
         }

@@ -43,7 +43,17 @@ sealed class CharringCataclysm(BossModule module) : Components.UniformStackSprea
         if (spell.Action.ID is (uint)AID.SusurrantBreathAOE or (uint)AID.SlitheringStrikeAOE or (uint)AID.StranglingCoilAOE)
         {
             // note: dd vs supports is random, select supports arbitrarily
-            AddStacks(Module.Raid.WithoutSlot(true, true, true).Where(p => p.Class.IsSupport()), Module.CastFinishAt(spell, 0.7f));
+            var party = Module.Raid.WithoutSlot(true, true, true);
+            var len = party.Length;
+            var act = Module.CastFinishAt(spell, 0.7d);
+            for (var i = 0; i < len; ++i)
+            {
+                var p = party[i];
+                if (p.Class.IsSupport())
+                {
+                    AddStack(p, act);
+                }
+            }
         }
     }
 

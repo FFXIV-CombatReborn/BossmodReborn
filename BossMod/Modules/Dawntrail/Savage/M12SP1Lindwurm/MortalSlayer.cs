@@ -118,7 +118,8 @@ sealed class MortalSlayer(BossModule module) : Components.GenericAOEs(module)
             return;
 
         // build list of active non-destroyed, non-baited orbs for prediction
-        var activeOrbs = new List<Actor>();
+        var activeOrbs = _activeOrbs;
+        activeOrbs.Clear();
         foreach (var orb in _allOrbs)
         {
             if (IsOrbActive(orb))
@@ -136,12 +137,31 @@ sealed class MortalSlayer(BossModule module) : Components.GenericAOEs(module)
         var party = Raid.WithoutSlot(false, true, true);
         foreach (var orb in activeOrbs)
         {
-            var closest = party.Closest(orb.Position);
+            var closest = ClosestTo(party, orb.Position);
             if (closest != null)
             {
                 _aoes.Add(new(_shape, closest.Position, default, _mechanicActivation));
             }
         }
+    }
+
+    private readonly List<Actor> _activeOrbs = [];
+    private readonly List<OrbInfo> _waveOrbs = [];
+
+    private static Actor? ClosestTo(Actor[] party, WPos origin, bool farthest = false)
+    {
+        Actor? best = null;
+        var bestDistSq = farthest ? float.MinValue : float.MaxValue;
+        for (var i = 0; i < party.Length; ++i)
+        {
+            var distSq = (party[i].Position - origin).LengthSq();
+            if (farthest ? distSq > bestDistSq : distSq < bestDistSq)
+            {
+                bestDistSq = distSq;
+                best = party[i];
+            }
+        }
+        return best;
     }
 
     private static bool IsOrbActive(OrbInfo orb) => !orb.Orb.IsDestroyed && !orb.Baited;
@@ -228,12 +248,13 @@ sealed class MortalSlayer(BossModule module) : Components.GenericAOEs(module)
         if (currentWave < 0)
             return;
 
-        var party = Raid.WithoutSlot(false, true, true).ToList();
-        if (party.Count == 0)
+        var party = Raid.WithoutSlot(false, true, true);
+        if (party.Length == 0)
             return;
 
         // collect active orbs in current wave
-        var waveOrbs = new List<OrbInfo>();
+        var waveOrbs = _waveOrbs;
+        waveOrbs.Clear();
         foreach (var orb in _allOrbs)
             if (IsOrbActive(orb) && orb.WaveIndex == currentWave)
                 waveOrbs.Add(orb);
@@ -242,7 +263,7 @@ sealed class MortalSlayer(BossModule module) : Components.GenericAOEs(module)
         // then draw circle with appropriate color
         foreach (var orb in waveOrbs)
         {
-            var closest = party.Closest(orb.Orb.Position);
+            var closest = ClosestTo(party, orb.Orb.Position);
             if (closest == null)
                 continue;
 

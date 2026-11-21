@@ -43,109 +43,106 @@ sealed class WyvernsVengeance(BossModule module) : Components.Exaflare(module, 6
     }
 }
 
-// Don't think I am able to put the predicted path of the 'Laser' in, so this may have to do.
-
-// Wyvern's Weal beam telegraphs (helpers)
-sealed class WyvernsWealAOE(BossModule module)
-    : Components.SimpleAOEGroups(module, [(uint)AID.WyvernsWeal1, (uint)AID.WyvernsWeal4], new AOEShapeRect(60f, 3f));
-
-// Wyvern's Weal pulses (no-cast helper rects)
-sealed class WyvernsWealPulses(BossModule module) : Components.GenericAOEs(module)
+sealed class WyvernsWeal(BossModule module) : Components.GenericAOEs(module)
 {
-    private static readonly AOEShapeRect _shape = new(60f, 3f);
-    private readonly List<AOEInstance> _aoes = [];
+    private static readonly AOEShapeRect rect = new(60f, 3f);
+    private static readonly Angle maxStep = 11.25f.Degrees();
+    private readonly List<(Angle Rotation, DateTime Activation)> _rotations = [with(16)];
+    private readonly AOEInstance[] _aoes = new AOEInstance[2];
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoes.AsSpan();
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        var id = spell.Action.ID;
+        if (id == (uint)AID.WyvernsWeal1)
+        {
+            _rotations.Clear();
+            _rotations.Add((spell.Rotation, Module.CastFinishAt(spell)));
+        }
+        else if (id == (uint)AID.WyvernsWeal3)
+        {
+            _rotations.Add((spell.Rotation, Module.CastFinishAt(spell, 0.7d)));
+        }
+    }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID == (uint)AID.WyvernsWeal2)
-            _aoes.Add(new AOEInstance(_shape, caster.Position, caster.Rotation, WorldState.FutureTime(0.8f)));
+        var id = spell.Action.ID;
+        if (id == (uint)AID.WyvernsWeal1)
+        {
+            var count = _rotations.Count;
+            if (count != 0)
+            {
+                var now = WorldState.CurrentTime;
+                var last = _rotations[count - 1].Rotation;
+                _rotations[count - 1] = (last, now);
+                _rotations.Add((last, now.AddSeconds(0.7d)));
+            }
+        }
+        else if (id == (uint)AID.WyvernsWeal2)
+        {
+            _rotations.Add((caster.Rotation, WorldState.FutureTime(0.7d)));
+        }
+        if (id is (uint)AID.WyvernsWeal1 or (uint)AID.WyvernsWeal2 or (uint)AID.WyvernsWeal3)
+        {
+            ++NumCasts;
+        }
     }
 
     public override void Update()
     {
         var now = WorldState.CurrentTime;
-        _aoes.RemoveAll(a => a.Activation <= now);
-    }
-}
-
-// Wyvern's Weal: deterministic GTFO lane based on boss sweep cast.
-// 45046 = southeast/left sweep  → danger LEFT  → safe RIGHT
-// 45047 = north/right sweep     → danger RIGHT → safe LEFT
-// Lane extends 60y forward and 20y behind boss.
-sealed class WyvernsWealIrregularCastLane(BossModule module) : Components.GenericAOEs(module)
-{
-    private const float LenFront = 60f;
-    private const float LenBack = 20f;
-    private const float Narrow = 1f;
-    private const float Wide = 60f;
-
-    private AOEShapeRect? _shape;
-    private SDRect? _forbid;
-    private WPos _origin;
-    private Angle _rotation;
-    private DateTime _until;
-
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
-    {
-        if (_shape == null || WorldState.CurrentTime >= _until)
-            return default;
-
-        return new AOEInstance[] { new(_shape, _origin, _rotation, _until) };
-    }
-
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
-    {
-        if (caster != Module.PrimaryActor)
-            return;
-
-        // Only the two sweep casts
-        if (spell.Action.ID is not 45046u and not 45047u)
-            return;
-
-        // 45047 = north/right sweep → danger RIGHT
-        // 45046 = southeast/left sweep → danger LEFT
-        var dangerOnRight = spell.Action.ID == 45047u;
-
-        _rotation = spell.Rotation;
-        var forward = _rotation.ToDirection();
-        var left = new WDir(-forward.Z, forward.X);
-
-        // asymmetric lateral extents
-        var lw = dangerOnRight ? Narrow : Wide;
-        var rw = dangerOnRight ? Wide : Narrow;
-        var halfW = (lw + rw) * 0.5f;
-        var lateralShift = (lw - rw) * 0.5f;
-
-        // origin shifted sideways so the narrow side is safe
-        _origin = caster.Position + lateralShift * left;
-
-        // pull the lane backward so it covers behind boss
-        _origin -= forward * LenBack;
-
-        // Build matching visual + forbidden shapes
-        _shape = new AOEShapeRect(LenFront, halfW, LenBack);
-        _forbid = new SDRect(_origin, forward, LenFront, LenBack, halfW);
-
-        _until = Module.CastFinishAt(spell); // ~7s cast
-    }
-
-    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
-    {
-        if (caster == Module.PrimaryActor && (spell.Action.ID == 45046u || spell.Action.ID == 45047u))
+        for (var i = _rotations.Count - 1; i >= 0; --i)
         {
-            _shape = null;
-            _forbid = null;
+            if (_rotations[i].Activation.AddSeconds(2d) < now)
+            {
+                _rotations.RemoveAt(i);
+            }
         }
     }
 
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        if (_forbid == null || WorldState.CurrentTime >= _until)
-            return;
-
-        // Hard forbid entire lane immediately
-        hints.AddForbiddenZone(_forbid, _until);
+        var count = _rotations.Count;
+        if (count == 0)
+        {
+            return [];
+        }
+        var now = WorldState.CurrentTime;
+        var current = -1;
+        var previous = -1;
+        for (var i = count - 1; i >= 0; --i)
+        {
+            if (_rotations[i].Activation.AddSeconds(1d) > now)
+            {
+                if (current < 0)
+                {
+                    current = i;
+                }
+                else
+                {
+                    previous = i;
+                    break;
+                }
+            }
+        }
+        if (current < 0)
+        {
+            return [];
+        }
+        var origin = Module.PrimaryActor.Position;
+        var (rot, act) = _rotations[current];
+        _aoes[0] = new(rect, origin, rot, act);
+        if (previous >= 0)
+        {
+            var nextTime = act.AddSeconds(0.7d);
+            if (nextTime > now && nextTime < now.AddSeconds(5d))
+            {
+                var delta = (rot - _rotations[previous].Rotation).Normalized().Rad;
+                var step = Math.Clamp(delta, -maxStep.Rad, maxStep.Rad);
+                _aoes[1] = new(rect, origin, rot + new Angle(step), nextTime);
+                return _aoes;
+            }
+        }
+        return _aoes.AsSpan(0, 1);
     }
 }

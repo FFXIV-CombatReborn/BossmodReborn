@@ -28,7 +28,8 @@ sealed class StickyMousse(BossModule module) : Components.GenericStackSpread(mod
         {
             case (uint)AID.StickyMousse:
                 Spreads.Clear();
-                Stacks.Add(new(WorldState.Actors.Find(spell.MainTargetID)!, 4f, 4, 4, WorldState.FutureTime(6d)));
+                if (WorldState.Actors.Find(spell.MainTargetID) is Actor target)
+                    Stacks.Add(new(target, 4f, 4, 4, WorldState.FutureTime(6d)));
                 break;
             case (uint)AID.BurstStickyMousse:
                 ++NumCasts;

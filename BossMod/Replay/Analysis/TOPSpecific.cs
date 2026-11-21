@@ -22,11 +22,26 @@ sealed class TOPSpecific
         foreach (var replay in replays)
         {
             var aidFlamethrower = ActionID.MakeSpell(AID.FlameThrowerFirst);
-            foreach (var p in replay.Participants)
+            for (var pi = 0; pi < replay.Participants.Count; ++pi)
             {
-                foreach (var cast in p.Casts.Where(c => c.ID == aidFlamethrower))
+                var p = replay.Participants[pi];
+                for (var ci = 0; ci < p.Casts.Count; ++ci)
                 {
-                    var boss = replay.Participants.First(p => (OID)p.OID == OID.Boss && p.ExistsInWorldAt(cast.Time.Start));
+                    var cast = p.Casts[ci];
+                    if (cast.ID != aidFlamethrower)
+                    {
+                        continue;
+                    }
+                    Replay.Participant? boss = null;
+                    for (var bi = 0; bi < replay.Participants.Count; ++bi)
+                    {
+                        var cand = replay.Participants[bi];
+                        if ((OID)cand.OID == OID.Boss && cand.ExistsInWorldAt(cast.Time.Start))
+                        {
+                            boss = cand;
+                            break;
+                        }
+                    }
                     if (boss != null)
                     {
                         _flamethrowers.Add(new() { Replay = replay, Timestamp = cast.Time.Start, Difference = (cast.Rotation - boss.PosRotAt(cast.Time.Start).W.Radians()).Normalized() });

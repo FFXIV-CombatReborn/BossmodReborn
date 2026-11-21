@@ -10,7 +10,27 @@ sealed class Q1FinalVerseStates : StateMachineBuilder
         DeathPhase(default, SinglePhase)
             .ActivateOnEnter<Quantumlevel>()
             .ActivateOnEnter<TerrorEyeVoidTrapBallOfFire>()
-            ;
+            .ActivateOnEnter<BladeOfFirstLight>()
+            .ActivateOnEnter<ChainsOfCondemnation>()
+            .ActivateOnEnter<BallOfFireBait>()
+            .ActivateOnEnter<Eruption>()
+            .ActivateOnEnter<UnholyDarkness>()
+            .ActivateOnEnter<SelfDestruct>()
+            .ActivateOnEnter<SearingChain>()
+            .ActivateOnEnter<SearingChainCross>()
+            .ActivateOnEnter<Spinelash>()
+            .ActivateOnEnter<Vodoriga>()
+            .ActivateOnEnter<ShackleSpreadHint>()
+            .ActivateOnEnter<ShackleHint>()
+            .ActivateOnEnter<ArcaneFont>()
+            .ActivateOnEnter<HellishEarthPull>()
+            .ActivateOnEnter<ManifoldLashingsTower>()
+            .ActivateOnEnter<ManifoldLashingsTail>()
+            .ActivateOnEnter<Flameborn>()
+            .ActivateOnEnter<FlamebornAura>()
+            .ActivateOnEnter<CrimeAndPunishmentHint>()
+            .ActivateOnEnter<SinBearer>()
+            .ActivateOnEnter<Doom>();
     }
 
     enum QuantumLevel

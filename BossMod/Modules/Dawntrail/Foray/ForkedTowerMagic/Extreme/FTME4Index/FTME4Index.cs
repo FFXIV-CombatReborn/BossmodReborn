@@ -126,12 +126,14 @@ sealed class AllConsumingFlames(BossModule module) : Components.SpreadFromIcon(m
 }
 sealed class AllKnowingFlames(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
     private readonly AOEShapeCone _cone = new(30f, 30f.Degrees());
     private BitMask _spreading;
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        List<AOEInstance> aoes = [];
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         var rotation = _spreading[slot] ? 60f.Degrees() : default;
         aoes.Add(new(_cone, Module.PrimaryActor.Position, rotation));
         aoes.Add(new(_cone, Module.PrimaryActor.Position, 120f.Degrees() + rotation));
@@ -379,6 +381,7 @@ sealed class SealedImplements(BossModule module) : Components.GenericAOEs(module
 
 sealed class ElementIII(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
     // 8s between icon appear to resolve
     // 2 sets of icons go out
     // 2nd set happens roughly same time as Sealed Implements, resolve this before Sealed
@@ -398,7 +401,8 @@ sealed class ElementIII(BossModule module) : Components.GenericAOEs(module)
         }
 
         var safeOID = _safePanel[slot];
-        List<AOEInstance> aoes = [];
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         var panels = CollectionsMarshal.AsSpan(_panels.Actors);
         var count = panels.Length;
         var center = Module.PrimaryActor.Position;

@@ -7,6 +7,7 @@ sealed class P1FallOfFaith(BossModule module) : Components.CastCounter(module, d
     private readonly int[] _playerOrder = new int[PartyState.MaxPartySize]; // 0 if not assigned, 1-4 if tethered, 5-8 for conga help order (5/6 help group 1, 7/8 help group 2)
     private readonly List<Actor> _tetherTargets = [];
     private readonly List<Actor> _currentBaiters = [];
+    private readonly List<(AOEShapeCone shape, WPos origin, Angle dir)> _baitsBuffer = [];
     private BitMask _fireTethers; // bit i is set if i'th tether is fire
     private int _numFetters;
     private DateTime _minHelpMove; // we want conga members to start moving with a slight delay
@@ -20,7 +21,18 @@ sealed class P1FallOfFaith(BossModule module) : Components.CastCounter(module, d
         if (_tetherTargets.Count == 4 && NumCasts < _tetherTargets.Count)
         {
             var nextSource = _tetherTargets[NumCasts];
-            _currentBaiters.AddRange(Raid.WithoutSlot(false, true, true).Exclude(nextSource).SortedByRange(nextSource.Position).Take(_fireTethers[NumCasts] ? 1 : 3));
+            var numBaiters = _fireTethers[NumCasts] ? 1 : 3;
+            var party = Raid.WithoutSlot(false, true, true);
+            for (var i = 0; i < party.Length; ++i)
+            {
+                var p = party[i];
+                if (p != nextSource)
+                    _currentBaiters.Add(p);
+            }
+            var origin = nextSource.Position;
+            _currentBaiters.Sort((a, b) => (a.Position - origin).LengthSq().CompareTo((b.Position - origin).LengthSq()));
+            if (_currentBaiters.Count > numBaiters)
+                _currentBaiters.RemoveRange(numBaiters, _currentBaiters.Count - numBaiters);
         }
     }
 
@@ -32,8 +44,14 @@ sealed class P1FallOfFaith(BossModule module) : Components.CastCounter(module, d
         else if (order > 0)
             hints.Add($"Order: {order}", false);
 
-        if (ActiveBaits(slot, actor, true).Any(bait => bait.shape.Check(actor.Position, bait.origin, bait.dir)))
-            hints.Add("GTFO from baited aoe!");
+        foreach (var bait in ActiveBaits(slot, actor, true))
+        {
+            if (bait.shape.Check(actor.Position, bait.origin, bait.dir))
+            {
+                hints.Add("GTFO from baited aoe!");
+                break;
+            }
+        }
         // TODO: hint if actor is baiter while it's not his turn?
         // TODO: hint if actor is clipping others?
     }
@@ -41,7 +59,16 @@ sealed class P1FallOfFaith(BossModule module) : Components.CastCounter(module, d
     public override void AddGlobalHints(Actor actor, GlobalHints hints)
     {
         if (_tetherTargets.Count > NumCasts)
-            hints.Add(string.Join(" -> ", Enumerable.Range(NumCasts, _tetherTargets.Count - NumCasts).Select(i => _fireTethers[i] ? "Fire" : "Lightning")));
+        {
+            var sb = new StringBuilder();
+            for (var i = NumCasts; i < _tetherTargets.Count; ++i)
+            {
+                if (i > NumCasts)
+                    sb.Append(" -> ");
+                sb.Append(_fireTethers[i] ? "Fire" : "Lightning");
+            }
+            hints.Add(sb.ToString());
+        }
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
@@ -190,10 +217,11 @@ sealed class P1FallOfFaith(BossModule module) : Components.CastCounter(module, d
         return IsGroupEven(order) == nextBaitsEven;
     }
 
-    private IEnumerable<(AOEShapeCone shape, WPos origin, Angle dir)> ActiveBaits(int slot, Actor actor, bool wantDangerous)
+    private List<(AOEShapeCone shape, WPos origin, Angle dir)> ActiveBaits(int slot, Actor actor, bool wantDangerous)
     {
+        _baitsBuffer.Clear();
         if (_tetherTargets.Count < 4 || NumCasts >= _tetherTargets.Count)
-            yield break;
+            return _baitsBuffer;
 
         var isFire = _fireTethers[NumCasts];
         var shouldBait = ShouldBeBaiting(slot);
@@ -203,7 +231,8 @@ sealed class P1FallOfFaith(BossModule module) : Components.CastCounter(module, d
             // if we shouldn't be baiting - all baits are dangerous, otherwise only other proteans are dangerous
             var dangerous = !shouldBait || !isFire && target != actor;
             if (dangerous == wantDangerous)
-                yield return (isFire ? _shapeFire : _shapeLightning, source.Position, Angle.FromDirection(target.Position - source.Position));
+                _baitsBuffer.Add((isFire ? _shapeFire : _shapeLightning, source.Position, Angle.FromDirection(target.Position - source.Position)));
         }
+        return _baitsBuffer;
     }
 }

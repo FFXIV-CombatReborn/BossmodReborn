@@ -64,16 +64,22 @@ class Un2ShinryuStates : StateMachineBuilder
         return s;
     }
 
+    private Actor? FirstOf(OID oid)
+    {
+        var actors = Module.Enemies((uint)oid);
+        return actors.Count != 0 ? actors[0] : null;
+    }
+
     private State WingCast(uint id, OID wing, AID aid, float at, float castTime, string name)
     {
-        var s = ActorCast(id, () => Module.Enemies((uint)wing).FirstOrDefault(), aid, at - _t, castTime, false, name);
+        var s = ActorCast(id, () => FirstOf(wing), aid, at - _t, castTime, false, name);
         _t = at + castTime;
         return s;
     }
 
     private State WingCastMulti(uint id, OID wing, AID[] aids, float at, float castTime, string name)
     {
-        var s = ActorCastMulti(id, () => Module.Enemies((uint)wing).FirstOrDefault(), aids, at - _t, castTime, false, name);
+        var s = ActorCastMulti(id, () => FirstOf(wing), aids, at - _t, castTime, false, name);
         _t = at + castTime;
         return s;
     }

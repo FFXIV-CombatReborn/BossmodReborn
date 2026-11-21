@@ -46,6 +46,7 @@ sealed class StampedingThunder(BossModule module) : Components.GenericAOEs(modul
 
 sealed class ElectronStream(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _aoesBuffer = []; // reused every call to avoid per-frame allocations
     private Actor? _posCaster;
     private Actor? _negCaster;
     private BitMask _positron;
@@ -55,7 +56,8 @@ sealed class ElectronStream(BossModule module) : Components.GenericAOEs(module)
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        var aoes = new List<AOEInstance>();
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         if (_posCaster?.CastInfo != null)
             aoes.Add(new(_shape, _posCaster.Position, _posCaster.CastInfo.Rotation, Module.CastFinishAt(_posCaster.CastInfo), _positron[slot] ? default : Colors.SafeFromAOE, _positron[slot]));
         if (_negCaster?.CastInfo != null)
@@ -69,15 +71,29 @@ sealed class ElectronStream(BossModule module) : Components.GenericAOEs(module)
 
         // wild charge
         var offZ = actor.PosRot.Z - Module.PrimaryActor.PosRot.Z;
-        var sameSideCloser = Raid.WithoutSlot(false, true, true).Where(p => p != actor && p.PosRot.Z - Module.PrimaryActor.PosRot.Z is var off && off * offZ > 0f && Math.Abs(off) < Math.Abs(offZ));
+        var anyCloser = false;
+        var tankCloser = false;
+        var party = Raid.WithoutSlot(false, true, true);
+        var bossZ = Module.PrimaryActor.PosRot.Z;
+        for (var i = 0; i < party.Length; ++i)
+        {
+            var p = party[i];
+            var off = p.PosRot.Z - bossZ;
+            if (p != actor && off * offZ > 0f && Math.Abs(off) < Math.Abs(offZ))
+            {
+                anyCloser = true;
+                if (p.Role == Role.Tank)
+                    tankCloser = true;
+            }
+        }
         if (actor.Role == Role.Tank)
         {
-            if (sameSideCloser.Any())
+            if (anyCloser)
                 hints.Add("Move closer!");
         }
         else
         {
-            if (!sameSideCloser.Any(p => p.Role == Role.Tank))
+            if (!tankCloser)
                 hints.Add("Hide behind tank!");
         }
     }
@@ -124,6 +140,7 @@ sealed class ElectronStream(BossModule module) : Components.GenericAOEs(module)
 
 sealed class ElectronStreamCurrent(BossModule module) : Components.GenericAOEs(module, (uint)AID.AxeCurrent)
 {
+    private readonly List<AOEInstance> _aoesBuffer = []; // reused every call to avoid per-frame allocations
     private readonly uint[] _status = new uint[PartyState.MaxPartySize];
     private DateTime _activation;
 
@@ -134,7 +151,8 @@ sealed class ElectronStreamCurrent(BossModule module) : Components.GenericAOEs(m
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var actorOffset = actor.PosRot.Z - Module.PrimaryActor.PosRot.Z;
-        var aoes = new List<AOEInstance>();
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         var party = Raid.WithoutSlot(false, true, true);
         var len = party.Length;
         for (var i = 0; i < len; ++i)
@@ -236,15 +254,38 @@ sealed class ElectronStreamCurrent(BossModule module) : Components.GenericAOEs(m
             (uint)SID.ProximateCurrent => (actor.PosRot.Z - Module.PrimaryActor.PosRot.Z) * targetOffset > 0,
             _ => false
         };
-        return Raid.WithSlot(false, true, true).FirstOrDefault(ip => isBaiter(ip.Item1, ip.Item2));
+        var party = Raid.WithSlot(false, true, true);
+        for (var i = 0; i < party.Length; ++i)
+        {
+            var ip = party[i];
+            if (isBaiter(ip.Item1, ip.Item2))
+                return ip;
+        }
+        return default;
     }
 
-    private Actor? FindBaitTarget(int slot, Actor source) => _status[slot] switch
+    private Actor? FindBaitTarget(int slot, Actor source)
     {
-        (uint)SID.RemoteCurrent => Raid.WithoutSlot(false, true, true).Exclude(source).Farthest(source.Position),
-        (uint)SID.ProximateCurrent => Raid.WithoutSlot(false, true, true).Exclude(source).Closest(source.Position),
-        _ => null
-    };
+        var farthest = _status[slot] == (uint)SID.RemoteCurrent;
+        if (!farthest && _status[slot] != (uint)SID.ProximateCurrent)
+            return null;
+        Actor? best = null;
+        var bestDistSq = farthest ? float.MinValue : float.MaxValue;
+        var party = Raid.WithoutSlot(false, true, true);
+        for (var i = 0; i < party.Length; ++i)
+        {
+            var p = party[i];
+            if (p == source)
+                continue;
+            var distSq = (p.Position - source.Position).LengthSq();
+            if (farthest ? distSq > bestDistSq : distSq < bestDistSq)
+            {
+                bestDistSq = distSq;
+                best = p;
+            }
+        }
+        return best;
+    }
 
     private List<WPos> SafeSpots(int slot, Actor actor)
     {

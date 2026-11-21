@@ -29,7 +29,17 @@ sealed class P3UltimateRelativity(BossModule module) : Components.CastCounter(mo
     public const float RangeHintEye = 2f;
     public const float RangeHintChill = -1f; // simplifies looking outside and hitting boss
 
-    public Angle LaserRotationAt(WPos pos) => LaserRotations.FirstOrDefault(r => r.origin.Position.AlmostEqual(pos, 1f)).rotation;
+    public Angle LaserRotationAt(WPos pos)
+    {
+        var count = LaserRotations.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            var r = LaserRotations[i];
+            if (r.origin.Position.AlmostEqual(pos, 1f))
+                return r.rotation;
+        }
+        return default;
+    }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
@@ -68,8 +78,12 @@ sealed class P3UltimateRelativity(BossModule module) : Components.CastCounter(mo
                     {
                         // ok, out is imminent, gtfo - we need to avoid clipping people, avoid dark blizzard (if it's being resolved now), and avoid lasers (if any)
                         var avoidBlizzard = NumCasts == 2;
-                        foreach (var (i, p) in Raid.WithSlot(false, true, true).Exclude(slot))
+                        var party = Raid.WithSlot(false, true, true);
+                        for (var j = 0; j < party.Length; ++j)
                         {
+                            var (i, p) = party[j];
+                            if (i == slot)
+                                continue;
                             var avoidRadius = avoidBlizzard && States[i].HaveDarkBlizzard ? 12f : 8f;
                             hints.AddForbiddenZone(new SDCircle(p.Position, avoidRadius));
                         }
@@ -333,6 +347,17 @@ sealed class P3UltimateRelativitySinboundMeltdownBait(BossModule module) : Compo
     }
 
     // TODO: hints for proper baiting?..
+    private bool IsClippedByOthers(Actor actor)
+    {
+        var baits = CollectionsMarshal.AsSpan(ActiveBaitsNotOn(actor));
+        for (var i = 0; i < baits.Length; ++i)
+        {
+            if (IsClippedBy(actor, ref baits[i]))
+                return true;
+        }
+        return false;
+    }
+
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         if (CurrentBaits.Count == 0)
@@ -346,7 +371,7 @@ sealed class P3UltimateRelativitySinboundMeltdownBait(BossModule module) : Compo
             hints.Add(shouldBait ? "Bait laser!" : "GTFO from hourglass!");
         }
 
-        if (ActiveBaitsNotOn(actor).Any(b => IsClippedBy(actor, ref b)))
+        if (IsClippedByOthers(actor))
             hints.Add("GTFO from baited aoe!");
     }
 
@@ -434,7 +459,18 @@ sealed class P3UltimateRelativitySinboundMeltdownAOE(BossModule module) : Compon
                 break;
             case (uint)AID.UltimateRelativitySinboundMeltdownAOERest:
                 ++NumCasts;
-                var count = _aoes.RemoveAll(aoe => aoe.Origin.AlmostEqual(caster.Position, 1) && aoe.Rotation.AlmostEqual(spell.Rotation, 0.1f));
+                var count = 0;
+                var pos = caster.Position;
+                var rotation = spell.Rotation;
+                for (var i = _aoes.Count - 1; i >= 0; --i)
+                {
+                    var aoe = _aoes[i];
+                    if (aoe.Origin.AlmostEqual(pos, 1f) && aoe.Rotation.AlmostEqual(rotation, 0.1f))
+                    {
+                        _aoes.RemoveAt(i);
+                        ++count;
+                    }
+                }
                 if (count != 1)
                     ReportError($"Unexpected aoe at {caster.Position} -> {spell.Rotation}");
                 break;

@@ -252,7 +252,10 @@ sealed class LayOfTheSun(BossModule module) : Components.UniformStackSpread(modu
     {
         if (spell.Action.ID is (uint)AID.LayOfTheSunA1 or (uint)AID.LayOfTheSunB1)
         {
-            AddStack(WorldState.Actors.Find(spell.TargetID)!, Module.CastFinishAt(spell));
+            if (WorldState.Actors.Find(spell.TargetID) is Actor target)
+            {
+                AddStack(target, Module.CastFinishAt(spell));
+            }
         }
     }
 }

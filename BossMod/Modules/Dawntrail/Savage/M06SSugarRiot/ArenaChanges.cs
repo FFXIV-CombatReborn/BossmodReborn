@@ -87,7 +87,7 @@ sealed class ArenaChanges(BossModule module) : Components.GenericAOEs(module)
         return new AOEShapeCustom(center, bossmod.GetCombinedRiver());
     }
 
-    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         if (spell.Action.ID is (uint)AID.TasteOfFire or (uint)AID.TasteOfThunderSpread)
         {

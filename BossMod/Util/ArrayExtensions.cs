@@ -1,4 +1,4 @@
-namespace BossMod;
+﻿namespace BossMod;
 
 public static class ArrayExtensions
 {
@@ -7,5 +7,11 @@ public static class ArrayExtensions
         var copy = (T[])source.Clone();
         Array.Reverse(copy);
         return copy;
+    }
+
+    public static T[] Single<T>(this T[] buffer, T value)
+    {
+        buffer[0] = value;
+        return buffer;
     }
 }

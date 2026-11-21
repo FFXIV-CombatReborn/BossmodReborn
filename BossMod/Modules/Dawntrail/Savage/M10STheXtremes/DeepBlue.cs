@@ -403,6 +403,7 @@ sealed class DeepImpact(BossModule module) : Components.GenericBaitProximity(mod
 sealed class DeepImpactKnockback(BossModule module) : Components.GenericKnockback(module)
 {
     private readonly DeepImpact _impact = module.FindComponent<DeepImpact>()!;
+    private readonly Knockback[] _kb = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (_impact.ActiveBaits.Count == 0)
@@ -415,7 +416,8 @@ sealed class DeepImpactKnockback(BossModule module) : Components.GenericKnockbac
             return [];
 
         var direction = (actor.Position - bait.Position).ToAngle();
-        return new Knockback[1] { new(actor.Position, 10f, bait.Activation, null, direction, Kind.DirForward) };
+        _kb[0] = new(actor.Position, 10f, bait.Activation, null, direction, Kind.DirForward);
+        return _kb;
     }
 }
 

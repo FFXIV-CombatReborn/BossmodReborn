@@ -153,7 +153,7 @@ sealed class Ex3QueenEternalStates : StateMachineBuilder
 
         Cast(id + 0x300u, AID.WorldShatterP1, 3f, 5f, "Raidwide + platform end")
             .SetHint(StateMachine.StateHint.Raidwide);
-        ComponentCondition<AeroquellTwister>(id + 0x310u, 2.6f, comp => !comp.Sources(Module).Any())
+        ComponentCondition<AeroquellTwister>(id + 0x310u, 2.6f, _ => Module.Enemies((uint)OID.Twister).Count == 0)
             .DeactivateOnExit<AeroquellTwister>();
 
         P1ProsecutionOfWar(id + 0x1000u, 4.5f);

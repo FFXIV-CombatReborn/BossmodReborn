@@ -2,6 +2,7 @@
 
 sealed class SunderingSpellblade(BossModule module) : Components.GenericAOEs(module)
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
     // can start on left or right side?
     // exaflare but curves along edge of arena
     // no indicators of left/right; check using position
@@ -25,7 +26,8 @@ sealed class SunderingSpellblade(BossModule module) : Components.GenericAOEs(mod
             return [];
         }
 
-        List<AOEInstance> aoes = [];
+        var aoes = _aoesBuffer;
+        aoes.Clear();
 
         var aoelist = CollectionsMarshal.AsSpan(_aoes);
         var listcount = aoelist.Length;

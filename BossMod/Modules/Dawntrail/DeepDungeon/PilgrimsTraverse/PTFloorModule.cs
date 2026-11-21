@@ -56,12 +56,21 @@ public abstract class PTFloorModule(WorldState ws) : AutoClear(ws, 100)
         if (Config.Enable && !player.InCombat)
         {
             var interactDist = hints.InteractWithTarget is { } t ? player.DistanceToPoint(t.Position) : float.MaxValue;
-            if (World.Actors.FirstOrDefault(t => t.OID == 0x1EBE27 && t.IsTargetable) is { } v && player.DistanceToPoint(v.Position) < interactDist)
-                hints.InteractWithTarget = v;
+            foreach (var v in World.Actors)
+            {
+                if (v.OID == 0x1EBE27 && v.IsTargetable)
+                {
+                    if (player.DistanceToPoint(v.Position) < interactDist)
+                        hints.InteractWithTarget = v;
+                    break;
+                }
+            }
         }
 
-        foreach (var tar in World.Actors.Where(o => o.OID == (uint)OID.TraverseTroubadour && !o.IsDead))
+        foreach (var tar in World.Actors)
         {
+            if (tar.OID != (uint)OID.TraverseTroubadour || tar.IsDead)
+                continue;
             // turtles do 60k autos that apply vuln, but are much slower than the player
             if (tar.TargetID == player.InstanceID && (tar.CastInfo == null || tar.CastInfo.RemainingTime < 1f))
                 hints.AddForbiddenZone(new SDCircle(tar.Position, tar.HitboxRadius + 5.5f));
@@ -162,7 +171,11 @@ public abstract class PTFloorModule(WorldState ws) : AutoClear(ws, 100)
             case (uint)AID.RightSidedShockwave:
             case (uint)AID.LeftSidedShockwave:
             case (uint)AID.Subduction:
-                Voidzones.RemoveAll(v => v.Source == actor);
+                for (var i = Voidzones.Count - 1; i >= 0; --i)
+                {
+                    if (Voidzones[i].Source == actor)
+                        Voidzones.RemoveAt(i);
+                }
                 break;
         }
     }
@@ -182,7 +195,11 @@ public abstract class PTFloorModule(WorldState ws) : AutoClear(ws, 100)
         switch (status.ID)
         {
             case (uint)SID.BlazeSpikes:
-                Spikes.RemoveAll(s => s.Actor == actor);
+                for (var i = Spikes.Count - 1; i >= 0; --i)
+                {
+                    if (Spikes[i].Actor == actor)
+                        Spikes.RemoveAt(i);
+                }
                 break;
         }
     }

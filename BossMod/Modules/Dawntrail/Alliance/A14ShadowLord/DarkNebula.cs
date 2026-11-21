@@ -84,14 +84,17 @@ sealed class DarkNebula(BossModule module) : Components.GenericKnockback(module)
             if (KBs.Count > 1)
             {
                 KBs.RemoveRange(0, 2);
-                shapeDistances.RemoveAt(0);
+                if (shapeDistances.Count != 0)
+                {
+                    shapeDistances.RemoveAt(0);
+                }
             }
         }
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (KBs.Count == 0)
+        if (KBs.Count == 0 || shapeDistances.Count == 0)
         {
             return;
         }

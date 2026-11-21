@@ -21,7 +21,29 @@ sealed class EvilSeedBait(BossModule module) : BossComponent(module)
 
 sealed class EvilSeedAOE(BossModule module) : Components.SimpleAOEs(module, (uint)AID.EvilSeedAOE, 5f);
 
-sealed class EvilSeedVoidzone(BossModule module) : Components.Voidzone(module, 5f, module => module.Enemies((uint)OID.EvilSeed).Where(z => z.EventState != 7));
+sealed class EvilSeedVoidzone(BossModule module) : Components.Voidzone(module, 5f, GetVoidzones)
+{
+    private static Actor[] GetVoidzones(BossModule module)
+    {
+        var enemies = module.Enemies((uint)OID.EvilSeed);
+        var count = enemies.Count;
+        if (count == 0)
+        {
+            return [];
+        }
+        var voidzones = new Actor[count];
+        var index = 0;
+        for (var i = 0; i < count; ++i)
+        {
+            var z = enemies[i];
+            if (z.EventState != 7)
+            {
+                voidzones[index++] = z;
+            }
+        }
+        return voidzones[..index];
+    }
+}
 
 sealed class ThornyVine(BossModule module) : Components.Chains(module, (uint)TetherID.ThornyVine, default, 25f)
 {

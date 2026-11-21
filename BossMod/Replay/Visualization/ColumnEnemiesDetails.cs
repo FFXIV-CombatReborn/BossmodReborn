@@ -27,9 +27,13 @@ public sealed class ColumnEnemiesDetails : Timeline.ColumnGroup
         foreach (var (oid, participants) in enc.ParticipantsByOID)
         {
             var data = new PerOID() { OID = oid };
-            foreach (var p in participants.Where(p => (p.HasAnyActions || p.Casts.Count > 0) && !(p.Type is ActorType.Player or ActorType.Pet or ActorType.Chocobo or ActorType.Buddy)))
+            for (var i = 0; i < participants.Count; ++i)
             {
-                data.Columns.Add((p, null));
+                var p = participants[i];
+                if ((p.HasAnyActions || p.Casts.Count > 0) && p.Type is not (ActorType.Player or ActorType.Pet or ActorType.Chocobo or ActorType.Buddy))
+                {
+                    data.Columns.Add((p, null));
+                }
             }
 
             if (data.Columns.Count > 0)
@@ -51,9 +55,13 @@ public sealed class ColumnEnemiesDetails : Timeline.ColumnGroup
                 {
                     c.DrawConfig(tree);
                 }
-                else if (ImGui.Button($"Show details for {ReplayUtils.ParticipantString(p, p.WorldExistence.FirstOrDefault().Start)}"))
+                else
                 {
-                    n.Columns[i] = (p, Add(new ColumnEnemyDetails(Timeline, _tree, _phaseBranches, _replay, _encounter, p)));
+                    var startTime = p.WorldExistence.Count > 0 ? p.WorldExistence[0].Start : default;
+                    if (ImGui.Button($"Show details for {ReplayUtils.ParticipantString(p, startTime)}"))
+                    {
+                        n.Columns[i] = (p, Add(new ColumnEnemyDetails(Timeline, _tree, _phaseBranches, _replay, _encounter, p)));
+                    }
                 }
             }
         }

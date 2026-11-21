@@ -72,19 +72,22 @@ sealed class OneTwoPaw(BossModule module) : Components.GenericAOEs(module)
         }
     }
 
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        switch (spell.Action.ID)
+        {
+            case (uint)AID.LeapingBlackCatCrossingVisual1:
+            case (uint)AID.LeapingBlackCatCrossingVisual2:
+            case (uint)AID.LeapingBlackCatCrossingVisual3:
+            case (uint)AID.LeapingBlackCatCrossingVisual4:
+                helper = null;
+                break;
+        }
+    }
+
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        if (helper != null)
-            switch (spell.Action.ID)
-            {
-                case (uint)AID.LeapingBlackCatCrossingVisual1:
-                case (uint)AID.LeapingBlackCatCrossingVisual2:
-                case (uint)AID.LeapingBlackCatCrossingVisual3:
-                case (uint)AID.LeapingBlackCatCrossingVisual4:
-                    helper = null;
-                    break;
-            }
-        else if (_aoes.Count != 0)
+        if (_aoes.Count != 0)
             switch (spell.Action.ID)
             {
                 case (uint)AID.OneTwoPaw1:

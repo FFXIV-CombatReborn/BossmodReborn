@@ -148,5 +148,5 @@ public sealed class CE103WithExtremePrejudice(WorldState ws, Actor primary) : Bo
         }
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 25f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 25f);
 }

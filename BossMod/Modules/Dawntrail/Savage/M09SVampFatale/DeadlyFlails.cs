@@ -41,12 +41,13 @@ sealed class ElectrocutionVoidzone(BossModule module) : Components.GenericAOEs(m
     private bool _active = false;
     private WPos _doornailPos;
     private DateTime _start;
+    private readonly AOEInstance[] _aoe = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (!_show)
             return [];
 
-        var aoe = new AOEInstance[1];
+        var aoe = _aoe;
         var radius = 3f;
 
         if (!_active || _start == default)
@@ -108,6 +109,7 @@ sealed class GravegrazerSmall(BossModule module) : Components.GenericAOEs(module
     // neckbiters get status 2056 with extra 0x443 before moving
     // make it bigger than actual cast to avoid
     // casts full AOE periodically, is voidzone ahead of actor enough?
+    private readonly List<AOEInstance> _aoes = [];
     private readonly List<Actor> _neckbiters = [];
     private readonly AOEShapeRect _rect = new(5f + 5f, 2.5f);
     private readonly ArenaChanges _arena = module.FindComponent<ArenaChanges>()!;
@@ -120,13 +122,13 @@ sealed class GravegrazerSmall(BossModule module) : Components.GenericAOEs(module
         if (count == 0)
             return [];
 
-        var aoes = new AOEInstance[count];
+        _aoes.Clear();
         for (var i = 0; i < count; ++i)
         {
-            aoes[i] = new(_rect, _neckbiters[i].Position, _neckbiters[i].Rotation);
+            _aoes.Add(new(_rect, _neckbiters[i].Position, _neckbiters[i].Rotation));
         }
 
-        return aoes;
+        return CollectionsMarshal.AsSpan(_aoes);
     }
 
     public override void OnActorCreated(Actor actor)
@@ -141,6 +143,7 @@ sealed class GravegrazerBig(BossModule module) : Components.GenericAOEs(module)
 {
     // coffinmaker spawn + movement by mapeffects 0x0D and 0x0E -> 0x00800040 and 0x01000020
     private readonly List<Actor> _coffinmakers = [];
+    private readonly List<AOEInstance> _aoes = [];
     private readonly AOEShapeRect _rect = new(10f + 10f, 2.5f);
     private readonly ArenaChanges _arena = module.FindComponent<ArenaChanges>()!;
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
@@ -152,13 +155,13 @@ sealed class GravegrazerBig(BossModule module) : Components.GenericAOEs(module)
         if (count == 0)
             return [];
 
-        var aoes = new AOEInstance[count];
+        _aoes.Clear();
         for (var i = 0; i < count; ++i)
         {
-            aoes[i] = new(_rect, _coffinmakers[i].Position, _coffinmakers[i].Rotation);
+            _aoes.Add(new(_rect, _coffinmakers[i].Position, _coffinmakers[i].Rotation));
         }
 
-        return aoes;
+        return CollectionsMarshal.AsSpan(_aoes);
     }
 
     public override void OnActorCreated(Actor actor)

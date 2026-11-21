@@ -461,6 +461,22 @@ sealed class Netherworld(BossModule module) : Components.UniformStackSpread(modu
         }
     }
 
+    private static Actor? ClosestTo(Actor[] party, WPos origin, bool farthest = false)
+    {
+        Actor? best = null;
+        var bestDistSq = farthest ? float.MinValue : float.MaxValue;
+        for (var i = 0; i < party.Length; ++i)
+        {
+            var distSq = (party[i].Position - origin).LengthSq();
+            if (farthest ? distSq > bestDistSq : distSq < bestDistSq)
+            {
+                bestDistSq = distSq;
+                best = party[i];
+            }
+        }
+        return best;
+    }
+
     public override void Update()
     {
         Stacks.Clear();
@@ -468,9 +484,7 @@ sealed class Netherworld(BossModule module) : Components.UniformStackSpread(modu
         if (_activation == default)
             return;
 
-        var target = _far
-            ? Raid.WithoutSlot().Farthest(Module.PrimaryActor.Position)
-            : Raid.WithoutSlot().Closest(Module.PrimaryActor.Position);
+        var target = ClosestTo(Raid.WithoutSlot(), Module.PrimaryActor.Position, _far);
 
         if (target != null)
             AddStack(target, _activation, _forbidden);

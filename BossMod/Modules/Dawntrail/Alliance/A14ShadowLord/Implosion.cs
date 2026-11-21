@@ -6,7 +6,13 @@ sealed class Implosion(BossModule module) : Components.GenericAOEs(module)
 
     private readonly AOEShapeCone _shapeSmall = new(12f, 90f.Degrees()), _shapeLarge = new(90f, 90f.Degrees());
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => Module.FindComponent<GigaSlash>()?.AOEs.Count == 0 ? CollectionsMarshal.AsSpan(_aoes) : [];
+    private GigaSlash? _gigaSlash;
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        _gigaSlash ??= Module.FindComponent<GigaSlash>();
+        return _gigaSlash?.AOEs.Count == 0 ? CollectionsMarshal.AsSpan(_aoes) : [];
+    }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {

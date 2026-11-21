@@ -48,6 +48,7 @@ sealed class ChasmOfVollokFangLarge(BossModule module) : Components.GenericAOEs(
 
 sealed class ChasmOfVollokPlayer(BossModule module) : Components.GenericAOEs(module, (uint)AID.ChasmOfVollokPlayer, "GTFO from occupied cell!")
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
     public bool Active;
     private readonly List<Actor> _targets = [with(8)];
     private DateTime _activation;
@@ -60,7 +61,8 @@ sealed class ChasmOfVollokPlayer(BossModule module) : Components.GenericAOEs(mod
     {
         if (!Active)
             return [];
-        var aoes = new List<AOEInstance>();
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         var mid = new WPos(100f, 100f);
         var platformOffset = 2f * (Arena.Center - mid);
         var a45 = 45f.Degrees();

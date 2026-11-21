@@ -15,7 +15,13 @@ sealed class BombarianSpecial(BossModule module) : Components.UniformStackSpread
                 break;
             case Mechanic.Pairs:
                 // TODO: can target any role
-                AddStacks(Raid.WithoutSlot(true, true, true).Where(p => p.Class.IsSupport()), WorldState.FutureTime(delay));
+                var supports = Raid.WithoutSlot(true, true, true);
+                for (var i = 0; i < supports.Length; ++i)
+                {
+                    var p = supports[i];
+                    if (p.Class.IsSupport())
+                        AddStack(p, WorldState.FutureTime(delay));
+                }
                 break;
         }
     }

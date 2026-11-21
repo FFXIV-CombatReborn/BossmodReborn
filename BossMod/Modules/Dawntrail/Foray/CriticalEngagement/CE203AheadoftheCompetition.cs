@@ -176,8 +176,30 @@ sealed class ManyHeadedBreath(BossModule module) : Components.GenericAOEs(module
     }
 }
 
-sealed class Dissipate(BossModule module) : Components.Voidzone(module, 8.5f, module => module.Enemies((uint)OID.PoisonOrb).Where(z => z.EventState != 7))
+sealed class Dissipate(BossModule module) : Components.Voidzone(module, 8.5f, GetVoidzones)
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
+    private static Actor[] GetVoidzones(BossModule module)
+    {
+        var enemies = module.Enemies((uint)OID.PoisonOrb);
+        var count = enemies.Count;
+        if (count == 0)
+        {
+            return [];
+        }
+        var voidzones = new Actor[count];
+        var index = 0;
+        for (var i = 0; i < count; ++i)
+        {
+            var z = enemies[i];
+            if (z.EventState != 7)
+            {
+                voidzones[index++] = z;
+            }
+        }
+        return voidzones[..index];
+    }
+
     private bool active = false;
 
     public override void OnActorEAnim(Actor actor, uint state)
@@ -198,7 +220,8 @@ sealed class Dissipate(BossModule module) : Components.Voidzone(module, 8.5f, mo
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        var aoes = new List<AOEInstance>();
+        var aoes = _aoesBuffer;
+        aoes.Clear();
 
         foreach (var source in Sources(Module))
         {
@@ -239,5 +262,5 @@ public sealed class CE203AheadoftheCompetition : BossModule
         return (arena.Center, arena);
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 20f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 20f);
 }

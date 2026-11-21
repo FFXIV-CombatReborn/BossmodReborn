@@ -106,9 +106,12 @@ sealed class GrandCrossOrder(BossModule module) : BossComponent(module)
         return grandCross[id].playerBuffs[slot];
     }
 
+    private readonly List<(int slot, DateTime expireAt, bool? tellingTruth)> _nextBuffBuffer = [];
+
     public List<(int slot, DateTime expireAt, bool? tellingTruth)> GetNextBuffPlayers(uint status, int count)
     {
-        var result = new List<(int slot, DateTime expireAt, bool? tellingTruth)>();
+        var result = _nextBuffBuffer;
+        result.Clear();
         foreach (var index in grandCross)
         {
             for (var slot = 0; slot < index.playerBuffs.Length; slot++)
@@ -122,7 +125,20 @@ sealed class GrandCrossOrder(BossModule module) : BossComponent(module)
                 }
             }
         }
-        return [.. result.OrderBy(buff => buff.expireAt).Take(count)];
+        for (var i = 1; i < result.Count; ++i)
+        {
+            var cur = result[i];
+            var j = i - 1;
+            while (j >= 0 && result[j].expireAt > cur.expireAt)
+            {
+                result[j + 1] = result[j];
+                --j;
+            }
+            result[j + 1] = cur;
+        }
+        if (result.Count > count)
+            result.RemoveRange(count, result.Count - count);
+        return result;
     }
 }
 
@@ -206,9 +222,12 @@ sealed class TsunamiInfernoOrder(BossModule module) : BossComponent(module)
         return tsunamiInferno[id].playerBuffs[slot];
     }
 
+    private readonly List<(int slot, DateTime expireAt, bool? tellingTruth)> _nextBuffBuffer = [];
+
     public List<(int slot, DateTime expireAt, bool? tellingTruth)> GetNextBuffPlayers(uint status, int count)
     {
-        var result = new List<(int slot, DateTime expireAt, bool? tellingTruth)>();
+        var result = _nextBuffBuffer;
+        result.Clear();
         foreach (var index in tsunamiInferno)
         {
             for (var slot = 0; slot < index.playerBuffs.Length; ++slot)
@@ -222,7 +241,20 @@ sealed class TsunamiInfernoOrder(BossModule module) : BossComponent(module)
                 }
             }
         }
-        return [.. result.OrderBy(buff => buff.expireAt).Take(count)];
+        for (var i = 1; i < result.Count; ++i)
+        {
+            var cur = result[i];
+            var j = i - 1;
+            while (j >= 0 && result[j].expireAt > cur.expireAt)
+            {
+                result[j + 1] = result[j];
+                --j;
+            }
+            result[j + 1] = cur;
+        }
+        if (result.Count > count)
+            result.RemoveRange(count, result.Count - count);
+        return result;
     }
 }
 
@@ -401,7 +433,13 @@ sealed class AntiLight(BossModule module) : BossComponent(module)
 
     private bool HasBuff(List<(uint buff, DateTime expireAt)> buffs, uint status)
     {
-        return buffs.Any(b => b.buff == status);
+        var count = buffs.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            if (buffs[i].buff == status)
+                return true;
+        }
+        return false;
     }
 }
 
@@ -488,7 +526,25 @@ sealed class ForkedWater(BossModule module) : Components.UniformStackSpread(modu
         }
 
         // Stacks + nothing players
-        if (Stacks.Any(player => player.Target == pc) || !Spreads.Any(player => player.Target == pc))
+        var hasStack = false;
+        for (var i = 0; i < Stacks.Count; ++i)
+        {
+            if (Stacks[i].Target == pc)
+            {
+                hasStack = true;
+                break;
+            }
+        }
+        var hasSpread = false;
+        for (var i = 0; i < Spreads.Count; ++i)
+        {
+            if (Spreads[i].Target == pc)
+            {
+                hasSpread = true;
+                break;
+            }
+        }
+        if (hasStack || !hasSpread)
         {
             if (pc.Class.IsSupport())
             {
@@ -502,7 +558,7 @@ sealed class ForkedWater(BossModule module) : Components.UniformStackSpread(modu
         }
 
         // Spread players
-        if (Spreads.Any(player => player.Target == pc))
+        if (hasSpread)
         {
             if (pc.Class.IsSupport())
             {
@@ -589,6 +645,17 @@ sealed class CursedShriek(BossModule module) : Components.GenericGaze(module)
 {
     private readonly GrandCrossOrder? grandCrossOrder = module.FindComponent<GrandCrossOrder>();
     private readonly List<(int slot, DateTime expireAt, bool inverted, Actor player)> pendingGazes = [];
+
+    private bool HasPendingGaze(Actor pc)
+    {
+        var count = pendingGazes.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            if (pendingGazes[i].player == pc)
+                return true;
+        }
+        return false;
+    }
     readonly LightningSafeSpots? lightningSafeSpots = module.FindComponent<LightningSafeSpots>();
     private readonly List<Eye> eyes = [];
 
@@ -630,7 +697,7 @@ sealed class CursedShriek(BossModule module) : Components.GenericGaze(module)
             return;
         }
 
-        var players = grandCrossOrder.GetNextBuffPlayers((uint)SID.CursedShriek, 2).ToList();
+        var players = grandCrossOrder.GetNextBuffPlayers((uint)SID.CursedShriek, 2);
         if (players.Count != 2)
         {
             return;
@@ -672,7 +739,7 @@ sealed class CursedShriek(BossModule module) : Components.GenericGaze(module)
             return;
         }
 
-        var players = grandCrossOrder.GetNextBuffPlayers((uint)SID.CursedShriek, 2).ToList();
+        var players = grandCrossOrder.GetNextBuffPlayers((uint)SID.CursedShriek, 2);
         if (players.Count != 2)
         {
             return;
@@ -704,25 +771,25 @@ sealed class CursedShriek(BossModule module) : Components.GenericGaze(module)
         {
 
             // Support gaze player
-            if (pendingGazes.Any(eye => eye.player == pc) && pc.Class.IsSupport())
+            if (HasPendingGaze(pc) && pc.Class.IsSupport())
             {
                 Arena.ZoneCircleOutline(Module.Center - new WDir(0, 2.0f), 1f, Colors.Safe, 2f);
             }
 
             // DD gaze player
-            if (pendingGazes.Any(eye => eye.player == pc) && pc.Class.IsDD())
+            if (HasPendingGaze(pc) && pc.Class.IsDD())
             {
                 Arena.ZoneCircleOutline(Module.Center - new WDir(0, -2.0f), 1f, Colors.Safe, 2f);
             }
 
             // Support players
-            if (!pendingGazes.Any(eye => eye.player == pc) && pc.Class.IsSupport())
+            if (!HasPendingGaze(pc) && pc.Class.IsSupport())
             {
                 Arena.ZoneCircleOutline(Module.Center - new WDir(0, 6.0f), 1f, Colors.Safe, 2f);
             }
 
             // DD players
-            if (!pendingGazes.Any(eye => eye.player == pc) && pc.Class.IsDD())
+            if (!HasPendingGaze(pc) && pc.Class.IsDD())
             {
                 Arena.ZoneCircleOutline(Module.Center - new WDir(0, -6.0f), 1f, Colors.Safe, 2f);
             }
@@ -730,7 +797,7 @@ sealed class CursedShriek(BossModule module) : Components.GenericGaze(module)
             return;
         }
 
-        var aoes = lightningSafeSpots.Casters.ToList();
+        var aoes = lightningSafeSpots.Casters;
         if (aoes.Count == 0)
         {
             return;
@@ -762,25 +829,25 @@ sealed class CursedShriek(BossModule module) : Components.GenericGaze(module)
             }
 
             // Support gaze player
-            if (pendingGazes.Any(eye => eye.player == pc) && pc.Class.IsSupport())
+            if (HasPendingGaze(pc) && pc.Class.IsSupport())
             {
                 Arena.ZoneCircleOutline(safeSpot - forward * 2f, 1f, Colors.Safe, 2f);
             }
 
             // DD gaze player
-            if (pendingGazes.Any(eye => eye.player == pc) && pc.Class.IsDD())
+            if (HasPendingGaze(pc) && pc.Class.IsDD())
             {
                 Arena.ZoneCircleOutline(safeSpot + forward * 2f, 1f, Colors.Safe, 2f);
             }
 
             // Support players
-            if (!pendingGazes.Any(eye => eye.player == pc) && pc.Class.IsSupport())
+            if (!HasPendingGaze(pc) && pc.Class.IsSupport())
             {
                 Arena.ZoneCircleOutline(safeSpot - forward * 6f, 1f, Colors.Safe, 2f);
             }
 
             // DD players
-            if (!pendingGazes.Any(eye => eye.player == pc) && pc.Class.IsDD())
+            if (!HasPendingGaze(pc) && pc.Class.IsDD())
             {
                 Arena.ZoneCircleOutline(safeSpot + forward * 6f, 1f, Colors.Safe, 2f);
             }
@@ -860,13 +927,13 @@ sealed class Inferno(BossModule module) : Components.GenericBaitProximity(module
             // Real
             if (tellingTruth == true)
             {
-                CurrentBaits.Add(new(player.Position, new AOEShapeCircle(6.0f), expireAt));
+                CurrentBaits.Add(new(player.Position, DMUShapes.Circle6, expireAt));
             }
 
             // Fake
             if (tellingTruth == false)
             {
-                CurrentBaits.Add(new(player.Position, new AOEShapeDonut(6.0f, 40.0f), expireAt));
+                CurrentBaits.Add(new(player.Position, DMUShapes.Donut6_40, expireAt));
             }
         }
     }
@@ -954,13 +1021,13 @@ sealed class Tsunami(BossModule module) : Components.GenericBaitProximity(module
             // Real
             if (tellingTruth == true)
             {
-                CurrentBaits.Add(new(player.Position, new AOEShapeDonut(6.0f, 40.0f), expireAt));
+                CurrentBaits.Add(new(player.Position, DMUShapes.Donut6_40, expireAt));
             }
 
             // Fake
             if (tellingTruth == false)
             {
-                CurrentBaits.Add(new(player.Position, new AOEShapeCircle(6.0f), expireAt));
+                CurrentBaits.Add(new(player.Position, DMUShapes.Circle6, expireAt));
             }
         }
     }
@@ -990,8 +1057,14 @@ sealed class P4LightningSafeSpotsOLD(BossModule module) : LightningSafeSpots(mod
             return;
         }
 
-        var lightning = kefkaOrder.tellingTruthOrder.Where(e => e.element == KefkaOrder.Element.Thunder).ToList();
-        if (lightning.Count != 2)
+        var lightningCount = 0;
+        var order = kefkaOrder.tellingTruthOrder;
+        for (var i = 0; i < order.Count; ++i)
+        {
+            if (order[i].element == KefkaOrder.Element.Thunder)
+                ++lightningCount;
+        }
+        if (lightningCount != 2)
         {
             return;
         }

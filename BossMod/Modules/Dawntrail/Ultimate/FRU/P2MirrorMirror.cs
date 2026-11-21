@@ -90,8 +90,15 @@ sealed class P2MirrorMirrorHouseOfLight(BossModule module) : Components.GenericB
     {
         CurrentBaits.Clear();
         foreach (var s in CurrentSources)
-            foreach (var p in Raid.WithoutSlot(false, true, true).SortedByRange(s.Actor.Position).Take(4))
+        {
+            var taken = 0;
+            foreach (var p in Raid.WithoutSlot(false, true, true).SortedByRange(s.Actor.Position))
+            {
+                if (taken++ == 4)
+                    break;
                 CurrentBaits.Add(new(s.Actor, p, _shape, s.Activation));
+            }
+        }
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)

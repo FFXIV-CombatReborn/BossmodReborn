@@ -8,21 +8,13 @@ sealed class ImpartialRuling(BossModule module) : Components.SimpleAOEGroups(mod
 
 sealed class RadiantSacrament(BossModule module) : Components.GenericAOEs(module, (uint)AID.RadiantSacrament1)
 {
+    private static readonly AOEShapeRect square = new(5f, 5f, 5f);
     private readonly List<AOEInstance> _aoes = [];
+
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        var count = _aoes.Count;
-        if (count > 0)
-        {
-            var max = count > 15 ? 15 : count;
-            var tiles = new AOEInstance[max];
-            for (var i = 0; i < max; ++i)
-            {
-                tiles[i] = _aoes[i];
-            }
-            return tiles;
-        }
-        return [];
+        var aoes = CollectionsMarshal.AsSpan(_aoes);
+        return aoes[..Math.Min(15, aoes.Length)];
     }
 
     public override void OnMapEffect(byte index, uint state) // credit for finding the way these related to the squares goes to Xan. 
@@ -33,7 +25,7 @@ sealed class RadiantSacrament(BossModule module) : Components.GenericAOEs(module
             var row = ix % 5;
             var col = ix / 5;
             var wd = new WDir(10f * col, 10f * row) + (Arena.Center - new WDir(20f, 20f));
-            _aoes.Add(new(new AOEShapeRect(5f, 5f, 5f), wd, default, WorldState.FutureTime(8.1d)));
+            _aoes.Add(new(square, wd, default, WorldState.FutureTime(8.1d)));
         }
     }
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
@@ -41,7 +33,10 @@ sealed class RadiantSacrament(BossModule module) : Components.GenericAOEs(module
         if (spell.Action.ID == WatchedAction)
         {
             ++NumCasts;
-            _aoes.RemoveAt(0);
+            if (_aoes.Count != 0)
+            {
+                _aoes.RemoveAt(0);
+            }
         }
     }
 }
@@ -87,18 +82,8 @@ class Electrify(BossModule module) : Components.GenericAOEs(module)
     private static readonly AOEShapeCircle _circle = new(18f);
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        var count = _tethers.Count;
-        if (count <= 0)
-        {
-            return [];
-        }
-        var max = (count > 2) ? 2 : count;
-        var _aoes = new AOEInstance[max];
-        for (var i = 0; i < max; ++i)
-        {
-            _aoes[i] = _tethers[i];
-        }
-        return _aoes;
+        var aoes = CollectionsMarshal.AsSpan(_tethers);
+        return aoes[..Math.Min(2, aoes.Length)];
     }
     public override void OnTethered(Actor source, in ActorTetherInfo tether)
     {
@@ -110,7 +95,10 @@ class Electrify(BossModule module) : Components.GenericAOEs(module)
         if (spell.Action.ID == (uint)AID.Electrify)
         {
             NumCasts++;
-            _tethers.RemoveAt(0);
+            if (_tethers.Count != 0)
+            {
+                _tethers.RemoveAt(0);
+            }
         }
     }
 }

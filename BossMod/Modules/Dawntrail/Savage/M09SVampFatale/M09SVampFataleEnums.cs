@@ -139,5 +139,6 @@ public enum IconID : uint
 public enum TetherID : uint
 {
     Chains = 353, // CharnelCell1/CharnelCell/CharnelCell2/player->player/VampetteFatale
+    ChainsStretched = 354 // player->VampetteFatale, same bat tether while the player is too far
 }
 

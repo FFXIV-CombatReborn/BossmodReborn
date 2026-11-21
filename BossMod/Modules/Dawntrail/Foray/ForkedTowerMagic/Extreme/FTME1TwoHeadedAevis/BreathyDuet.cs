@@ -19,11 +19,13 @@ sealed class BreathyDuet(BossModule module) : Components.GenericAOEs(module)
     // TODO: add/remove cone AOEs separately
     // 2nd tether Z-axis = safe spot CW, x-axis = safe spot CCW?
 
+    private readonly List<AOEInstance> _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_clusters.TryGetValue(_green, out var lightnings) && _clusters.TryGetValue(_blue, out var ices))
         {
-            List<AOEInstance> aoes = [];
+            var aoes = _aoesBuffer;
+            aoes.Clear();
             var activation = _activation.AddSeconds(NumCasts * 3.6d);
 
             if (lightnings.Count != 0)

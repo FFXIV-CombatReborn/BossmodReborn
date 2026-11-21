@@ -135,24 +135,24 @@ public enum SID : uint
     LightVengeance = 4560, // none->player, extra=0x0
     DarkVengeance = 4559, // none->player, extra=0x0
     _Gen_Suppuration = 4512, // Helper->player, extra=0x1/0x2/0x3/0x4/0x5
-    _Gen_SearingChains = 4563, // none->player, extra=0x0
+    SearingChains = 4563, // none->player, extra=0x0
     _Gen_FireResistanceDownII = 2937, // Helper/Flameborn->player, extra=0x0
     _Gen_Burns = 2082, // Helper->player, extra=0x0
     _Gen_ = 3913, // EminentGrief->EminentGrief/Flameborn, extra=0x3C6/0x399/0x39A
     _Gen_ShackledAbilities = 4565, // none->player, extra=0x0
-    _Gen_ShackledHealing = 4564, // none->player, extra=0x0
+    ShackledHealing = 4564, // none->player, extra=0x0
     _Gen_DamageDown = 3304, // Helper->player, extra=0x1/0x2
-    _Gen_HellishEarth = 4566, // none->player, extra=0x0
+    HellishEarth = 4566, // none->player, extra=0x0
     _Gen2_ = 4684, // none->EminentGrief/DevouredEater, extra=0x0
 
     _Gen3_ = 3572, // EminentGrief->EminentGriefHelper, extra=0x19
 
     _Gen_Poison = 3462, // Helper->player, extra=0x1/0x2/0x3
     _Gen_Bleeding = 2088, // Helper->player, extra=0x0
-    _Gen_SinBearer = 4567, // Helper->player, extra=0x1/0x2/0x3/0x4/0x5/0x6/0x7/0x8/0x9/0xA/0xB/0xC/0xD/0xE/0xF/0x10
-    _Gen_ChainsOfCondemnation = 4562, // Helper->player, extra=0x0
-    _Gen_WithoutSin = 4569, // none->player, extra=0x0
-    _Gen_Doom = 4594, // none->player, extra=0x0
+    SinBearer = 4567, // Helper->player, extra=0x1/0x2/0x3/0x4/0x5/0x6/0x7/0x8/0x9/0xA/0xB/0xC/0xD/0xE/0xF/0x10
+    ChainsOfCondemnation = 4562, // Helper->player, extra=0x0
+    WithoutSin = 4569, // none->player, extra=0x0
+    Doom = 4594, // none->player, extra=0x0
     _Gen_VulnerabilityDown = 2198, // none->Flameborn, extra=0x0
     _Gen_Stoneskin = 151, // none->Flameborn, extra=0x0
     _Gen_DamageUp = 2550, // none->Flameborn/DevouredEater/EminentGrief, extra=0x1/0x2/0x3/0x5/0x4/0x6/0x7/0xF/0xE
@@ -168,13 +168,13 @@ public enum IconID : uint
     Dark = 78, // player->self
     Light = 77, // player->self
     SearingChains = 97, // player->self
-    _Gen_Icon_lockon5_t0h = 23, // player->self
+    Spinelash = 23, // player->self
     _Gen_Icon_share_laser_3sec_0t = 527, // EminentGrief->player
 }
 
 public enum TetherID : uint
 {
-    _Gen_Tether_chn_hfchain1f = 9, // player->player
-    _Gen_Tether_chn_fire001f = 5, // EminentGrief->player
+    SearingChains = 9, // player->player
+    HellishEarth = 5, // EminentGrief->player
     _Gen_Tether_chn_tergetfix1f = 17, // Flameborn->player
 }

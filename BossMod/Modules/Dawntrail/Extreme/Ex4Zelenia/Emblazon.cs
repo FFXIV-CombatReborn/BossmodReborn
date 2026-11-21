@@ -104,9 +104,8 @@ sealed class Emblazon(BossModule module) : Components.GenericTowers(module, (uin
                         AddTower(FloorTiles.DonutSIn, FloorTiles.TileAngles[tiles[i]]);
                     }
                 }
-                else if (Mechanic == false)
+                else if (Mechanic == false && FloorTiles.Find4ConnectedInactiveTiles(_tiles.InnerActiveTiles, _tiles.OuterActiveTiles, out var innerResult, out var outerResult))
                 {
-                    FloorTiles.Find4ConnectedInactiveTiles(_tiles.InnerActiveTiles, _tiles.OuterActiveTiles, out var innerResult, out var outerResult);
                     for (var i = 0; i < 2; ++i)
                     {
                         AddTower(FloorTiles.DonutSIn, FloorTiles.TileAngles[innerResult[i]]);

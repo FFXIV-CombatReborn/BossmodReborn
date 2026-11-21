@@ -243,5 +243,5 @@ sealed class CE110FlameOfDuskStates : StateMachineBuilder
 [ModuleInfo(BossModuleInfo.Maturity.AISupport, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 1018u, NameID = 47u)]
 public sealed class CE110FlameOfDusk(WorldState ws, Actor primary) : BossModule(ws, primary, new WPos(-570f, -160f).Quantized(), new ArenaBoundsCircle(20f))
 {
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 25f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 25f);
 }
