@@ -12,7 +12,20 @@ public sealed class ColumnPlayersDetails : Timeline.ColumnGroup
     private readonly PlanDatabase _planDB;
     private readonly ColumnPlayerDetails?[] _columns;
 
-    public bool AnyPlanModified => _columns.Any(c => c?.PlanModified ?? false);
+    public bool AnyPlanModified
+    {
+        get
+        {
+            for (var i = 0; i < _columns.Length; ++i)
+            {
+                if (_columns[i]?.PlanModified ?? false)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
 
     public ColumnPlayersDetails(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, BitMask showPlayers, PlanDatabase planDB)
         : base(timeline)
@@ -35,7 +48,8 @@ public sealed class ColumnPlayersDetails : Timeline.ColumnGroup
         for (var i = 0; i < _columns.Length; ++i)
         {
             var (p, c, l) = _encounter.PartyMembers[i];
-            foreach (var n in tree.Node($"{c} {ReplayUtils.ParticipantString(p, p.WorldExistence.FirstOrDefault().Start)}"))
+            var startTime = p.WorldExistence.Count > 0 ? p.WorldExistence[0].Start : default;
+            foreach (var n in tree.Node($"{c} {ReplayUtils.ParticipantString(p, startTime)}"))
             {
                 var col = _columns[i];
                 if (col != null)

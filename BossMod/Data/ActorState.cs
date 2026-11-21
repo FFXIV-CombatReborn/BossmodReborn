@@ -318,7 +318,7 @@ public sealed class ActorState : IEnumerable<Actor>
            .Emit(OID, "X")
            .Emit(SpawnIndex)
            .Emit(LayoutID, "X")
-           .EmitName(Name, Type, Class, Level)
+           .EmitActorName(InstanceID, Name, Type, Class, Level)
            .Emit(NameID)
            .Emit((ushort)Type, "X4")
            .Emit(Class)
@@ -373,7 +373,7 @@ public sealed class ActorState : IEnumerable<Actor>
             wsactors.Removed.Fire(actor);
             wsactors.Actors.Remove(InstanceID);
         }
-        public override void Write(ReplayRecorder.Output output) => output.EmitFourCC("ACT-"u8).Emit(InstanceID, "X8");
+        public override void Write(ReplayRecorder.Output output) => output.EmitFourCC("ACT-"u8).EmitActor(InstanceID);
     }
 
     public Event<Actor> Renamed = new();
@@ -388,8 +388,7 @@ public sealed class ActorState : IEnumerable<Actor>
             actor.NameID = NameID;
             ws.Actors.Renamed.Fire(actor);
         }
-        // note that this op is never triggered for players, so anonymization is unnecessary
-        public override void Write(ReplayRecorder.Output output) => output.EmitFourCC("NAME"u8).Emit(InstanceID, "X8").Emit(Name).Emit(NameID);
+        public override void Write(ReplayRecorder.Output output) => output.EmitFourCC("NAME"u8).Emit(InstanceID, "X8").EmitRename(InstanceID, Name).Emit(NameID);
     }
 
     public Event<Actor> ClassChanged = new();
@@ -616,13 +615,13 @@ public sealed class ActorState : IEnumerable<Actor>
 
         protected override void ExecActor(WorldState ws, Actor actor)
         {
-            if (actor.Tether.Target != default)
+            if (actor.Tether.Target is not (0ul or 0xE0000000))
             {
                 ws.Actors.Untethered.Fire(actor);
             }
 
             actor.Tether = Value;
-            if (Value.Target != default)
+            if (Value.Target is not (0ul or 0xE0000000))
             {
                 ws.Actors.Tethered.Fire(actor);
             }
@@ -826,6 +825,7 @@ public sealed class ActorState : IEnumerable<Actor>
             {
                 var effects = prev.Effects.ValidEffects();
                 var lenE = effects.Length;
+            done:
                 for (var i = 0; i < lenE; ++i)
                 {
                     ref readonly var e = ref effects[i];
@@ -839,12 +839,11 @@ public sealed class ActorState : IEnumerable<Actor>
                             if (p.GlobalSequence == prevSeq && p.TargetIndex == prevIdx && !p.RequiresEffectResult)
                             {
                                 actor.PendingKnockbacks.RemoveAt(j);
-                                goto done;
+                                break done;
                             }
                         }
                     }
                 }
-            done:
                 ws.Actors.IncomingEffectRemove.Fire(actor, Index);
             }
             actor.IncomingEffects[Index] = v;

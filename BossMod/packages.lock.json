@@ -10,15 +10,15 @@
       },
       "RebornMaterial": {
         "type": "Direct",
-        "requested": "[7.5.8.1, )",
-        "resolved": "7.5.8.1",
-        "contentHash": "lLFc0gHAKw8Br4IMIf+0C4D+W1QMO7J59cC0URMbzBqSpdT/qPSi+ogIwerFybmfunAs8+N8FQgXevStBSEkOA=="
+        "requested": "[7.5.8.2, )",
+        "resolved": "7.5.8.2",
+        "contentHash": "2AK+TzWYvcMKFbrJVCZhN8X5ISHvGzACQtWEcLusjpmjbSiNefkCkNt5Uw+sYjcyrjUlBt1Rzt3/7HjgpLZWVQ=="
       },
       "TerraFX.Interop.Windows": {
         "type": "Direct",
-        "requested": "[10.0.26100.6, )",
-        "resolved": "10.0.26100.6",
-        "contentHash": "QjL9vliSWmscUv6A7bjvsryHjYnY0norqvCNcLXSdEy1VIIzMF6FiS7BuvLTBuGUeN9FY4zJbU65OsHEv7jG9A=="
+        "requested": "[10.0.28000, )",
+        "resolved": "10.0.28000",
+        "contentHash": "ugOxRTlKp6VaJq9Wv5tr/d9kZhAO/s7HA8eyhmxIlOmeymuCiEBZrn0n8muu9KWDcD7ksgu1oxsjseX6q0ZYHQ=="
       }
     }
   }

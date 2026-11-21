@@ -13,12 +13,14 @@ namespace BossMod;
 public sealed class ReplayManagementWindow : UIWindow
 {
     private readonly WorldState _ws;
+    private readonly DirectoryInfo _defaultLogDir;
     private DirectoryInfo _logDir;
     private static readonly ReplayManagementConfig _config = Service.Config.Get<ReplayManagementConfig>();
     private readonly ReplayManager _manager;
     private readonly EventSubscriptions _subscriptions;
     private readonly BossModuleManager _bmm;
     private ReplayRecorder? _recorder;
+    private string? _lastRecordedLogPath;
     private string _message = "";
     private bool _recordingManual; // recording was started manually, and so should not be stopped automatically
     private bool _recordingDuty; // recording was started automatically because we've entered duty
@@ -34,8 +36,9 @@ public sealed class ReplayManagementWindow : UIWindow
     public ReplayManagementWindow(WorldState ws, BossModuleManager bmm, RotationDatabase rotationDB, DirectoryInfo logDir) : base(_windowID, false, new(300f, 200f))
     {
         _ws = ws;
-        _logDir = logDir;
-        _manager = new(rotationDB, logDir.FullName);
+        _defaultLogDir = logDir;
+        _logDir = string.IsNullOrEmpty(_config.ReplayFolder) ? _defaultLogDir : new DirectoryInfo(_config.ReplayFolder);
+        _manager = new(rotationDB, _logDir.FullName);
         _bmm = bmm;
         _subscriptions = new
         (
@@ -61,6 +64,21 @@ public sealed class ReplayManagementWindow : UIWindow
         _recorder?.Dispose();
         _subscriptions.Dispose();
         _manager.Dispose();
+        if (_startLinkPayload != null)
+        {
+            Service.ChatGui.RemoveChatLinkHandler(0u);
+            _startLinkPayload = null;
+        }
+        if (_uploadLinkPayload != null)
+        {
+            Service.ChatGui.RemoveChatLinkHandler(1u);
+            _uploadLinkPayload = null;
+        }
+        if (_disableAlertLinkPayload != null)
+        {
+            Service.ChatGui.RemoveChatLinkHandler(2u);
+            _disableAlertLinkPayload = null;
+        }
         base.Dispose(disposing);
     }
 
@@ -81,8 +99,7 @@ public sealed class ReplayManagementWindow : UIWindow
         {
             if (!IsRecording())
             {
-                _recordingManual = true;
-                StartRecording("");
+                StartRecording("", true);
             }
             else
             {
@@ -151,7 +168,7 @@ public sealed class ReplayManagementWindow : UIWindow
             {
                 if (id == default)
                 {
-                    StartRecording("");
+                    StartRecording("", true);
                     Service.ChatGui.Print("[BMR] Replay recording started");
                 }
             });
@@ -226,14 +243,14 @@ public sealed class ReplayManagementWindow : UIWindow
             909u, 688u, 745u, 268u, 276u,
             586u
         ];
-        for (var i = 0; i < 36; ++i)
+        for (var i = 0; i < alwaysImportantDuties.Length; ++i)
         {
             map[alwaysImportantDuties[i]] = true;
         }
 
         // ignored duties
         uint[] alwaysIgnoredDuties = [0u, 650u, 127u, 130u, 195u, 756u, 180u, 701u, 473u, 721u, 1065u];
-        for (var i = 0; i < 11; ++i)
+        for (var i = 0; i < alwaysIgnoredDuties.Length; ++i)
         {
             map[alwaysIgnoredDuties[i]] = false;
         }
@@ -312,11 +329,16 @@ public sealed class ReplayManagementWindow : UIWindow
         }
     }
 
-    public void StartRecording(string prefix)
+    public void StartRecording(string prefix, bool manual = false)
     {
         if (IsRecording())
         {
             return; // already recording
+        }
+
+        if (manual)
+        {
+            _recordingManual = true;
         }
 
         _logDir.Create();
@@ -326,11 +348,15 @@ public sealed class ReplayManagementWindow : UIWindow
         {
             try
             {
-                var replays = _logDir.GetFiles();
-                replays.Sort(static (a, b) => a.LastWriteTime.CompareTo(b.LastWriteTime));
-                foreach (var f in replays.Take(replays.Length - _config.MaxReplays))
+                var replays = _logDir.GetFiles("*.log");
+                var excess = replays.Length - _config.MaxReplays + 1; // leave space for the recording about to be created
+                if (excess > 0)
                 {
-                    f.Delete();
+                    Array.Sort(replays, static (a, b) => a.LastWriteTimeUtc.CompareTo(b.LastWriteTimeUtc));
+                    for (var i = 0; i < excess; ++i)
+                    {
+                        replays[i].Delete();
+                    }
                 }
             }
             catch (Exception ex)
@@ -353,9 +379,9 @@ public sealed class ReplayManagementWindow : UIWindow
 
     public void StopRecording()
     {
+        _lastRecordedLogPath = _recorder?.LogPath;
         if (_config.ImportantDutyAlert && IsImportantDuty(_recorder?.CFCID ?? default))
         {
-            var path = _recorder?.LogPath;
             _uploadLinkPayload ??= Service.ChatGui.AddChatLinkHandler(1u, (id, str) =>
             {
                 if (id == 1u)
@@ -368,7 +394,7 @@ public sealed class ReplayManagementWindow : UIWindow
                             UseShellExecute = true
                         });
                     });
-                    Service.ChatGui.Print($"[BMR] The path to your replay is: {path}");
+                    Service.ChatGui.Print($"[BMR] The path to your replay is: {_lastRecordedLogPath}");
                 }
             });
             var alertPayload =
@@ -388,7 +414,7 @@ public sealed class ReplayManagementWindow : UIWindow
 
     public void UpdateLogDirectory()
     {
-        var newLogDir = string.IsNullOrEmpty(_config.ReplayFolder) ? _logDir : new DirectoryInfo(_config.ReplayFolder);
+        var newLogDir = string.IsNullOrEmpty(_config.ReplayFolder) ? _defaultLogDir : new DirectoryInfo(_config.ReplayFolder);
         _logDir = newLogDir;
         _manager.SetLogDirectory(_logDir.FullName);
     }

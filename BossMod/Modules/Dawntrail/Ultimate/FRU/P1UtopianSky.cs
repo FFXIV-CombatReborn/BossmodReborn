@@ -52,7 +52,13 @@ sealed class P1UtopianSkySpreadStack(BossModule module) : Components.UniformStac
         {
             case Mechanic.Stack:
                 // TODO: this can target either tanks or healers
-                AddStacks(Raid.WithoutSlot(true, true, true).Where(p => p.Role == Role.Healer), Activation);
+                var stackParty = Raid.WithoutSlot(true, true, true);
+                for (var i = 0; i < stackParty.Length; ++i)
+                {
+                    var p = stackParty[i];
+                    if (p.Role == Role.Healer)
+                        AddStack(p, Activation);
+                }
                 break;
             case Mechanic.Spread:
                 AddSpreads(Raid.WithoutSlot(true, true, true), Activation);

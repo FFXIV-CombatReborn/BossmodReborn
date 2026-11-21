@@ -54,7 +54,18 @@ sealed class P4DarklitDragonsong(BossModule module) : BossComponent(module)
             return; // assignments are not valid, bail
 
         // find the anchor (tethered player with lowest prio), players tethered to him on both sides will take S tower
-        var anchorSlot = TowerSoakers.SetBits().MinBy(i => playerPrios[i]);
+        var anchorSlot = -1;
+        var anchorPrio = int.MaxValue;
+        foreach (var i in TowerSoakers.SetBits())
+        {
+            if (playerPrios[i] < anchorPrio)
+            {
+                anchorPrio = playerPrios[i];
+                anchorSlot = i;
+            }
+        }
+        if (anchorSlot < 0)
+            return;
         var anchorPlayer = Raid[anchorSlot];
         foreach (var t in _tethers)
         {
@@ -155,8 +166,26 @@ sealed class P4DarklitDragonsongPathOfLight(BossModule module) : Components.Gene
     {
         CurrentBaits.Clear();
         if (_source != null && ForbiddenPlayers.Any())
-            foreach (var p in Raid.WithoutSlot(false, true, true).SortedByRange(_source.Position).Take(4))
+        {
+            var taken = 0;
+            foreach (var p in Raid.WithoutSlot(false, true, true).SortedByRange(_source.Position))
+            {
+                if (taken++ == 4)
+                    break;
                 CurrentBaits.Add(new(_source, p, _shape, _activation));
+            }
+        }
+    }
+
+    private bool IsClippedByOthers(Actor actor)
+    {
+        var baits = CollectionsMarshal.AsSpan(ActiveBaitsNotOn(actor));
+        for (var i = 0; i < baits.Length; ++i)
+        {
+            if (IsClippedBy(actor, ref baits[i]))
+                return true;
+        }
+        return false;
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
@@ -178,7 +207,7 @@ sealed class P4DarklitDragonsongPathOfLight(BossModule module) : Components.Gene
                 hints.Add("Bait cone away from raid!");
         }
 
-        if (ActiveBaitsNotOn(actor).Any(b => IsClippedBy(actor, ref b)))
+        if (IsClippedByOthers(actor))
             hints.Add("GTFO from baited cone!");
     }
 

@@ -19,6 +19,7 @@ public sealed class WorldState
     public readonly ClientState Client = new();
     public readonly DeepDungeonState DeepDungeon = new();
     public readonly NetworkState Network = new();
+    public bool UpdateGlobalRSV = true;
 
     public DateTime CurrentTime => Frame.Timestamp;
 
@@ -61,9 +62,9 @@ public sealed class WorldState
         var actors = Actors.CompareToInitial();
         var party = Party.CompareToInitial();
         var client = Client.CompareToInitial();
-        // var network = Network.CompareToInitial();
+        var network = Network.CompareToInitial();
         var deepdungeon = DeepDungeon.CompareToInitial();
-        List<Operation> ops = [with(RSVEntries.Count + waymarks.Count + actors.Count + party.Count + client.Count + deepdungeon.Count + 2)]; // todo add network back
+        List<Operation> ops = [with(RSVEntries.Count + waymarks.Count + actors.Count + party.Count + client.Count + network.Count + deepdungeon.Count + 3)];
 
         if (CurrentTime != default)
         {
@@ -88,7 +89,7 @@ public sealed class WorldState
         ops.AddRange(actors);
         ops.AddRange(party);
         ops.AddRange(client);
-        // ops.AddRange(network);
+        ops.AddRange(network);
         ops.AddRange(deepdungeon);
         return ops;
     }
@@ -140,7 +141,10 @@ public sealed class WorldState
 
         protected override void Exec(WorldState ws)
         {
-            Service.LuminaRSV[Key] = Encoding.UTF8.GetBytes(Value); // TODO: reconsider...
+            if (ws.UpdateGlobalRSV)
+            {
+                Service.LuminaRSV[Key] = Encoding.UTF8.GetBytes(Value); // TODO: reconsider...
+            }
             ws.RSVEntries[Key] = Value;
             ws.RSVDataReceived.Fire(this);
         }

@@ -141,7 +141,7 @@ sealed class P2Intermission(BossModule module) : Components.GenericBaitAway(modu
             // cardinals - bait puddles accurately
             var assignedDir = (180f - 45f * clockSpot).Degrees();
             var assignedPosition = Arena.Center + 15f * assignedDir.ToDirection(); // crystal is at R=15
-            var assignedCrystal = CrystalsOfLight.FirstOrDefault(c => c.Position.AlmostEqual(assignedPosition, 2f));
+            var assignedCrystal = FindCrystalAt(CrystalsOfLight, assignedPosition);
             if (assignedCrystal != null)
             {
                 hints.AddForbiddenZone(new SDInvertedCircle(assignedPosition, 5f), WorldState.FutureTime(60d));
@@ -161,7 +161,7 @@ sealed class P2Intermission(BossModule module) : Components.GenericBaitAway(modu
             if (_cones?.Casters.Count == 0)
             {
                 var assignedPosition = Arena.Center + 9f * (180f - 45f * clockSpot).Degrees().ToDirection(); // crystal is at R=8
-                var assignedCrystal = CrystalsOfDarkness.FirstOrDefault(c => c.Position.AlmostEqual(assignedPosition, 2f));
+                var assignedCrystal = FindCrystalAt(CrystalsOfDarkness, assignedPosition);
                 if (assignedCrystal != null)
                     hints.AddForbiddenZone(new SDPrecisePosition(assignedPosition, new WDir(default, 1f), Arena.Bounds.MapResolution, actor.Position, 0.1f));
             }
@@ -182,6 +182,17 @@ sealed class P2Intermission(BossModule module) : Components.GenericBaitAway(modu
         {
             _iceVeilInvincible = false;
         }
+    }
+
+    private static Actor? FindCrystalAt(List<Actor> crystals, WPos pos)
+    {
+        var count = crystals.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            if (crystals[i].Position.AlmostEqual(pos, 2f))
+                return crystals[i];
+        }
+        return null;
     }
 
     private List<Actor> CrystalsOfLight => BossModule.GetActiveActors(_crystalsOfLight);

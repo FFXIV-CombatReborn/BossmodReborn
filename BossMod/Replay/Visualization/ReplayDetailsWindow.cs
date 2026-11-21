@@ -34,6 +34,7 @@ sealed class ReplayDetailsWindow : UIWindow
     private float _pfCushion;
     private float _pfTargetRadius = 3;
     private Positional _pfPositional = Positional.Any;
+    private volatile bool _exporting;
 
     public DateTime CurrentTime
     {
@@ -335,16 +336,19 @@ sealed class ReplayDetailsWindow : UIWindow
         ImGui.Checkbox("Show config", ref _showConfig);
         ImGui.SameLine();
         ImGui.Checkbox("Show debug", ref _showDebug);
-        ImGui.SameLine();
-        if (ImGui.Button("Split"))
+        using (ImRaii.Disabled(_exporting))
         {
-            SplitLog();
-        }
+            ImGui.SameLine();
+            if (ImGui.Button("Split"))
+            {
+                SplitLog();
+            }
 
-        ImGui.SameLine();
-        if (ImGui.Button("Split (encounter)"))
-        {
-            IsolateEncounter();
+            ImGui.SameLine();
+            if (ImGui.Button("Split (encounter)"))
+            {
+                IsolateEncounter();
+            }
         }
 
         if (_showConfig)
@@ -370,7 +374,7 @@ sealed class ReplayDetailsWindow : UIWindow
         }
         foreach (var m in _player.Replay.UserMarkers)
         {
-            DrawCheckpoint(m.Key, Colors.TextColor14, cursor, w);
+            DrawCheckpoint(m.Timestamp, Colors.TextColor14, cursor, w);
         }
         if (ImGui.IsWindowFocused() && (ImGui.IsMouseClicked(ImGuiMouseButton.Left) || ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left)))
         {
@@ -718,43 +722,78 @@ sealed class ReplayDetailsWindow : UIWindow
 
     private void SplitLog()
     {
-        if (_player.Replay.Ops.Count == 0)
+        if (_player.Replay.Ops.Count == 0 || _exporting)
         {
             return;
         }
 
-        var player = new ReplayPlayer(_player.Replay);
-        player.WorldState.Frame.Timestamp = _player.Replay.Ops[0].Timestamp; // so that we get correct name etc.
-        using (var relogger = new ReplayRecorder(player.WorldState, ReplayLogFormat.BinaryCompressed, false, new FileInfo(_player.Replay.Path).Directory!, "Before", false))
+        var replay = _player.Replay;
+        var splitTime = _curTime;
+        var dir = new FileInfo(replay.Path).Directory!;
+        _exporting = true;
+        _ = Task.Run(() =>
         {
-            player.AdvanceTo(_curTime, static () => { });
-        }
+            try
+            {
+                var player = new ReplayPlayer(replay);
+                player.WorldState.Frame.Timestamp = replay.Ops[0].Timestamp; // so that we get correct name etc.
+                using (var relogger = new ReplayRecorder(player.WorldState, ReplayLogFormat.BinaryCompressed, false, dir, "Before", false))
+                {
+                    player.AdvanceTo(splitTime, static () => { });
+                }
 
-        using (var relogger = new ReplayRecorder(player.WorldState, ReplayLogFormat.BinaryCompressed, true, new FileInfo(_player.Replay.Path).Directory!, "After", false))
-        {
-            player.AdvanceTo(DateTime.MaxValue, static () => { });
-        }
+                using (var relogger = new ReplayRecorder(player.WorldState, ReplayLogFormat.BinaryCompressed, true, dir, "After", false))
+                {
+                    player.AdvanceTo(DateTime.MaxValue, static () => { });
+                }
+            }
+            catch (Exception ex)
+            {
+                Service.Log($"Failed to split replay {replay.Path}: {ex}");
+            }
+            finally
+            {
+                _exporting = false;
+            }
+        });
     }
 
     private void IsolateEncounter()
     {
-        if (_player.Replay.Ops.Count == 0)
+        if (_player.Replay.Ops.Count == 0 || _exporting)
         {
             return;
         }
 
-        var enc = _player.Replay.Encounters.Find(e => e.Time.Start <= _curTime && e.Time.End >= _curTime);
+        var replay = _player.Replay;
+        var enc = replay.Encounters.Find(e => e.Time.Start <= _curTime && e.Time.End >= _curTime);
         if (enc == null)
         {
             return;
         }
 
-        var primaryActorName = enc.ParticipantsByOID.TryGetValue(enc.OID, out var primary) ? primary[0].NameAt(enc.Time.Start).name : null;
-
-        var player = new ReplayPlayer(_player.Replay);
-        player.WorldState.Frame.Timestamp = _player.Replay.Ops[0].Timestamp;
-        player.AdvanceTo(enc.Time.Start, static () => { });
-        using var relogger = new ReplayRecorder(player.WorldState, ReplayLogFormat.BinaryCompressed, true, new FileInfo(_player.Replay.Path).Directory!, $"Encounter_{Utils.StringToIdentifier(primaryActorName ?? "unknown")}", false);
-        player.AdvanceTo(enc.Time.End, static () => { });
+        var primaryActorName = enc.ParticipantsByOID.TryGetValue(enc.OID, out var primary) && primary.Count > 0 ? primary[0].NameAt(enc.Time.Start).name : null;
+        var dir = new FileInfo(replay.Path).Directory!;
+        var prefix = $"Encounter_{Utils.StringToIdentifier(primaryActorName ?? "unknown")}";
+        _exporting = true;
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var player = new ReplayPlayer(replay);
+                player.WorldState.Frame.Timestamp = replay.Ops[0].Timestamp;
+                player.AdvanceTo(enc.Time.Start, static () => { });
+                using var relogger = new ReplayRecorder(player.WorldState, ReplayLogFormat.BinaryCompressed, true, dir, prefix, false);
+                player.AdvanceTo(enc.Time.End, static () => { });
+            }
+            catch (Exception ex)
+            {
+                Service.Log($"Failed to isolate encounter from replay {replay.Path}: {ex}");
+            }
+            finally
+            {
+                _exporting = false;
+            }
+        });
     }
 }

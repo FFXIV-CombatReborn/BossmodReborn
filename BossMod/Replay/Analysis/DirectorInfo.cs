@@ -9,8 +9,13 @@ sealed class DirectorInfo
         var moduleInfo = BossModuleRegistry.FindByOID(oid);
         foreach (var replay in replays)
         {
-            foreach (var enc in replay.Encounters.Where(enc => enc.OID == oid))
+            for (var i = 0; i < replay.Encounters.Count; ++i)
             {
+                var enc = replay.Encounters[i];
+                if (enc.OID != oid)
+                {
+                    continue;
+                }
                 foreach (var diru in replay.EncounterDirectorUpdates(enc))
                 {
                     _data.GetOrAdd(diru.UpdateID).Add((replay, enc, [diru.Param1, diru.Param2, diru.Param3, diru.Param4], diru.Timestamp));

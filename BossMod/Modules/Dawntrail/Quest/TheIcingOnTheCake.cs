@@ -126,7 +126,7 @@ sealed class TheIcingOnTheCakeStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, Contributors = "croizat, ported from upstream", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1045u, NameID = 14234u)]
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, Contributors = "croizat, ported from upstream", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 1045u, NameID = 14234u)]
 public sealed class TheIcingOnTheCake(WorldState ws, Actor primary) : BossModule(ws, primary, default, new ArenaBoundsCircle(45f))
 {
     protected override bool CheckPull() => !PrimaryActor.IsDead;

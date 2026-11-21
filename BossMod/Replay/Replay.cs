@@ -2,6 +2,111 @@
 
 public sealed class Replay
 {
+    public sealed class History<T> : IEnumerable<(DateTime Key, T Value)>
+    {
+        public struct Enumerator(List<(DateTime Key, T Value)> list) : IEnumerator<(DateTime Key, T Value)>
+        {
+            private readonly List<(DateTime Key, T Value)> _list = list;
+            private int _index = -1;
+
+            public readonly (DateTime Key, T Value) Current => _list[_index];
+            readonly object IEnumerator.Current => Current;
+            public bool MoveNext() => ++_index < _list.Count;
+            public void Reset() => _index = -1;
+            public readonly void Dispose() { }
+        }
+
+        private readonly List<(DateTime Key, T Value)> _entries = [];
+
+        public int Count => _entries.Count;
+        public (DateTime Key, T Value) this[int index] => _entries[index];
+
+        public T this[DateTime key]
+        {
+            set
+            {
+                var count = _entries.Count;
+                if (count == 0 || key > _entries[count - 1].Key)
+                {
+                    _entries.Add((key, value));
+                    return;
+                }
+
+                var span = CollectionsMarshal.AsSpan(_entries);
+                if (key == span[count - 1].Key)
+                {
+                    span[count - 1] = (key, value);
+                    return;
+                }
+
+                var idx = LowerBound(key);
+                if (idx < count && span[idx].Key == key)
+                {
+                    span[idx] = (key, value);
+                }
+                else
+                {
+                    _entries.Insert(idx, (key, value));
+                }
+            }
+        }
+
+        public int LowerBound(DateTime test)
+        {
+            var span = CollectionsMarshal.AsSpan(_entries);
+            int first = 0, size = span.Length;
+            while (size > 0)
+            {
+                var step = size >> 1;
+                var mid = first + step;
+                if (span[mid].Key < test)
+                {
+                    first = mid + 1;
+                    size -= step + 1;
+                }
+                else
+                {
+                    size = step;
+                }
+            }
+            return first;
+        }
+
+        public int UpperBound(DateTime test)
+        {
+            var span = CollectionsMarshal.AsSpan(_entries);
+            int first = 0, size = span.Length;
+            while (size > 0)
+            {
+                var step = size >> 1;
+                var mid = first + step;
+                if (span[mid].Key <= test)
+                {
+                    first = mid + 1;
+                    size -= step + 1;
+                }
+                else
+                {
+                    size = step;
+                }
+            }
+            return first;
+        }
+
+        public T? At(DateTime t)
+        {
+            var next = UpperBound(t);
+            return next == 0 ? default : _entries[next - 1].Value;
+        }
+
+        public void RemoveLast() => _entries.RemoveAt(_entries.Count - 1);
+        public void TrimExcess() => _entries.TrimExcess();
+
+        public Enumerator GetEnumerator() => new(_entries);
+        IEnumerator<(DateTime Key, T Value)> IEnumerable<(DateTime Key, T Value)>.GetEnumerator() => GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
     public record struct TimeRange(DateTime Start = default, DateTime End = default)
     {
         public readonly float Duration => (float)(End - Start).TotalSeconds;
@@ -45,36 +150,69 @@ public sealed class Replay
         public uint LayoutID;
         public TimeRange EffectiveExistence;
         public readonly List<TimeRange> WorldExistence = []; // sorted by time, non-overlapping ranges
-        public readonly SortedList<DateTime, (string name, uint id)> NameHistory = [];
-        public readonly SortedList<DateTime, bool> TargetableHistory = [];
-        public readonly SortedList<DateTime, bool> DeadHistory = [];
-        public readonly SortedList<DateTime, bool> AllyHistory = [];
-        public readonly SortedList<DateTime, Vector4> PosRotHistory = [];
-        public readonly SortedList<DateTime, ActorHPMP> HPMPHistory = [];
+        public readonly History<(string name, uint id)> NameHistory = new();
+        public readonly History<bool> TargetableHistory = new();
+        public readonly History<bool> DeadHistory = new();
+        public readonly History<bool> AllyHistory = new();
+        public readonly History<Vector4> PosRotHistory = new();
+        public readonly History<ActorHPMP> HPMPHistory = new();
         public readonly List<Cast> Casts = [];
-        public readonly SortedList<DateTime, uint> EventObjectAnimation = [];
-        public readonly SortedList<DateTime, byte> EventState = [];
-        public readonly SortedList<DateTime, ushort> ActionTimeline = [];
+        public readonly History<uint> EventObjectAnimation = new();
+        public readonly History<byte> EventState = new();
+        public readonly History<ushort> ActionTimeline = new();
         public float MinRadius = float.MaxValue;
         public float MaxRadius = float.MinValue;
         public bool HasAnyActions;
         public bool HasAnyStatuses;
         public bool IsTargetOfAnyActions;
 
-        public bool ExistsInWorldAt(DateTime t) => WorldExistence.Any(r => r.Contains(t));
-        public (string? name, uint id) NameAt(DateTime t) => HistoryEntryAt(NameHistory, t);
-        public bool TargetableAt(DateTime t) => HistoryEntryAt(TargetableHistory, t);
-        public bool AllyAt(DateTime t) => HistoryEntryAt(AllyHistory, t);
-        public bool DeadAt(DateTime t) => HistoryEntryAt(DeadHistory, t);
-        public Vector4 PosRotAt(DateTime t) => HistoryEntryAt(PosRotHistory, t);
-        public ActorHPMP HPMPAt(DateTime t) => HistoryEntryAt(HPMPHistory, t);
-
-        public bool WasAlly => AllyHistory.Any(p => p.Value);
-
-        private T? HistoryEntryAt<T>(SortedList<DateTime, T> history, DateTime t)
+        public bool ExistsInWorldAt(DateTime t)
         {
-            var next = history.UpperBound(t);
-            return next == 0 ? default : history.Values[next - 1];
+            for (var i = 0; i < WorldExistence.Count; ++i)
+            {
+                if (WorldExistence[i].Contains(t))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public (string? name, uint id) NameAt(DateTime t) => NameHistory.At(t);
+        public bool TargetableAt(DateTime t) => TargetableHistory.At(t);
+        public bool AllyAt(DateTime t) => AllyHistory.At(t);
+        public bool DeadAt(DateTime t) => DeadHistory.At(t);
+        public Vector4 PosRotAt(DateTime t) => PosRotHistory.At(t);
+        public ActorHPMP HPMPAt(DateTime t) => HPMPHistory.At(t);
+
+        public bool WasAlly
+        {
+            get
+            {
+                for (var i = 0; i < AllyHistory.Count; ++i)
+                {
+                    if (AllyHistory[i].Value)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
+        public void TrimExcess()
+        {
+            WorldExistence.TrimExcess();
+            NameHistory.TrimExcess();
+            TargetableHistory.TrimExcess();
+            DeadHistory.TrimExcess();
+            AllyHistory.TrimExcess();
+            PosRotHistory.TrimExcess();
+            HPMPHistory.TrimExcess();
+            Casts.TrimExcess();
+            EventObjectAnimation.TrimExcess();
+            EventState.TrimExcess();
+            ActionTimeline.TrimExcess();
         }
     }
 
@@ -132,6 +270,7 @@ public sealed class Replay
     public string GameVersion = "";
     public readonly List<WorldState.Operation> Ops = [];
     public readonly List<Participant> Participants = [];
+    private readonly Dictionary<ulong, List<Participant>> _participantsById = [];
     public readonly List<Action> Actions = [];
     public readonly List<Status> Statuses = [];
     public readonly List<Tether> Tethers = [];
@@ -140,14 +279,76 @@ public sealed class Replay
     public readonly List<MapEffect> MapEffects = [];
     public readonly List<ClientAction> ClientActions = [];
     public readonly List<Encounter> Encounters = [];
-    public readonly SortedList<DateTime, string> UserMarkers = [];
+    public readonly List<(DateTime Timestamp, string Text)> UserMarkers = [];
 
-    public IEnumerable<Action> EncounterActions(Encounter e) => Actions.Skip(e.FirstAction).TakeWhile(a => a.Timestamp <= e.Time.End);
-    public IEnumerable<Status> EncounterStatuses(Encounter e) => Statuses.Skip(e.FirstStatus).TakeWhile(s => s.Time.Start <= e.Time.End);
-    public IEnumerable<Tether> EncounterTethers(Encounter e) => Tethers.Skip(e.FirstTether).TakeWhile(t => t.Time.Start <= e.Time.End);
-    public IEnumerable<Icon> EncounterIcons(Encounter e) => Icons.Skip(e.FirstIcon).TakeWhile(i => i.Timestamp <= e.Time.End);
-    public IEnumerable<DirectorUpdate> EncounterDirectorUpdates(Encounter e) => DirectorUpdates.Skip(e.FirstDirectorUpdate).TakeWhile(du => du.Timestamp <= e.Time.End);
-    public IEnumerable<MapEffect> EncounterMapEffects(Encounter e) => MapEffects.Skip(e.FirstEnvControl).TakeWhile(ec => ec.Timestamp <= e.Time.End);
+    public void AddParticipant(Participant p)
+    {
+        Participants.Add(p);
+        _participantsById.GetOrAdd(p.InstanceID).Add(p);
+    }
 
-    public Participant? FindParticipant(ulong instanceID, DateTime t) => Participants.FirstOrDefault(p => p.InstanceID == instanceID && p.EffectiveExistence.Contains(t));
+    public IEnumerable<Action> EncounterActions(Encounter e)
+    {
+        for (var i = e.FirstAction; i < Actions.Count && Actions[i].Timestamp <= e.Time.End; ++i)
+        {
+            yield return Actions[i];
+        }
+    }
+
+    public IEnumerable<Status> EncounterStatuses(Encounter e)
+    {
+        for (var i = e.FirstStatus; i < Statuses.Count && Statuses[i].Time.Start <= e.Time.End; ++i)
+        {
+            yield return Statuses[i];
+        }
+    }
+
+    public IEnumerable<Tether> EncounterTethers(Encounter e)
+    {
+        for (var i = e.FirstTether; i < Tethers.Count && Tethers[i].Time.Start <= e.Time.End; ++i)
+        {
+            yield return Tethers[i];
+        }
+    }
+
+    public IEnumerable<Icon> EncounterIcons(Encounter e)
+    {
+        for (var i = e.FirstIcon; i < Icons.Count && Icons[i].Timestamp <= e.Time.End; ++i)
+        {
+            yield return Icons[i];
+        }
+    }
+
+    public IEnumerable<DirectorUpdate> EncounterDirectorUpdates(Encounter e)
+    {
+        for (var i = e.FirstDirectorUpdate; i < DirectorUpdates.Count && DirectorUpdates[i].Timestamp <= e.Time.End; ++i)
+        {
+            yield return DirectorUpdates[i];
+        }
+    }
+
+    public IEnumerable<MapEffect> EncounterMapEffects(Encounter e)
+    {
+        for (var i = e.FirstEnvControl; i < MapEffects.Count && MapEffects[i].Timestamp <= e.Time.End; ++i)
+        {
+            yield return MapEffects[i];
+        }
+    }
+
+    public Participant? FindParticipant(ulong instanceID, DateTime t)
+    {
+        if (!_participantsById.TryGetValue(instanceID, out var list))
+        {
+            return null;
+        }
+        for (var i = 0; i < list.Count; ++i)
+        {
+            var p = list[i];
+            if (p.EffectiveExistence.Contains(t))
+            {
+                return p;
+            }
+        }
+        return null;
+    }
 }

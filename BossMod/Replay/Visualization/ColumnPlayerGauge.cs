@@ -48,9 +48,26 @@ public abstract class ColumnPlayerGauge : Timeline.ColumnGroup, IToggleableColum
     protected IEnumerable<(DateTime time, T gauge)> EnumerateGauge<T>() where T : unmanaged
     {
         var minTime = MinTime();
-        foreach (var frame in Replay.Ops.SkipWhile(op => op.Timestamp < minTime).TakeWhile(op => op.Timestamp <= Encounter.Time.End).OfType<WorldState.OpFrameStart>())
+        var ops = Replay.Ops;
+        int lo = 0, hi = ops.Count;
+        while (lo < hi)
         {
-            yield return (frame.Timestamp, ClientState.GetGauge<T>(frame.GaugePayload));
+            var mid = lo + ((hi - lo) >> 1);
+            if (ops[mid].Timestamp < minTime)
+            {
+                lo = mid + 1;
+            }
+            else
+            {
+                hi = mid;
+            }
+        }
+        for (var i = lo; i < ops.Count && ops[i].Timestamp <= Encounter.Time.End; ++i)
+        {
+            if (ops[i] is WorldState.OpFrameStart frame)
+            {
+                yield return (frame.Timestamp, ClientState.GetGauge<T>(frame.GaugePayload));
+            }
         }
     }
 }

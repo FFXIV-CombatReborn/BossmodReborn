@@ -45,7 +45,7 @@ public readonly struct ActionID(uint raw) : IEquatable<ActionID>
     public static bool operator ==(ActionID left, ActionID right) => left.Raw == right.Raw;
     public static bool operator !=(ActionID left, ActionID right) => left.Raw != right.Raw;
     public override readonly string ToString() => $"{Type} {ID} '{Name()}'";
-    private static readonly Dictionary<uint, (float, string)> _spellCache = [];
+    private static readonly ConcurrentDictionary<uint, (float, string)> _spellCache = [];
 
     public readonly AID As<AID>() where AID : Enum => (AID)(object)ID;
 
@@ -103,10 +103,14 @@ public readonly struct ActionID(uint raw) : IEquatable<ActionID>
         }
 
         var row = Service.LuminaRow<Lumina.Excel.Sheets.Action>(actionID);
-        (float, string)? data;
+        if (row == null)
+        {
+            return default;
+        }
 
-        data = (row!.Value.ExtraCastTime100ms * 0.1f, row.Value.Name.ToString());
-        return _spellCache[actionID] = data!.Value;
+        var data = (row.Value.ExtraCastTime100ms * 0.1f, row.Value.Name.ToString());
+        _spellCache.TryAdd(actionID, data);
+        return data;
     }
 
     public readonly bool Equals(ActionID other) => this == other;

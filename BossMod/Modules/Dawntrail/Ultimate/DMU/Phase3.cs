@@ -6,6 +6,7 @@ sealed class AeroIIIAssault(BossModule module) : Components.SimpleKnockbacks(mod
 
 sealed class TheDecisiveBattle(BossModule module) : BossComponent(module)
 {
+    private readonly List<Actor> _closest = new(PartyState.MaxPartySize);
     private Actor? chaosBoss;
     private Actor? exDeathBoss;
     private readonly PartyRolesConfig partyConfig = Service.Config.Get<PartyRolesConfig>();
@@ -17,13 +18,14 @@ sealed class TheDecisiveBattle(BossModule module) : BossComponent(module)
             return;
         }
 
-        var players = Raid.WithoutSlot().SortedByRange(chaosBoss.Position).Take(4).ToList();
+        var party = Raid.WithoutSlot();
+        var players = DMUHelpers.ClosestPlayers(party, chaosBoss.Position, _closest, 4);
         foreach (var player in players)
         {
             Arena.AddLine(chaosBoss.Position, player.Position, Colors.Danger);
         }
 
-        players = [.. Raid.WithoutSlot().SortedByRange(exDeathBoss.Position).Take(4)];
+        players = DMUHelpers.ClosestPlayers(party, exDeathBoss.Position, _closest, 4);
         foreach (var player in players)
         {
             Arena.AddLine(exDeathBoss.Position, player.Position, Colors.Danger);
@@ -85,6 +87,32 @@ sealed class Crystals(BossModule module) : BossComponent(module)
     public List<(Actor actor, uint colour)> crystals = [];
     public List<(Actor actor, uint colour)> crystalsStored = []; // Used as a reference point for where the crystals were for easier hint logic
     public List<(Actor actor, ActorStatus debuff)> debuffPlayers = [];
+
+    public (Actor actor, uint colour) StoredCrystal(uint oid)
+    {
+        var count = crystalsStored.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            if (crystalsStored[i].actor.OID == oid)
+                return crystalsStored[i];
+        }
+        return default;
+    }
+
+    private readonly List<(Actor actor, ActorStatus debuff)> _debuffBuffer = new(2);
+
+    public List<(Actor actor, ActorStatus debuff)> DebuffPlayers(uint sid)
+    {
+        var result = _debuffBuffer;
+        result.Clear();
+        var count = debuffPlayers.Count;
+        for (var i = 0; i < count && result.Count < 2; ++i)
+        {
+            if (debuffPlayers[i].debuff.ID == sid)
+                result.Add(debuffPlayers[i]);
+        }
+        return result;
+    }
 
     public Element nextElement = Element.None;
     public enum Element { None, Water, Fire, Wind }
@@ -186,6 +214,7 @@ sealed class ThunderIII(BossModule module) : Components.SimpleAOEs(module, (uint
 sealed class WaterCrystal(BossModule module) : Components.GenericBaitProximity(module)
 {
     private readonly Crystals? crystals = module.FindComponent<Crystals>();
+    private readonly List<Actor> _closest = new(PartyState.MaxPartySize);
     private readonly PartyRolesConfig partyConfig = Service.Config.Get<PartyRolesConfig>();
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
@@ -221,13 +250,13 @@ sealed class WaterCrystal(BossModule module) : Components.GenericBaitProximity(m
             return;
         }
 
-        var players = Raid.WithoutSlot().SortedByRange(waterCrystal.Value.actor.Position).ToList();
-        for (var i = 0; i < 2; ++i)
+        var players = DMUHelpers.ClosestPlayers(Raid.WithoutSlot(), waterCrystal.Value.actor.Position, _closest, 2);
+        for (var i = 0; i < players.Count; ++i)
         {
-            CurrentBaits.Add(new(players[i], new AOEShapeCircle(5.0f)));
+            CurrentBaits.Add(new(players[i], DMUShapes.Circle5));
         }
 
-        var debuffPlayers = crystals.debuffPlayers.Where(d => d.debuff.ID == (uint)SID.DynamicFluid).Take(2).ToList();
+        var debuffPlayers = crystals.DebuffPlayers((uint)SID.DynamicFluid);
         if (debuffPlayers.Count < 2)
         {
             return;
@@ -235,7 +264,7 @@ sealed class WaterCrystal(BossModule module) : Components.GenericBaitProximity(m
 
         for (var i = 0; i < 2; ++i)
         {
-            CurrentBaits.Add(new(debuffPlayers[i].actor, new AOEShapeDonut(4.0f, 10.0f)));
+            CurrentBaits.Add(new(debuffPlayers[i].actor, DMUShapes.Donut4_10));
         }
     }
 
@@ -258,9 +287,13 @@ sealed class WaterCrystal(BossModule module) : Components.GenericBaitProximity(m
             return;
         }
 
-        var waterCrystal = crystals.crystalsStored.First(c => c.actor.OID == (uint)OID.WaterP3);
-        var fireCrystal = crystals.crystalsStored.First(c => c.actor.OID == (uint)OID.FireP3);
-        var windCrystal = crystals.crystalsStored.First(c => c.actor.OID == (uint)OID.WindP3);
+        var waterCrystal = crystals.StoredCrystal((uint)OID.WaterP3);
+        var fireCrystal = crystals.StoredCrystal((uint)OID.FireP3);
+        var windCrystal = crystals.StoredCrystal((uint)OID.WindP3);
+        if (waterCrystal.actor == null || fireCrystal.actor == null || windCrystal.actor == null)
+        {
+            return;
+        }
 
         if (assignment == PartyRolesConfig.Assignment.H1)
         {
@@ -288,6 +321,7 @@ sealed class WaterCrystal(BossModule module) : Components.GenericBaitProximity(m
 sealed class FireCrystal(BossModule module) : Components.GenericBaitProximity(module)
 {
     private readonly Crystals? crystals = module.FindComponent<Crystals>();
+    private readonly List<Actor> _closest = new(PartyState.MaxPartySize);
     private readonly PartyRolesConfig partyConfig = Service.Config.Get<PartyRolesConfig>();
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
@@ -323,13 +357,13 @@ sealed class FireCrystal(BossModule module) : Components.GenericBaitProximity(mo
             return;
         }
 
-        var players = Raid.WithoutSlot().SortedByRange(fireCrystal.Value.actor.Position).ToList();
-        for (var i = 0; i < 2; ++i)
+        var players = DMUHelpers.ClosestPlayers(Raid.WithoutSlot(), fireCrystal.Value.actor.Position, _closest, 2);
+        for (var i = 0; i < players.Count; ++i)
         {
-            CurrentBaits.Add(new(players[i], new AOEShapeDonut(4.0f, 10.0f)));
+            CurrentBaits.Add(new(players[i], DMUShapes.Donut4_10));
         }
 
-        var debuffPlayers = crystals.debuffPlayers.Where(d => d.debuff.ID == (uint)SID.Entropy).Take(2).ToList();
+        var debuffPlayers = crystals.DebuffPlayers((uint)SID.Entropy);
         if (debuffPlayers.Count < 2)
         {
             return;
@@ -337,7 +371,7 @@ sealed class FireCrystal(BossModule module) : Components.GenericBaitProximity(mo
 
         for (var i = 0; i < 2; ++i)
         {
-            CurrentBaits.Add(new(debuffPlayers[i].actor, new AOEShapeCircle(5.0f)));
+            CurrentBaits.Add(new(debuffPlayers[i].actor, DMUShapes.Circle5));
         }
     }
 
@@ -360,9 +394,13 @@ sealed class FireCrystal(BossModule module) : Components.GenericBaitProximity(mo
             return;
         }
 
-        var waterCrystal = crystals.crystalsStored.First(c => c.actor.OID == (uint)OID.WaterP3);
-        var fireCrystal = crystals.crystalsStored.First(c => c.actor.OID == (uint)OID.FireP3);
-        var windCrystal = crystals.crystalsStored.First(c => c.actor.OID == (uint)OID.WindP3);
+        var waterCrystal = crystals.StoredCrystal((uint)OID.WaterP3);
+        var fireCrystal = crystals.StoredCrystal((uint)OID.FireP3);
+        var windCrystal = crystals.StoredCrystal((uint)OID.WindP3);
+        if (waterCrystal.actor == null || fireCrystal.actor == null || windCrystal.actor == null)
+        {
+            return;
+        }
 
         if (assignment == PartyRolesConfig.Assignment.H1)
         {
@@ -428,8 +466,7 @@ sealed class LongitudinalLatitudinalImplosion(BossModule module) : Components.Ge
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        var nextAOEs = aoes.Take(2).ToList();
-        return CollectionsMarshal.AsSpan(nextAOEs);
+        return CollectionsMarshal.AsSpan(aoes)[..Math.Min(2, aoes.Count)];
     }
 }
 
@@ -466,13 +503,24 @@ sealed class ThunderIIITB(BossModule module) : Components.BaitAwayCast(module, (
             return;
         }
 
-        var player = Raid.WithoutSlot().SortedByRange(boss.Position).FirstOrDefault();
+        Actor? player = null;
+        var bestDistSq = float.MaxValue;
+        var party = Raid.WithoutSlot();
+        for (var i = 0; i < party.Length; ++i)
+        {
+            var d = (party[i].Position - boss.Position).LengthSq();
+            if (d < bestDistSq)
+            {
+                bestDistSq = d;
+                player = party[i];
+            }
+        }
         if (player == null)
         {
             return;
         }
 
-        CurrentBaits.Add(new(boss, player, new AOEShapeCircle(5.0f)));
+        CurrentBaits.Add(new(boss, player, DMUShapes.Circle5));
     }
 }
 
@@ -513,19 +561,31 @@ sealed class UmbraSmash(BossModule module) : Components.GenericBaitProximity(mod
 
         CurrentBaits.Clear();
 
-        var chaosBoss = WorldState.Actors.FirstOrDefault(a => a.OID == (uint)OID.Chaos);
+        var chaosBosses = Module.Enemies((uint)OID.Chaos);
+        var chaosBoss = chaosBosses.Count != 0 ? chaosBosses[0] : null;
         if (chaosBoss == null)
         {
             return;
         }
 
-        var player = Raid.WithoutSlot().SortedByRange(chaosBoss.Position).LastOrDefault();
+        Actor? player = null;
+        var worstDistSq = float.MinValue;
+        var party = Raid.WithoutSlot();
+        for (var i = 0; i < party.Length; ++i)
+        {
+            var d = (party[i].Position - chaosBoss.Position).LengthSq();
+            if (d >= worstDistSq)
+            {
+                worstDistSq = d;
+                player = party[i];
+            }
+        }
         if (player == null)
         {
             return;
         }
 
-        CurrentBaits.Add(new(player, new AOEShapeCircle(15.0f)));
+        CurrentBaits.Add(new(player, DMUShapes.Circle15));
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
@@ -547,7 +607,11 @@ sealed class UmbraSmash(BossModule module) : Components.GenericBaitProximity(mod
         }
         var assignment = partyConfig[Raid.Members[pcSlot].ContentId];
 
-        var windCrystal = crystals.crystalsStored.First(c => c.actor.OID == (uint)OID.WindP3);
+        var windCrystal = crystals.StoredCrystal((uint)OID.WindP3);
+        if (windCrystal.actor == null)
+        {
+            return;
+        }
 
         if (assignment == PartyRolesConfig.Assignment.R1)
         {
@@ -784,9 +848,12 @@ sealed class Cyclone(BossModule module) : Components.GenericStackSpread(module)
             return;
         }
 
-        foreach (var (slot, player) in Raid.WithSlot(true, true, true).WhereSlot(p => windDebuffs.Direction[p] is (uint)SID.Headwind or (uint)SID.Tailwind))
+        var party = Raid.WithSlot(true, true, true);
+        for (var i = 0; i < party.Length; ++i)
         {
-            Stacks.Add(new(player, 6.0f));
+            var (slot, player) = party[i];
+            if (windDebuffs.Direction[slot] is (uint)SID.Headwind or (uint)SID.Tailwind)
+                Stacks.Add(new(player, 6.0f));
         }
     }
 }
@@ -971,6 +1038,69 @@ sealed class WhiteHole(BossModule module) : Components.RaidwideCast(module, (uin
 
 sealed class EarthquakeRaidwide(BossModule module) : Components.RaidwideCast(module, (uint)AID.EarthquakeRaidwide);
 
+sealed class P3Firewall(BossModule module) : Components.GenericInvincible(module)
+{
+    private enum Side { None, Epic, Fated }
+    private readonly Side[] _sides = new Side[PartyState.MaxPartySize];
+    private readonly Actor[] _forbidden = new Actor[1];
+    private Actor? _epicBoss;
+    private Actor? _fatedBoss;
+
+    protected override ReadOnlySpan<Actor> ForbiddenTargets(int slot, Actor actor)
+    {
+        if (slot < 0 || slot >= _sides.Length)
+            return [];
+        var otherBoss = _sides[slot] switch
+        {
+            Side.Epic => _fatedBoss,
+            Side.Fated => _epicBoss,
+            _ => null
+        };
+        if (otherBoss == null)
+            return [];
+        _forbidden[0] = otherBoss;
+        return _forbidden;
+    }
+
+    public override void OnStatusGain(Actor actor, ref ActorStatus status)
+    {
+        switch (status.ID)
+        {
+            case (uint)SID.EpicHero:
+            case (uint)SID.FatedHero:
+                var slot = Raid.FindSlot(actor.InstanceID);
+                if (slot >= 0)
+                    _sides[slot] = status.ID == (uint)SID.EpicHero ? Side.Epic : Side.Fated;
+                break;
+            case (uint)SID.EpicVillain:
+                _epicBoss = actor;
+                break;
+            case (uint)SID.FatedVillain:
+                _fatedBoss = actor;
+                break;
+        }
+    }
+
+    public override void OnStatusLose(Actor actor, ref ActorStatus status)
+    {
+        switch (status.ID)
+        {
+            case (uint)SID.EpicHero:
+            case (uint)SID.FatedHero:
+                var slot = Raid.FindSlot(actor.InstanceID);
+                if (slot >= 0)
+                    _sides[slot] = Side.None;
+                break;
+            case (uint)SID.EpicVillain:
+                _epicBoss = null;
+                break;
+            case (uint)SID.FatedVillain:
+                _fatedBoss = null;
+                break;
+        }
+    }
+}
+
 sealed class BlackHoleActors(BossModule module) : Components.Voidzone(module, 2.0f, enemies => enemies.Enemies((uint)OID.BlackHole));
 
 sealed class BlackHole(BossModule module) : Components.BaitAwayTethers(module, new AOEShapeRect(125.0f, 3.0f), (uint)TetherID.BlackHoleTether)
@@ -1129,7 +1259,10 @@ sealed class BlackHole(BossModule module) : Components.BaitAwayTethers(module, n
         }
         list.Sort(static (a, b) => b.angle.CompareTo(a.angle));
         Tethers.Clear();
-        Tethers.AddRange(list.Select(x => x.item));
+        for (var i = 0; i < list.Count; ++i)
+        {
+            Tethers.Add(list[i].item);
+        }
     }
 }
 
@@ -1179,7 +1312,7 @@ sealed class P3Blizzard(DMU module) : Components.GenericBaitAway(module, centerA
 
         foreach (var player in Raid.WithoutSlot())
         {
-            CurrentBaits.Add(new(boss, player, new AOEShapeCircle(6.0f)));
+            CurrentBaits.Add(new(boss, player, DMUShapes.Circle6));
         }
     }
 
@@ -1374,7 +1507,7 @@ sealed class BigBang(BossModule module) : Components.GenericAOEs(module)
         {
             foreach (var stack in stacks.stackLocations)
             {
-                aoes.Add(new(new AOEShapeCircle(6.0f), stack));
+                aoes.Add(new(DMUShapes.Circle6, stack));
             }
         }
     }
@@ -1408,7 +1541,7 @@ sealed class StompAMole(BossModule module) : Components.GenericTowers(module)
     private readonly List<(Tower tower, TowerSide side, int wave)> towers = [];
     private readonly PartyRolesConfig partyConfig = Service.Config.Get<PartyRolesConfig>();
 
-    private IEnumerable<(Tower tower, TowerSide side, int wave)> CurrentTowers => towers.Where(t => t.wave == (NumCasts < 2 ? 0 : 1));
+    private int CurrentWave => NumCasts < 2 ? 0 : 1;
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
@@ -1473,8 +1606,11 @@ sealed class StompAMole(BossModule module) : Components.GenericTowers(module)
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
-        foreach (var (tower, _, _) in CurrentTowers)
+        var wave = CurrentWave;
+        foreach (var (tower, _, w) in towers)
         {
+            if (w != wave)
+                continue;
             if (tower.ForbiddenSoakers[pcSlot] || !tower.IsInside(pc) && tower.NumInside(Module) >= tower.MaxSoakers)
             {
                 tower.Shape.Draw(Arena, tower.Position, tower.Rotation);
@@ -1500,9 +1636,10 @@ sealed class StompAMole(BossModule module) : Components.GenericTowers(module)
             }
         }
 
-        foreach (var (tower, side, _) in CurrentTowers)
+        var wave = CurrentWave;
+        foreach (var (tower, side, w) in towers)
         {
-            if (tower.ForbiddenSoakers[pcSlot])
+            if (w != wave || tower.ForbiddenSoakers[pcSlot])
             {
                 continue;
             }

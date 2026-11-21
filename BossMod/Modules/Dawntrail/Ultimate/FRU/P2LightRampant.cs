@@ -51,7 +51,14 @@ sealed class P2LuminousHammer(BossModule module) : Components.BaitAwayIcon(modul
             ++NumCasts;
             PrevBaitOffset[slot] = (Raid[slot]?.Position ?? Arena.Center) - Arena.Center;
             if (++BaitsPerPlayer[slot] == 5)
-                CurrentBaits.RemoveAll(b => b.Target == Raid[slot]); // last bait
+            {
+                var target = Raid[slot]; // last bait
+                for (var i = CurrentBaits.Count - 1; i >= 0; --i)
+                {
+                    if (CurrentBaits[i].Target == target)
+                        CurrentBaits.RemoveAt(i);
+                }
+            }
         }
     }
 }
@@ -267,13 +274,15 @@ sealed class P2LightRampantAITowers(BossModule module) : BossComponent(module)
         if (_puddles == null || _towers == null)
             return;
 
-        var bait = _puddles.ActiveBaitsOn(actor).FirstOrDefault();
+        var baitsOn = _puddles.ActiveBaitsOn(actor);
+        var bait = baitsOn.Count != 0 ? baitsOn[0] : default;
         if (bait.Target != null)
         {
             if (_puddles.BaitsPerPlayer[slot] == 0)
             {
                 // position for first bait
-                var partner = _puddles.ActiveBaitsNotOn(actor).FirstOrDefault().Target;
+                var baitsNotOn = _puddles.ActiveBaitsNotOn(actor);
+                var partner = baitsNotOn.Count != 0 ? baitsNotOn[0].Target : null;
                 if (partner == null)
                     return; // we can't resolve the hint without knowing the partner
 
@@ -379,11 +388,21 @@ sealed class P2LightRampantAIStackResolve(BossModule module) : BossComponent(mod
                 var distSq = toPartner.LengthSq();
                 return distSq > 9f && toDest.Dot(toPartner) < 0f; // partner is far enough away, and moving towards destination will not bring us closer
             }
-            if (!Raid.WithoutSlot(false, true, true).Any(needToWaitFor))
+            var mustWait = false;
+            var party = Raid.WithoutSlot(false, true, true);
+            for (var i = 0; i < party.Length; ++i)
+            {
+                if (needToWaitFor(party[i]))
+                {
+                    mustWait = true;
+                    break;
+                }
+            }
+            if (!mustWait)
                 hints.AddForbiddenZone(new SDInvertedCircle(destPos, 1f), DateTime.MaxValue);
             // else: we still have someone we need to wait for, just stay where we are...
         }
-        else if (_stack.Stacks.FirstOrDefault(s => IsNorthCamp(s.Target) == northCamp).Target is var stackTarget && stackTarget != null)
+        else if (FindCampStackTarget(northCamp) is Actor stackTarget)
         {
             // we just want to stay close to the stack target, slightly offset to the destination
             var dirToDest = destPos - stackTarget.Position;
@@ -393,12 +412,36 @@ sealed class P2LightRampantAIStackResolve(BossModule module) : BossComponent(mod
     }
 
     private bool IsNorthCamp(Actor actor) => actor.PosRot.Z < Arena.Center.Z;
+
+    private Actor? FindCampStackTarget(bool northCamp)
+    {
+        var stacks = _stack!.Stacks;
+        var count = stacks.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            var target = stacks[i].Target;
+            if (IsNorthCamp(target) == northCamp)
+                return target;
+        }
+        return null;
+    }
 }
 
 // movement to dodge orbs after resolving stack
 sealed class P2LightRampantAIOrbs(BossModule module) : BossComponent(module)
 {
     private readonly P2HolyLightBurst? _orbs = module.FindComponent<P2HolyLightBurst>();
+
+    private bool IsInAnyOrb(Actor actor)
+    {
+        var casters = CollectionsMarshal.AsSpan(_orbs!.Casters);
+        for (var i = 0; i < casters.Length; ++i)
+        {
+            if (_orbs.Shape.Check(actor.Position, casters[i].Origin, default))
+                return true;
+        }
+        return false;
+    }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
@@ -420,7 +463,7 @@ sealed class P2LightRampantAIOrbs(BossModule module) : BossComponent(module)
                 orbs[i] = new SDCircle(_orbs.ActiveCasters[i].Origin, 13.5f);
             hints.AddForbiddenZone(new SDInvertedUnion(orbs), DateTime.MaxValue);
         }
-        else if (_orbs.Casters.Any(c => _orbs.Shape.Check(actor.Position, c.Origin, default)))
+        else if (IsInAnyOrb(actor))
         {
             // dodge second orbs while staying near edge (tethers are still up for a bit after first dodge)
             hints.AddForbiddenZone(new SDCircle(Arena.Center, 16f));

@@ -22,12 +22,13 @@ public sealed class ReplayBuilder : IDisposable
     private readonly Dictionary<ulong, Replay.Participant> _participants = []; // these are either existing actors, destroyed actors that can still be recreated, or never-created-but-referenced actors
     private readonly Dictionary<(ulong, int), Replay.Status> _statuses = [];
     private readonly Dictionary<ulong, Replay.Tether> _tethers = [];
+    private readonly Dictionary<uint, Replay.Action> _actionsByGlobalSeq = [];
     private readonly List<Replay.ClientAction> _pendingClientActions = [];
 
     public ReplayBuilder(string path)
     {
         _res = new() { Path = path };
-        _ws = new(TimeSpan.TicksPerSecond, "pending");
+        _ws = new(TimeSpan.TicksPerSecond, "pending") { UpdateGlobalRSV = false };
         _mgr = new(_ws);
         _subscribers = new
         (
@@ -100,7 +101,7 @@ public sealed class ReplayBuilder : IDisposable
             if (enc.ActiveState != null)
             {
                 enc.Encounter.Phases.Add(new(enc.ActivePhaseIndex, enc.ActiveState.ID, _ws.CurrentTime));
-                enc.Encounter.States.Add(new(enc.ActiveState.ID, enc.ActiveState.Name, enc.ActiveState.Comment, enc.ActiveState.Duration, [.. (enc.ActiveState.NextStates ?? []).Select(s => s.ID)], _ws.CurrentTime));
+                enc.Encounter.States.Add(new(enc.ActiveState.ID, enc.ActiveState.Name, enc.ActiveState.Comment, enc.ActiveState.Duration, BuildExpectedSuccessors(enc.ActiveState), _ws.CurrentTime));
             }
             enc.Encounter.Time.End = _ws.CurrentTime;
         }
@@ -116,7 +117,38 @@ public sealed class ReplayBuilder : IDisposable
         {
             t.Time.End = _ws.CurrentTime;
         }
+
+        for (var i = 0; i < _res.Participants.Count; ++i)
+        {
+            _res.Participants[i].TrimExcess();
+        }
+        _res.Ops.TrimExcess();
+        _res.Participants.TrimExcess();
+        _res.Actions.TrimExcess();
+        _res.Statuses.TrimExcess();
+        _res.Tethers.TrimExcess();
+        _res.Icons.TrimExcess();
+        _res.DirectorUpdates.TrimExcess();
+        _res.MapEffects.TrimExcess();
+        _res.ClientActions.TrimExcess();
+        _res.Encounters.TrimExcess();
+        _res.UserMarkers.TrimExcess();
         return _res;
+    }
+
+    private static List<uint> BuildExpectedSuccessors(StateMachine.State state)
+    {
+        var next = state.NextStates;
+        if (next == null || next.Length == 0)
+        {
+            return [];
+        }
+        var res = new List<uint>(next.Length);
+        for (var i = 0; i < next.Length; ++i)
+        {
+            res.Add(next[i].ID);
+        }
+        return res;
     }
 
     private void FinishFrame()
@@ -136,9 +168,12 @@ public sealed class ReplayBuilder : IDisposable
                     m.Encounter.FirstIcon = _res.Icons.Count;
                     m.Encounter.FirstDirectorUpdate = _res.DirectorUpdates.Count;
                     m.Encounter.FirstEnvControl = _res.MapEffects.Count;
-                    foreach (var p in _participants.Values.Where(p => p.WorldExistence.Count > 0 && p.WorldExistence[^1].End == default)) // include only live actors
+                    foreach (var p in _participants.Values)
                     {
-                        m.Encounter.ParticipantsByOID.GetOrAdd(p.OID).Add(p);
+                        if (p.WorldExistence.Count > 0 && p.WorldExistence[^1].End == default) // include only live actors
+                        {
+                            m.Encounter.ParticipantsByOID.GetOrAdd(p.OID).Add(p);
+                        }
                     }
 
                     foreach (var p in _ws.Party.WithoutSlot(true))
@@ -154,7 +189,7 @@ public sealed class ReplayBuilder : IDisposable
                     {
                         m.Encounter.Phases.Add(new(m.ActivePhaseIndex, m.ActiveState.ID, _ws.CurrentTime));
                     }
-                    m.Encounter.States.Add(new(m.ActiveState.ID, m.ActiveState.Name, m.ActiveState.Comment, m.ActiveState.Duration, [.. (m.ActiveState.NextStates ?? []).Select(s => s.ID)], _ws.CurrentTime));
+                    m.Encounter.States.Add(new(m.ActiveState.ID, m.ActiveState.Name, m.ActiveState.Comment, m.ActiveState.Duration, BuildExpectedSuccessors(m.ActiveState), _ws.CurrentTime));
                 }
                 m.ActivePhaseIndex = m.Module.StateMachine?.ActivePhaseIndex ?? -1;
                 m.ActiveState = m.Module.StateMachine?.ActiveState;
@@ -179,15 +214,15 @@ public sealed class ReplayBuilder : IDisposable
             p.Casts[^1].Time.End = _ws.CurrentTime;
         }
 
-        if (p.TargetableHistory.LastOrDefault().Value)
+        if (p.TargetableHistory.Count > 0 && p.TargetableHistory[^1].Value)
         {
-            if (p.TargetableHistory.Keys[^1] < _ws.CurrentTime)
+            if (p.TargetableHistory[^1].Key < _ws.CurrentTime)
             {
-                p.TargetableHistory.Add(_ws.CurrentTime, false);
+                p.TargetableHistory[_ws.CurrentTime] = false;
             }
             else
             {
-                p.TargetableHistory.RemoveAt(p.TargetableHistory.Count - 1);
+                p.TargetableHistory.RemoveLast();
             }
         }
     }
@@ -210,7 +245,7 @@ public sealed class ReplayBuilder : IDisposable
         }
         // new participant
         p = _participants[instanceID] = new(instanceID) { ZoneID = _ws.CurrentZone, CFCID = _ws.CurrentCFCID, EffectiveExistence = new(_ws.CurrentTime, _ws.CurrentTime) };
-        _res.Participants.Add(p);
+        _res.AddParticipant(p);
         return p;
     }
     private Replay.Participant? GetOrCreateOptionalParticipant(ulong instanceID) => instanceID is 0 or 0xE0000000 ? null : GetOrCreateParticipant(instanceID);
@@ -249,7 +284,7 @@ public sealed class ReplayBuilder : IDisposable
 
         p.EffectiveExistence.End = DateTime.MaxValue; // until it is destroyed
         p.WorldExistence.Add(new(_ws.CurrentTime));
-        if (p.NameHistory.Count == 0 ? (actor.Name.Length > 0 || actor.NameID != 0) : p.NameHistory.Values[^1] != (actor.Name, actor.NameID))
+        if (p.NameHistory.Count == 0 ? (actor.Name.Length > 0 || actor.NameID != 0) : p.NameHistory[^1].Value != (actor.Name, actor.NameID))
         {
             p.NameHistory[_ws.CurrentTime] = (actor.Name, actor.NameID);
         }
@@ -269,8 +304,12 @@ public sealed class ReplayBuilder : IDisposable
         p.MinRadius = Math.Min(p.MinRadius, actor.HitboxRadius);
         p.MaxRadius = Math.Max(p.MaxRadius, actor.HitboxRadius);
 
-        foreach (var e in _modules.Values.Where(e => e.ActiveState != null))
+        foreach (var e in _modules.Values)
         {
+            if (e.ActiveState == null)
+            {
+                continue;
+            }
             var encParticipants = e.Encounter.ParticipantsByOID.GetOrAdd(actor.OID);
             if (!encParticipants.Contains(p))
             {
@@ -279,7 +318,7 @@ public sealed class ReplayBuilder : IDisposable
         }
     }
 
-    private void ActorRemoved(Actor actor) => FinalizeParticipant(_participants[actor.InstanceID]);// keep participant entry in case it is recreated later
+    private void ActorRemoved(Actor actor) => FinalizeParticipant(_participants[actor.InstanceID]); // keep participant entry in case it is recreated later
 
     private void ActorRenamed(Actor actor) => _participants[actor.InstanceID].NameHistory[_ws.CurrentTime] = (actor.Name, actor.NameID);
 
@@ -326,6 +365,11 @@ public sealed class ReplayBuilder : IDisposable
 
     private void TetherAdd(Actor actor)
     {
+        if (actor.Tether.Target is 0 or 0xE0000000)
+        {
+            Service.Log($"Skipping invalid tether #{actor.Tether.ID} for {actor.InstanceID:X} -> {actor.Tether.Target:X}");
+            return;
+        }
         var t = _tethers[actor.InstanceID] = new(actor.Tether.ID, _participants[actor.InstanceID], GetOrCreateParticipant(actor.Tether.Target));
         t.Time.Start = _ws.CurrentTime;
         _res.Tethers.Add(t);
@@ -333,8 +377,11 @@ public sealed class ReplayBuilder : IDisposable
 
     private void TetherRemove(Actor actor)
     {
-        _tethers[actor.InstanceID].Time.End = _ws.CurrentTime;
-        _tethers.Remove(actor.InstanceID);
+        if (_tethers.TryGetValue(actor.InstanceID, out var t))
+        {
+            t.Time.End = _ws.CurrentTime;
+            _tethers.Remove(actor.InstanceID);
+        }
     }
 
     private void StatusGain(Actor actor, int index)
@@ -363,21 +410,27 @@ public sealed class ReplayBuilder : IDisposable
         _statuses.Remove((actor.InstanceID, index));
     }
 
-    private void EventIcon(Actor actor, uint iconID, ulong targetId) => _res.Icons.Add(new(iconID, GetOrCreateParticipant(actor.InstanceID), targetId != 0 ? GetOrCreateParticipant(targetId) : null, _ws.CurrentTime));
+    private void EventIcon(Actor actor, uint iconID, ulong targetId) => _res.Icons.Add(new(iconID, GetOrCreateParticipant(actor.InstanceID), GetOrCreateOptionalParticipant(targetId), _ws.CurrentTime));
 
     private void EventCast(Actor actor, ActorCastEvent cast)
     {
         var p = GetOrCreateParticipant(actor.InstanceID);
         var mt = GetOrCreateOptionalParticipant(cast.MainTargetID);
         var a = new Replay.Action(cast.Action, _ws.CurrentTime, p, mt, mt?.PosRotAt(_ws.CurrentTime).XYZ() ?? cast.TargetPos, cast.AnimationLockTime, cast.SourceSequence, cast.GlobalSequence, cast.Rotation);
-        foreach (var t in cast.Targets)
+        for (var i = 0; i < cast.Targets.Count; ++i)
         {
+            var t = cast.Targets[i];
+            if (t.ID is 0 or 0xE0000000)
+            {
+                continue;
+            }
             var target = GetOrCreateParticipant(t.ID);
             target.IsTargetOfAnyActions = true;
             a.Targets.Add(new(target, t.Effects));
         }
         p.HasAnyActions = true;
         _res.Actions.Add(a);
+        _actionsByGlobalSeq[a.GlobalSequence] = a;
 
         if (actor == _ws.Party.Player() && _pendingClientActions.FindIndex(a => a.SourceSequence == cast.SourceSequence) is var index && index >= 0)
         {
@@ -389,14 +442,13 @@ public sealed class ReplayBuilder : IDisposable
 
     private void EventConfirm(Actor source, uint seq, int targetIndex)
     {
-        var a = _res.Actions.FindLast(a => a.GlobalSequence == seq);
-        if (a == null)
+        if (!_actionsByGlobalSeq.TryGetValue(seq, out var a))
         {
             Service.Log($"Skipping confirmation #{seq}/{targetIndex} for {source.InstanceID:X} for missing action");
             return;
         }
 
-        if (targetIndex >= a.Targets.Count)
+        if (targetIndex < 0 || targetIndex >= a.Targets.Count)
         {
             Service.Log($"Skipping confirmation #{seq}/{targetIndex} for {source.InstanceID:X} for out-of-range target index (action has {a.Targets.Count} targets)");
             return;
@@ -439,7 +491,7 @@ public sealed class ReplayBuilder : IDisposable
 
     private void PlayActionTimeline(Actor actor, ushort id) => _participants[actor.InstanceID].ActionTimeline[_ws.CurrentTime] = id;
 
-    private void EventUserMarker(WorldState.OpUserMarker op) => _res.UserMarkers.TryAdd(_ws.CurrentTime, op.Text);
+    private void EventUserMarker(WorldState.OpUserMarker op) => _res.UserMarkers.Add((_ws.CurrentTime, op.Text));
 
     private void EventZoneChange(WorldState.OpZoneChange op)
     {
@@ -494,8 +546,9 @@ public sealed class ReplayBuilder : IDisposable
         if (data.ActiveState != null)
         {
             data.Encounter.Phases.Add(new(data.ActivePhaseIndex, data.ActiveState.ID, _ws.CurrentTime));
-            data.Encounter.States.Add(new(data.ActiveState.ID, data.ActiveState.Name, data.ActiveState.Comment, data.ActiveState.Duration, [.. (data.ActiveState.NextStates ?? []).Select(s => s.ID)], _ws.CurrentTime));
+            data.Encounter.States.Add(new(data.ActiveState.ID, data.ActiveState.Name, data.ActiveState.Comment, data.ActiveState.Duration, BuildExpectedSuccessors(data.ActiveState), _ws.CurrentTime));
         }
         data.Encounter.Time.End = _ws.CurrentTime;
+        data.Dispose();
     }
 }

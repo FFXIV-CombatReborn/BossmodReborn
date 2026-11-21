@@ -1,4 +1,4 @@
-namespace BossMod.Dawntrail.Ultimate.DMU;
+﻿namespace BossMod.Dawntrail.Ultimate.DMU;
 
 sealed class UltimateEmbrace(BossModule module) : Components.CastSharedTankbuster(module, (uint)AID.UltimateEmbrace, 5f);
 
@@ -492,7 +492,7 @@ sealed class ForsakenBaitsSpreadStacks(BossModule module) : Components.UniformSt
 
         foreach (var (i, player) in Raid.WithSlot(true, true, true))
         {
-            if (towers.Towers.Any(t => player.Position.InCircle(t.Position, 4.00f)))
+            if (DMUHelpers.InAnyTower(towers.Towers, player.Position, 4f))
             {
                 var shape = shapes.shapes[i];
                 if (shape == ForsakenShapes.Shape.Stack)
@@ -525,11 +525,25 @@ sealed class ForsakenBaitsCone(BossModule module) : Components.GenericBaitAway(m
 
         foreach (var (i, player) in Raid.WithSlot(true, true, true))
         {
-            if (towers.Towers.Any(t => player.Position.InCircle(t.Position, 4.00f)))
+            if (DMUHelpers.InAnyTower(towers.Towers, player.Position, 4f))
             {
                 if (shapes.shapes[i] == ForsakenShapes.Shape.Cone)
                 {
-                    var closestPlayer = Raid.WithoutSlot(false, true, true).Exclude(player).Closest(player.Position);
+                    Actor? closestPlayer = null;
+                    var bestDistSq = float.MaxValue;
+                    var party = Raid.WithoutSlot(false, true, true);
+                    for (var j = 0; j < party.Length; ++j)
+                    {
+                        var p = party[j];
+                        if (p == player)
+                            continue;
+                        var distSq = (p.Position - player.Position).LengthSq();
+                        if (distSq < bestDistSq)
+                        {
+                            bestDistSq = distSq;
+                            closestPlayer = p;
+                        }
+                    }
                     if (closestPlayer != null)
                     {
                         CurrentBaits.Add(new(player, closestPlayer, cone));
@@ -587,7 +601,21 @@ sealed class ForsakenBaitsBossClones(DMU module) : Components.UniformStackSpread
 
         foreach (var clone in clones)
         {
-            var baiter = Raid.WithoutSlot().Where(p => !baiters.Contains(p)).SortedByRange(clone.Position).Take(1).FirstOrDefault();
+            Actor? baiter = null;
+            var bestDistSq = float.MaxValue;
+            var party = Raid.WithoutSlot();
+            for (var i = 0; i < party.Length; ++i)
+            {
+                var p = party[i];
+                if (baiters.Contains(p))
+                    continue;
+                var d = (p.Position - clone.Position).LengthSq();
+                if (d < bestDistSq)
+                {
+                    bestDistSq = d;
+                    baiter = p;
+                }
+            }
             if (baiter == null)
             {
                 continue;
@@ -1035,11 +1063,27 @@ sealed class WingsOfDestructionTB(BossModule module) : Components.GenericBaitAwa
             return;
         }
 
-        var players = Raid.WithoutSlot().SortedByRange(casterPosition.Position).ToList();
-        if (players.Count > 1)
+        var party = Raid.WithoutSlot();
+        if (party.Length > 1)
         {
-            CurrentBaits.Add(new(casterPosition, players[0], circle));
-            CurrentBaits.Add(new(casterPosition, players[^1], circle));
+            Actor closest = party[0], farthest = party[0];
+            float minD = float.MaxValue, maxD = float.MinValue;
+            for (var i = 0; i < party.Length; ++i)
+            {
+                var d = (party[i].Position - casterPosition.Position).LengthSq();
+                if (d < minD)
+                {
+                    minD = d;
+                    closest = party[i];
+                }
+                if (d >= maxD)
+                {
+                    maxD = d;
+                    farthest = party[i];
+                }
+            }
+            CurrentBaits.Add(new(casterPosition, closest, circle));
+            CurrentBaits.Add(new(casterPosition, farthest, circle));
         }
     }
 }
@@ -1130,7 +1174,11 @@ sealed class Trine(DMU module) : Components.GenericAOEs(module, (uint)AID.Trine)
         var center = Arena.Center;
         var waymarkAAngle = (new WPos(wayA) - center).ToAngle();
         var waymark1Angle = (new WPos(way1) - center).ToAngle();
-        var firstWave = triangles.Take(3).Select(t => t.Position).ToArray();
+        var firstWave = new WPos[Math.Min(3, triangles.Count)];
+        for (var i = 0; i < firstWave.Length; ++i)
+        {
+            firstWave[i] = triangles[i].Position;
+        }
 
         Array.Sort(firstWave, delegate (WPos x, WPos y)
         {
@@ -1149,7 +1197,17 @@ sealed class Trine(DMU module) : Components.GenericAOEs(module, (uint)AID.Trine)
             return;
         }
 
-        var ccwSpot = firstWave.MinBy(p => (waymark1Angle - (p - center).ToAngle()).Normalized().Deg)!;
+        var ccwSpot = firstWave[0];
+        var bestCCW = float.MaxValue;
+        for (var i = 0; i < firstWave.Length; ++i)
+        {
+            var deg = (waymark1Angle - (firstWave[i] - center).ToAngle()).Normalized().Deg;
+            if (deg < bestCCW)
+            {
+                bestCCW = deg;
+                ccwSpot = firstWave[i];
+            }
+        }
         if (assignment == PartyRolesConfig.Assignment.OT)
         {
             Arena.ZoneCircleOutline(center + (ccwSpot - center).Normalized() * 20f, 1f, Colors.Safe, 2f);
@@ -1161,20 +1219,26 @@ sealed class Trine(DMU module) : Components.GenericAOEs(module, (uint)AID.Trine)
         var angleCCW = (ccwSpot - bossP).ToAngle();
         for (var r = 0.5f; r <= counter; r += 0.5f)
         {
-            List<WPos> spots = [];
+            var found = false;
+            var bestDeg = float.MaxValue;
             for (var degree = -60f; degree <= 60f; degree += 5f)
             {
                 var spot = bossP + r * (angleCCW + degree.Degrees()).ToDirection();
 
-                if (!aoes.Any(aoe => aoe.Check(spot)))
+                if (!DMUHelpers.AnyContains(aoes, spot))
                 {
-                    spots.Add(spot);
+                    var deg = ((spot - bossP).ToAngle() - angleCCW).Abs().Deg;
+                    if (deg < bestDeg)
+                    {
+                        bestDeg = deg;
+                        closestSpot = spot;
+                        found = true;
+                    }
                 }
             }
 
-            if (spots.Count > 0)
+            if (found)
             {
-                closestSpot = spots.MinBy(spot => ((spot - bossP).ToAngle() - angleCCW).Abs().Deg)!;
                 break;
             }
         }
@@ -1184,4 +1248,49 @@ sealed class Trine(DMU module) : Components.GenericAOEs(module, (uint)AID.Trine)
             Arena.ZoneCircleOutline(closestSpot, 1f, Colors.Safe, 2f);
         }
     }
+}
+
+static class DMUHelpers
+{
+    public static bool InAnyTower(List<Components.GenericTowers.Tower> towers, WPos pos, float radius)
+    {
+        var count = towers.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            if (pos.InCircle(towers[i].Position, radius))
+                return true;
+        }
+        return false;
+    }
+
+    public static bool AnyContains(List<Components.GenericAOEs.AOEInstance> aoes, WPos pos, int start = 0, int count = int.MaxValue)
+    {
+        var end = Math.Min(aoes.Count, start + Math.Min(count, aoes.Count));
+        for (var i = start; i < end; ++i)
+        {
+            if (aoes[i].Check(pos))
+                return true;
+        }
+        return false;
+    }
+
+    public static List<Actor> ClosestPlayers(Actor[] party, WPos origin, List<Actor> result, int n = int.MaxValue)
+    {
+        party.SortedByRange(origin, result);
+        if (result.Count > n)
+        {
+            result.RemoveRange(n, result.Count - n);
+        }
+        return result;
+    }
+}
+
+static class DMUShapes
+{
+    public static readonly AOEShapeCircle Circle15 = new(15.0f);
+    public static readonly AOEShapeCircle Circle5 = new(5.0f);
+    public static readonly AOEShapeCircle Circle6 = new(6.0f);
+    public static readonly AOEShapeCircle Circle8 = new(8.0f);
+    public static readonly AOEShapeDonut Donut4_10 = new(4.0f, 10.0f);
+    public static readonly AOEShapeDonut Donut6_40 = new(6.0f, 40.0f);
 }

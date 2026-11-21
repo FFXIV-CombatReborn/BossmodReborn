@@ -89,9 +89,12 @@ sealed class P5PolarizingStrikes(BossModule module) : Components.GenericAOEs(mod
     {
         if (_source == null || !_baitsActive)
             return;
-        foreach (var (baiter, forbidden) in _baiters.Zip(_forbidden))
+        for (var i = 0; i < _baiters.Length; ++i)
+        {
+            var baiter = _baiters[i];
             if (baiter != null)
-                _shape.Outline(Arena, _source.Position, Angle.FromDirection(baiter.Position - _source.Position), forbidden[pcSlot] ? default : Colors.Safe);
+                _shape.Outline(Arena, _source.Position, Angle.FromDirection(baiter.Position - _source.Position), _forbidden[i][pcSlot] ? default : Colors.Safe);
+        }
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

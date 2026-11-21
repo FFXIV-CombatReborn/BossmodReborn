@@ -142,10 +142,20 @@ sealed class P1BoundOfFaithAIStack(BossModule module) : BossComponent(module)
         {
             // stack with closest (note: we could also stack with assigned, but that won't work well if people swap and assignments end up wrong)
             //var stackWith = _comp.Stacks.FirstOrDefault(s => _comp.AssignedGroups[Raid.FindSlot(s.Target.InstanceID)] == _comp.AssignedGroups[slot]);
-            var stackWith = _comp.Stacks.MinBy(s => (s.Target.Position - actor.Position).LengthSq());
+            Actor? stackWith = null;
+            var bestDistSq = float.MaxValue;
             foreach (var s in _comp.Stacks)
             {
-                ShapeDistance zone = s.Target == stackWith.Target
+                var distSq = (s.Target.Position - actor.Position).LengthSq();
+                if (distSq < bestDistSq)
+                {
+                    bestDistSq = distSq;
+                    stackWith = s.Target;
+                }
+            }
+            foreach (var s in _comp.Stacks)
+            {
+                ShapeDistance zone = s.Target == stackWith
                     ? new SDInvertedCircle(s.Target.Position, 4f) // stay a bit closer to the target to avoid spooking people
                     : new SDCircle(s.Target.Position, 6f);
                 hints.AddForbiddenZone(zone, _comp.Activation);

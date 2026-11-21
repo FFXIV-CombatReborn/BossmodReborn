@@ -40,8 +40,13 @@ sealed class StateTransitionTimings
     {
         foreach (var replay in replays)
         {
-            foreach (var enc in replay.Encounters.Where(enc => enc.OID == oid))
+            for (var ei = 0; ei < replay.Encounters.Count; ++ei)
             {
+                var enc = replay.Encounters[ei];
+                if (enc.OID != oid)
+                {
+                    continue;
+                }
                 _encounters.Add((replay, enc));
 
                 foreach (var s in enc.States)
@@ -94,7 +99,7 @@ sealed class StateTransitionTimings
         foreach (var n in tree.Node("Errors", _errors.Count == 0))
         {
             ImGui.InputFloat("Last seconds to ignore", ref _lastSecondsToIgnore);
-            tree.LeafNodes(_errors.Where(e => (e.Item2.Time.End - e.Item3.Timestamp).TotalSeconds >= _lastSecondsToIgnore), error => $"{LocationString(error.Item1, error.Item2, error.Item3.Timestamp)} [{error.Item3.CompType}] {error.Item3.Message}");
+            tree.LeafNodes(FilterErrors(), error => $"{LocationString(error.Item1, error.Item2, error.Item3.Timestamp)} [{error.Item3.CompType}] {error.Item3.Message}");
         }
 
         foreach (var from in _metrics.Values)
@@ -112,7 +117,7 @@ sealed class StateTransitionTimings
                 //bool warn = from.ExpectedTime < Math.Round(m.MinTime, 1) || from.ExpectedTime > Math.Round(m.MaxTime, 1);
                 return new($"{name}: {value}###{name}", kv.Value.Instances.Count == 0, color);
             }
-            var transitions = _showTransitionsToEnd ? from.Transitions : from.Transitions.Where(kv => kv.Key != uint.MaxValue);
+            var transitions = FilterTransitions(from.Transitions, _showTransitionsToEnd);
             foreach (var (toID, m) in tree.Nodes(transitions, map, kv => TransitionContextMenu(from, kv.Key, kv.Value, tree, ref actions), select: kv => _selected = kv.Value))
             {
                 foreach (var inst in m.Instances)
@@ -123,6 +128,29 @@ sealed class StateTransitionTimings
             }
         }
         actions?.Invoke();
+    }
+
+    private IEnumerable<(Replay, Replay.Encounter, Replay.EncounterError)> FilterErrors()
+    {
+        for (var i = 0; i < _errors.Count; ++i)
+        {
+            var e = _errors[i];
+            if ((e.Item2.Time.End - e.Item3.Timestamp).TotalSeconds >= _lastSecondsToIgnore)
+            {
+                yield return e;
+            }
+        }
+    }
+
+    private static IEnumerable<KeyValuePair<uint, TransitionMetrics>> FilterTransitions(SortedDictionary<uint, TransitionMetrics> transitions, bool showToEnd)
+    {
+        foreach (var kv in transitions)
+        {
+            if (showToEnd || kv.Key != uint.MaxValue)
+            {
+                yield return kv;
+            }
+        }
     }
 
     private string LocationString(Replay replay, Replay.Encounter enc, DateTime timestamp) => $"{replay.Path} @ {enc.Time.Start:O} + {(timestamp - enc.Time.Start).TotalSeconds:f3} / {enc.Time.Duration:f3}";

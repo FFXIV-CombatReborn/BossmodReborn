@@ -23,8 +23,10 @@ public sealed class ColumnActorHP : Timeline.ColumnGroup, IToggleableColumn
         var initial = actor.HPMPAt(enc.Time.Start);
         var prevTime = enc.Time.Start;
         var prevHPMP = initial;
-        foreach (var h in actor.HPMPHistory.SkipWhile(e => e.Key <= enc.Time.Start).TakeWhile(e => e.Key < enc.Time.End))
+        var startIdx = actor.HPMPHistory.UpperBound(enc.Time.Start);
+        for (var i = startIdx; i < actor.HPMPHistory.Count && actor.HPMPHistory[i].Key < enc.Time.End; ++i)
         {
+            var h = actor.HPMPHistory[i];
             AddRange(enc.Time.Start, prevTime, h.Key, initial.MaxHP, prevHPMP);
             prevTime = h.Key;
             prevHPMP = h.Value;

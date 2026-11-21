@@ -246,7 +246,7 @@ public sealed class PartyState
         public override void Write(ReplayRecorder.Output output)
         {
             ref readonly var m = ref Member;
-            output.EmitFourCC("PAR "u8).Emit(Slot).Emit(m.ContentId, "X").Emit(m.InstanceId, "X8").Emit(m.InCutscene);
+            output.EmitFourCC("PAR "u8).Emit(Slot).EmitContentID(m.ContentId).Emit(m.InstanceId, "X8").Emit(m.InCutscene);
         }
     }
 

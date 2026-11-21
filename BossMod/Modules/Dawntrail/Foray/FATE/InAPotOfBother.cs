@@ -43,7 +43,7 @@ sealed class InAPotOfBotherStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP,
+[ModuleInfo(BossModuleInfo.Maturity.Contributed,
     StatesType = typeof(InAPotOfBotherStates),
     ConfigType = null, // replace null with typeof(GreaterFanConfig) if applicable
     ObjectIDType = typeof(OID),

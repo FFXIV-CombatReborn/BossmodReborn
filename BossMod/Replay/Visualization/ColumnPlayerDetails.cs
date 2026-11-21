@@ -42,7 +42,7 @@ public sealed class ColumnPlayerDetails : Timeline.ColumnGroup
         _moduleInfo = BossModuleRegistry.FindByOID(enc.OID);
 
         _actions = Add(new ColumnPlayerActions(timeline, tree, phaseBranches, replay, enc, player, playerClass));
-        _actions.Name = player.NameHistory.FirstOrDefault().Value.name;
+        _actions.Name = player.NameHistory.Count > 0 ? player.NameHistory[0].Value.name : "";
 
         _statuses = Add(new ColumnActorStatuses(timeline, tree, phaseBranches, replay, enc, player));
 
@@ -58,7 +58,22 @@ public sealed class ColumnPlayerDetails : Timeline.ColumnGroup
         if (_moduleInfo?.PlanLevel > 0)
         {
             var minTime = _enc.Time.Start.AddSeconds(Timeline.MinTime);
-            _plannerActions = [.. _replay.Actions.SkipWhile(a => a.Timestamp < minTime).TakeWhile(a => a.Timestamp <= _enc.Time.End).Where(a => a.Source == _player)];
+            for (var i = 0; i < _replay.Actions.Count; ++i)
+            {
+                var a = _replay.Actions[i];
+                if (a.Timestamp < minTime)
+                {
+                    continue;
+                }
+                if (a.Timestamp > _enc.Time.End)
+                {
+                    break;
+                }
+                if (a.Source == _player)
+                {
+                    _plannerActions.Add(a);
+                }
+            }
             var plans = _planDatabase.GetPlans(_moduleInfo.ModuleType, _playerClass);
             UpdateSelectedPlan(plans, plans.SelectedIndex);
         }

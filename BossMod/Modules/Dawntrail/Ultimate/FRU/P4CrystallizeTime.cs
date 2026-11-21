@@ -346,6 +346,7 @@ sealed class P4CrystallizeTimeDarkEruption(BossModule module) : Components.Gener
 
 sealed class P4CrystallizeTimeDarkAero(BossModule module) : Components.GenericKnockback(module, (uint)AID.CrystallizeTimeDarkAero) // TODO: not sure whether it actually ignores immunes, if so need to warn about immunity
 {
+    private readonly List<Knockback> _sourcesBuffer = [];
     private readonly List<Actor> _sources = [];
     private DateTime _activation;
 
@@ -356,7 +357,8 @@ sealed class P4CrystallizeTimeDarkAero(BossModule module) : Components.GenericKn
         var count = _sources.Count;
         if (count == 0)
             return [];
-        List<Knockback> sources = [];
+        var sources = _sourcesBuffer;
+        sources.Clear();
         for (var i = 0; i < count; ++i)
         {
             var s = _sources[i];
@@ -666,6 +668,7 @@ sealed class P4CrystallizeTimeRewind(BossModule module) : Components.GenericKnoc
     public bool ReturnDone;
     private readonly P4CrystallizeTime? _ct = module.FindComponent<P4CrystallizeTime>();
     private readonly P4CrystallizeTimeTidalLight? _exalines = module.FindComponent<P4CrystallizeTimeTidalLight>();
+    private readonly List<Knockback> _sources = [];
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
@@ -673,13 +676,13 @@ sealed class P4CrystallizeTimeRewind(BossModule module) : Components.GenericKnoc
         {
             var exas = _exalines.StartingPositions;
             var count = exas.Count;
-            var sources = new List<Knockback>();
+            _sources.Clear();
             for (var i = 0; i < count; ++i)
             {
                 var s = exas[i];
-                sources.Add(new(s.pos, 20f, direction: s.dir, kind: Kind.DirForward));
+                _sources.Add(new(s.pos, 20f, direction: s.dir, kind: Kind.DirForward));
             }
-            return CollectionsMarshal.AsSpan(sources);
+            return CollectionsMarshal.AsSpan(_sources);
         }
         return [];
     }

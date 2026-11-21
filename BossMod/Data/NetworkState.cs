@@ -84,7 +84,7 @@ public sealed class NetworkState
             .Emit(p.Epoch)
             .Emit(p.SourceServerActor, "X8")
             .Emit(p.SendTimestamp.Ticks)
-            .Emit([.. p.Payload]);
+            .Emit(p.Payload);
         }
     }
 }

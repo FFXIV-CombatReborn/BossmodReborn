@@ -69,11 +69,11 @@ public sealed class DeepDungeonState
         if (DungeonId != DungeonType.None)
         {
             ops.Add(new OpProgressChange(DungeonId, Progress));
-            ops.Add(new OpMapDataChange(Rooms));
-            ops.Add(new OpPartyStateChange(Party));
-            ops.Add(new OpPomandersChange(Pomanders));
-            ops.Add(new OpChestsChange(Chests));
-            ops.Add(new OpMagiciteChange(Magicite));
+            ops.Add(new OpMapDataChange([.. Rooms]));
+            ops.Add(new OpPartyStateChange([.. Party]));
+            ops.Add(new OpPomandersChange([.. Pomanders]));
+            ops.Add(new OpChestsChange([.. Chests]));
+            ops.Add(new OpMagiciteChange([.. Magicite]));
         }
         return ops;
     }

@@ -22,8 +22,13 @@ sealed class IconInfo : CommonEnumInfo
         _iidType = moduleInfo?.IconIDType;
         foreach (var replay in replays)
         {
-            foreach (var enc in replay.Encounters.Where(enc => enc.OID == oid))
+            for (var i = 0; i < replay.Encounters.Count; ++i)
             {
+                var enc = replay.Encounters[i];
+                if (enc.OID != oid)
+                {
+                    continue;
+                }
                 foreach (var icon in replay.EncounterIcons(enc))
                 {
                     var data = _data.GetOrAdd(icon.ID);
@@ -70,9 +75,12 @@ sealed class IconInfo : CommonEnumInfo
         if (ImGui.MenuItem("Generate missing enum values for boss module"))
         {
             var sb = new StringBuilder();
-            foreach (var (iid, data) in _data.Where(kv => _iidType?.GeneratedEnumName(kv.Key) == null))
+            foreach (var (iid, data) in _data)
             {
-                sb.AppendLine(EnumMemberString(iid, data));
+                if (_iidType?.GeneratedEnumName(iid) == null)
+                {
+                    sb.AppendLine(EnumMemberString(iid, data));
+                }
             }
 
             ImGui.SetClipboardText(sb.ToString());

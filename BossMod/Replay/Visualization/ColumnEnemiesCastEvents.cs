@@ -21,11 +21,25 @@ public sealed class ColumnEnemiesCastEvents : Timeline.ColumnGroup
         _phaseBranches = phaseBranches;
         _encounter = enc;
         _moduleInfo = BossModuleRegistry.FindByOID(enc.OID);
-        _actions = [.. replay.EncounterActions(enc).Where(a => a.Source.Type is not (ActorType.Player or ActorType.Pet or ActorType.Chocobo or ActorType.Buddy))];
-        foreach (var a in _actions)
+        _actions = [];
+        foreach (var a in replay.EncounterActions(enc))
         {
+            if (a.Source.Type is ActorType.Player or ActorType.Pet or ActorType.Chocobo or ActorType.Buddy)
+            {
+                continue;
+            }
+            _actions.Add(a);
             var f = _filters.GetOrAdd(a.ID);
-            if (!f.Any(e => e.source == a.Source))
+            var found = false;
+            for (var i = 0; i < f.Count; ++i)
+            {
+                if (f[i].source == a.Source)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
             {
                 f.Add((a.Source, new(1)));
             }
@@ -46,7 +60,8 @@ public sealed class ColumnEnemiesCastEvents : Timeline.ColumnGroup
         {
             foreach (ref var v in na.Value.AsSpan())
             {
-                needRebuild |= DrawConfigColumns(ref v.cols, $"{ReplayUtils.ParticipantString(v.source, v.source.WorldExistence.FirstOrDefault().Start)} ({_moduleInfo?.ObjectIDType?.GeneratedEnumName(v.source.OID)})");
+                var startTime = v.source.WorldExistence.Count > 0 ? v.source.WorldExistence[0].Start : default;
+                needRebuild |= DrawConfigColumns(ref v.cols, $"{ReplayUtils.ParticipantString(v.source, startTime)} ({_moduleInfo?.ObjectIDType?.GeneratedEnumName(v.source.OID)})");
             }
         }
 
@@ -77,9 +92,9 @@ public sealed class ColumnEnemiesCastEvents : Timeline.ColumnGroup
 
     private void RebuildEvents()
     {
-        foreach (var c in Columns.Cast<ColumnGenericHistory>())
+        for (var i = 0; i < Columns.Count; ++i)
         {
-            c.Entries.Clear();
+            ((ColumnGenericHistory)Columns[i]).Entries.Clear();
         }
 
         foreach (var a in _actions)

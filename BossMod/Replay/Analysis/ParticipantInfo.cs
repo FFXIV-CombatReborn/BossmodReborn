@@ -26,18 +26,31 @@ sealed class ParticipantInfo : CommonEnumInfo
         _oidType = moduleInfo?.ObjectIDType;
         foreach (var replay in replays)
         {
-            foreach (var enc in replay.Encounters.Where(enc => enc.OID == oid))
+            for (var ei = 0; ei < replay.Encounters.Count; ++ei)
             {
+                var enc = replay.Encounters[ei];
+                if (enc.OID != oid)
+                {
+                    continue;
+                }
                 var minExistence = enc.Time.End.AddSeconds(-1d); // we don't want to add actors that spawned right before wipe, they could belong to reset
                 foreach (var (commonOID, participants) in enc.ParticipantsByOID)
                 {
                     var data = _data.GetOrAdd(commonOID);
                     var spawnedPreFight = 0;
-                    foreach (var p in participants.Where(p => !IsIgnored(p) && p.EffectiveExistence.Start <= minExistence))
+                    for (var pi = 0; pi < participants.Count; ++pi)
                     {
+                        var p = participants[pi];
+                        if (IsIgnored(p) || p.EffectiveExistence.Start > minExistence)
+                        {
+                            continue;
+                        }
                         data.Types.Add(p.Type);
                         data.Zones.Add((p.ZoneID, p.CFCID));
-                        data.Names.AddRange(p.NameHistory.Values);
+                        for (var ni = 0; ni < p.NameHistory.Count; ++ni)
+                        {
+                            data.Names.Add(p.NameHistory[ni].Value);
+                        }
 
                         if (p.ExistsInWorldAt(enc.Time.Start))
                         {
@@ -63,12 +76,20 @@ sealed class ParticipantInfo : CommonEnumInfo
     {
         foreach (var replay in replays)
         {
-            foreach (var p in replay.Participants.Where(p => !IsIgnored(p)))
+            for (var pi = 0; pi < replay.Participants.Count; ++pi)
             {
+                var p = replay.Participants[pi];
+                if (IsIgnored(p))
+                {
+                    continue;
+                }
                 var data = _data.GetOrAdd(p.OID);
                 data.Types.Add(p.Type);
                 data.Zones.Add((p.ZoneID, p.CFCID));
-                data.Names.AddRange(p.NameHistory.Values);
+                for (var ni = 0; ni < p.NameHistory.Count; ++ni)
+                {
+                    data.Names.Add(p.NameHistory[ni].Value);
+                }
                 data.SeenTargetable = p.TargetableHistory.Count > 0;
                 data.MinRadius = Math.Min(data.MinRadius, p.MinRadius);
                 data.MaxRadius = Math.Max(data.MaxRadius, p.MaxRadius);
@@ -90,7 +111,8 @@ sealed class ParticipantInfo : CommonEnumInfo
             };
             // for global, highlight by targetable; for encounter, highlight by being defined in enum
             var highlight = _oidType != null ? name == null : !kv.Value.SeenTargetable;
-            return new($"{kv.Key:X} ({_oidType?.GeneratedEnumName(kv.Key)}) '{kv.Value.Names.FirstOrDefault().name}' ({typeName})", false, highlight ? Colors.TextColor2 : Colors.TextColor1);
+            var firstName = kv.Value.Names.Count > 0 ? kv.Value.Names[0].name : null;
+            return new($"{kv.Key:X} ({_oidType?.GeneratedEnumName(kv.Key)}) '{firstName}' ({typeName})", false, highlight ? Colors.TextColor2 : Colors.TextColor1);
         }
         foreach (var (oid, data) in tree.Nodes(_data, map, kv => DrawSubContextMenu(kv.Key, kv.Value)))
         {
@@ -125,8 +147,16 @@ sealed class ParticipantInfo : CommonEnumInfo
 
         if (ImGui.MenuItem("Generate missing enum values for boss module"))
         {
+            var rawMembers = new List<(string, string)>();
+            foreach (var d in _data)
+            {
+                if (_oidType?.GeneratedEnumName(d.Key) == null)
+                {
+                    rawMembers.Add(EnumMemberString(d.Key, d.Value));
+                }
+            }
             var sb = new StringBuilder();
-            foreach (var (name, val) in Utils.DedupKeys(_data.Where(kv => _oidType?.GeneratedEnumName(kv.Key) == null).Select(d => EnumMemberString(d.Key, d.Value))))
+            foreach (var (name, val) in Utils.DedupKeys(rawMembers))
             {
                 sb.AppendLine($"{name} = {val}");
             }
@@ -198,7 +228,11 @@ sealed class ParticipantInfo : CommonEnumInfo
 
     private StringBuilder AddOIDEnum(StringBuilder sb, uint forcedBossOID = 0)
     {
-        var members = _data.Select(d => EnumMemberString(d.Key, d.Value, d.Key == forcedBossOID ? "Boss" : null));
+        var members = new List<(string, string)>(_data.Count);
+        foreach (var d in _data)
+        {
+            members.Add(EnumMemberString(d.Key, d.Value, d.Key == forcedBossOID ? "Boss" : null));
+        }
 
         sb.AppendLine("public enum OID : uint");
         sb.AppendLine("{");
