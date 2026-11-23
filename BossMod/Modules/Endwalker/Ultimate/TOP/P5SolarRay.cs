@@ -8,8 +8,19 @@ sealed class P5SolarRay(BossModule module) : Components.GenericBaitAway(module, 
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (NumCasts == 0 && CurrentBaits.FirstOrDefault(b => b.Source.TargetID == b.Target.InstanceID) is var b && b.Source != null && actor.Role == Role.Tank)
-            hints.Add(b.Source.TargetID != actor.InstanceID ? "Taunt!" : "Pass aggro!");
+        if (NumCasts == 0 && actor.Role == Role.Tank)
+        {
+            var baits = CollectionsMarshal.AsSpan(CurrentBaits);
+            for (var i = 0; i < baits.Length; ++i)
+            {
+                ref var b = ref baits[i];
+                if (b.Source.TargetID == b.Target.InstanceID)
+                {
+                    hints.Add(b.Source.TargetID != actor.InstanceID ? "Taunt!" : "Pass aggro!");
+                    break;
+                }
+            }
+        }
         base.AddHints(slot, actor, hints);
     }
 

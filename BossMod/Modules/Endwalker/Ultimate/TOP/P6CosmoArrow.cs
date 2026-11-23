@@ -13,12 +13,14 @@ sealed class P6CosmoArrow(BossModule module) : Components.GenericAOEs(module)
     private readonly AOEShapeRect _shapeFirst = new(40f, 5f);
     private readonly AOEShapeRect _shapeRest = new(100f, 2.5f);
 
+    private readonly List<AOEInstance> _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _lines.Count;
         if (count == 0)
             return [];
-        var aoes = new List<AOEInstance>();
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         for (var i = 0; i < count; ++i)
         {
             var l = _lines[i];

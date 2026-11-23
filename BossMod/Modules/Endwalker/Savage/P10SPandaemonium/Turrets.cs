@@ -9,13 +9,15 @@ sealed class Turrets(BossModule module) : Components.GenericKnockback(module, (u
     private const float _distance = 17f;
     private readonly AOEShapeRect _shape = new(50f, 2.5f);
 
+    private readonly List<Knockback> _sourcesBuffer = [];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         var turrets = ImminentTurretsWithTargets();
         var count = turrets.Count;
         if (count == 0)
             return [];
-        var sources = new List<Knockback>(count);
+        var sources = _sourcesBuffer;
+        sources.Clear();
         for (var i = 0; i < count; ++i)
         {
             var t = turrets[i];
@@ -112,9 +114,11 @@ sealed class Turrets(BossModule module) : Components.GenericKnockback(module, (u
             ReportError($"More than 2 turrets of order {order}");
     }
 
+    private readonly List<(Actor? source, Actor? target)> _turretsBuffer = [];
     private List<(Actor? source, Actor? target)> ImminentTurretsWithTargets()
     {
-        List<(Actor? source, Actor? target)> turrets = [];
+        var turrets = _turretsBuffer;
+        turrets.Clear();
         var count = 0;
         var len = _turrets.Length;
         for (var i = NumCasts; i < len && count < 2; ++i)
@@ -127,9 +131,11 @@ sealed class Turrets(BossModule module) : Components.GenericKnockback(module, (u
         return turrets;
     }
 
+    private readonly List<Actor?> _futureTurretsBuffer = [];
     private List<Actor?> FutureTurrets()
     {
-        List<Actor?> turrets = [];
+        var turrets = _futureTurretsBuffer;
+        turrets.Clear();
         var count = 0;
         var len = _turrets.Length;
         for (var i = NumCasts + 2; i < len && count < 2; ++i)

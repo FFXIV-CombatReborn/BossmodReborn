@@ -83,6 +83,7 @@ sealed class AssaultCannon(BossModule module) : Components.GenericAOEs(module)
     private int numCastsReflections;
     private int numCastsCannons;
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var countCones = _aoesCones.Count;
@@ -95,14 +96,17 @@ sealed class AssaultCannon(BossModule module) : Components.GenericAOEs(module)
         var maxCone = type && countCones > 2 ? 2 : countCones;
         var maxRect = type && countRects > 2 ? 2 : countRects;
         var adjtotal = maxCone + maxRect;
-        var aoes = new AOEInstance[adjtotal];
+        var aoesLen = adjtotal;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         var index = 0;
 
         for (var i = 0; i < maxCone; ++i)
             aoes[index++] = _aoesCones[i];
         for (var i = 0; i < maxRect; ++i)
             aoes[index++] = _aoesRects[i];
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnActorPlayActionTimelineEvent(Actor actor, ushort id)

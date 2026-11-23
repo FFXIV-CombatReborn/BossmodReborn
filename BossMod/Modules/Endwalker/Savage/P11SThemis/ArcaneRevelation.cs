@@ -56,10 +56,14 @@ sealed class DismissalOverruling(BossModule module) : Components.GenericKnockbac
 {
     private Actor? _source;
 
+    private readonly Knockback[] _oneKnockback = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (_source != null)
-            return new Knockback[1] { new(_source.Position, 11f, Module.CastFinishAt(_source.CastInfo)) };
+        {
+            _oneKnockback[0] = new(_source.Position, 11f, Module.CastFinishAt(_source.CastInfo));
+            return _oneKnockback;
+        }
         return [];
     }
 

@@ -7,7 +7,7 @@ sealed class Silkspit(BossModule module) : Components.UniformStackSpread(module,
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         base.AddHints(slot, actor, hints);
-        if (IsSpreadTarget(actor) && _pillars.InRadius(actor.Position, SpreadRadius).Any())
+        if (IsSpreadTarget(actor) && _pillars.AnyInRadius(actor.Position, SpreadRadius))
             hints.Add("GTFO from pillars!");
     }
 

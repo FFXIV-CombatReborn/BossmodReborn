@@ -16,7 +16,7 @@ sealed class Roar(BossModule module) : Components.GenericBaitAway(module)
         {
             foreach (var s in _snakes)
             {
-                var target = Raid.WithoutSlot(false, true, true).Closest(s.actor.Position);
+                var target = Raid.WithoutSlot(false, true, true).ClosestTo(s.actor.Position);
                 if (target != null)
                     CurrentBaits.Add(new(s.actor, target, _shape));
             }

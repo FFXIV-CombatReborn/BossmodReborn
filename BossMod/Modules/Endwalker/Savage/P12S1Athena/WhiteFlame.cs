@@ -11,13 +11,22 @@ sealed class WhiteFlame(BossModule module) : Components.GenericBaitAway(module)
 
     public void Enable() => _enabled = true;
 
+    private readonly List<Actor> _sorted = new(PartyState.MaxPartySize);
+
     public override void Update()
     {
         CurrentBaits.Clear();
         if (_enabled)
-            foreach (var s in _sources.Take(2))
-                foreach (var t in Raid.WithoutSlot(false, true, true).SortedByRange(s.Position).Take(2))
-                    CurrentBaits.Add(new(s, t, _shape));
+        {
+            var party = Raid.WithoutSlot(false, true, true);
+            for (var k = 0; k < _sources.Count && k < 2; ++k)
+            {
+                var s = _sources[k];
+                party.SortedByRange(s.Position, _sorted);
+                for (var i = 0; i < _sorted.Count && i < 2; ++i)
+                    CurrentBaits.Add(new(s, _sorted[i], _shape));
+            }
+        }
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)

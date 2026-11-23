@@ -13,7 +13,7 @@ sealed class TrailOfCondemnation(BossModule module) : BossComponent(module)
             return;
         if (_isCenter)
         {
-            if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _aoeRadius).Any())
+            if (Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, _aoeRadius))
             {
                 hints.Add("Spread!");
             }
@@ -23,8 +23,10 @@ sealed class TrailOfCondemnation(BossModule module) : BossComponent(module)
             // note: sparks either target all tanks & healers or all dds - so correct pairings are always dd+tank/healer
             var numStacked = 0;
             var goodPair = false;
-            foreach (var pair in Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _aoeRadius))
+            foreach (var pair in Raid.WithoutSlot(false, true, true))
             {
+                if (!(pair != actor && pair.Position.InCircle(actor.Position, _aoeRadius)))
+                    continue;
                 ++numStacked;
                 goodPair = (actor.Role == Role.Tank || actor.Role == Role.Healer) != (pair.Role == Role.Tank || pair.Role == Role.Healer);
             }

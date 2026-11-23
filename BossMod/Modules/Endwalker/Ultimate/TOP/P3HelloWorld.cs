@@ -59,7 +59,7 @@ sealed class P3HelloWorld(BossModule module) : Components.GenericTowers(module)
         {
             if (PendingRot(slot))
             {
-                if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, 5).Any())
+                if (Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, 5))
                     hints.Add("GTFO from raid!");
             }
             else

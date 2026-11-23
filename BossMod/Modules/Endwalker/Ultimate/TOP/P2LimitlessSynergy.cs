@@ -31,7 +31,7 @@ sealed class P2BeyondDefense(BossModule module) : Components.UniformStackSpread(
                     AddSpreads(Raid.WithoutSlot(false, true, true).SortedByRange(_source.Position).Take(2), _activation);
                     break;
                 case Mechanic.Stack:
-                    if (Raid.WithoutSlot(false, true, true).Closest(_source.Position) is var target && target != null)
+                    if (Raid.WithoutSlot(false, true, true).ClosestTo(_source.Position) is var target && target != null)
                         AddStack(target, _activation, _forbiddenStack);
                     break;
             }

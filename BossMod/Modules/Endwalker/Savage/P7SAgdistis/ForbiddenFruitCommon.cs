@@ -21,11 +21,15 @@ abstract class ForbiddenFruitCommon(BossModule module, uint watchedAction) : Com
 
     public bool CastsActive => _activeAOEs.Count > 0;
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var countP = _predictedAOEs.Count;
         var countA = _activeAOEs.Count;
-        var aoes = new AOEInstance[countP + countA];
+        var aoesLen = countP + countA;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         var index = 0;
         for (var i = 0; i < countP; ++i)
         {
@@ -37,7 +41,7 @@ abstract class ForbiddenFruitCommon(BossModule module, uint watchedAction) : Com
             var p = _activeAOEs[i];
             aoes[index++] = new(p.Item2, p.Item1.CastInfo!.LocXZ, p.Item1.CastInfo!.Rotation, Module.CastFinishAt(p.Item1.CastInfo));
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void Update()
@@ -52,7 +56,7 @@ abstract class ForbiddenFruitCommon(BossModule module, uint watchedAction) : Com
             if (tetherSource != null)
             {
                 AOEShape tetherShape = tetherSource.OID == (uint)OID.ImmatureMinotaur ? ShapeMinotaurTethered : ShapeRect;
-                _tetherClips[p.Item1] = party.Exclude(p.Item2).InShape(tetherShape, tetherSource.Position, Angle.FromDirection(p.Item2.Position - tetherSource.Position)).Mask();
+                _tetherClips[p.Item1] = party.MaskInShape(tetherShape, tetherSource.Position, Angle.FromDirection(p.Item2.Position - tetherSource.Position), p.Item2);
             }
         }
     }

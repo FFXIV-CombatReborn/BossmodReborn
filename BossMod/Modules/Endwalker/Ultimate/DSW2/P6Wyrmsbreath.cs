@@ -17,8 +17,15 @@ abstract class P6Wyrmsbreath(BossModule module, bool allowIntersect) : Component
         Bait? b = bait.Count != 0 ? bait[0] : null;
         if (b != null && b.Value.Source == null)
         {
-            if (ActiveBaits.Any(b => IsClippedBy(actor, ref b)))
-                hints.Add("GTFO from baits!");
+            var baits = CollectionsMarshal.AsSpan(ActiveBaits);
+            for (var i = 0; i < baits.Length; ++i)
+            {
+                if (IsClippedBy(actor, ref baits[i]))
+                {
+                    hints.Add("GTFO from baits!");
+                    break;
+                }
+            }
         }
         else
         {
@@ -26,10 +33,32 @@ abstract class P6Wyrmsbreath(BossModule module, bool allowIntersect) : Component
                 hints.Add("Stretch the tether!");
 
             var partner = IgnoredPartner(slot, actor);
-            if (ActiveBaitsOn(actor).Any(b => PlayersClippedBy(ref b).Any(p => p != partner)))
+            var baitsOn = CollectionsMarshal.AsSpan(ActiveBaitsOn(actor));
+            var clipsRaid = false;
+            for (var i = 0; i < baitsOn.Length && !clipsRaid; ++i)
+            {
+                var clipped = PlayersClippedBy(ref baitsOn[i]);
+                for (var j = 0; j < clipped.Count; ++j)
+                {
+                    if (clipped[j] != partner)
+                    {
+                        clipsRaid = true;
+                        break;
+                    }
+                }
+            }
+            if (clipsRaid)
                 hints.Add("Bait away from raid!");
-            if (ActiveBaitsNotOn(actor).Any(b => b.Target != partner && IsClippedBy(actor, ref b)))
-                hints.Add("GTFO from baited aoe!");
+            var baitsNotOn = CollectionsMarshal.AsSpan(ActiveBaitsNotOn(actor));
+            for (var i = 0; i < baitsNotOn.Length; ++i)
+            {
+                ref var other = ref baitsNotOn[i];
+                if (other.Target != partner && IsClippedBy(actor, ref other))
+                {
+                    hints.Add("GTFO from baited aoe!");
+                    break;
+                }
+            }
         }
     }
 
@@ -150,13 +179,17 @@ sealed class P6WyrmsbreathCone(BossModule module) : Components.GenericAOEs(modul
 
     private readonly AOEShapeCone _shape = new(50f, 15f.Degrees()); // TODO: verify angle
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_main?.Glows.Raw is 1 or 2)
         {
             var source = _main.Dragons[_main.Glows.Raw == 1ul ? 0 : 1];
             if (source != null)
-                return new AOEInstance[1] { new(_shape, source.Position, source.Rotation) }; // TODO: activation
+            {
+                _oneAOEInstance[0] = new(_shape, source.Position, source.Rotation); // TODO: activation
+                return _oneAOEInstance;
+            }
         }
         return [];
     }

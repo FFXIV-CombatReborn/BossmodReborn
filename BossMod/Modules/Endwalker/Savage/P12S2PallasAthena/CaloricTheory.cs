@@ -11,8 +11,9 @@ sealed class CaloricTheory1Part1(BossModule module) : Components.UniformStackSpr
         if (spell.Action.ID == (uint)AID.CaloricTheory1InitialFire && WorldState.Actors.Find(spell.TargetID) is var target && target != null)
         {
             AddStack(target, Module.CastFinishAt(spell));
-            foreach (var (_, p) in Raid.WithSlot(true, true, true).ExcludedFromMask(_initialMarkers))
-                AddSpread(p, Module.CastFinishAt(spell));
+            foreach (var (s_, p) in Raid.WithSlot(true, true, true))
+                if (!_initialMarkers[s_])
+                    AddSpread(p, Module.CastFinishAt(spell));
         }
     }
 

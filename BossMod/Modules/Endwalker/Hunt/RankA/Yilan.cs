@@ -42,10 +42,14 @@ class MiniLight(BossModule module) : Components.GenericAOEs(module)
 
     public static readonly AOEShapeCircle Shape = new(18);
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_activation != default)
-            return new AOEInstance[1] { new(Shape, Module.PrimaryActor.Position, default, _activation) };
+        {
+            _oneAOEInstance[0] = new(Shape, Module.PrimaryActor.Position, default, _activation);
+            return _oneAOEInstance;
+        }
         return [];
     }
 

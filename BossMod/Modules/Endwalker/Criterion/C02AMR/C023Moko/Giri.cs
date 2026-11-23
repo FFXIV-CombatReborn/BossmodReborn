@@ -249,6 +249,7 @@ sealed class IaiGiriResolve(BossModule module) : Components.GenericAOEs(module)
 
     private readonly List<Instance> _instances = [];
 
+    private readonly List<AOEInstance> _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _instances.Count;
@@ -256,7 +257,8 @@ sealed class IaiGiriResolve(BossModule module) : Components.GenericAOEs(module)
         {
             return [];
         }
-        var aoes = new List<AOEInstance>();
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         for (var i = 0; i < count; ++i)
         {
             var ins = _instances[i];

@@ -6,15 +6,19 @@ sealed class CthonicVent(BossModule module) : Components.GenericAOEs(module)
     private readonly List<WPos> _centers = [];
     private static readonly AOEShapeCircle _shape = new(23);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _centers.Count;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
             aoes[i] = new(_shape, _centers[i]);
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

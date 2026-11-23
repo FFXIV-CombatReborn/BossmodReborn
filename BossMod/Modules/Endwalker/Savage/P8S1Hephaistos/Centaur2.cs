@@ -4,10 +4,14 @@ sealed class QuadrupedalImpact(BossModule module) : Components.GenericKnockback(
 {
     private WPos? _source;
 
+    private readonly Knockback[] _oneKnockback = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (_source != null)
-            return new Knockback[1] { new(_source.Value, 30f, ignoreImmunes: true) }; // TODO: activation
+        {
+            _oneKnockback[0] = new(_source.Value, 30f, ignoreImmunes: true); // TODO: activation
+            return _oneKnockback;
+        }
         return [];
     }
 
@@ -25,10 +29,14 @@ sealed class QuadrupedalCrush(BossModule module) : Components.GenericAOEs(module
 
     private readonly AOEShapeCircle _shape = new(30f);
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_source != null)
-            return new AOEInstance[1] { new(_shape, _source.Value, default, _activation) };
+        {
+            _oneAOEInstance[0] = new(_shape, _source.Value, default, _activation);
+            return _oneAOEInstance;
+        }
         return [];
     }
 

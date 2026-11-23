@@ -25,7 +25,7 @@ sealed class BeloneCoils(BossModule module) : BossComponent(module)
         if (ActiveSoakers == Soaker.Unknown)
             return;
 
-        var isSoaking = _activeTowers.InRadius(actor.Position, _towerRadius).Any();
+        var isSoaking = _activeTowers.AnyInRadius(actor.Position, _towerRadius);
         if (IsValidSoaker(actor))
         {
             hints.Add("Soak the tower", !isSoaking);

@@ -359,10 +359,14 @@ sealed class P5DeltaOpticalLaser(BossModule module) : Components.GenericAOEs(mod
 
     private readonly AOEShapeRect _shape = new(100f, 8f);
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (Source != null)
-            return new AOEInstance[1] { new(_shape, Source.Position, Source.Rotation, _activation) };
+        {
+            _oneAOEInstance[0] = new(_shape, Source.Position, Source.Rotation, _activation);
+            return _oneAOEInstance;
+        }
         return [];
     }
 
@@ -400,6 +404,7 @@ sealed class P5DeltaHyperPulse(BossModule module) : Components.GenericAOEs(modul
     private static readonly AOEShapeRect _shape = new(100f, 4f);
     private const uint _numRepeats = 6u;
 
+    private readonly List<AOEInstance> _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_aoes.Count != 0)
@@ -409,11 +414,12 @@ sealed class P5DeltaHyperPulse(BossModule module) : Components.GenericAOEs(modul
         else if (_delta != null)
         {
             var len = _delta.ArmRotations.Length;
-            var aoes = new List<AOEInstance>(len);
+            var aoes = _aoesBuffer;
+            aoes.Clear();
             for (var i = 0; i < len; ++i)
             {
                 var pos = (Arena.Center + _delta.ArmOffset(i)).Quantized();
-                if (Raid.WithoutSlot(false, true, true).Closest(pos) == actor)
+                if (Raid.WithoutSlot(false, true, true).ClosestTo(pos) == actor)
                 {
                     var angle = Angle.FromDirection(actor.Position - pos);
                     for (var j = 0u; j < _numRepeats; ++j)
@@ -479,7 +485,19 @@ sealed class P5DeltaOversampledWaveCannon(BossModule module) : Components.Unifor
         if (_player == actor)
         {
             // ensure we hit only two intended targets
-            hints.Add("Aim monitor!", Raid.WithSlot(false, true, true).Exclude(actor).Any(ip => _shape.Check(ip.Item2.Position, actor.Position, actor.Rotation + _playerAngle) != _playerIntendedTargets[ip.Item1]));
+            var party = Raid.WithSlot(false, true, true);
+            var badAim = false;
+            var rot = actor.Rotation + _playerAngle;
+            for (var i = 0; i < party.Length; ++i)
+            {
+                var (s, p) = party[i];
+                if (p != actor && _shape.Check(p.Position, actor.Position, rot) != _playerIntendedTargets[s])
+                {
+                    badAim = true;
+                    break;
+                }
+            }
+            hints.Add("Aim monitor!", badAim);
         }
         else if (_player != null)
         {

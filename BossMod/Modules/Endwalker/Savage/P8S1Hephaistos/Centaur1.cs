@@ -19,7 +19,7 @@ sealed class UpliftStompDead : Components.UniformStackSpread
         if (Spreads.Count == 0)
         {
             Stacks.Clear();
-            if (Raid.WithoutSlot().Farthest(Module.PrimaryActor.Position) is var target && target != null)
+            if (Raid.WithoutSlot().FarthestFrom(Module.PrimaryActor.Position) is var target && target != null)
                 AddStack(target);
         }
         base.Update();
@@ -40,7 +40,15 @@ sealed class UpliftStompDead : Components.UniformStackSpread
         else
         {
             // custom hints for baiting stomps
-            var isBaiting = Stacks.Any(s => actor.Position.InCircle(s.Target.Position, s.Radius));
+            var isBaiting = false;
+            for (var i = 0; i < Stacks.Count; ++i)
+            {
+                if (actor.Position.InCircle(Stacks[i].Target.Position, Stacks[i].Radius))
+                {
+                    isBaiting = true;
+                    break;
+                }
+            }
             var shouldBait = OrderPerSlot[slot] == NumStomps + 1;
             hints.Add(shouldBait ? "Bait jump!" : "Avoid jump!", isBaiting != shouldBait);
         }

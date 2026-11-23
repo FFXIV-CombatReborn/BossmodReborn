@@ -9,35 +9,35 @@ sealed class WreathOfThorns1(BossModule module) : BossComponent(module)
     public State CurState = State.FirstAOEs;
     private readonly List<Actor> _relevantHelpers = []; // 2 aoes -> 8 towers -> 2 aoes
 
-    private IEnumerable<Actor> FirstAOEs => _relevantHelpers.Take(2);
-    private IEnumerable<Actor> Towers => _relevantHelpers.Skip(2).Take(8);
-    private IEnumerable<Actor> LastAOEs => _relevantHelpers.Skip(10);
+    private ReadOnlySpan<Actor> FirstAOEs => _relevantHelpers.SpanRange(0, 2);
+    private ReadOnlySpan<Actor> Towers => _relevantHelpers.SpanRange(2, 8);
+    private ReadOnlySpan<Actor> LastAOEs => _relevantHelpers.SpanRange(10);
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         switch (CurState)
         {
             case State.FirstAOEs:
-                if (FirstAOEs.InRadius(actor.Position, P4S2.WreathAOERadius).Any())
+                if (FirstAOEs.AnyInRadius(actor.Position, P4S2.WreathAOERadius))
                 {
                     hints.Add("GTFO from AOE!");
                 }
                 break;
             case State.Towers:
                 {
-                    var soakedTower = Towers.InRadius(actor.Position, P4S2.WreathTowerRadius).FirstOrDefault();
+                    var soakedTower = Towers.FirstInRadius(actor.Position, P4S2.WreathTowerRadius);
                     if (soakedTower == null)
                     {
                         hints.Add("Soak the tower!");
                     }
-                    else if (Raid.WithoutSlot(false, true, true).Exclude(actor).InRadius(soakedTower.Position, P4S2.WreathTowerRadius).Any())
+                    else if (Raid.WithoutSlot(false, true, true).CountInRadius(soakedTower.Position, P4S2.WreathTowerRadius) > 1) // actor is inside, so more than one means extra soakers
                     {
                         hints.Add("Multiple soakers for the tower!");
                     }
                 }
                 break;
             case State.LastAOEs:
-                if (LastAOEs.InRadius(actor.Position, P4S2.WreathAOERadius).Any())
+                if (LastAOEs.AnyInRadius(actor.Position, P4S2.WreathAOERadius))
                 {
                     hints.Add("GTFO from AOE!");
                 }

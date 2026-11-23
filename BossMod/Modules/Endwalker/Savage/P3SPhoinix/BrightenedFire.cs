@@ -19,7 +19,7 @@ sealed class BrightenedFire(BossModule module) : Components.CastCounter(module, 
             hints.Add($"Get to correct position {_playerOrder[slot]}!");
         }
 
-        var numHitAdds = Module.Enemies((uint)OID.DarkenedFire).InRadius(actor.Position, _aoeRange).Count();
+        var numHitAdds = Module.Enemies((uint)OID.DarkenedFire).CountInRadius(actor.Position, _aoeRange);
         if (numHitAdds < 2)
         {
             hints.Add("Get closer to adds!");
@@ -35,11 +35,25 @@ sealed class BrightenedFire(BossModule module) : Components.CastCounter(module, 
         Arena.ZoneCircleOutline(pos, 1, Colors.Safe);
 
         // draw all adds
-        var addIndex = 0;
-        foreach (var fire in Module.Enemies((uint)OID.DarkenedFire).SortedByRange(pos))
+        // the two adds closest to the assigned position are the ones to hit
+        var fires = Module.Enemies((uint)OID.DarkenedFire);
+        Actor? closest1 = null, closest2 = null;
+        float dist1 = float.MaxValue, dist2 = float.MaxValue;
+        for (var i = 0; i < fires.Count; ++i)
         {
-            Arena.Actor(fire, addIndex++ < 2 ? Colors.Danger : Colors.PlayerGeneric);
+            var distSq = (fires[i].Position - pos).LengthSq();
+            if (distSq < dist1)
+            {
+                (closest2, dist2) = (closest1, dist1);
+                (closest1, dist1) = (fires[i], distSq);
+            }
+            else if (distSq < dist2)
+            {
+                (closest2, dist2) = (fires[i], distSq);
+            }
         }
+        for (var i = 0; i < fires.Count; ++i)
+            Arena.Actor(fires[i], fires[i] == closest1 || fires[i] == closest2 ? Colors.Danger : Colors.PlayerGeneric);
 
         // draw range circle
         Arena.ZoneCircleOutline(pc.Position, _aoeRange, Colors.Danger);

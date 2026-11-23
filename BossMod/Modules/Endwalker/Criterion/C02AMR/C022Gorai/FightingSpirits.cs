@@ -64,9 +64,13 @@ sealed class WorldlyPursuitLast(BossModule module) : Components.GenericAOEs(modu
 
     private static readonly AOEShapeCross _shape = new(60f, 10f);
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        return new AOEInstance[1] { new(_shape, Arena.Center, Angle.FromDirection(Arena.Center - Module.PrimaryActor.Position), _activation) };
+        {
+            _oneAOEInstance[0] = new(_shape, Arena.Center, Angle.FromDirection(Arena.Center - Module.PrimaryActor.Position), _activation);
+            return _oneAOEInstance;
+        }
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)

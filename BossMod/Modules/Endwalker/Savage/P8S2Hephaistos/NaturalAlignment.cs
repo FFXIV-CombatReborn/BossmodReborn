@@ -11,6 +11,8 @@ sealed class NaturalAlignment(BossModule module) : Components.GenericStackSpread
     private bool CurMechanicInverted;
     public int CurMechanicProgress;
 
+    private readonly List<Actor> _potentialTargets = new(PartyState.MaxPartySize);
+
     public override void Update()
     {
         Stacks.Clear();
@@ -19,14 +21,34 @@ sealed class NaturalAlignment(BossModule module) : Components.GenericStackSpread
             return;
 
         var firstPart = CurMechanicProgress == (CurMechanicInverted ? 1 : 0);
-        var potentialTargets = Raid.WithSlot(false, true, true).ExcludedFromMask(_targets).Actors().ToList();
+        var potentialTargets = _potentialTargets;
+        potentialTargets.Clear();
+        foreach (var (s, p) in Raid.WithSlot(false, true, true))
+        {
+            if (!_targets[s])
+                potentialTargets.Add(p);
+        }
+        // closest to the mechanic source first
+        var sourcePos = CurMechanicSource.Position;
+        for (var i = 1; i < potentialTargets.Count; ++i)
+        {
+            var cur = potentialTargets[i];
+            var curDistSq = (cur.Position - sourcePos).LengthSq();
+            var j = i - 1;
+            while (j >= 0 && (potentialTargets[j].Position - sourcePos).LengthSq() > curDistSq)
+            {
+                potentialTargets[j + 1] = potentialTargets[j];
+                --j;
+            }
+            potentialTargets[j + 1] = cur;
+        }
         switch (CurMechanic)
         {
             case Mechanic.StackSpread:
                 if (firstPart)
                 {
                     // no idea how stack target is actually selected, assume it is closest...
-                    var stackTarget = potentialTargets.Closest(CurMechanicSource.Position);
+                    var stackTarget = potentialTargets.Count != 0 ? potentialTargets[0] : null;
                     if (stackTarget != null)
                         Stacks.Add(new(stackTarget, 6, 6, 6, default, _targets));
                 }
@@ -39,13 +61,13 @@ sealed class NaturalAlignment(BossModule module) : Components.GenericStackSpread
             case Mechanic.FireIce:
                 if (firstPart)
                 {
-                    foreach (var target in potentialTargets.SortedByRange(CurMechanicSource.Position).TakeLast(3))
-                        Stacks.Add(new(target, 6, 2, 2));
+                    for (var i = Math.Max(0, potentialTargets.Count - 3); i < potentialTargets.Count; ++i)
+                        Stacks.Add(new(potentialTargets[i], 6, 2, 2));
                 }
                 else
                 {
-                    foreach (var target in potentialTargets.SortedByRange(CurMechanicSource.Position).Take(2))
-                        Stacks.Add(new(target, 5, 3, 3));
+                    for (var i = 0; i < potentialTargets.Count && i < 2; ++i)
+                        Stacks.Add(new(potentialTargets[i], 5, 3, 3));
                 }
                 break;
         }

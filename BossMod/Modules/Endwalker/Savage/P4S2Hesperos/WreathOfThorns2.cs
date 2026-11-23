@@ -15,8 +15,8 @@ sealed class WreathOfThorns2(BossModule module) : BossComponent(module)
     private readonly uint[] _playerIcons = new uint[8];
     private int _numAOECasts;
 
-    private IEnumerable<Actor> FirstSet => _relevantHelpers.Take(4);
-    private IEnumerable<Actor> SecondSet => _relevantHelpers.Skip(4);
+    private ReadOnlySpan<Actor> FirstSet => _relevantHelpers.SpanRange(0, 4);
+    private ReadOnlySpan<Actor> SecondSet => _relevantHelpers.SpanRange(4);
 
     private const float _fireExplosionRadius = 6f;
 
@@ -51,12 +51,21 @@ sealed class WreathOfThorns2(BossModule module) : BossComponent(module)
             if (CurState != State.Done)
             {
                 var relevantHelpers = CurState == State.FirstSet ? FirstSet : SecondSet;
-                if (relevantHelpers.Where(IsAOE).InRadius(actor.Position, P4S2.WreathAOERadius).Any())
+                Actor? soakedTower = null;
+                var inAOE = false;
+                for (var h = 0; h < relevantHelpers.Length; ++h)
+                {
+                    var helper = relevantHelpers[h];
+                    if (IsAOE(helper))
+                        inAOE |= helper.Position.InCircle(actor.Position, P4S2.WreathAOERadius);
+                    else if (soakedTower == null && IsTower(helper) && helper.Position.InCircle(actor.Position, P4S2.WreathTowerRadius))
+                        soakedTower = helper;
+                }
+                if (inAOE)
                 {
                     hints.Add("GTFO from AOE!");
                 }
 
-                var soakedTower = relevantHelpers.Where(IsTower).InRadius(actor.Position, P4S2.WreathTowerRadius).FirstOrDefault();
                 if (isTowerSoaker)
                 {
                     // note: we're assuming that players with 'dark' soak all towers
@@ -75,20 +84,33 @@ sealed class WreathOfThorns2(BossModule module) : BossComponent(module)
         if (CurState == State.Done)
             return;
 
-        foreach (var aoe in (CurState == State.SecondSet ? SecondSet : FirstSet).Where(IsAOE))
-            Arena.ZoneCircle(aoe.Position, P4S2.WreathAOERadius, Colors.AOE);
+        foreach (var aoe in (CurState == State.SecondSet ? SecondSet : FirstSet))
+            if (IsAOE(aoe))
+                Arena.ZoneCircle(aoe.Position, P4S2.WreathAOERadius, Colors.AOE);
+    }
+
+    private Actor? TetheredTo(Actor pc)
+    {
+        var party = Raid.WithoutSlot(false, true, true);
+        for (var i = 0; i < party.Length; ++i)
+        {
+            if (party[i].Tether.Target == pc.InstanceID)
+                return party[i];
+        }
+        return null;
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
         // draw players
-        foreach (var player in Raid.WithoutSlot(false, true, true).Exclude(pc))
-            Arena.Actor(player, Colors.PlayerGeneric);
+        foreach (var player in Raid.WithoutSlot(false, true, true))
+            if (player != pc)
+                Arena.Actor(player, Colors.PlayerGeneric);
 
         // draw pc's tether
         var pcPartner = pc.Tether.Target != 0
             ? WorldState.Actors.Find(pc.Tether.Target)
-            : Raid.WithoutSlot(false, true, true).FirstOrDefault(p => p.Tether.Target == pc.InstanceID);
+            : TetheredTo(pc);
         if (pcPartner != null)
         {
             var tetherColor = _playerIcons[pcSlot] switch
@@ -103,8 +125,9 @@ sealed class WreathOfThorns2(BossModule module) : BossComponent(module)
         // draw towers for designated tower soakers
         var isTowerSoaker = pc == _darkTH.Item1 || pc == _darkTH.Item2;
         if (isTowerSoaker && CurState != State.Done)
-            foreach (var tower in (CurState == State.SecondSet ? SecondSet : FirstSet).Where(IsTower))
-                Arena.ZoneCircleOutline(tower.Position, P4S2.WreathTowerRadius, CurState == State.DarkDesign ? default : Colors.Safe);
+            foreach (var tower in (CurState == State.SecondSet ? SecondSet : FirstSet))
+                if (IsTower(tower))
+                    Arena.ZoneCircleOutline(tower.Position, P4S2.WreathTowerRadius, CurState == State.DarkDesign ? default : Colors.Safe);
 
         // draw circles around next imminent fire explosion
         if (CurState != State.DarkDesign)

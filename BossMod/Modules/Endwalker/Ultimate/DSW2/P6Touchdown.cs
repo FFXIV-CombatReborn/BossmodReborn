@@ -38,7 +38,15 @@ class P6TouchdownCauterize(BossModule module) : BossComponent(module)
             hints.Add("GTFO from wrong side!");
 
         // note: assume both dragons are always at north side
-        var isClosest = Raid.WithoutSlot(false, true, true).Where(p => NidhoggSide(p) == nidhoggSide).MinBy(p => p.PosRot.Z) == actor;
+        Actor? closestOnSide = null;
+        var party = Raid.WithoutSlot(false, true, true);
+        for (var i = 0; i < party.Length; ++i)
+        {
+            var p = party[i];
+            if (NidhoggSide(p) == nidhoggSide && (closestOnSide == null || p.PosRot.Z < closestOnSide.PosRot.Z))
+                closestOnSide = p;
+        }
+        var isClosest = closestOnSide == actor;
         var shouldBeClosest = actor.Role == Role.Tank;
         if (isClosest != shouldBeClosest)
             hints.Add(shouldBeClosest ? "Move closer to dragons!" : "Move away from dragons!");

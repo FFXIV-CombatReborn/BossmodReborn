@@ -9,13 +9,26 @@ sealed class DispersedCondensedAero(BossModule module) : BossComponent(module)
     private const float _radiusDispersed = 8f;
     private const float _radiusCondensed = 6f;
 
+    // any other player (tanks only, or non-tanks only) in radius around actor
+    private bool AnyInRadius(Actor actor, float radius, bool tanks)
+    {
+        var party = Raid.WithoutSlot(false, true, true);
+        for (var i = 0; i < party.Length; ++i)
+        {
+            var a = party[i];
+            if (a != actor && a.Role == Role.Tank == tanks && a.Position.InCircle(actor.Position, radius))
+                return true;
+        }
+        return false;
+    }
+
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         if (_condensed)
         {
             if (Module.PrimaryActor.TargetID == actor.InstanceID)
             {
-                hints.Add("Stack with other tank or press invuln!", Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _radiusCondensed).Any(a => a.Role != Role.Tank));
+                hints.Add("Stack with other tank or press invuln!", AnyInRadius(actor, _radiusCondensed, false));
             }
             else
             {
@@ -30,9 +43,9 @@ sealed class DispersedCondensedAero(BossModule module) : BossComponent(module)
         {
             if (actor.Role == Role.Tank)
             {
-                hints.Add("GTFO from raid!", Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _radiusDispersed).Any());
+                hints.Add("GTFO from raid!", Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, _radiusDispersed));
             }
-            else if (Raid.WithoutSlot(false, true, true).Where(a => a.Role == Role.Tank).InRadius(actor.Position, _radiusDispersed).Any())
+            else if (Raid.WithoutSlot(false, true, true).CountInRadius(actor.Position, _radiusDispersed, Role.Tank) != 0)
             {
                 hints.Add("GTFO from tanks!");
             }
@@ -52,8 +65,9 @@ sealed class DispersedCondensedAero(BossModule module) : BossComponent(module)
         }
         else
         {
-            foreach (var tank in Raid.WithoutSlot(false, true, true).Where(a => a.Role == Role.Tank))
-                Arena.ZoneCircleOutline(tank.Position, _radiusDispersed, Colors.Danger);
+            foreach (var tank in Raid.WithoutSlot(false, true, true))
+                if (tank.Role == Role.Tank)
+                    Arena.ZoneCircleOutline(tank.Position, _radiusDispersed, Colors.Danger);
         }
     }
 

@@ -17,7 +17,7 @@ sealed class P6CosmoDive(BossModule module) : Components.UniformStackSpread(modu
                 AddSpread(actor, _activation);
                 forbidden.Set(slot);
             }
-            var farthest = Raid.WithoutSlot(false, true, true).Farthest(_source.Position);
+            var farthest = Raid.WithoutSlot(false, true, true).FarthestFrom(_source.Position);
             if (farthest != null)
             {
                 AddStack(farthest, _activation, forbidden);

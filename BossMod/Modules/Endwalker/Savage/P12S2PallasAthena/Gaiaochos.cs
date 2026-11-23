@@ -95,7 +95,7 @@ sealed class UltimaBlow(BossModule module) : Components.CastCounter(module, (uin
         if (_vulnerable[slot])
         {
             var source = _tethers.Find(t => t.target == actor).source;
-            var numHit = source != null ? Raid.WithoutSlot(false, true, true).Exclude(actor).InShape(_shape, source.Position, Angle.FromDirection(actor.Position - source.Position)).Count : 0;
+            var numHit = source != null ? Raid.WithoutSlot(false, true, true).CountInShape(_shape, source.Position, Angle.FromDirection(actor.Position - source.Position), actor) : 0;
             if (numHit == 0)
                 hints.Add("Hide behind partner!");
             else if (numHit > 1)
@@ -103,7 +103,13 @@ sealed class UltimaBlow(BossModule module) : Components.CastCounter(module, (uin
         }
         else if (_tethers.Count > 0)
         {
-            var numHit = _tethers.Count(t => _shape.Check(actor.Position, t.source.Position, Angle.FromDirection(t.target.Position - t.source.Position)));
+            var numHit = 0;
+            for (var i = 0; i < _tethers.Count; ++i)
+            {
+                var t = _tethers[i];
+                if (_shape.Check(actor.Position, t.source.Position, Angle.FromDirection(t.target.Position - t.source.Position)))
+                    ++numHit;
+            }
             if (numHit == 0)
                 hints.Add("Intercept the charge!");
             else if (numHit > 1)
@@ -113,14 +119,20 @@ sealed class UltimaBlow(BossModule module) : Components.CastCounter(module, (uin
 
     public override PlayerPriority CalcPriority(int pcSlot, Actor pc, int playerSlot, Actor player, ref uint customColor)
     {
-        return _tethers.Any(t => t.target == player) ? PlayerPriority.Danger : PlayerPriority.Irrelevant;
+        for (var i = 0; i < _tethers.Count; ++i)
+        {
+            if (_tethers[i].target == player)
+                return PlayerPriority.Danger;
+        }
+        return PlayerPriority.Irrelevant;
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
         if (_vulnerable[pcSlot]) // TODO: reconsider
-            foreach (var t in _tethers.Where(t => t.target != pc))
-                _shape.Draw(Arena, t.source.Position, Angle.FromDirection(t.target.Position - t.source.Position));
+            foreach (var t in _tethers)
+                if (t.target != pc)
+                    _shape.Draw(Arena, t.source.Position, Angle.FromDirection(t.target.Position - t.source.Position));
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)

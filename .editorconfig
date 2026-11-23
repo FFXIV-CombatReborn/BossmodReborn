@@ -166,8 +166,8 @@ csharp_style_deconstructed_variable_declaration = true
 dotnet_diagnostic.IDE0044.severity = warning # prefer marking fields as readonly if possible
 dotnet_style_readonly_field = true
 
-dotnet_diagnostic.IDE0045.severity = suggestion # suggest ternary over if-else for assignments, however sometimes it actually complicates code too much
-dotnet_diagnostic.IDE0046.severity = suggestion # suggest ternary over if-else for return, however sometimes it actually complicates code too much
+dotnet_diagnostic.IDE0045.severity = none # suggest ternary over if-else for assignments, however sometimes it actually complicates code too much
+dotnet_diagnostic.IDE0046.severity = none # suggest ternary over if-else for return, however sometimes it actually complicates code too much
 dotnet_style_prefer_conditional_expression_over_assignment = true
 dotnet_style_prefer_conditional_expression_over_return = true
 

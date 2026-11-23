@@ -18,7 +18,7 @@ sealed class P6FlashGale : Components.GenericBaitAway
         if (_source != null)
         {
             var mainTarget = WorldState.Actors.Find(_source.TargetID);
-            var farTarget = Raid.WithoutSlot(false, true, true).Farthest(_source.Position);
+            var farTarget = Raid.WithoutSlot(false, true, true).FarthestFrom(_source.Position);
             if (mainTarget != null)
                 CurrentBaits.Add(new(_source, mainTarget, _shape));
             if (farTarget != null)

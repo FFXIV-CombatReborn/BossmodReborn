@@ -121,11 +121,15 @@ sealed class P5WrathOfTheHeavensTwister(BossModule module) : Components.GenericA
         return pos;
     }
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var lenP = _predicted.Length;
         var countV = _voidzones.Count;
-        var aoes = new AOEInstance[lenP + countV];
+        var aoesLen = lenP + countV;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < lenP; ++i)
         {
             aoes[i] = new(_shape, _predicted[i]); // TODO: activation
@@ -134,7 +138,7 @@ sealed class P5WrathOfTheHeavensTwister(BossModule module) : Components.GenericA
         {
             aoes[lenP + i] = new(_shape, _voidzones[i].Position);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnActorCreated(Actor actor)

@@ -108,6 +108,7 @@ sealed class TrueAeroIVLOS(BossModule module) : Components.CastLineOfSightAOE(mo
 {
     private readonly CosmicKiss _aoe = module.FindComponent<CosmicKiss>()!;
 
+    private readonly Actor[] _oneActor = new Actor[1];
     public override ReadOnlySpan<Actor> BlockerActors()
     {
         var meteors = Module.Enemies((uint)OID.Meteor);
@@ -119,7 +120,10 @@ sealed class TrueAeroIVLOS(BossModule module) : Components.CastLineOfSightAOE(mo
                 var m = meteors[i];
                 if (m.ModelState.AnimState2 != 1)
                 {
-                    return new Actor[1] { m };
+                    {
+                        _oneActor[0] = m;
+                        return _oneActor;
+                    }
                 }
             }
             return [];

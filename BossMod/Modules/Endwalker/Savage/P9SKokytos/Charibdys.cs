@@ -9,8 +9,10 @@ class Comet(BossModule module) : Components.Adds(module, (uint)OID.Comet)
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
-        foreach (var c in Actors.Where(a => !IsFinished(a)))
+        foreach (var c in Actors)
         {
+            if (!(!IsFinished(c)))
+                continue;
             Arena.Actor(c, IsActive(c) ? Colors.Enemy : Colors.Object, true);
         }
     }
@@ -31,9 +33,21 @@ class BeastlyBile(BossModule module) : Components.UniformStackSpread(module, 6, 
         base.AddHints(slot, actor, hints);
         if (_comet != null && IsStackTarget(actor))
         {
-            if (_comet.Actors.Any(c => !Comet.IsActive(c) && c.Position.InCircle(actor.Position, StackRadius)))
+            var nearInactive = false;
+            var nearActive = false;
+            foreach (var c in _comet.Actors)
+            {
+                if (c.Position.InCircle(actor.Position, StackRadius))
+                {
+                    if (Comet.IsActive(c))
+                        nearActive = true;
+                    else
+                        nearInactive = true;
+                }
+            }
+            if (nearInactive)
                 hints.Add("GTFO from normal comets!");
-            if (!_comet.Actors.Any(c => Comet.IsActive(c) && c.Position.InCircle(actor.Position, StackRadius)))
+            if (!nearActive)
                 hints.Add("Bait to glowing comet!");
         }
     }
@@ -41,7 +55,7 @@ class BeastlyBile(BossModule module) : Components.UniformStackSpread(module, 6, 
     public override void Update()
     {
         Stacks.Clear();
-        var target = NumCasts < 2 ? Raid.WithoutSlot(false, true, true).Farthest(Module.PrimaryActor.Position) : null;
+        var target = NumCasts < 2 ? Raid.WithoutSlot(false, true, true).FarthestFrom(Module.PrimaryActor.Position) : null;
         if (target != null)
             AddStack(target, _activation, _forbiddenPlayers);
         base.Update();
@@ -65,11 +79,14 @@ class Thunderbolt(BossModule module) : Components.GenericBaitAway(module, (uint)
 
     private readonly AOEShapeCone _shape = new(40, 22.5f.Degrees());
 
+    private readonly List<Actor> _sorted = new(PartyState.MaxPartySize);
+
     public override void Update()
     {
         CurrentBaits.Clear();
-        foreach (var p in Raid.WithoutSlot(false, true, true).SortedByRange(Module.PrimaryActor.Position).Take(4))
-            CurrentBaits.Add(new(Module.PrimaryActor, p, _shape));
+        Raid.WithoutSlot(false, true, true).SortedByRange(Module.PrimaryActor.Position, _sorted);
+        for (var i = 0; i < _sorted.Count && i < 4; ++i)
+            CurrentBaits.Add(new(Module.PrimaryActor, _sorted[i], _shape));
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)

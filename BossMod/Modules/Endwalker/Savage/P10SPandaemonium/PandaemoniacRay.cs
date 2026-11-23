@@ -26,18 +26,22 @@ sealed class JadePassage(BossModule module) : Components.GenericAOEs(module, (ui
         return voidzones[..index];
     }
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var spheres = GetSpheres(Module);
         var count = spheres.Length;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var s = spheres[i];
             aoes[i] = new(_shape, s.Position, s.Rotation, Module.CastFinishAt(s.CastInfo, 0, _activation));
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 }

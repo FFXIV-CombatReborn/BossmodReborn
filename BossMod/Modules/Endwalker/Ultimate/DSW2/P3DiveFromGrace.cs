@@ -9,7 +9,7 @@ sealed class P3Geirskogul(BossModule module) : Components.SimpleAOEs(module, (ui
         foreach (var p in _predicted)
         {
             Arena.Actor(p, Colors.Object, true);
-            var target = Raid.WithoutSlot(false, true, true).Closest(p.Position);
+            var target = Raid.WithoutSlot(false, true, true).ClosestTo(p.Position);
             if (target != null)
                 Shape.Outline(Arena, p.Position, Angle.FromDirection(target.Position - p.Position));
         }
@@ -147,8 +147,10 @@ sealed class P3DiveFromGrace(BossModule module) : Components.CastTowers(module, 
 
         // draw baited jumps
         var baitOrder = CurrentBaitOrder();
-        foreach (var (slot, player) in Raid.WithSlot(true, true, true).WhereSlot(i => _playerStates[i].JumpOrder == baitOrder))
+        foreach (var (slot, player) in Raid.WithSlot(true, true, true))
         {
+            if (!(_playerStates[slot].JumpOrder == baitOrder))
+                continue;
             var pos = player.Position + _playerStates[slot].JumpDirection * player.Rotation.ToDirection() * _towerOffset;
             Arena.ZoneCircleOutline(pos, Radius, Colors.Object);
             if (slot == pcSlot)

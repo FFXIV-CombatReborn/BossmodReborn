@@ -6,13 +6,17 @@ sealed class DarkCurrent(BossModule module) : Components.GenericAOEs(module)
 
     private readonly AOEShapeCircle _shape = new(8);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _aoes.Count;
         if (count == 0)
             return [];
         var max = count > 9 ? 9 : count;
-        var aoes = new AOEInstance[max];
+        var aoesLen = max;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
 
         for (var i = 0; i < max; ++i)
         {
@@ -22,7 +26,7 @@ sealed class DarkCurrent(BossModule module) : Components.GenericAOEs(module)
             else
                 aoes[i] = aoe;
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)

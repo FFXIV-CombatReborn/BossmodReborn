@@ -12,15 +12,30 @@ sealed class PandaemoniacMeltdown(BossModule module) : Components.CastCounter(mo
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         var isSpread = _spreadTargets.Contains(actor);
-        if (_spreadTargets.Any(t => t != actor && _shapeSpread.Check(actor.Position, Module.PrimaryActor.Position, Angle.FromDirection(t.Position - Module.PrimaryActor.Position))))
-            hints.Add("GTFO from other spreads!");
-        if (isSpread && Raid.WithoutSlot(false, true, true).Exclude(actor).InShape(_shapeSpread, Module.PrimaryActor.Position, Angle.FromDirection(actor.Position - Module.PrimaryActor.Position)).Count != 0)
+        var bossPos = Module.PrimaryActor.Position;
+        for (var i = 0; i < _spreadTargets.Count; ++i)
+        {
+            var t = _spreadTargets[i];
+            if (t != actor && _shapeSpread.Check(actor.Position, bossPos, Angle.FromDirection(t.Position - bossPos)))
+            {
+                hints.Add("GTFO from other spreads!");
+                break;
+            }
+        }
+        if (isSpread && Raid.WithoutSlot(false, true, true).AnyInShape(_shapeSpread, Module.PrimaryActor.Position, Angle.FromDirection(actor.Position - Module.PrimaryActor.Position), actor))
             hints.Add("Aim spread away from raid!");
 
         if (_stackTarget == actor)
         {
-            if (_spreadTargets.InShape(_shapeStack, Module.PrimaryActor.Position, Angle.FromDirection(actor.Position - Module.PrimaryActor.Position)).Count != 0)
-                hints.Add("Aim stack away from spreads!");
+            var stackDir = Angle.FromDirection(actor.Position - bossPos);
+            for (var i = 0; i < _spreadTargets.Count; ++i)
+            {
+                if (_shapeStack.Check(_spreadTargets[i].Position, bossPos, stackDir))
+                {
+                    hints.Add("Aim stack away from spreads!");
+                    break;
+                }
+            }
         }
         else if (_stackTarget != null)
         {
@@ -40,8 +55,9 @@ sealed class PandaemoniacMeltdown(BossModule module) : Components.CastCounter(mo
         var isSpread = _spreadTargets.Contains(pc);
         if (_stackTarget != null && _stackTarget != pc)
             _shapeStack.Draw(Arena, Module.PrimaryActor.Position, Angle.FromDirection(_stackTarget.Position - Module.PrimaryActor.Position), isSpread ? Colors.AOE : Colors.SafeFromAOE);
-        foreach (var t in _spreadTargets.Exclude(pc))
-            _shapeStack.Draw(Arena, Module.PrimaryActor.Position, Angle.FromDirection(t.Position - Module.PrimaryActor.Position), Colors.AOE);
+        foreach (var t in _spreadTargets)
+            if (t != pc)
+                _shapeStack.Draw(Arena, Module.PrimaryActor.Position, Angle.FromDirection(t.Position - Module.PrimaryActor.Position), Colors.AOE);
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)

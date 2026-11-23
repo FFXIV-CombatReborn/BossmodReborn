@@ -1,6 +1,4 @@
-﻿using BossMod.AST;
-
-namespace BossMod.Endwalker.Hunt.RankA.Sugriva;
+﻿namespace BossMod.Endwalker.Hunt.RankA.Sugriva;
 
 public enum OID : uint
 {
@@ -34,6 +32,7 @@ sealed class TwisterKB(BossModule module) : Components.GenericKnockback(module)
     private Actor? target;
     private DateTime activation;
 
+    private readonly Knockback[] _oneKnockback = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (target is not Actor t || actor == t)
@@ -43,7 +42,10 @@ sealed class TwisterKB(BossModule module) : Components.GenericKnockback(module)
 
         if (actor.Position.InCircle(t.Position, 8f))
         {
-            return new Knockback[1] { new(t.Position, 20f, activation) };
+            {
+                _oneKnockback[0] = new(t.Position, 20f, activation);
+                return _oneKnockback;
+            }
         }
         return [];
     }

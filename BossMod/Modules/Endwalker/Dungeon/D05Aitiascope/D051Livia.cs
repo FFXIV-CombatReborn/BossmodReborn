@@ -39,6 +39,7 @@ class AglaeaShot(BossModule module) : Components.GenericAOEs(module)
     private readonly List<Actor> casters = [with(8)];
     private DateTime activation;
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_aoes.Count != 0)
@@ -46,13 +47,16 @@ class AglaeaShot(BossModule module) : Components.GenericAOEs(module)
         if ((activation - WorldState.CurrentTime).TotalSeconds < 5d)
         {
             var count = casters.Count;
-            var aoes = new AOEInstance[count];
+            var aoesLen = count;
+            if (_aoesBuffer.Length < aoesLen)
+                _aoesBuffer = new AOEInstance[aoesLen];
+            var aoes = _aoesBuffer;
             for (var i = 0; i < count; ++i)
             {
                 var c = casters[i];
                 aoes[i] = new(rect, c.Position, c.Rotation, activation);
             }
-            return aoes;
+            return aoes.AsSpan(0, aoesLen);
         }
         return [];
     }

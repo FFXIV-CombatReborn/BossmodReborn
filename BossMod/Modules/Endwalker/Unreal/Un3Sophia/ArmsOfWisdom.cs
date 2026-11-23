@@ -8,10 +8,10 @@ sealed class ArmsOfWisdom(BossModule module) : Components.GenericKnockback(modul
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (_caster?.CastInfo?.TargetID == actor.InstanceID)
-            {
-                _oneKnockback[0] = new(_caster.Position, 5f, Module.CastFinishAt(_caster.CastInfo));
-                return _oneKnockback;
-            }
+        {
+            _oneKnockback[0] = new(_caster.Position, 5f, Module.CastFinishAt(_caster.CastInfo));
+            return _oneKnockback;
+        }
         return [];
     }
 

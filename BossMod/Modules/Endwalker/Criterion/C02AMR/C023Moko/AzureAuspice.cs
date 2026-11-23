@@ -27,12 +27,14 @@ sealed class Upwell(BossModule module) : Components.GenericAOEs(module)
     private readonly AOEShapeRect _shapeWide = new(30f, 5f, 30f);
     private readonly AOEShapeRect _shapeNarrow = new(30f, 2.5f, 30f);
 
+    private readonly List<AOEInstance> _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         // TODO: think about imminent/future color/risk, esp for overlapping lines
         var imminentDeadline = WorldState.FutureTime(5d);
         var count = _lines.Count;
-        var aoes = new List<AOEInstance>();
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         for (var i = 0; i < count; ++i)
         {
             var l = _lines[i];

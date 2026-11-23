@@ -4,9 +4,13 @@ sealed class SnakingKick(BossModule module) : Components.GenericAOEs(module, (ui
 {
     private readonly AOEShapeCircle _shape = new(10f);
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        return new AOEInstance[1] { new(_shape, Module.PrimaryActor.Position) };
+        {
+            _oneAOEInstance[0] = new(_shape, Module.PrimaryActor.Position);
+            return _oneAOEInstance;
+        }
     }
 }
 
@@ -19,6 +23,7 @@ abstract class PetrifactionCommon(BossModule module) : Components.GenericGaze(mo
     public int NumBreathCasts;
     protected List<(Actor caster, DateTime activation, int priority)> ActiveGorgons = [];
 
+    private Eye[] _eyesBuffer = [];
     public override ReadOnlySpan<Eye> ActiveEyes(int slot, Actor actor)
     {
         if (ActiveGorgons.Count <= NumCasts)
@@ -44,7 +49,10 @@ abstract class PetrifactionCommon(BossModule module) : Components.GenericGaze(mo
             return [];
         }
 
-        var eyes = new Eye[count];
+        var eyesLen = count;
+        if (_eyesBuffer.Length < eyesLen)
+            _eyesBuffer = new Eye[eyesLen];
+        var eyes = _eyesBuffer;
         var index = 0;
 
         for (var i = NumCasts; i < countG && gorgons[i].activation < maxActivation; ++i)
@@ -53,7 +61,7 @@ abstract class PetrifactionCommon(BossModule module) : Components.GenericGaze(mo
             var loc = gorgon.caster.Position.Quantized();
             eyes[index++] = new(loc, gorgon.activation, eyeCenter: loc);
         }
-        return eyes;
+        return eyes.AsSpan(0, eyesLen);
     }
 
     private static List<Actor> GetGorgons(BossModule module)

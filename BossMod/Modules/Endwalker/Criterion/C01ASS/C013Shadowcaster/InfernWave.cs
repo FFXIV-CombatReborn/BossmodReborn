@@ -19,8 +19,21 @@ abstract class InfernWave(BossModule module, bool savage, bool showHints, int ma
     public override void Update()
     {
         // create entries for newly activated beacons
-        foreach (var s in Module.Enemies(_savage ? (uint)OID.SBeacon : (uint)OID.NBeacon).Where(s => s.ModelState.AnimState1 == 1 && !_beacons.Any(b => b.Source == s)))
+        foreach (var s in Module.Enemies(_savage ? (uint)OID.SBeacon : (uint)OID.NBeacon))
         {
+            if (s.ModelState.AnimState1 != 1)
+                continue;
+            var known = false;
+            for (var i = 0; i < _beacons.Count; ++i)
+            {
+                if (_beacons[i].Source == s)
+                {
+                    known = true;
+                    break;
+                }
+            }
+            if (known)
+                continue;
             _beacons.Add(new(s, WorldState.FutureTime(17.1d)));
         }
 
@@ -50,7 +63,7 @@ abstract class InfernWave(BossModule module, bool savage, bool showHints, int ma
                 if (t.target == actor)
                 {
                     ++numBaits;
-                    clipping |= Raid.WithoutSlot(false, true, true).Exclude(actor).InShape(_shape, b.Source.Position, t.dir).Count != 0;
+                    clipping |= Raid.WithoutSlot(false, true, true).AnyInShape(_shape, b.Source.Position, t.dir, actor);
                 }
                 else
                 {

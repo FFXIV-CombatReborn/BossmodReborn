@@ -73,6 +73,7 @@ sealed class Magnetism(BossModule module) : Components.GenericKnockback(module)
     private bool shape; // false if circle, true if rect
     private static readonly Angle a90 = 90f.Degrees();
     private static readonly AOEShapeCone _shape = new(30f, a90);
+    private readonly Knockback[] _kbRect = new Knockback[2], _kbCircle = new Knockback[1];
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
@@ -82,13 +83,12 @@ sealed class Magnetism(BossModule module) : Components.GenericKnockback(module)
             if (shape)
             {
                 var kind = isPull ? Kind.DirBackward : Kind.DirForward;
-                var knockback = new Knockback[2];
-                knockback[0] = new(Arena.Center, 9f, activation, _shape, a90, kind);
-                knockback[1] = new(Arena.Center, 9f, activation, _shape, -a90, kind);
-                return knockback;
+                _kbRect[0] = new(Arena.Center, 9f, activation, _shape, a90, kind);
+                _kbRect[1] = new(Arena.Center, 9f, activation, _shape, -a90, kind);
+                return _kbRect;
             }
-            else
-                return new Knockback[1] { new(Arena.Center, 5f, activation, kind: isPull ? Kind.TowardsOrigin : Kind.AwayFromOrigin, ignoreImmunes: true) };
+            _kbCircle[0] = new(Arena.Center, 5f, activation, kind: isPull ? Kind.TowardsOrigin : Kind.AwayFromOrigin, ignoreImmunes: true);
+            return _kbCircle;
         }
         return [];
     }
@@ -140,7 +140,7 @@ sealed class Magnetism(BossModule module) : Components.GenericKnockback(module)
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID is (uint)AID.DynamicPoundKB or (uint)AID.DynamicPoundPull or (uint)AID.DynamicScraplinePull or (uint)AID.DynamicScraplinePull)
+        if (spell.Action.ID is (uint)AID.DynamicPoundKB or (uint)AID.DynamicPoundPull or (uint)AID.DynamicScraplineKB or (uint)AID.DynamicScraplinePull)
         {
             negativeCharge = default;
             positiveCharge = default;

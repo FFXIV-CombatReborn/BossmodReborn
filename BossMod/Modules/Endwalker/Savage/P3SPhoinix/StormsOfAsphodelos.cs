@@ -6,6 +6,7 @@ sealed class StormsOfAsphodelos(BossModule module) : BossComponent(module)
     private readonly AOEShapeCone _windsAOE = new(50f, 30f.Degrees());
     private readonly AOEShapeCircle _beaconAOE = new(6);
     private readonly List<Actor> _twisterTargets = [];
+    private readonly List<(int, Actor)> _sorted = new(PartyState.MaxPartySize);
     private BitMask _tetherTargets;
     private BitMask _bossTargets;
     private BitMask _closeToTetherTarget;
@@ -21,20 +22,26 @@ sealed class StormsOfAsphodelos(BossModule module) : BossComponent(module)
         // for now, we consider tether target to be a "tank"
         var aoesPerPlayer = new int[PartyState.MaxPartySize];
 
-        foreach ((var i, var player) in Raid.WithSlot(true, true, true).WhereActor(x => x.Tether.Target == Module.PrimaryActor.InstanceID))
+        foreach ((var i, var player) in Raid.WithSlot(true, true, true))
         {
+            if (!(player.Tether.Target == Module.PrimaryActor.InstanceID))
+                continue;
             _tetherTargets.Set(i);
 
             ++aoesPerPlayer[i];
-            foreach ((var j, var other) in Raid.WithSlot(false, true, true).InRadiusExcluding(player, _beaconAOE.Radius))
+            foreach ((var j, var other) in Raid.WithSlot(false, true, true))
             {
+                if (!(other != player && other.Position.InCircle(player.Position, _beaconAOE.Radius)))
+                    continue;
                 ++aoesPerPlayer[j];
                 _closeToTetherTarget.Set(j);
             }
         }
 
-        foreach ((var i, var player) in Raid.WithSlot(false, true, true).SortedByRange(Module.PrimaryActor.Position).Take(3))
+        Raid.WithSlot(false, true, true).SortedByRange(Module.PrimaryActor.Position, _sorted);
+        for (var k = 0; k < _sorted.Count && k < 3; ++k)
         {
+            var (i, player) = _sorted[k];
             _bossTargets.Set(i);
             foreach ((var j, var other) in FindPlayersInWinds(Module.PrimaryActor, player))
             {
@@ -44,7 +51,7 @@ sealed class StormsOfAsphodelos(BossModule module) : BossComponent(module)
 
         foreach (var twister in Module.Enemies((uint)OID.DarkblazeTwister))
         {
-            var target = Raid.WithoutSlot(false, true, true).Closest(twister.Position);
+            var target = Raid.WithoutSlot(false, true, true).ClosestTo(twister.Position);
             if (target == null)
                 continue; // there are no alive players - target list will be left empty
 
@@ -104,9 +111,11 @@ sealed class StormsOfAsphodelos(BossModule module) : BossComponent(module)
             }
         }
 
-        foreach (var (twister, target) in Module.Enemies((uint)OID.DarkblazeTwister).Zip(_twisterTargets))
+        var twisters = Module.Enemies((uint)OID.DarkblazeTwister);
+        for (var k = 0; k < twisters.Count && k < _twisterTargets.Count; ++k)
         {
-            _windsAOE.Draw(Arena, twister.Position, Angle.FromDirection(target.Position - twister.Position));
+            var twister = twisters[k];
+            _windsAOE.Draw(Arena, twister.Position, Angle.FromDirection(_twisterTargets[k].Position - twister.Position));
         }
     }
 

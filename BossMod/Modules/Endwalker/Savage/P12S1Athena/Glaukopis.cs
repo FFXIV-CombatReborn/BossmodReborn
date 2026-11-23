@@ -6,9 +6,19 @@ sealed class Glaukopis(BossModule module) : Components.GenericBaitAway(module)
 {
     private readonly AOEShapeRect _shape = new(60f, 2.5f);
 
+    private bool BossTargetsBaiter()
+    {
+        for (var i = 0; i < CurrentBaits.Count; ++i)
+        {
+            if (CurrentBaits[i].Source.TargetID == CurrentBaits[i].Target.InstanceID)
+                return true;
+        }
+        return false;
+    }
+
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (CurrentBaits.Any(b => b.Source.TargetID == b.Target.InstanceID) && actor.Role == Role.Tank)
+        if (actor.Role == Role.Tank && BossTargetsBaiter())
             hints.Add(Module.PrimaryActor.TargetID != actor.InstanceID ? "Taunt!" : "Pass aggro!");
         base.AddHints(slot, actor, hints);
     }

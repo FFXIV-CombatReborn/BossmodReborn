@@ -52,9 +52,13 @@ sealed class P5DeathOfTheHeavensHeavensflame(BossModule module) : Components.Gen
     private const float _aoeRadius = 10f;
     private const float _tetherBreakDistance = 32f; // TODO: verify...
 
+    private readonly Knockback[] _oneKnockback = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
-        return new Knockback[1] { new(Arena.Center, _knockbackDistance) };
+        {
+            _oneKnockback[0] = new(Arena.Center, _knockbackDistance);
+            return _oneKnockback;
+        }
     }
 
     public override void Update()

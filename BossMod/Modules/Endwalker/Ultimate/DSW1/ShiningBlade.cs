@@ -44,6 +44,7 @@ sealed class ShiningBladeFlares(BossModule module) : Components.GenericAOEs(modu
 
     public bool Done => NumCasts > 0 && _flares.Count == 0f;
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _flares.Count;
@@ -51,12 +52,15 @@ sealed class ShiningBladeFlares(BossModule module) : Components.GenericAOEs(modu
             return [];
 
         var max = count > 7 ? 7 : count;
-        var aoes = new AOEInstance[max];
+        var aoesLen = max;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
 
         for (var i = 0; i < max; ++i)
             aoes[i] = new(_shape, (Arena.Center + _flares[i]).Quantized()); // TODO: activation
 
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnActorPlayActionTimelineEvent(Actor actor, ushort id)
@@ -118,7 +122,7 @@ sealed class ShiningBladeExecution(BossModule module) : Components.CastCounter(m
     {
         if (_target == actor)
         {
-            if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(_target, _executionRadius).Any())
+            if (Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(_target, _executionRadius))
                 hints.Add("GTFO from raid!");
         }
         else if (_target != null)

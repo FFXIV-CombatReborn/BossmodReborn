@@ -5,6 +5,7 @@ sealed class RubyGlow2(BossModule module) : RubyGlowCommon(module, (uint)AID.Dou
 {
     private string _hint = "";
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         // TODO: correct explosion time
@@ -17,7 +18,10 @@ sealed class RubyGlow2(BossModule module) : RubyGlowCommon(module, (uint)AID.Dou
 
         var countSadj = magic != null ? 1 : 0;
         var len = poison.Length;
-        var aoes = new AOEInstance[countSadj + len];
+        var aoesLen = countSadj + len;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         var index = 0;
         if (magic != null)
             aoes[index++] = new(ShapeHalf, Arena.Center, Angle.FromDirection(QuadrantDir(QuadrantForPosition(magic.Position))));
@@ -25,7 +29,7 @@ sealed class RubyGlow2(BossModule module) : RubyGlowCommon(module, (uint)AID.Dou
         {
             aoes[index++] = poison[i];
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void AddGlobalHints(Actor actor, GlobalHints hints)

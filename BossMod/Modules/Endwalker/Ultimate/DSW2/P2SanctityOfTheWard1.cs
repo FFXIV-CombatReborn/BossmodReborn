@@ -61,6 +61,7 @@ sealed class P2SanctityOfTheWard1Flares(BossModule module) : Components.GenericA
     private const float _chargeHalfWidth = 3f;
     private static readonly AOEShapeCircle _brightflareShape = new(9);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = 0;
@@ -74,7 +75,10 @@ sealed class P2SanctityOfTheWard1Flares(BossModule module) : Components.GenericA
         if (count == 0)
             return [];
 
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         var index = 0;
 
         for (var i = 0; i < countC; ++i)
@@ -90,12 +94,14 @@ sealed class P2SanctityOfTheWard1Flares(BossModule module) : Components.GenericA
             for (var k = 0; k < max; ++k)
                 aoes[index++] = new AOEInstance(_brightflareShape, spheres[k]);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
+    private readonly List<Actor> _enemiesBuffer = [];
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
-        List<Actor> enemies = [];
+        var enemies = _enemiesBuffer;
+        enemies.Clear();
         var count = Charges.Count;
         for (var i = 0; i < count; ++i)
         {
@@ -331,11 +337,13 @@ sealed class P2SanctityOfTheWard1Hints(BossModule module) : BossComponent(module
         return 20f * dir.ToDirection();
     }
 
+    private readonly List<WDir> _hintsBuffer = [];
     private List<WDir> MovementHintOffsets(int slot)
     {
         if (_inited && _flares?.Charges.Count == 2)
         {
-            var hints = new List<WDir>(1);
+            var hints = _hintsBuffer;
+            hints.Clear();
             var count = _flares.Charges[0].Spheres.Count;
             // second safe spot could be either 3rd or 5th explosion
             if (count > (_chargeEarly ? 6 : 4))

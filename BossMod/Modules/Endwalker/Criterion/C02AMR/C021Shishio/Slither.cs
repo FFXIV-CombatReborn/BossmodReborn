@@ -7,12 +7,19 @@ sealed class Slither(BossModule module) : Components.GenericAOEs(module)
 
     private readonly AOEShapeCone _shape = new(25f, 45f.Degrees());
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_caster?.CastInfo != null)
-            return new AOEInstance[1] { new(_shape, _caster.Position, _caster.CastInfo.Rotation, Module.CastFinishAt(_caster.CastInfo)) };
+        {
+            _oneAOEInstance[0] = new(_shape, _caster.Position, _caster.CastInfo.Rotation, Module.CastFinishAt(_caster.CastInfo));
+            return _oneAOEInstance;
+        }
         else if (_predictedActivation != default)
-            return new AOEInstance[1] { new(_shape, Module.PrimaryActor.Position, Module.PrimaryActor.Rotation + 180f.Degrees(), _predictedActivation) };
+        {
+            _oneAOEInstance[0] = new(_shape, Module.PrimaryActor.Position, Module.PrimaryActor.Rotation + 180f.Degrees(), _predictedActivation);
+            return _oneAOEInstance;
+        }
         else
             return [];
     }

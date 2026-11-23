@@ -19,6 +19,8 @@ sealed class Shackles(BossModule module) : BossComponent(module)
     private const float _redExplosionRadius = 8f;
     private static uint TetherColor(bool blue, bool red) => blue ? (red ? Colors.Danger : Colors.Other1) : (red ? Colors.Other2 : Colors.PlayerGeneric);
 
+    private readonly List<(int, Actor)> _sorted = new(PartyState.MaxPartySize);
+
     public override void Update()
     {
         _blueTetherMatrix = _redTetherMatrix = _blueExplosionMatrix = _redExplosionMatrix = default;
@@ -35,16 +37,18 @@ sealed class Shackles(BossModule module) : BossComponent(module)
             if (blueDebuffs[iSrc])
             {
                 _blueTetherMatrix[iSrc, iSrc] = true;
-                foreach ((var iTgt, _) in Raid.WithSlot(false, true, true).Exclude(iSrc).SortedByRange(src.Position).Take(3))
-                    _blueTetherMatrix[iTgt, iSrc] = true;
+                Raid.WithSlot(false, true, true).SortedByRange(src.Position, _sorted, iSrc);
+                for (var k = 0; k < _sorted.Count && k < 3; ++k)
+                    _blueTetherMatrix[_sorted[k].Item1, iSrc] = true;
             }
 
             // red => 3 furthest
             if (redDebuffs[iSrc])
             {
                 _redTetherMatrix[iSrc, iSrc] = true;
-                foreach ((var iTgt, _) in Raid.WithSlot(false, true, true).Exclude(iSrc).SortedByRange(src.Position).TakeLast(3))
-                    _redTetherMatrix[iTgt, iSrc] = true;
+                Raid.WithSlot(false, true, true).SortedByRange(src.Position, _sorted, iSrc);
+                for (var k = Math.Max(0, _sorted.Count - 3); k < _sorted.Count; ++k)
+                    _redTetherMatrix[_sorted[k].Item1, iSrc] = true;
             }
         }
 
@@ -52,12 +56,14 @@ sealed class Shackles(BossModule module) : BossComponent(module)
         foreach ((var i, var actor) in Raid.WithSlot(false, true, true))
         {
             if (_blueTetherMatrix[i].Any())
-                foreach ((var j, _) in Raid.WithSlot(false, true, true).InRadiusExcluding(actor, _blueExplosionRadius))
-                    _blueExplosionMatrix[j, i] = true;
+                foreach ((var j, var p_) in Raid.WithSlot(false, true, true))
+                    if (p_ != actor && p_.Position.InCircle(actor.Position, _blueExplosionRadius))
+                        _blueExplosionMatrix[j, i] = true;
 
             if (_redTetherMatrix[i].Any())
-                foreach ((var j, _) in Raid.WithSlot(false, true, true).InRadiusExcluding(actor, _redExplosionRadius))
-                    _redExplosionMatrix[j, i] = true;
+                foreach ((var j, var p_) in Raid.WithSlot(false, true, true))
+                    if (p_ != actor && p_.Position.InCircle(actor.Position, _redExplosionRadius))
+                        _redExplosionMatrix[j, i] = true;
         }
     }
 
@@ -95,8 +101,9 @@ sealed class Shackles(BossModule module) : BossComponent(module)
             Arena.Actor(actor, TetherColor(blueTetheredTo.Any(), redTetheredTo.Any()), drawWorld: blueTetheredTo.Any() || redTetheredTo.Any() ? true : null);
 
             // draw tethers
-            foreach ((var j, var target) in Raid.WithSlot(true).Exclude(i).IncludedInMask(blueTetheredTo | redTetheredTo))
-                Arena.AddLine(actor.Position, target.Position, TetherColor(blueTetheredTo[j], redTetheredTo[j]));
+            foreach ((var j, var target) in Raid.WithSlot(true))
+                if (j != i && (blueTetheredTo | redTetheredTo)[j])
+                    Arena.AddLine(actor.Position, target.Position, TetherColor(blueTetheredTo[j], redTetheredTo[j]));
 
             // draw explosion circles that hit me
             if (_blueExplosionMatrix[pcSlot, i])

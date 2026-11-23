@@ -11,8 +11,10 @@ sealed class DarkenedFire(BossModule module) : BossComponent(module)
     {
         var haveTooClose = false;
         var numInRange = 0;
-        foreach (var player in Raid.WithoutSlot(false, true, true).Where(player => CanBothBeTargets(player, actor)))
+        foreach (var player in Raid.WithoutSlot(false, true, true))
         {
+            if (!(CanBothBeTargets(player, actor)))
+                continue;
             haveTooClose |= player.Position.InCircle(actor.Position, _minRange);
             if (player.Position.InCircle(actor.Position, _maxRange))
                 ++numInRange;

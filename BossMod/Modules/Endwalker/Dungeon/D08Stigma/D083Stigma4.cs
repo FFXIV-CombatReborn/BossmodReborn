@@ -45,6 +45,7 @@ public enum SID : uint
     LeftFace = 1960 // Boss->player, extra=0x0
 }
 
+class MindhackRaidwide(BossModule module) : Components.RaidwideCast(module, (uint)AID.Mindhack);
 class Mindhack(BossModule module) : Components.StatusDrivenForcedMarch(module, 2f, (uint)SID.ForwardMarch, (uint)SID.AboutFace, (uint)SID.LeftFace, (uint)SID.RightFace, activationLimit: 8);
 
 class ElectromagneticReleaseIn(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ElectromagneticReleaseIn, new AOEShapeDonut(7f, 60f));
@@ -65,6 +66,7 @@ class D083Stigma4States : StateMachineBuilder
     public D083Stigma4States(BossModule module) : base(module)
     {
         TrivialPhase()
+            .ActivateOnEnter<MindhackRaidwide>()
             .ActivateOnEnter<Mindhack>()
             .ActivateOnEnter<ElectromagneticReleaseIn>()
             .ActivateOnEnter<ElectromagneticReleaseOut>()
@@ -78,5 +80,5 @@ class D083Stigma4States : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, Contributors = "The Combat Reborn Team", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 784, NameID = 10404)]
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, Contributors = "The Combat Reborn Team (LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 784, NameID = 10404)]
 public class D083Stigma4(WorldState ws, Actor primary) : BossModule(ws, primary, new(0, 2.5f), new ArenaBoundsSquare(20));

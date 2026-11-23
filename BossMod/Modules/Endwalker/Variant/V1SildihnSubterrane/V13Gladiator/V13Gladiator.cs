@@ -19,6 +19,7 @@ sealed class ShatteringSteelMeteor(BossModule module) : Components.CastLineOfSig
         }
     }
 
+    private readonly List<Actor> _actorsBuffer = [];
     public override ReadOnlySpan<Actor> BlockerActors()
     {
         var boulders = Module.Enemies((uint)OID.AntiqueBoulder);
@@ -27,7 +28,8 @@ sealed class ShatteringSteelMeteor(BossModule module) : Components.CastLineOfSig
         {
             return [];
         }
-        var actors = new List<Actor>(1);
+        var actors = _actorsBuffer;
+        actors.Clear();
         for (var i = 0; i < count; ++i)
         {
             var b = boulders[i];

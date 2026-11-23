@@ -5,6 +5,7 @@ sealed class NoblePursuit(BossModule module) : Components.GenericAOEs(module)
     private WPos _posAfterLastCharge;
     private readonly List<AOEInstance> _charges = [];
     private readonly List<AOEInstance> _rings = [];
+    private AOEInstance[] _buffer = [];
 
     private const float _chargeHalfWidth = 6f;
     private readonly AOEShapeRect _shapeRing = new(5f, 50f, 5f);
@@ -22,7 +23,9 @@ sealed class NoblePursuit(BossModule module) : Components.GenericAOEs(module)
         var firstActivation = countCharges > 0 ? _charges[0].Activation : countRings > 0 ? _rings[0].Activation : default;
         var deadline = firstActivation.AddSeconds(2.5d);
 
-        var aoes = new AOEInstance[total];
+        if (_buffer.Length < total)
+            _buffer = new AOEInstance[total];
+        var aoes = _buffer;
         var index = 0;
         var i = 0;
 

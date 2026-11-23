@@ -7,12 +7,16 @@ sealed class ClawTail(BossModule module) : Components.GenericAOEs(module)
 
     private readonly AOEShapeCone _shape = new(45f, 90f.Degrees());
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var rotation = Module.PrimaryActor.CastInfo?.Rotation ?? Module.PrimaryActor.Rotation;
         if (_tailFirst ? Progress == 0 : Progress >= 7)
             rotation += 180f.Degrees();
-        return new AOEInstance[1] { new(_shape, Module.PrimaryActor.Position, rotation, Module.CastFinishAt(Module.PrimaryActor.CastInfo)) };
+        {
+            _oneAOEInstance[0] = new(_shape, Module.PrimaryActor.Position, rotation, Module.CastFinishAt(Module.PrimaryActor.CastInfo));
+            return _oneAOEInstance;
+        }
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

@@ -22,8 +22,10 @@ sealed class ChannelingFlow(BossModule module) : BossComponent(module)
             int numPartners = 0, numClipped = 0;
             var partnerDir = -_arrows[slot].Item1;
             float minDistance = 50;
-            foreach (var (otherSlot, otherActor) in ActorsHitBy(slot, actor))
+            foreach (var (otherSlot, otherActor) in Raid.WithSlot(false, true, true))
             {
+                if (otherSlot == slot || !otherActor.Position.InRect(actor.Position, _arrows[slot].Item1, 50f, default, _typhoonHalfWidth))
+                    continue;
                 if (_arrows[otherSlot].Item1 == partnerDir)
                 {
                     minDistance = Math.Min(minDistance, partnerDir.Dot(actor.Position - otherActor.Position));
@@ -44,15 +46,22 @@ sealed class ChannelingFlow(BossModule module) : BossComponent(module)
                 hints.Add("Too close to partner!");
         }
 
-        if (ActiveArrows().Any(pd => pd.Item1 != actor && pd.Item1 != partner && actor.Position.InRect(pd.Item1.Position, pd.Item2, 50, 0, _typhoonHalfWidth)))
-            hints.Add("GTFO from imminent flow!");
+        foreach (var (s, p) in Raid.WithSlot(false, true, true))
+        {
+            if (SlotActive(s) && p != actor && p != partner && actor.Position.InRect(p.Position, _arrows[s].Item1, 50f, default, _typhoonHalfWidth))
+            {
+                hints.Add("GTFO from imminent flow!");
+                break;
+            }
+        }
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
-        foreach (var (player, dir) in ActiveArrows())
+        foreach (var (s, player) in Raid.WithSlot(false, true, true))
         {
-            Arena.ZoneRect(player.Position, dir, 50, 0, _typhoonHalfWidth, Colors.AOE);
+            if (SlotActive(s))
+                Arena.ZoneRect(player.Position, _arrows[s].Item1, 50f, default, _typhoonHalfWidth, Colors.AOE);
         }
     }
 
@@ -101,13 +110,4 @@ sealed class ChannelingFlow(BossModule module) : BossComponent(module)
             _arrows[slot] = (dir, expire);
     }
 
-    private IEnumerable<(Actor, WDir)> ActiveArrows()
-    {
-        return Raid.WithSlot(false, true, true).WhereSlot(SlotActive).Select(ia => (ia.Item2, _arrows[ia.Item1].Item1));
-    }
-
-    private IEnumerable<(int, Actor)> ActorsHitBy(int slot, Actor actor)
-    {
-        return Raid.WithSlot(false, true, true).Exclude(slot).WhereActor(a => a.Position.InRect(actor.Position, _arrows[slot].Item1, 50, 0, _typhoonHalfWidth));
-    }
 }

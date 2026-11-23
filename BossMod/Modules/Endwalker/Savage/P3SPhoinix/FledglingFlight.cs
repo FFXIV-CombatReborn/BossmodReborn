@@ -20,7 +20,13 @@ sealed class FledglingFlight(BossModule module) : BossComponent(module)
         foreach ((var i, var player) in Raid.WithSlot(false, true, true))
         {
             _playerDeathTollStacks[i] = player.FindStatus((uint)SID.DeathsToll)?.Extra ?? 0; // TODO: use status events here...
-            _playerAOECount[i] = _sources.Count(srcRot => player.Position.InCone(srcRot.Item1.Position, srcRot.Item2, _coneHalfAngle));
+            var hits = 0;
+            for (var j = 0; j < _sources.Count; ++j)
+            {
+                if (player.Position.InCone(_sources[j].Item1.Position, _sources[j].Item2, _coneHalfAngle))
+                    ++hits;
+            }
+            _playerAOECount[i] = hits;
         }
     }
 

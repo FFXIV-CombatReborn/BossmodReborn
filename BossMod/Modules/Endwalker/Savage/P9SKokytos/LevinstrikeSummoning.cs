@@ -87,10 +87,14 @@ sealed class LevinstrikeSummoningShock(BossModule module) : Components.GenericAO
 
     private static readonly AOEShapeCircle _shape = new(6);
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (NumCasts < _explodeOrder.Length)
-            return new AOEInstance[1] { new(_shape, _explodeOrder[NumCasts], default, _firstExplosion.AddSeconds(NumCasts * 5.6d)) };
+        {
+            _oneAOEInstance[0] = new(_shape, _explodeOrder[NumCasts], default, _firstExplosion.AddSeconds(NumCasts * 5.6d));
+            return _oneAOEInstance;
+        }
         return [];
     }
 

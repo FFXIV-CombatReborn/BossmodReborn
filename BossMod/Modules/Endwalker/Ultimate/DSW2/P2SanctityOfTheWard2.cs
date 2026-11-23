@@ -108,8 +108,10 @@ sealed class P2SanctityOfTheWard2Towers1(BossModule module) : Components.CastTow
                 color = Colors.Danger;
             }
 
-            foreach (var tower in Towers.Where(t => !t.ForbiddenSoakers[slot]))
+            foreach (var tower in Towers)
             {
+                if (!!tower.ForbiddenSoakers[slot])
+                    continue;
                 movementHints.Add(from, tower.Position, color);
             }
         }

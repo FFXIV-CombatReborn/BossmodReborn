@@ -33,10 +33,14 @@ class PrincessThrenody(BossModule module) : Components.GenericAOEs(module)
 
     private static readonly AOEShapeCone _shape = new(40f, 60f.Degrees());
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_activation != default)
-            return new AOEInstance[1] { new(_shape, Module.PrimaryActor.Position, _direction, _activation) };
+        {
+            _oneAOEInstance[0] = new(_shape, Module.PrimaryActor.Position, _direction, _activation);
+            return _oneAOEInstance;
+        }
         return [];
     }
 

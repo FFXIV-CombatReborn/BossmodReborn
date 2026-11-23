@@ -37,19 +37,23 @@ class HexingStaves(BossModule module) : Components.GenericAOEs(module)
     private readonly Explosion _aoe = module.FindComponent<Explosion>()!;
     private static readonly AOEShapeCross cross = new(40f, 4f);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _aoes.Count;
         if (count == 0 || _aoe.Casters.Count != 0)
             return [];
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         var risky = _aoes[0].Activation.AddSeconds(-5d) < WorldState.CurrentTime;
         for (var i = 0; i < count; ++i)
         {
             var aoe = _aoes[i];
             aoes[i] = aoe with { Risky = risky };
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnActorModelStateChange(Actor actor, byte modelState, byte animState1, byte animState2)

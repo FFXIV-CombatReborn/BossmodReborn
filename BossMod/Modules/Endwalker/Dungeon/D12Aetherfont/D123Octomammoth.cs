@@ -65,7 +65,7 @@ public sealed class D123Octomammoth(WorldState ws, Actor primary) : BossModule(w
     new PolygonCustom(bridge1), new PolygonCustom(WPos.GenerateRotatedVertices(arenaCenter, bridge1, -45f)),
     new PolygonCustom(WPos.GenerateRotatedVertices(arenaCenter, bridge1, -90f)), new PolygonCustom(bridge5)], AdjustForHitboxInwards: true);
 
-    protected override bool CheckPull() => Arena.InBounds(Raid.Player()!.Position);
+    protected override bool CheckPull() => Raid.Player() is Actor player && Arena.InBounds(player.Position);
 
     protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {

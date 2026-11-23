@@ -3,11 +3,13 @@
 // this includes venom pools and raging claw/searing ray aoes
 sealed class RubyGlow4(BossModule module) : RubyGlowRecolor(module, 5)
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var poison = ActivePoisonAOEs();
         var len = poison.Length;
-        var aoes = new List<AOEInstance>(len + 2);
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         if (CurRecolorState != RecolorState.BeforeStones && MagicStones.Count != 0)
             aoes.Add(new(ShapeHalf, Arena.Center.Quantized(), Angle.FromDirection(QuadrantDir(AOEQuadrant))));
         aoes.AddRange(poison);

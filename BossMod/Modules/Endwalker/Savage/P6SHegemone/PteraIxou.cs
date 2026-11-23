@@ -9,14 +9,16 @@ sealed class PteraIxou(BossModule module) : Components.CastCounter(module, (uint
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (ForbiddenCenters(slot).Any(dir => _shape.Check(actor.Position, Arena.Center, dir)))
+        if (_vulnSnake[slot] && _shape.Check(actor.Position, Arena.Center, 90f.Degrees()) || _vulnWing[slot] && _shape.Check(actor.Position, Arena.Center, -90f.Degrees()))
             hints.Add("GTFO from aoe!");
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
-        foreach (var dir in ForbiddenCenters(pcSlot))
-            _shape.Draw(Arena, Arena.Center, dir);
+        if (_vulnSnake[pcSlot])
+            _shape.Draw(Arena, Arena.Center, 90f.Degrees());
+        if (_vulnWing[pcSlot])
+            _shape.Draw(Arena, Arena.Center, -90f.Degrees());
     }
 
     public override void OnStatusGain(Actor actor, ref ActorStatus status)
@@ -43,14 +45,6 @@ sealed class PteraIxou(BossModule module) : Components.CastCounter(module, (uint
                 _vulnWing.Clear(Raid.FindSlot(actor.InstanceID));
                 break;
         }
-    }
-
-    private IEnumerable<Angle> ForbiddenCenters(int slot)
-    {
-        if (_vulnSnake[slot])
-            yield return 90f.Degrees();
-        if (_vulnWing[slot])
-            yield return -90f.Degrees();
     }
 }
 

@@ -36,10 +36,12 @@ sealed class InversiveChlamys(BossModule module) : BossComponent(module)
         if (_tetherForbidden.None())
             return;
 
-        foreach ((var i, var player) in Raid.WithSlot(false, true, true).Tethered(TetherID.Chlamys))
+        foreach ((var i, var player) in Raid.WithSlot(false, true, true))
         {
+            if (player.Tether.ID != (uint)TetherID.Chlamys)
+                continue;
             _tetherTargets.Set(i);
-            _tetherInAOE |= Raid.WithSlot(false, true, true).InRadiusExcluding(player, _aoeRange).Mask();
+            _tetherInAOE |= Raid.WithSlot(false, true, true).MaskInRadiusExcluding(player, _aoeRange);
         }
     }
 
@@ -59,7 +61,7 @@ sealed class InversiveChlamys(BossModule module) : BossComponent(module)
             {
                 hints.Add("Tethers: intercept!");
             }
-            else if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _aoeRange).Any())
+            else if (Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, _aoeRange))
             {
                 hints.Add("Tethers: GTFO from others!");
             }
@@ -92,7 +94,7 @@ sealed class InversiveChlamys(BossModule module) : BossComponent(module)
 
     public override void AddGlobalHints(Actor actor, GlobalHints hints)
     {
-        var forbidden = Raid.WithSlot(true, true, true).IncludedInMask(_tetherForbidden).FirstOrDefault().Item2;
+        var forbidden = _tetherForbidden.Any() ? Raid[_tetherForbidden.LowestSetBit()] : null;
         if (forbidden != null)
         {
             hints.Add($"Intercept: {(forbidden.Role is Role.Tank or Role.Healer ? "DD" : "Tanks/Healers")}");
