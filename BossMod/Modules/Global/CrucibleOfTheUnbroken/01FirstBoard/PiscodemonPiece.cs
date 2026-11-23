@@ -26,6 +26,11 @@ public enum AID : uint
     VoidAeroIII = 46897, // 233C->self, 6.0s cast, range 5-60 donut
 }
 
+public enum SID : uint
+{
+    DamageUp = 1225 // PiscodemonPiece->PiscodemonPiece, extra=0x0
+}
+
 // This is the initial aoe when the ice is thrown out to mark where exaflares start.
 sealed class VoidBlizzardIII(BossModule module) : Components.SimpleAOEs(module, (uint)AID.VoidBlizzardIIICircle, new AOEShapeCircle(5f));
 // The ice bursts travel across the arena in a straight line. Distance and timing are a bit of an estimate here.
@@ -33,6 +38,7 @@ sealed class VoidBlizzardIII(BossModule module) : Components.SimpleAOEs(module, 
 sealed class VoidBlizzardIIIOne(BossModule module) : Components.SimpleExaflare(module, 5f, (uint)AID.VoidBlizzardIIIFirst, (uint)AID.VoidBlizzardIIIRest, 6f, 1.1d, 6, 2, true);
 
 sealed class ArcaneBlast(BossModule module) : Components.RaidwideCast(module, (uint)AID.ArcaneBlast);
+sealed class ClearMind(BossModule module) : Components.Dispel(module, (uint)SID.DamageUp, (uint)AID.ClearMind);
 
 //Proximity aoe. Initial safe distance is an estimate to be adjusted as we get more data.
 sealed class VoidFlareStar(BossModule module) : Components.ProximityAOEs(module, (uint)AID.VoidFlareStar1, 28f);
@@ -46,6 +52,7 @@ sealed class PiscodemonPieceStates : StateMachineBuilder
     public PiscodemonPieceStates(BossModule module) : base(module)
     {
         TrivialPhase()
+            .ActivateOnEnter<ClearMind>()
             .ActivateOnEnter<VoidBlizzardIIIOne>()
             .ActivateOnEnter<VoidBlizzardIII>()
             .ActivateOnEnter<ArcaneBlast>()
@@ -55,6 +62,7 @@ sealed class PiscodemonPieceStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.PiscodemonPiece, Contributors = "wen", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1088u, NameID = 14535u, SortOrder = 5)]
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.PiscodemonPiece, Contributors = "wen", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1088u, NameID = 14535u, SortOrder = 3)]
 
+[PreferredKinship(BST.Kinship.Wave, "Remove Damage Up from Clear Mind")]
 public sealed class PiscodemonPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsSquare(20f));

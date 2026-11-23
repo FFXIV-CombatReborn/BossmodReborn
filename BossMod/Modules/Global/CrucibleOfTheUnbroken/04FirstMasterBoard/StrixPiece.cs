@@ -1,6 +1,7 @@
 ﻿namespace BossMod.Global.CrucibleOfTheUnbroken.FirstMasterBoard.StrixPiece;
 
-public enum OID : uint {
+public enum OID : uint
+{
     StrixPiece = 0x4CB6,
     Helper = 0x233C,
     TomePiece = 0x4CB7, // R1.050, x8
@@ -10,7 +11,8 @@ public enum OID : uint {
     StrixPlume = 0x4CB8, // R1.500, x0 (spawn during fight)
 }
 
-public enum AID : uint {
+public enum AID : uint
+{
     AutoAttackAero = 50929, // StrixPiece->player, no cast, single-target
     PlummetBoss = 48654, // StrixPiece->self, 3.0s cast, single-target
     PlummetVisual = 48655, // Helper->self, 7.0+0.5s cast, single-target
@@ -29,7 +31,8 @@ public enum AID : uint {
     MagicalMalletTheoryAOE = 48660, // Helper->player, no cast, range 8 circle
 }
 
-public enum SID : uint {
+public enum SID : uint
+{
     MagicDamageUp = 5020, // StrixPiece->StrixPiece, extra=0x0
     Levitation = 12, // none->player, extra=0x0
     Imp = 1134, // none->player, extra=0x30
@@ -40,23 +43,29 @@ public enum SID : uint {
 sealed class UltimateFocus(BossModule module) : Components.Dispel(module, (uint)SID.MagicDamageUp, (uint)AID.UltimateFocus);
 sealed class OnThePropertiesOfDarkness(BossModule module) : Components.RaidwideCast(module, (uint)AID.OnThePropertiesOfDarkness);
 
-sealed class Plummet : Components.SimpleAOEs {
+sealed class Plummet : Components.SimpleAOEs
+{
     public Plummet(BossModule module) : base(module, (uint)AID.Plummet, 10.0f, maxCasts: 6)
     {
         MaxDangerColor = 3;
     }
 }
 
-sealed class AeroIII(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.AeroIII, 25f) {
+sealed class AeroIII(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.AeroIII, 25f)
+{
     public override void AddHints(int slot, Actor actor, TextHints hints) { }
 }
-sealed class StrixPlume(BossModule module) : Components.Adds(module, (uint)OID.StrixPlume, 2) {
-    public override void AddHints(int slot, Actor actor, TextHints hints) {
-        if (Actors.Count == 0) {
+sealed class StrixPlume(BossModule module) : Components.Adds(module, (uint)OID.StrixPlume, 2)
+{
+    public override void AddHints(int slot, Actor actor, TextHints hints)
+    {
+        if (Actors.Count == 0)
+        {
             return;
         }
 
-        if (Actors[0].IsDead) {
+        if (Actors[0].IsDead)
+        {
             return;
         }
 
@@ -66,8 +75,10 @@ sealed class StrixPlume(BossModule module) : Components.Adds(module, (uint)OID.S
 
 // Leaving this voidzone will instantly remove the buff
 sealed class OnThePropertiesOfQuakes(BossModule module) : Components.PersistentInvertibleVoidzoneByCast(module, 6f, GetVoidzones,
-    (uint)AID.OnThePropertiesOfQuakes) {
-    private static Actor[] GetVoidzones(BossModule module) {
+    (uint)AID.OnThePropertiesOfQuakes)
+{
+    private static Actor[] GetVoidzones(BossModule module)
+    {
         var enemies = module.Enemies((uint)OID.Gravity);
         var count = enemies.Count;
         if (count == 0)
@@ -75,7 +86,8 @@ sealed class OnThePropertiesOfQuakes(BossModule module) : Components.PersistentI
 
         var voidzones = new Actor[count];
         var index = 0;
-        for (var i = 0; i < count; ++i) {
+        for (var i = 0; i < count; ++i)
+        {
             var z = enemies[i];
             if (z.EventState != 7)
                 voidzones[index++] = z;
@@ -86,25 +98,31 @@ sealed class OnThePropertiesOfQuakes(BossModule module) : Components.PersistentI
 
 // Entering this voidzone will give you a buff with a timer
 sealed class OnThePropertiesOfFloods(BossModule module) : Components.PersistentInvertibleVoidzoneByCast(module, 6f, GetVoidzones,
-    (uint)AID.OnThePropertiesOfFloods) {
+    (uint)AID.OnThePropertiesOfFloods)
+{
     private BitMask affectedPlayers;
 
-    public override void OnStatusGain(Actor actor, ref ActorStatus status) {
-        if (status.ID == (uint)SID.Imp && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0) {
+    public override void OnStatusGain(Actor actor, ref ActorStatus status)
+    {
+        if (status.ID == (uint)SID.Imp && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0)
+        {
             affectedPlayers[slot] = true;
             InvertResolveAt = default;
         }
     }
 
-    public override void AddHints(int slot, Actor actor, TextHints hints) {
-        if (affectedPlayers[slot]) {
+    public override void AddHints(int slot, Actor actor, TextHints hints)
+    {
+        if (affectedPlayers[slot])
+        {
             return;
         }
 
         base.AddHints(slot, actor, hints);
     }
 
-    private static Actor[] GetVoidzones(BossModule module) {
+    private static Actor[] GetVoidzones(BossModule module)
+    {
         var enemies = module.Enemies((uint)OID.Duck);
         var count = enemies.Count;
         if (count == 0)
@@ -112,7 +130,8 @@ sealed class OnThePropertiesOfFloods(BossModule module) : Components.PersistentI
 
         var voidzones = new Actor[count];
         var index = 0;
-        for (var i = 0; i < count; ++i) {
+        for (var i = 0; i < count; ++i)
+        {
             var z = enemies[i];
             if (z.EventState != 7)
                 voidzones[index++] = z;
@@ -122,18 +141,23 @@ sealed class OnThePropertiesOfFloods(BossModule module) : Components.PersistentI
 }
 
 // Entering this voidzone will give you a buff with a timer
-sealed class MagicalMalletTheory(BossModule module) : Components.PersistentInvertibleVoidzoneByCast(module, 6f, GetVoidzones, (uint)AID.MagicalMalletTheory) {
+sealed class MagicalMalletTheory(BossModule module) : Components.PersistentInvertibleVoidzoneByCast(module, 6f, GetVoidzones, (uint)AID.MagicalMalletTheory)
+{
     private BitMask affectedPlayers;
 
-    public override void OnStatusGain(Actor actor, ref ActorStatus status) {
-        if (status.ID == (uint)SID.Transfiguration && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0) {
+    public override void OnStatusGain(Actor actor, ref ActorStatus status)
+    {
+        if (status.ID == (uint)SID.Transfiguration && Raid.FindSlot(actor.InstanceID) is var slot && slot >= 0)
+        {
             affectedPlayers[slot] = true;
             InvertResolveAt = default;
         }
     }
 
-    public override void AddHints(int slot, Actor actor, TextHints hints) {
-        if (affectedPlayers[slot]) {
+    public override void AddHints(int slot, Actor actor, TextHints hints)
+    {
+        if (affectedPlayers[slot])
+        {
             return;
         }
 
@@ -142,13 +166,16 @@ sealed class MagicalMalletTheory(BossModule module) : Components.PersistentInver
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell) { }
 
-    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
-        if (spell.Action.ID == (uint)AID.MagicalMalletTheoryAOE) {
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID == (uint)AID.MagicalMalletTheoryAOE)
+        {
             InvertResolveAt = default;
         }
     }
 
-    private static Actor[] GetVoidzones(BossModule module) {
+    private static Actor[] GetVoidzones(BossModule module)
+    {
         var enemies = module.Enemies((uint)OID.Puddle);
         var count = enemies.Count;
         if (count == 0)
@@ -156,7 +183,8 @@ sealed class MagicalMalletTheory(BossModule module) : Components.PersistentInver
 
         var voidzones = new Actor[count];
         var index = 0;
-        for (var i = 0; i < count; ++i) {
+        for (var i = 0; i < count; ++i)
+        {
             var z = enemies[i];
             if (z.EventState != 7)
                 voidzones[index++] = z;
@@ -173,8 +201,10 @@ sealed class Overdue : Components.SimpleAOEs
     }
 }
 
-sealed class StrixPieceStates : StateMachineBuilder {
-    public StrixPieceStates(BossModule module) : base(module) {
+sealed class StrixPieceStates : StateMachineBuilder
+{
+    public StrixPieceStates(BossModule module) : base(module)
+    {
         TrivialPhase()
             .ActivateOnEnter<Plummet>()
             .ActivateOnEnter<OnThePropertiesOfQuakes>()
@@ -189,12 +219,18 @@ sealed class StrixPieceStates : StateMachineBuilder {
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.StrixPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1091u, NameID = 14596u, SortOrder = 1)]
-public sealed class StrixPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f)) {
-    protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+[PreferredKinship(BST.Kinship.Wave, "Remove Magic Damage Up from Ultimate Focus")]
+[PreferredKinship(BST.Kinship.Vile, "Ignore Aero III's knockback")]
+public sealed class StrixPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f))
+{
+    protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         var count = hints.PotentialTargets.Count;
-        for (var i = 0; i < count; ++i) {
+        for (var i = 0; i < count; ++i)
+        {
             var e = hints.PotentialTargets[i];
-            e.Priority = e.Actor.OID switch {
+            e.Priority = e.Actor.OID switch
+            {
                 (uint)OID.StrixPlume => 2,
                 (uint)OID.StrixPiece => 1,
                 _ => 0
@@ -202,7 +238,8 @@ public sealed class StrixPiece(WorldState ws, Actor primary) : BossModule(ws, pr
         }
     }
 
-    protected override void DrawEnemies(int pcSlot, Actor pc) {
+    protected override void DrawEnemies(int pcSlot, Actor pc)
+    {
         Arena.Actor(PrimaryActor);
         Arena.Actors(Enemies((uint)OID.StrixPlume));
     }

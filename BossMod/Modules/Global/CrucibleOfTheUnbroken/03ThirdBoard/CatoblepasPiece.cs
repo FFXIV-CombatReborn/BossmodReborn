@@ -20,9 +20,10 @@ public enum AID : uint
     ShiftingGaze = 48509, // CatoblepasPiece->self, 3.0s cast, single-target
     ShiftingGaze1 = 48954, // CatoblepasPiece->4C9D/4C9C, no cast, single-target
     FalseDemonEye = 48510, // Helper->self, no cast, range 100 circle, cast by tethered eye
-    _Weaponskill_SinisterGleam = 48511, // CatoblepasPiece->self, 6.0s cast, single-target
+    SinisterGleamVisual = 48511, // CatoblepasPiece->self, 6.0s cast, single-target
     SinisterGleam = 48512, // Helper->self, 6.5s cast, range 60 180.000-degree cone
-
+    JettaturaVisual = 48513, // CatoblepasPiece->self, 3.0s cast, single-target
+    Jettatura = 48514, // Helper->location, 5.0s cast, range 8 circle
 }
 
 public enum SID : uint
@@ -40,6 +41,7 @@ public enum TetherID : uint
 sealed class BestialRoar(BossModule module) : Components.RaidwideCast(module, (uint)AID.BestialRoar);
 
 sealed class SinisterGleam(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SinisterGleam, new AOEShapeCone(60f, 90f.Degrees()));
+sealed class Jettatura(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Jettatura, 8f);
 
 sealed class DemonicEyeCircle(BossModule module) : Components.Voidzone(module, 2f, module => module.Enemies((uint)OID.DemonicEyeCircle).Where(z => z.Renderflags == 0), 2f);
 
@@ -368,6 +370,7 @@ sealed class CatoblepasPieceStates : StateMachineBuilder
     {
         TrivialPhase()
             .ActivateOnEnter<BestialRoar>()
+            .ActivateOnEnter<Jettatura>()
             .ActivateOnEnter<DemonicEyes>()
             .ActivateOnEnter<DemonicEyeCircle>()
             .ActivateOnEnter<DemonicEyeDonut>()
@@ -378,7 +381,7 @@ sealed class CatoblepasPieceStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.CatoblepasPiece, Contributors = "gynorhino", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14577u, SortOrder = 3)]
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.CatoblepasPiece, Contributors = "gynorhino", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14577u, SortOrder = 3)]
 public sealed class CatoblepasPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f))
 {
     private readonly string[] _prePullHints = [

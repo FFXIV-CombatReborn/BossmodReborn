@@ -56,9 +56,11 @@ sealed class VineProbe(BossModule module) : Components.SimpleAOEs(module, (uint)
 
 sealed class GreenPuddle(BossModule module) : Components.Voidzone(module, 6f, GetVoidzones)
 {
+    private readonly List<AOEInstance> _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        var aoes = new List<AOEInstance>();
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         foreach (var source in Sources(Module))
         {
             if (ArenaProjectionLayerParticipantApplies(source, ArenaProjectionLayer, RestrictToArenaProjectionLayer))
@@ -187,6 +189,8 @@ sealed class MorbolPieceStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.MorbolPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1091u, NameID = 14599u, SortOrder = 2)]
+[PreferredKinship(BST.Kinship.Vile, "Ignore Tremblor's knockback")]
+[PreferredKinship(BST.Kinship.Ash, "Cleanse Paralysis from Carrion Broth")]
 public sealed class MorbolPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f))
 {
     protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
@@ -211,6 +215,6 @@ public sealed class MorbolPiece(WorldState ws, Actor primary) : BossModule(ws, p
         Arena.Actor(PrimaryActor);
         Arena.Actors(Enemies((uint)OID.CarrionBroth));
         Arena.Actors(Enemies((uint)OID.SeedlingPiece));
-        Arena.Actors(Enemies((uint)OID.MorbolPiece));
+        Arena.Actors(Enemies((uint)OID.OchuPiece));
     }
 }

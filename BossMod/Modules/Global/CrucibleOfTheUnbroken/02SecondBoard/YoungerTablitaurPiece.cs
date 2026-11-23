@@ -1,13 +1,15 @@
 ﻿namespace BossMod.Global.CrucibleOfTheUnbroken.SecondBoard.YoungerTablitaurPiece;
 
-public enum OID : uint {
+public enum OID : uint
+{
     YoungerTablitaurPiece = 0x4C60,
     ElderTablitaurPiece = 0x4C5F, // R3.600, x1
     Gen = 0x4E00, // R1.000, x2
     Helper = 0x233C
 }
 
-public enum AID : uint {
+public enum AID : uint
+{
     AutoAttack = 50216, // ElderTablitaurPiece/YoungerTablitaurPiece->player, no cast, single-target
     Teleport = 48188, // YoungerTablitaurPiece/ElderTablitaurPiece->location, no cast, single-target
 
@@ -48,63 +50,85 @@ public enum AID : uint {
     EndlessSlashes = 48216 // Helper->self, no cast, range 80 width 70 rect
 }
 
-public enum IconID : uint {
+public enum IconID : uint
+{
     TankBuster = 412, // player->self
     TurnRight = 167, // YoungerTablitaurPiece->self
     TurnLeft = 168, // ElderTablitaurPiece->self
 }
 
-public enum TetherID : uint {
+public enum TetherID : uint
+{
     KnockbackTether = 54, // YoungerTablitaurPiece/4C5F->4E00
     TankBusterTether = 260, // YoungerTablitaurPiece->ElderTablitaurPiece
     UnknownTether = 17, // 4C5F->player - most likely the target tether for the spin attack that follows the player around
     _Gen_Tether_chn_dark001f = 1, // ElderTablitaurPiece->player
 }
 
-public enum SID : uint {
+public enum SID : uint
+{
     DamageUpEnrage1 = 1225, // YoungerTablitaurPiece->ElderTablitaurPiece, extra=0x0
     DamageUpEnrage2 = 2550 // YoungerTablitaurPiece->YoungerTablitaurPiece, extra=0x1/0x2
 }
 
-sealed class TonzeSlash100(BossModule module) : Components.BaitAwayIcon(module, new AOEShapeRect(65.0f, 4.0f), (uint)IconID.TankBuster, (uint)AID.TonzeSlash100,
-    9.1d, source: module.Enemies((uint)OID.ElderTablitaurPiece)[0], tankbuster: true, damageType: AIHints.PredictedDamageType.Tankbuster);
+sealed class TonzeSlash100(YoungerTablitaurPiece module) : Components.BaitAwayIcon(module, new AOEShapeRect(65.0f, 4.0f), (uint)IconID.TankBuster,
+    (uint)AID.TonzeSlash100, 9.1d, tankbuster: true, damageType: AIHints.PredictedDamageType.Tankbuster)
+{
+    private readonly YoungerTablitaurPiece bossModule = module;
 
-sealed class TonzeSwipe1000 : Components.SimpleAOEGroups {
+    public override Actor? BaitSource(Actor target) => bossModule.ElderTablitaur;
+}
+
+sealed class RallyingCheer(BossModule module) : Components.CastInterruptHint(module, (uint)AID.RallyingCheer, showNameInHint: true);
+sealed class EndlessSlashes(BossModule module) : Components.RaidwideCast(module, (uint)AID.EndlessSlashesVisual1, "Enrage: 8x raidwide");
+
+sealed class TonzeSwipe1000 : Components.SimpleAOEGroups
+{
     public TonzeSwipe1000(BossModule module) : base(module, [(uint)AID.TonzeSwipe1000, (uint)AID.TonzeSwipe1000Long], new AOEShapeRect(60f, 30f),
-        expectedNumCasters: 2) {
+        expectedNumCasters: 2)
+    {
         MaxDangerColor = 1;
         MaxRisky = 1;
     }
 }
 
-sealed class TonzeSwing1111 : Components.SimpleAOEGroups {
-    public TonzeSwing1111(BossModule module) : base(module, [(uint)AID.TonzeSwing1111, (uint)AID.TonzeSwing1111Long], 23f, expectedNumCasters: 2) {
+sealed class TonzeSwing1111 : Components.SimpleAOEGroups
+{
+    public TonzeSwing1111(BossModule module) : base(module, [(uint)AID.TonzeSwing1111, (uint)AID.TonzeSwing1111Long], 23f, expectedNumCasters: 2)
+    {
         MaxDangerColor = 1;
         MaxRisky = 1;
     }
 }
 
-sealed class Shockwave(BossModule module) : Components.SimpleKnockbackGroups(module, [(uint)AID.Shockwave, (uint)AID.ShockwaveLong], 20f) {
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
+sealed class Shockwave(BossModule module) : Components.SimpleKnockbackGroups(module, [(uint)AID.Shockwave, (uint)AID.ShockwaveLong], 20f)
+{
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
         base.OnCastStarted(caster, spell);
         SortHelpers.SortKnockbacksByActivation(Casters);
     }
 }
 
-sealed class TonzeStomp10 : Components.SimpleAOEGroups {
-    public TonzeStomp10(BossModule module) : base(module, [(uint)AID.TonzeStomp10, (uint)AID.TonzeStomp10Long], 5f, expectedNumCasters: 2) {
+sealed class TonzeStomp10 : Components.SimpleAOEGroups
+{
+    public TonzeStomp10(BossModule module) : base(module, [(uint)AID.TonzeStomp10, (uint)AID.TonzeStomp10Long], 5f, expectedNumCasters: 2)
+    {
         MaxDangerColor = 1;
         MaxRisky = 1;
     }
 }
 
-sealed class EndlessSwing(BossModule module) : Components.GenericAOEs(module) {
+sealed class EndlessSwing(BossModule module) : Components.GenericAOEs(module)
+{
     private readonly AOEShapeCapsule shape = new(8f, 5f);
     private DateTime activation;
     private Actor? source;
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) {
-        if (source is Actor caster) {
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        if (source is Actor caster)
+        {
             var pos = caster.Position;
             var angle = Angle.FromDirection(actor.Position - pos);
             AOEInstance[] aoe = [new(shape, pos.Quantized(), angle, activation)];
@@ -113,60 +137,72 @@ sealed class EndlessSwing(BossModule module) : Components.GenericAOEs(module) {
         return [];
     }
 
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
-        if (spell.Action.ID == (uint)AID.EndlessSwingVisual) {
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.EndlessSwingVisual)
+        {
             source = caster;
             activation = Module.CastFinishAt(spell, 2.1d);
         }
     }
 
-    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
-        if (spell.Action.ID is (uint)AID.EndlessSwipes1 or (uint)AID.EndlessSwipes3) {
-            if (++NumCasts == 13) {
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID is (uint)AID.EndlessSwipes1 or (uint)AID.EndlessSwipes3)
+        {
+            if (++NumCasts == 13)
+            {
                 source = null;
                 NumCasts = 0;
             }
         }
     }
 
-    public override void OnActorDeath(Actor actor) {
-        if (actor.OID is (uint)OID.YoungerTablitaurPiece or (uint)OID.ElderTablitaurPiece) {
+    public override void OnActorDeath(Actor actor)
+    {
+        if (actor.OID is (uint)OID.YoungerTablitaurPiece or (uint)OID.ElderTablitaurPiece)
+        {
             source = null;
         }
     }
 }
 
-sealed class EndlessSwipes(BossModule module) : Components.GenericRotatingAOE(module) {
+sealed class EndlessSwipes(BossModule module) : Components.GenericRotatingAOE(module)
+{
     private ActorCastInfo? spellInfo;
     private Actor? source;
     private Angle increment;
     private readonly AOEShapeCone shape = new(40f, 30f.Degrees());
 
-    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID) {
-        increment = iconID switch {
-            (uint)IconID.TurnLeft => 30f.Degrees(),
-            (uint)IconID.TurnRight => -30f.Degrees(),
-            _ => default
-        };
-
-        InitIfReady();
+    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
+    {
+        if (iconID is (uint)IconID.TurnLeft or (uint)IconID.TurnRight)
+        {
+            increment = iconID == (uint)IconID.TurnLeft ? 30f.Degrees() : -30f.Degrees();
+            InitIfReady();
+        }
     }
 
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
         // The spell for the rotation and starting locXZ
-        if (spell.Action.ID is var id && id == (uint)AID.EndlessSwipes1) {
+        if (spell.Action.ID is var id && id == (uint)AID.EndlessSwipes1)
+        {
             spellInfo = spell;
             InitIfReady();
         }
         // The spell for which boss is actually performing the spell - it can be either one
-        else if (id is (uint)AID.EndlessSwipesYounger or (uint)AID.EndlessSwipesElder) {
+        else if (id is (uint)AID.EndlessSwipesYounger or (uint)AID.EndlessSwipesElder)
+        {
             source = caster;
             InitIfReady();
         }
     }
 
-    private void InitIfReady() {
-        if (spellInfo != null && increment != default && source != null) {
+    private void InitIfReady()
+    {
+        if (spellInfo != null && increment != default && source != null)
+        {
             Sequences.Add(new(shape, spellInfo.LocXZ, spellInfo.Rotation, increment, Module.CastFinishAt(spellInfo), 1.5d, 13, 5, actorID: source.InstanceID));
             spellInfo = null;
             increment = default;
@@ -174,18 +210,24 @@ sealed class EndlessSwipes(BossModule module) : Components.GenericRotatingAOE(mo
         }
     }
 
-    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
-        if (spell.Action.ID is (uint)AID.EndlessSwipes1 or (uint)AID.EndlessSwipes3) {
-            if (Sequences.Count > 0) {
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID is (uint)AID.EndlessSwipes1 or (uint)AID.EndlessSwipes3)
+        {
+            if (Sequences.Count > 0)
+            {
                 AdvanceSequence(0, WorldState.CurrentTime);
             }
         }
     }
 
     // If the caster of swipes dies, then we have to clear any left over aoes otherwise they will not get removed - it can be either boss
-    public override void OnActorDeath(Actor actor) {
-        if (actor.OID is (uint)OID.YoungerTablitaurPiece or (uint)OID.ElderTablitaurPiece) {
-            if (Sequences.Count > 0 && actor == WorldState.Actors.Find(Sequences[0].ActorID)) {
+    public override void OnActorDeath(Actor actor)
+    {
+        if (actor.OID is (uint)OID.YoungerTablitaurPiece or (uint)OID.ElderTablitaurPiece)
+        {
+            if (Sequences.Count > 0 && actor == WorldState.Actors.Find(Sequences[0].ActorID))
+            {
                 Sequences.Clear();
             }
         }
@@ -193,10 +235,13 @@ sealed class EndlessSwipes(BossModule module) : Components.GenericRotatingAOE(mo
 }
 
 // Consider changing to % ratio instead
-sealed class hpChecker(YoungerTablitaurPiece module) : BossComponent(module) {
-    public override void AddGlobalHints(Actor actor, GlobalHints hints) {
+sealed class HpChecker(YoungerTablitaurPiece module) : BossComponent(module)
+{
+    public override void AddGlobalHints(Actor actor, GlobalHints hints)
+    {
         var elder = module.ElderTablitaur;
-        if (elder == null || elder.IsDead) {
+        if (elder == null || elder.IsDead)
+        {
             return;
         }
 
@@ -205,38 +250,47 @@ sealed class hpChecker(YoungerTablitaurPiece module) : BossComponent(module) {
         hints.Add($"Younger Tablitaur HP difference: {difference:f1}%");
     }
 
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         var elder = module.ElderTablitaur;
-        if (elder == null || elder.IsDead) {
+        if (elder == null || elder.IsDead)
+        {
             return;
         }
 
         var younger = Module.PrimaryActor;
         var difference = (int)(younger.HPMP.CurHP - elder.HPMP.CurHP) * 100f / younger.HPMP.MaxHP;
 
-        for (var i = 0; i < hints.PotentialTargets.Count; i++) {
+        for (var i = 0; i < hints.PotentialTargets.Count; i++)
+        {
             var target = hints.PotentialTargets[i];
 
             // Younger is always set to priority 1
-            if (target.Actor == younger) {
+            if (target.Actor == younger)
+            {
                 target.Priority = 1;
             }
 
             // Elder is set to 0 when younger is ahead otherwise if Elder is ahead it will set to 2 to prioritise elder instead
             // if both are within the hp range then we don't care and treat both as the same
-            if (target.Actor == elder) {
+            if (target.Actor == elder)
+            {
                 target.Priority = difference > 30.0f ? 0 : difference < -30.0f ? 2 : 1;
             }
         }
     }
 }
 
-sealed class YoungerTablitaurPieceStates : StateMachineBuilder {
+sealed class YoungerTablitaurPieceStates : StateMachineBuilder
+{
     private readonly YoungerTablitaurPiece _module;
 
-    public YoungerTablitaurPieceStates(YoungerTablitaurPiece module) : base(module) {
+    public YoungerTablitaurPieceStates(YoungerTablitaurPiece module) : base(module)
+    {
         _module = module;
         TrivialPhase()
+            .ActivateOnEnter<RallyingCheer>()
+            .ActivateOnEnter<EndlessSlashes>()
             .ActivateOnEnter<TonzeSwipe1000>()
             .ActivateOnEnter<TonzeSwing1111>()
             .ActivateOnEnter<Shockwave>()
@@ -244,20 +298,26 @@ sealed class YoungerTablitaurPieceStates : StateMachineBuilder {
             .ActivateOnEnter<EndlessSwipes>()
             .ActivateOnEnter<EndlessSwing>()
             .ActivateOnEnter<TonzeSlash100>()
-            .ActivateOnEnter<hpChecker>()
+            .ActivateOnEnter<HpChecker>()
             .Raw.Update = () => _module.PrimaryActor.IsDeadOrDestroyed && _module.ElderTablitaur?.IsDeadOrDestroyed == true;
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.YoungerTablitaurPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1089u, NameID = 14556u, SortOrder = 4)]
-public sealed class YoungerTablitaurPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsSquare(20f)) {
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.YoungerTablitaurPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1089u, NameID = 14556u, SortOrder = 5)]
+[PreferredKinship(BST.Kinship.Soul, "Interrupt Rallying Cheer")]
+[PreferredKinship(BST.Kinship.Wave, "Remove Elder Tablitaur's Damage Up if Rallying Cheer goes off")]
+[PreferredKinship(BST.Kinship.Vile, "Ignore Shockwave's knockback")]
+public sealed class YoungerTablitaurPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsSquare(20f))
+{
     public Actor? ElderTablitaur;
 
-    protected override void UpdatePreModuleActivation() {
+    protected override void UpdatePreModuleActivation()
+    {
         ElderTablitaur ??= GetActor((uint)OID.ElderTablitaurPiece);
     }
 
-    protected override void DrawEnemies(int pcSlot, Actor pc) {
+    protected override void DrawEnemies(int pcSlot, Actor pc)
+    {
         Arena.Actor(PrimaryActor);
         Arena.Actor(ElderTablitaur);
     }

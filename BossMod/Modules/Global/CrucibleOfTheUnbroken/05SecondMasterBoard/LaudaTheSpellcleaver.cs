@@ -63,6 +63,7 @@ public enum AID : uint
     UnseenForce = 49484, // LaudaTheSpellcleaver->self, 3.0s cast, single-target
     UnseenForce1 = 49485, // LaudaTheSpellcleaver->self, no cast, single-target
     UnseenForce2 = 49486, // Helper->player, no cast, single-target
+    UnseenForce3 = 49487, // Helper->player, no cast, single-target
     Shockwave = 49489, // Helper->player, no cast, single-target
     GreaterStrengthBoss = 49472, // LaudaTheSpellcleaver->self, 3.0s cast, single-target
     SearingAxeBoss = 49477, // LaudaTheSpellcleaver->self, 27.1+0.9s cast, single-target
@@ -108,8 +109,51 @@ public enum TetherID : uint
     IndefatigableBladeTether = 5, // 4D22->LaudaTheSpellcleaver
 }
 
-sealed class GluttonousGutting(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GluttonousGutting, new AOEShapeRect(50f, 20f));
-sealed class GluttonousGoring(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GluttonousGoring, 40f);
+sealed class GluttonousGutting(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GluttonousGutting, new AOEShapeRect(50f, 20f))
+{
+    private UnseenForce? unseenForce;
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        unseenForce ??= Module.FindComponent<UnseenForce>();
+        if (unseenForce == null || unseenForce.Forces.Count == 0)
+        {
+            base.AddAIHints(slot, actor, assignment, hints);
+            return;
+        }
+
+        var activation = unseenForce.Forces[0].Activation;
+        var aoes = CollectionsMarshal.AsSpan(Casters);
+        for (var i = 0; i < aoes.Length; ++i)
+        {
+            hints.AddForbiddenZone(new SDCircle(aoes[i].Origin, 30f), activation);
+        }
+    }
+}
+
+sealed class GluttonousGoring(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GluttonousGoring, 40f)
+{
+    private UnseenForce? unseenForce;
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        unseenForce ??= Module.FindComponent<UnseenForce>();
+        if (unseenForce == null || unseenForce.Forces.Count == 0)
+        {
+            base.AddAIHints(slot, actor, assignment, hints);
+            return;
+        }
+
+        var activation = unseenForce.Forces[0].Activation;
+        var aoes = CollectionsMarshal.AsSpan(Casters);
+        for (var i = 0; i < aoes.Length; ++i)
+        {
+            hints.AddForbiddenZone(new SDInvertedCircle(aoes[i].Origin, 5f), activation);
+        }
+    }
+}
+
+sealed class InfernalPain(BossModule module) : Components.RaidwideCast(module, (uint)AID.InfernalPain, "Kill Thanatos before the cast ends!");
 
 sealed class AutoAttack(BossModule module) : Components.Cleave(module, (uint)AID.AutoAttack, new AOEShapeCone(9f, 55f.Degrees()))
 {
@@ -235,9 +279,10 @@ sealed class Rush(BossModule module) : Components.GenericAOEs(module)
     {
         if (spell.Action.ID == (uint)AID.Rush)
         {
-            if (aoes.Count > 0)
+            var index = IndexOfClosestAOE(aoes, caster.Position);
+            if (index >= 0)
             {
-                aoes.RemoveAt(0);
+                aoes.RemoveAt(index);
             }
         }
     }
@@ -397,38 +442,34 @@ sealed class DeadlyDemesne(BossModule module) : Components.GenericAOEs(module)
         }
         else if (state == 0x00040008u)
         {
-            if (oid == (uint)OID.DeadlyDemesneGreen)
+            var cages = oid == (uint)OID.DeadlyDemesneGreen ? greenCages : yellowCages;
+            var index = IndexOfClosestAOE(cages, actor.Position);
+            if (index >= 0)
             {
-                greenCages.RemoveAt(0);
-            }
-            else if (oid == (uint)OID.DeadlyDemesneYellow)
-            {
-                yellowCages.RemoveAt(0);
+                cages.RemoveAt(index);
             }
         }
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID is var id && id == (uint)AID.LifeClaim)
+        if (spell.Action.ID is var id && id is (uint)AID.LifeClaim or (uint)AID.CageOfMoltenMetal)
         {
-            if (greenAOEs.Count > 0)
+            var list = id == (uint)AID.LifeClaim ? greenAOEs : yellowAOEs;
+            var index = IndexOfClosestAOE(list, caster.Position);
+            if (index >= 0)
             {
-                greenAOEs.RemoveAt(0);
-            }
-        }
-        else if (id == (uint)AID.CageOfMoltenMetal)
-        {
-            if (yellowAOEs.Count > 0)
-            {
-                yellowAOEs.RemoveAt(0);
+                list.RemoveAt(index);
             }
         }
     }
 
+    private readonly List<AOEInstance> _colourAOEsBuffer = [];
+    private readonly List<AOEInstance> _incomingAOEsBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        List<AOEInstance> incomingAOEs = []; // Combines the cage & standard AOEs
+        var incomingAOEs = _incomingAOEsBuffer; // Combines the cage & standard AOEs
+        incomingAOEs.Clear();
 
         // green cages AOEs
         var greenCageCount = greenCages.Count;
@@ -464,7 +505,8 @@ sealed class DeadlyDemesne(BossModule module) : Components.GenericAOEs(module)
             return CollectionsMarshal.AsSpan(incomingAOEs);
         }
 
-        List<AOEInstance> colourAOEs = [];
+        var colourAOEs = _colourAOEsBuffer;
+        colourAOEs.Clear();
 
         // If colourFirst is not set then it means we are only dealing with one colour
         if (colourFirst == ColourType.NONE)
@@ -518,14 +560,19 @@ sealed class MoltenMetalBait(BossModule module) : Components.BaitAwayIcon(module
         hints.Add("Bait far away on one side of the map!");
     }
 
+    private readonly WPos[] baitSpots = [new(520f, -440f), new(520f, -400f)];
+
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (CurrentBaits.Count == 0)
+        if (CurrentBaits.Count == 0 || !IsBaitTarget(actor))
         {
             return;
         }
 
-        //hints.AddForbiddenZone(new SDInvertedCircle(new WPos(520.0f, -400.0f), 2.0f));
+        for (var i = 0; i < baitSpots.Length; ++i)
+        {
+            hints.GoalZones.Add(AIHints.GoalSingleTarget(baitSpots[i], 2f, 5f));
+        }
     }
 }
 sealed class MoltenMetalBaitAOE(BossModule module) : Components.SimpleAOEs(module, (uint)AID.MoltenMetalBaitCircle, 6f);
@@ -555,49 +602,67 @@ sealed class MagicalCombustion : Components.SimpleAOEs
 
 sealed class UnseenForce(BossModule module) : Components.GenericKnockback(module)
 {
-    private readonly List<(Actor player, Angle offset, DateTime expireAt)> knockbacks = [];
+    public readonly List<(Angle Offset, DateTime Activation)> Forces = [];
+    private readonly List<Knockback> _knockbacks = [];
+    private DateTime pendingActivation;
     private const float knockbackDistance = 40f;
-
-    public override void OnStatusGain(Actor actor, ref ActorStatus status)
-    {
-        if (status.ID == (uint)SID.UnseenForce)
-        {
-            var opposed = Module.PrimaryActor.Rotation.ToDirection().Dot(actor.Rotation.ToDirection()) < 0f;
-            knockbacks.Add((actor, opposed ? 180f.Degrees() : default, status.ExpireAt));
-        }
-    }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if (spell.Action.ID == (uint)AID.Shockwave)
+        if (spell.Action.ID is (uint)AID.UnseenForce2 or (uint)AID.UnseenForce3 && WorldState.Actors.Find(spell.MainTargetID) is Actor target)
         {
-            if (knockbacks.Count > 0)
+            Forces.Add(((target.Rotation - spell.Rotation).Normalized(), pendingActivation));
+        }
+        else if (spell.Action.ID == (uint)AID.Shockwave)
+        {
+            Forces.Clear();
+            pendingActivation = default;
+        }
+    }
+
+    public override void OnStatusGain(Actor actor, ref ActorStatus status)
+    {
+        if (status.ID == (uint)SID.UnseenForce && actor.Type == ActorType.Player)
+        {
+            pendingActivation = status.ExpireAt;
+            var forces = CollectionsMarshal.AsSpan(Forces);
+            for (var i = 0; i < forces.Length; ++i)
             {
-                knockbacks.RemoveAt(0);
+                forces[i].Activation = status.ExpireAt;
             }
         }
     }
 
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
-        var count = knockbacks.Count;
-        if (count == 0)
+        _knockbacks.Clear();
+        var count = Forces.Count;
+        for (var i = 0; i < count; ++i)
         {
-            return [];
+            var (offset, activation) = Forces[i];
+            if (activation != default)
+            {
+                _knockbacks.Add(new(actor.Position, knockbackDistance, activation, null, actor.Rotation + offset, Kind.DirForward, ignoreImmunes: true));
+            }
         }
+        return CollectionsMarshal.AsSpan(_knockbacks);
+    }
 
-        var incomingKnockbacks = CollectionsMarshal.AsSpan(knockbacks);
-        foreach (var (player, offset, expireAt) in incomingKnockbacks)
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        var count = Forces.Count;
+        for (var i = 0; i < count; ++i)
         {
-            if (player != actor)
+            var (offset, activation) = Forces[i];
+            if (activation == default)
             {
                 continue;
             }
 
-            return new Knockback[] { new(player.Position, knockbackDistance, expireAt, direction: player.Rotation + offset, kind: Kind.DirForward) };
+            hints.AddForbiddenZone(new SDCircle(Arena.Center, 20f), activation);
+            var wantedDir = (Arena.Center - actor.Position).ToAngle() + offset;
+            hints.ForbiddenDirections.Add(((wantedDir + 180f.Degrees()).Normalized(), 178f.Degrees(), activation));
         }
-
-        return [];
     }
 }
 
@@ -720,11 +785,13 @@ sealed class LaudaTheSpellcleaverStates : StateMachineBuilder
             .ActivateOnEnter<UnseenForce>()
             .ActivateOnEnter<SearingAxe>()
             .ActivateOnEnter<GuttlerGlutter>()
+            .ActivateOnEnter<InfernalPain>()
             .ActivateOnEnter<AutoAttack>();
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.LaudaTheSpellcleaver, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1092u, NameID = 14693u, SortOrder = 14)]
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.LaudaTheSpellcleaver, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1092u, NameID = 14693u, SortOrder = 14)]
+[PreferredKinship(BST.Kinship.Vile, "Ignore Beastly Aura, Unseen Force and Guttler Glutter knockbacks")]
 public sealed class LaudaTheSpellcleaver : BossModule
 {
     protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)

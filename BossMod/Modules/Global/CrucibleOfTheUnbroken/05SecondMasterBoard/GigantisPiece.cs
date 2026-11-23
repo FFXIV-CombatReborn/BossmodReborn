@@ -51,63 +51,81 @@ public enum IconID : uint
     SmashingStampIcon = 234, // player->self
 }
 
-sealed class Glower(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Glower, new AOEShapeRect(40f, 3f));
+sealed class Glower(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Glower, new AOEShapeRect(40f, 1.5f));
+sealed class Camaraderie(BossModule module) : Components.CastInterruptHint(module, (uint)AID.Camaraderie, showNameInHint: true);
 
 // Handles the bait and weapon's element
 
 sealed class SmashingStampBait(BossModule module) : Components.BaitAwayIcon(module, new AOEShapeRect(7.0f, 2.0f), (uint)IconID.SmashingStampIcon,
-    activationDelay: 6.1f) {
+    activationDelay: 6.1f)
+{
     private readonly List<Actor> slimes = [];
     public bool weaponRecentlyChanged = false;
 
     public enum Element { NONE, LIGHTNING, FIRE }
     public Element weaponElement = Element.NONE;
 
-    public override void OnActorCreated(Actor actor) {
-        if (actor.OID is (uint)OID.CongealedLightning or (uint)OID.CongealedKindling) {
+    public override void OnActorCreated(Actor actor)
+    {
+        if (actor.OID is (uint)OID.CongealedLightning or (uint)OID.CongealedKindling)
+        {
             slimes.Add(actor);
             weaponRecentlyChanged = false;
         }
     }
 
-    public override void OnActorDestroyed(Actor actor) {
-        if (actor.OID is (uint)OID.CongealedLightning or (uint)OID.CongealedKindling) {
+    public override void OnActorDestroyed(Actor actor)
+    {
+        if (actor.OID is (uint)OID.CongealedLightning or (uint)OID.CongealedKindling)
+        {
             slimes.Remove(actor);
         }
     }
 
-    public override void OnStatusGain(Actor actor, ref ActorStatus status) {
-        if (status.ID is var id && id == (uint)SID.WeaponElement && status.Extra == 0x499) {
+    public override void OnStatusGain(Actor actor, ref ActorStatus status)
+    {
+        if (status.ID is var id && id == (uint)SID.WeaponElement && status.Extra == 0x499)
+        {
             weaponElement = Element.LIGHTNING;
             weaponRecentlyChanged = true;
-        } else if (id == (uint)SID.WeaponElement && status.Extra == 0x49A) {
+        }
+        else if (id == (uint)SID.WeaponElement && status.Extra == 0x49A)
+        {
             weaponElement = Element.FIRE;
             weaponRecentlyChanged = true;
         }
     }
 
-    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID) {
-        if (iconID == (uint)IconID.SmashingStampIcon) {
+    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
+    {
+        if (iconID == (uint)IconID.SmashingStampIcon)
+        {
             CurrentBaits.Add(new(Module.PrimaryActor, actor, Shape, WorldState.FutureTime(ActivationDelay)));
         }
     }
 
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
-        if (spell.Action.ID == (uint)AID.SmashingStampBait) {
-            if (CurrentBaits.Count > 0) {
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.SmashingStampBait)
+        {
+            if (CurrentBaits.Count > 0)
+            {
                 CurrentBaits.RemoveAt(0);
             }
         }
     }
 
-    public override void AddHints(int slot, Actor actor, TextHints hints) {
+    public override void AddHints(int slot, Actor actor, TextHints hints)
+    {
         base.AddHints(slot, actor, hints);
 
-        if (CurrentBaits.Count == 0 || slimes.Count == 0) {
+        if (CurrentBaits.Count == 0 || slimes.Count == 0)
+        {
             return;
         }
 
-        switch (weaponElement) {
+        switch (weaponElement)
+        {
             case Element.NONE:
                 hints.Add("Hit any slime with the bait!", false);
                 break;
@@ -115,34 +133,42 @@ sealed class SmashingStampBait(BossModule module) : Components.BaitAwayIcon(modu
                 hints.Add("Hit the orange slime with the bait!", false);
                 break;
             case Element.FIRE:
-                hints.Add("Hint the purple slime with the bait!", false);
+                hints.Add("Hit the purple slime with the bait!", false);
                 break;
         }
     }
 
-    public override void DrawArenaForeground(int pcSlot, Actor pc) {
+    public override void DrawArenaForeground(int pcSlot, Actor pc)
+    {
         base.DrawArenaForeground(pcSlot, pc);
 
-        if (CurrentBaits.Count == 0 || slimes.Count == 0) {
+        if (CurrentBaits.Count == 0 || slimes.Count == 0)
+        {
             return;
         }
 
-        switch (weaponElement) {
+        switch (weaponElement)
+        {
             case Element.NONE:
-                foreach (var slime in slimes) {
+                foreach (var slime in slimes)
+                {
                     Arena.ZoneCircleOutline(slime.Position, 1f, Colors.Safe);
                 }
                 break;
             case Element.LIGHTNING:
-                foreach (var slime in slimes) {
-                    if (slime.OID == (uint)OID.CongealedKindling) {
+                foreach (var slime in slimes)
+                {
+                    if (slime.OID == (uint)OID.CongealedKindling)
+                    {
                         Arena.ZoneCircleOutline(slime.Position, 1f, Colors.Safe);
                     }
                 }
                 break;
             case Element.FIRE:
-                foreach (var slime in slimes) {
-                    if (slime.OID == (uint)OID.CongealedLightning) {
+                foreach (var slime in slimes)
+                {
+                    if (slime.OID == (uint)OID.CongealedLightning)
+                    {
                         Arena.ZoneCircleOutline(slime.Position, 1f, Colors.Safe);
                     }
                 }
@@ -150,32 +176,38 @@ sealed class SmashingStampBait(BossModule module) : Components.BaitAwayIcon(modu
         }
     }
 
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         base.AddAIHints(slot, actor, assignment, hints);
         var countSlime = slimes.Count;
         var countBaits = CurrentBaits.Count;
-        if (countBaits == 0 || countSlime == 0 || !IsBaitTarget(actor)) {
+        if (countBaits == 0 || countSlime == 0 || !IsBaitTarget(actor))
+        {
             return;
         }
 
         var currentBait = CurrentBaits[0];
         var activeSlimes = CollectionsMarshal.AsSpan(slimes);
 
-        var targetSlime = weaponElement switch {
+        var targetSlime = weaponElement switch
+        {
             Element.LIGHTNING => (uint)OID.CongealedKindling,
             Element.FIRE => (uint)OID.CongealedLightning,
             _ => (uint)0
         };
 
         List<ShapeDistance> circles = [];
-        for (var i = 0; i < countSlime; i++) {
+        for (var i = 0; i < countSlime; i++)
+        {
             ref var slime = ref activeSlimes[i];
-            if (targetSlime == 0 || slime.OID == targetSlime) {
+            if (targetSlime == 0 || slime.OID == targetSlime)
+            {
                 circles.Add(new SDCircle(slime.Position, 1.0f));
             }
         }
 
-        if (circles.Count == 0) {
+        if (circles.Count == 0)
+        {
             return;
         }
 
@@ -184,7 +216,7 @@ sealed class SmashingStampBait(BossModule module) : Components.BaitAwayIcon(modu
 }
 
 sealed class SmashingStamp(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SmashingStamp, new AOEShapeRect(40f, 4f));
-sealed class SmashingStampBaitAOE(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SmashingStamp, new AOEShapeRect(7f, 2f));
+sealed class SmashingStampBaitAOE(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SmashingStampBait, new AOEShapeRect(7f, 2f)); // was keyed to the 40y SmashingStamp, so the bait rects never showed
 
 sealed class GiganticRageCircle(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GiganticRageCircle, 15f);
 sealed class GiganticRageCone(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.GiganticRageCone, (uint)AID.GiganticRageCone1],
@@ -243,7 +275,8 @@ sealed class GiganticRageType(BossModule module) : Components.GenericBaitAway(mo
             return;
         }
 
-        var player = Raid.Player()!;
+        if (Raid.Player() is not Actor player)
+            return;
 
         switch (smashingStampBait.weaponElement)
         {
@@ -309,6 +342,7 @@ sealed class GigantisPieceStates : StateMachineBuilder
     public GigantisPieceStates(BossModule module) : base(module)
     {
         TrivialPhase()
+            .ActivateOnEnter<Camaraderie>()
             .ActivateOnEnter<SmashingStampBait>()
             .ActivateOnEnter<SmashingStampBaitAOE>()
             .ActivateOnEnter<SmashingStamp>()
@@ -323,6 +357,7 @@ sealed class GigantisPieceStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.GigantisPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1092u, NameID = 14670u, SortOrder = 10)]
+[PreferredKinship(BST.Kinship.Soul, "Interrupt Cyclops Piece's Camaraderie and the slimes' Rupture")]
 public sealed class GigantisPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f))
 {
     private SmashingStampBait? smashing;

@@ -47,6 +47,10 @@ sealed class SuccubusMageAdd(BossModule module) : Components.Adds(module, (uint)
 sealed class SuccubusKnightAdd(BossModule module) : Components.Adds(module, (uint)OID.SuccubusKnight, 1);
 
 sealed class VoidFireII(BossModule module) : Components.SimpleAOEs(module, (uint)AID.VoidFireII, 10f);
+sealed class Fanaticism(BossModule module) : Components.CastInterruptHint(module, (uint)AID.Fanaticism, showNameInHint: true);
+sealed class BloodSword(BossModule module) : Components.SingleTargetCast(module, (uint)AID.BloodSword, "Tankbuster + lifesteal");
+sealed class ColdCaress(BossModule module) : Components.SingleTargetCast(module, (uint)AID.ColdCaress, "Tankbuster + poison");
+sealed class BeguilingMist(BossModule module) : Components.RaidwideCast(module, (uint)AID.BeguilingMist, "Raidwide + Nightmare");
 
 //HeartShatter1 = 46938, // 233C->self, 1.0s cast, range 24 circle
 sealed class HeartShatter(BossModule module) : Components.GenericAOEs(module)
@@ -94,6 +98,10 @@ sealed class PasDeSeulStates : StateMachineBuilder
     public PasDeSeulStates(BossModule module) : base(module)
     {
         TrivialPhase()
+            .ActivateOnEnter<Fanaticism>()
+            .ActivateOnEnter<BloodSword>()
+            .ActivateOnEnter<ColdCaress>()
+            .ActivateOnEnter<BeguilingMist>()
             .ActivateOnEnter<BloodRainCircle>()
             .ActivateOnEnter<BloodRainDonut>()
             .ActivateOnEnter<VoidAeroIIRect>()
@@ -102,8 +110,7 @@ sealed class PasDeSeulStates : StateMachineBuilder
             .ActivateOnEnter<SuccubusKnightAdd>()
             .ActivateOnEnter<VoidFireII>()
             .ActivateOnEnter<HeartShatter>()
-            .ActivateOnEnter<SweetSteel>()
-            ;
+            .ActivateOnEnter<SweetSteel>();
     }
 }
 
@@ -114,6 +121,9 @@ sealed class PasDeSeulStates : StateMachineBuilder
     GroupID = 1088u,
     NameID = 14541u,
     SortOrder = 6)]
+[PreferredKinship(BST.Kinship.Soul, "Interrupt Succubus Mage's Fanaticism")]
+[PreferredKinship(BST.Kinship.Wave, "Remove Pas de Seul's Damage Up if Fanaticism goes off")]
+[PreferredKinship(BST.Kinship.Ash, "Cleanse Poison from Cold Caress")]
 public sealed class PasDeSeul : BossModule
 {
     public PasDeSeul(WorldState ws, Actor primary) : this(ws, primary, BuildArena()) { }

@@ -22,6 +22,7 @@ public enum AID : uint
     BlackEruption2 = 46900, // Helper->location, 1.5s cast, range 5 circle
     AncientAero = 46869, // BoneBishop->self, 5.0+0.7s cast, single-target
     AncientAero1 = 46870, // Helper->self, 5.7s cast, range 40 width 8 rect
+    Skullsplinter = 46872, // BoneKnight->player, 5.0s cast, single-target
     Tumulus = 46866 // BoneKnight->self, 5.0s cast, range 6 circle
 }
 
@@ -35,12 +36,13 @@ public enum SID : uint
 
 sealed class Ossify(BossModule module) : Components.CastInterruptHint(module, (uint)AID.Ossify, showNameInHint: true);
 sealed class DeathSpiral(BossModule module) : Components.SimpleAOEs(module, (uint)AID.DeathSpiral1, new AOEShapeDonut(4f, 40f));
+sealed class Skullsplinter(BossModule module) : Components.SingleTargetCast(module, (uint)AID.Skullsplinter);
 
 // Puts a shield in front of himself. Player should have pet snarl why they get behind and beat him up.
 sealed class ForwardGuard(BoneBishop module) : Components.DirectionalParry(module, [(uint)OID.BoneKnight])
 {
     private bool active;
-    private readonly Actor boneKnight = module.BoneKnight!;
+    private readonly BoneBishop bossModule = module;
 
     public override void OnStatusGain(Actor actor, ref ActorStatus status)
     {
@@ -69,7 +71,16 @@ sealed class ForwardGuard(BoneBishop module) : Components.DirectionalParry(modul
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (active && boneKnight.TargetID != actor.InstanceID)
+        if (!active || bossModule.BoneKnight is not Actor boneKnight)
+        {
+            return;
+        }
+
+        if (boneKnight.TargetID == actor.InstanceID)
+        {
+            hints.FindEnemy(boneKnight)?.PreferShirking = true;
+        }
+        else
         {
             base.AddAIHints(slot, actor, assignment, hints);
         }
@@ -216,6 +227,7 @@ sealed class BoneBishopStates : StateMachineBuilder
         _module = module;
         TrivialPhase()
             .ActivateOnEnter<Ossify>()
+            .ActivateOnEnter<Skullsplinter>()
             .ActivateOnEnter<DeathSpiral>()
             .ActivateOnEnter<ForwardGuard>()
             .ActivateOnEnter<BlackEruption>()
@@ -225,7 +237,10 @@ sealed class BoneBishopStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.BoneBishop, Contributors = "wen", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1088u, NameID = 14532u, SortOrder = 3)]
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.BoneBishop, Contributors = "wen", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1088u, NameID = 14532u, SortOrder = 1)]
+[PreferredKinship(BST.Kinship.Soul, "Interrupt Bone Knight's Ossify")]
+[PreferredKinship(BST.Kinship.Wave, "Remove Bone Knight's Physical Damage Up if Ossify goes off")]
+[PreferredKinship(BST.Kinship.Ash, "Cleanse Windburn from Ancient Aero")]
 public sealed class BoneBishop(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f))
 {
     public Actor? BoneKnight;

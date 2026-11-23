@@ -1,6 +1,7 @@
 ﻿namespace BossMod.Global.CrucibleOfTheUnbroken.FirstMasterBoard.GolemPiece;
 
-public enum OID : uint {
+public enum OID : uint
+{
     GolemPiece = 0x4CCB,
     GolemPiece1 = 0x4CCC, // R4.000, x1
     GolemPieceHeart = 0x4D5A, // R2.200, x0 (spawn during fight), Part type
@@ -8,7 +9,8 @@ public enum OID : uint {
     Helper = 0x233C
 }
 
-public enum AID : uint {
+public enum AID : uint
+{
     AutoAttackStone = 50930, // GolemPiece/4CCC->player, no cast, single-target
 
     EarthenRingBoss = 48752, // GolemPiece->self, 6.2+0.8s cast, single-target
@@ -40,7 +42,8 @@ public enum AID : uint {
     Unknown1 = 50687, // 4CCC/GolemPiece->self, no cast, single-target
 }
 
-public enum TetherID : uint {
+public enum TetherID : uint
+{
     SwapTether = 431 // GolemPiece->4CCC
 }
 
@@ -49,31 +52,39 @@ sealed class Plaincracker(BossModule module) : Components.SimpleAOEs(module, (ui
 sealed class Outcrop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Outcrop, new AOEShapeCone(40f, 30f.Degrees()));
 sealed class SelfDestruct(BossModule module) : Components.RaidwideCast(module, (uint)AID.SelfDestruct, "Enrage");
 
-sealed class Shockwave(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Shockwave, new AOEShapeRect(5f, 2.5f)) {
+sealed class Shockwave(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Shockwave, new AOEShapeRect(5f, 2.5f))
+{
     // Used to track if the mechanic started - needed as the boss can die while casting it, if the cast goes through and the boss dies, the mechanic
     // will still play out
     private bool active = false;
 
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
         base.OnCastStarted(caster, spell);
 
-        if (spell.Action.ID == (uint)AID.Shockwave) {
+        if (spell.Action.ID == (uint)AID.Shockwave)
+        {
             active = true;
         }
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell) { }
 
-    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
-        if (spell.Action.ID == (uint)AID.GolemDeath && !active) {
-            if (Casters.Count > 0) {
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID == (uint)AID.GolemDeath && !active)
+        {
+            if (Casters.Count > 0)
+            {
                 Casters.Clear();
             }
         }
     }
 
-    public override void OnMapEffect(byte index, uint state) {
-        switch (state) {
+    public override void OnMapEffect(byte index, uint state)
+    {
+        switch (state)
+        {
             case 0x00020001u:
             case 0x00200010u:
                 active = true;
@@ -87,7 +98,8 @@ sealed class Shockwave(BossModule module) : Components.SimpleAOEs(module, (uint)
     }
 }
 
-sealed class Rockslide(BossModule module) : Components.GenericAOEs(module) {
+sealed class Rockslide(BossModule module) : Components.GenericAOEs(module)
+{
     private readonly List<AOEInstance> aoes = [];
     private readonly AOEShapeRect shape = new(15f, 5f, 15f);
 
@@ -95,36 +107,48 @@ sealed class Rockslide(BossModule module) : Components.GenericAOEs(module) {
     // will still play out
     private bool active;
 
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
-        if (spell.Action.ID == (uint)AID.Shockwave) {
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.Shockwave)
+        {
             active = true;
         }
     }
 
-    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
-        if (spell.Action.ID == (uint)AID.GolemDeath && !active) {
-            if (aoes.Count > 0) {
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID == (uint)AID.GolemDeath && !active)
+        {
+            if (aoes.Count > 0)
+            {
                 aoes.Clear();
             }
         }
     }
 
-    public override void OnMapEffect(byte index, uint state) {
-        if (aoes.Count == 0) {
-            if (state == 0x00200010u) { // Outside is bad - so we just display everything right away
+    public override void OnMapEffect(byte index, uint state)
+    {
+        if (aoes.Count == 0)
+        {
+            if (state == 0x00200010u)
+            { // Outside is bad - so we just display everything right away
                 var pos1 = new WPos(505f, 0f);
                 var pos2 = new WPos(535f, 0f);
                 var rot = 180f.Degrees();
                 aoes.Add(new(shape, pos1, rot, shapeDistance: shape.Distance(pos1, rot)));
                 aoes.Add(new(shape, pos2, rot, shapeDistance: shape.Distance(pos2, rot)));
                 active = true;
-            } else if (state == 0x00020001u) { // Inside is bad
+            }
+            else if (state == 0x00020001u)
+            { // Inside is bad
                 var pos = new WPos(520f, 0f);
                 var rot = 180f.Degrees();
                 aoes.Add(new(shape, pos, rot, shapeDistance: shape.Distance(pos, rot)));
                 active = true;
             }
-        } else if (state is 0x00400004u or 0x00080004u) {
+        }
+        else if (state is 0x00400004u or 0x00080004u)
+        {
             aoes.Clear();
             active = false;
         }
@@ -133,7 +157,8 @@ sealed class Rockslide(BossModule module) : Components.GenericAOEs(module) {
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(aoes);
 }
 
-sealed class PlaincrackerSwap(BossModule module) : Components.GenericAOEs(module) {
+sealed class PlaincrackerSwap(BossModule module) : Components.GenericAOEs(module)
+{
     private readonly List<AOEInstance> aoes = [];
     private readonly AOEShapeCircle circle = new(20f);
     private readonly AOEShapeDonut donut = new(5.0f, 50.0f);
@@ -143,10 +168,13 @@ sealed class PlaincrackerSwap(BossModule module) : Components.GenericAOEs(module
     private enum SpellType { NONE, CIRCLE, DONUT }
     private SpellType aoeType = SpellType.NONE;
 
-    public override void OnTethered(Actor source, in ActorTetherInfo tether) {
-        if (tether.ID == (uint)TetherID.SwapTether) {
+    public override void OnTethered(Actor source, in ActorTetherInfo tether)
+    {
+        if (tether.ID == (uint)TetherID.SwapTether)
+        {
             var target = WorldState.Actors.Find(tether.Target);
-            if (target == null) {
+            if (target == null)
+            {
                 return;
             }
 
@@ -156,50 +184,64 @@ sealed class PlaincrackerSwap(BossModule module) : Components.GenericAOEs(module
         }
     }
 
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
-        if (spell.Action.ID == (uint)AID.PlaincrackerSwap) {
-            aoeType =  SpellType.CIRCLE;
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.PlaincrackerSwap)
+        {
+            aoeType = SpellType.CIRCLE;
             InitIfReady();
             return;
         }
 
-        if (spell.Action.ID == (uint)AID.EarthenRingSwap) {
+        if (spell.Action.ID == (uint)AID.EarthenRingSwap)
+        {
             aoeType = SpellType.DONUT;
             InitIfReady();
         }
     }
 
-    private void InitIfReady() {
-        if (swapSource == null || targetSource == null || aoeType == SpellType.NONE) {
+    private void InitIfReady()
+    {
+        if (swapSource == null || targetSource == null || aoeType == SpellType.NONE)
+        {
             return;
         }
 
-        if (aoeType == SpellType.CIRCLE) {
+        if (aoeType == SpellType.CIRCLE)
+        {
             aoes.Add(new(circle, targetSource.Position, targetSource.Rotation, WorldState.FutureTime(12.7f)));
             return;
         }
 
-        if (aoeType == SpellType.DONUT) {
+        if (aoeType == SpellType.DONUT)
+        {
             aoes.Add(new(donut, targetSource.Position, targetSource.Rotation, WorldState.FutureTime(12.7f)));
         }
     }
 
     // If the source of the cast dies before the cast finishes then the swapped boss will not cast PlainCracker
-    public override void OnActorDeath(Actor actor) {
-        if (swapSource == null) {
+    public override void OnActorDeath(Actor actor)
+    {
+        if (swapSource == null)
+        {
             return;
         }
 
-        if (actor.InstanceID == swapSource.InstanceID) {
-            if (aoes.Count > 0) {
+        if (actor.InstanceID == swapSource.InstanceID)
+        {
+            if (aoes.Count > 0)
+            {
                 aoes.RemoveAt(0);
             }
         }
     }
 
-    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
-        if (spell.Action.ID is (uint)AID.PlaincrackerShort or (uint)AID.EarthenRingShort) {
-            if (aoes.Count > 0) {
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID is (uint)AID.PlaincrackerShort or (uint)AID.EarthenRingShort)
+        {
+            if (aoes.Count > 0)
+            {
                 aoes.RemoveAt(0);
                 targetSource = null;
                 swapSource = null;
@@ -208,16 +250,19 @@ sealed class PlaincrackerSwap(BossModule module) : Components.GenericAOEs(module
         }
     }
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) {
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
         var count = aoes.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return [];
         }
 
         var incomingAOEs = CollectionsMarshal.AsSpan(aoes);
         var time = WorldState.CurrentTime;
 
-        for (var i = 0; i < count; ++i) {
+        for (var i = 0; i < count; ++i)
+        {
             ref var aoe = ref incomingAOEs[i];
             aoe.Risky = aoe.Activation.AddSeconds(-riskyWindow) <= time;
         }
@@ -226,38 +271,49 @@ sealed class PlaincrackerSwap(BossModule module) : Components.GenericAOEs(module
     }
 }
 
-sealed class SkyRock(BossModule module) : Components.GenericAOEs(module) {
+sealed class SkyRock(BossModule module) : Components.GenericAOEs(module)
+{
     private readonly List<AOEInstance> aoes = [];
     private readonly AOEShapeCircle circle = new(8f);
     private readonly AOEShapeDonut donut = new(3f, 11f);
     private const float riskyWindow = 5.0f;
 
-    public override void OnActorEAnim(Actor actor, uint state) {
-        if (actor.OID is var oid && oid == (uint)OID.SkyRock && state == 0x00010002u) {
+    public override void OnActorEAnim(Actor actor, uint state)
+    {
+        if (actor.OID is var oid && oid == (uint)OID.SkyRock && state == 0x00010002u)
+        {
             aoes.Add(new(circle, actor.Position, actor.Rotation, WorldState.FutureTime(10.0f)));
-        } else if (oid == (uint)OID.SkyRock && state == 0x00400080u) {
+        }
+        else if (oid == (uint)OID.SkyRock && state == 0x00400080u)
+        {
             aoes.Add(new(donut, actor.Position, actor.Rotation, WorldState.FutureTime(10.0f)));
         }
     }
 
-    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
-        if (spell.Action.ID is (uint)AID.StoneshowerCircle or (uint)AID.StoneshowerDonut) {
-            if (aoes.Count > 0) {
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID is (uint)AID.StoneshowerCircle or (uint)AID.StoneshowerDonut)
+        {
+            if (aoes.Count > 0)
+            {
                 aoes.RemoveAt(0);
             }
         }
     }
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) {
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
         var count = aoes.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return [];
         }
 
         var incomingAOEs = CollectionsMarshal.AsSpan(aoes);
         var time = WorldState.CurrentTime;
 
-        for (var i = 0; i < count; ++i) {
+        for (var i = 0; i < count; ++i)
+        {
             ref var aoe = ref incomingAOEs[i];
             aoe.Risky = aoe.Activation.AddSeconds(-riskyWindow) <= time;
         }
@@ -266,17 +322,21 @@ sealed class SkyRock(BossModule module) : Components.GenericAOEs(module) {
     }
 }
 
-sealed class Obliterate(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.Obliterate, 17f) {
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+sealed class Obliterate(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.Obliterate, 17f)
+{
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         var count = Casters.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return;
         }
 
         var knockbacks = CollectionsMarshal.AsSpan(Casters);
         ref var knockback = ref knockbacks[0];
 
-        if (IsImmune(slot, knockback.Activation)) {
+        if (IsImmune(slot, knockback.Activation))
+        {
             return;
         }
 
@@ -284,8 +344,10 @@ sealed class Obliterate(BossModule module) : Components.SimpleKnockbacks(module,
     }
 }
 
-sealed class GolemPieceStates : StateMachineBuilder {
-    public GolemPieceStates(BossModule module) : base(module) {
+sealed class GolemPieceStates : StateMachineBuilder
+{
+    public GolemPieceStates(BossModule module) : base(module)
+    {
         TrivialPhase()
             .ActivateOnEnter<EarthenRing>()
             .ActivateOnEnter<Shockwave>()
@@ -301,10 +363,13 @@ sealed class GolemPieceStates : StateMachineBuilder {
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.GolemPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1091u, NameID = 14617u, SortOrder = 7)]
-public sealed class GolemPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(520f, 0f), new ArenaBoundsRect(20.0f, 15.0f)) {
+[PreferredKinship(BST.Kinship.Vile, "Ignore Obliterate's knockback")]
+public sealed class GolemPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(520f, 0f), new ArenaBoundsRect(20.0f, 15.0f))
+{
     public static readonly uint[] Bosses = [(uint)OID.GolemPiece, (uint)OID.GolemPiece1, (uint)OID.GolemPieceHeart];
 
-    protected override void DrawEnemies(int pcSlot, Actor pc) {
+    protected override void DrawEnemies(int pcSlot, Actor pc)
+    {
         Arena.Actors(this, Bosses);
     }
 

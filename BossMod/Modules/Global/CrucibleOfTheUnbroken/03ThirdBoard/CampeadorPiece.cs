@@ -105,7 +105,7 @@ public sealed class CampeadorPiece(WorldState ws, Actor primary) : BossModule(ws
     }
 
     private readonly string[] _prePullHints = [
-        "Fight kill order priority: Flowertender Piece/Soldado Piece (purple) -> Sabotender Piece/Guardia Piece/Soldado Piece (red)"
+        "Fight kill order priority: Flowertender Piece/Soldado Piece (purple) -> Sabotender Piece/Guardia Piece/Campeador Piece (red)"
     ];
 
     public override string[] PrePullHints => _prePullHints;

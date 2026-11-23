@@ -1,13 +1,15 @@
 ﻿namespace BossMod.Global.CrucibleOfTheUnbroken.ThirdBoard.YmirPiece;
 
-public enum OID : uint {
+public enum OID : uint
+{
     YmirPiece = 0x4C93,
     SahaginPiece = 0x4C95, // R2.000, x1
     YmirShell = 0x4C94, // R2.000, x1, Part type
     Helper = 0x233C
 }
 
-public enum AID : uint {
+public enum AID : uint
+{
     // Sahagin
     AutoAttackWater = 48626, // 4C95->player, no cast, single-target
     SahaginTeleport = 48484, // SahaginPiece->location, no cast, single-target
@@ -24,12 +26,14 @@ public enum AID : uint {
     BlanketThunder = 48479, // YmirPiece->self, 5.0s cast, range 40 circle
 }
 
-public enum SID : uint {
+public enum SID : uint
+{
     VulnerabilityDown = 2198,
     ParalyzingSpikes = 5434, // none->4C95, extra=0x64
 }
 
-public enum TetherID : uint {
+public enum TetherID : uint
+{
     ParalyzingSpikesTether = 6, // 4C95->YmirPiece
 }
 
@@ -37,84 +41,126 @@ sealed class WaterII(BossModule module) : Components.SimpleAOEs(module, (uint)AI
 sealed class BlanketThunder(BossModule module) : Components.RaidwideCast(module, (uint)AID.BlanketThunder);
 sealed class Dreadwash(BossModule module) : Components.CastInterruptHint(module, (uint)AID.Dreadwash);
 
-sealed class ParalyzingSpikes(BossModule module) : Components.Adds(module, (uint)OID.SahaginPiece, 3) {
+sealed class HeadSnatch(BossModule module) : Components.GenericAOEs(module)
+{
+    private readonly AOEShapeCone shape = new(7f, 60f.Degrees());
+    private readonly AOEInstance[] _aoe = new AOEInstance[1];
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        var ymir = Module.PrimaryActor;
+        if (ymir.IsDead || ymir.FindStatus((uint)SID.VulnerabilityDown) == null)
+        {
+            return [];
+        }
+
+        _aoe[0] = new(shape, ymir.Position, ymir.Rotation);
+        return _aoe;
+    }
+}
+
+sealed class ParalyzingSpikes(BossModule module) : Components.Adds(module, (uint)OID.SahaginPiece, 3)
+{
     private readonly List<Actor> avoidBosses = [];
 
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
-        if (spell.Action.ID == (uint)AID.ParalyzingSpikes) {
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.ParalyzingSpikes)
+        {
             avoidBosses.Add(caster);
         }
     }
 
-    public override void OnStatusLose(Actor actor, ref ActorStatus status) {
-        if (status.ID == (uint)SID.ParalyzingSpikes) {
+    public override void OnStatusLose(Actor actor, ref ActorStatus status)
+    {
+        if (status.ID == (uint)SID.ParalyzingSpikes)
+        {
             avoidBosses.Remove(actor);
         }
     }
 
-    public override void AddHints(int slot, Actor actor, TextHints hints) {
+    public override void AddHints(int slot, Actor actor, TextHints hints)
+    {
         var count = avoidBosses.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return;
         }
 
-        for (var i = 0; i < count; i++) {
-            if (avoidBosses[i].InstanceID == actor.TargetID) {
+        for (var i = 0; i < count; i++)
+        {
+            if (avoidBosses[i].InstanceID == actor.TargetID)
+            {
                 hints.Add("Attacking boss with spikes debuff!");
             }
         }
     }
 
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         var enemies = ActiveActors;
         var count = enemies.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return;
         }
 
-        for (var i = 0; i < count; i++) {
+        for (var i = 0; i < count; i++)
+        {
             var enemy = enemies[i];
             hints.SetPriority(enemy, avoidBosses.Contains(enemy) ? AIHints.Enemy.PriorityForbidden : 3);
         }
     }
 }
 
-sealed class VulnDown(BossModule module) : Components.Adds(module, (uint)OID.YmirPiece, 1) {
+sealed class VulnDown(BossModule module) : Components.Adds(module, (uint)OID.YmirPiece, 1)
+{
     private readonly List<Actor> avoidBosses = [];
 
-    public override void OnStatusGain(Actor actor, ref ActorStatus status) {
-        if (status.ID == (uint)SID.VulnerabilityDown) {
+    public override void OnStatusGain(Actor actor, ref ActorStatus status)
+    {
+        if (status.ID == (uint)SID.VulnerabilityDown)
+        {
             avoidBosses.Add(actor);
         }
     }
 
-    public override void OnStatusLose(Actor actor, ref ActorStatus status) {
-        if (status.ID == (uint)SID.VulnerabilityDown) {
+    public override void OnStatusLose(Actor actor, ref ActorStatus status)
+    {
+        if (status.ID == (uint)SID.VulnerabilityDown)
+        {
             avoidBosses.Remove(actor);
         }
     }
 
-    public override void AddHints(int slot, Actor actor, TextHints hints) {
+    public override void AddHints(int slot, Actor actor, TextHints hints)
+    {
         var count = avoidBosses.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return;
         }
 
-        for (var i = 0; i < count; i++) {
-            if (avoidBosses[i].InstanceID == actor.TargetID) {
+        for (var i = 0; i < count; i++)
+        {
+            if (avoidBosses[i].InstanceID == actor.TargetID)
+            {
                 hints.Add("Attacking invincible target!");
             }
         }
     }
 
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         var enemies = ActiveActors;
         var count = enemies.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return;
         }
 
-        for (var i = 0; i < count; i++) {
+        for (var i = 0; i < count; i++)
+        {
             var enemy = enemies[i];
             hints.SetPriority(enemy, avoidBosses.Contains(enemy) ? AIHints.Enemy.PriorityForbidden : 1);
         }
@@ -123,25 +169,32 @@ sealed class VulnDown(BossModule module) : Components.Adds(module, (uint)OID.Ymi
 
 sealed class YmirShell(BossModule module) : Components.Adds(module, (uint)OID.YmirShell, 2);
 
-sealed class Tsunami(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.Tsunami, 35f, kind: Kind.DirForward) {
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+sealed class Tsunami(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.Tsunami, 35f, kind: Kind.DirForward)
+{
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         var count = Casters.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return;
         }
 
         var knockback = Casters[0];
 
-        if (!IsImmune(slot, knockback.Activation)) {
+        if (!IsImmune(slot, knockback.Activation))
+        {
             hints.AddForbiddenZone(new SDKnockbackInAABBRectFixedDirection(Arena.Center, Distance * knockback.Direction.ToDirection(), 20f, 20f),
                 knockback.Activation);
         }
     }
 }
 
-sealed class YmirPieceStates : StateMachineBuilder {
-    public YmirPieceStates(BossModule module) : base(module) {
+sealed class YmirPieceStates : StateMachineBuilder
+{
+    public YmirPieceStates(BossModule module) : base(module)
+    {
         TrivialPhase()
+            .ActivateOnEnter<HeadSnatch>()
             .ActivateOnEnter<WaterII>()
             .ActivateOnEnter<Tsunami>()
             .ActivateOnEnter<BlanketThunder>()
@@ -154,9 +207,13 @@ sealed class YmirPieceStates : StateMachineBuilder {
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.YmirPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14569u, SortOrder = 2)]
-public sealed class YmirPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsSquare(20f)) {
+[PreferredKinship(BST.Kinship.Soul, "Interrupt Sahagin Piece's Dreadwash")]
+[PreferredKinship(BST.Kinship.Vile, "Ignore Tsunami's knockback")]
+public sealed class YmirPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsSquare(20f))
+{
     public static readonly uint[] Bosses = [(uint)OID.YmirPiece, (uint)OID.SahaginPiece];
-    protected override void DrawEnemies(int pcSlot, Actor pc) {
+    protected override void DrawEnemies(int pcSlot, Actor pc)
+    {
         Arena.Actors(this, Bosses);
     }
 

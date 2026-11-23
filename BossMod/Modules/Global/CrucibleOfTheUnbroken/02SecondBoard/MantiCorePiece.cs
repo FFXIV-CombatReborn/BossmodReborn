@@ -140,35 +140,44 @@ sealed class WildCharge(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
-sealed class HeadsAndTails(BossModule module) : Components.GenericAOEs(module) {
+sealed class HeadsAndTails(BossModule module) : Components.GenericAOEs(module)
+{
     private readonly List<AOEInstance> aoes = [];
     private readonly AOEShapeCone shape = new(40.0f, 90.0f.Degrees());
 
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
-        if (spell.Action.ID is (uint)AID.HeadsAndTailsFront or (uint)AID.TailsAndHeadsBack) {
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID is (uint)AID.HeadsAndTailsFront or (uint)AID.TailsAndHeadsBack)
+        {
             aoes.Add(new(shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell)));
             aoes.Add(new(shape, spell.LocXZ, spell.Rotation + 180.0f.Degrees(), WorldState.FutureTime(7.7d), risky: false));
         }
     }
 
-    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
-        if (spell.Action.ID is (uint)AID.HeadsAndTailsFront or (uint)AID.HeadsAndTailsBack or (uint)AID.TailsAndHeadsBack or (uint)AID.TailsAndHeadsFront) {
-            if (aoes.Count > 0) {
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID is (uint)AID.HeadsAndTailsFront or (uint)AID.HeadsAndTailsBack or (uint)AID.TailsAndHeadsBack or (uint)AID.TailsAndHeadsFront)
+        {
+            if (aoes.Count > 0)
+            {
                 aoes.RemoveAt(0);
             }
         }
     }
 
-    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) {
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
         var count = aoes.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return [];
         }
 
         var max = count > 2 ? 2 : count;
         var nextAOEs = CollectionsMarshal.AsSpan(aoes);
 
-        for (var i = 0; i < max; ++i) {
+        for (var i = 0; i < max; ++i)
+        {
             ref var aoe = ref nextAOEs[i];
             aoe.Color = i == 0 ? Colors.Danger : Colors.AOE;
             aoe.Risky = i == 0;

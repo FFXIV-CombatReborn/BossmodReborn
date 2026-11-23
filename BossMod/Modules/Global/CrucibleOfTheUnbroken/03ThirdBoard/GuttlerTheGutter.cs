@@ -71,11 +71,14 @@ public enum TetherID : uint
     OverpoweringPointTether = 1, // GuttlerTheGutter->player
 }
 
-sealed class AutoAttack(BossModule module) : Components.Cleave(module, (uint)AID.AutoAttack, new AOEShapeCone(9f, 55f.Degrees()), activeWhileCasting: false) {
+sealed class AutoAttack(BossModule module) : Components.Cleave(module, (uint)AID.AutoAttack, new AOEShapeCone(9f, 55f.Degrees()), activeWhileCasting: false)
+{
     private readonly BeastlyAura? beastlyAura = module.FindComponent<BeastlyAura>();
 
-    public override void AddHints(int slot, Actor actor, TextHints hints) {
-        if (beastlyAura == null || beastlyAura.knockbacks.Count > 0) {
+    public override void AddHints(int slot, Actor actor, TextHints hints)
+    {
+        if (beastlyAura == null || beastlyAura.knockbacks.Count > 0)
+        {
             return;
         }
 
@@ -83,11 +86,13 @@ sealed class AutoAttack(BossModule module) : Components.Cleave(module, (uint)AID
     }
 
     // Set the cleave aoe to be maxValue so it doesn't overlap with really bad mechanics such as the cage - getting hitting by the cleave is fine
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         AllowPetTargets = true;
         NextExpected = DateTime.MaxValue;
 
-        if (beastlyAura == null || beastlyAura.knockbacks.Count > 0) {
+        if (beastlyAura == null || beastlyAura.knockbacks.Count > 0)
+        {
             return;
         }
 
@@ -130,9 +135,18 @@ sealed class DeadlyDemesne(BossModule module) : Components.GenericAOEs(module)
     {
         if (spell.Action.ID == (uint)AID.LifeClaim)
         {
-            if (aoes.Count > 0)
+            var index = IndexOfClosestAOE(aoes, caster.Position, shape);
+            if (index < 0)
             {
-                aoes.RemoveRange(0, 2);
+                return;
+            }
+
+            var origin = aoes[index].Origin;
+            aoes.RemoveAt(index);
+            var cage = IndexOfClosestAOE(aoes, origin, rect);
+            if (cage >= 0 && aoes[cage].Origin == origin)
+            {
+                aoes.RemoveAt(cage);
             }
         }
     }
@@ -158,38 +172,47 @@ sealed class DeadlyDemesne(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
-sealed class MoltenMetalBait(BossModule module) : Components.BaitAwayIcon(module, new AOEShapeCircle(6.0f), (uint)IconID.MoltenMetal, centerAtTarget: true) {
+sealed class MoltenMetalBait(BossModule module) : Components.BaitAwayIcon(module, new AOEShapeCircle(6.0f), (uint)IconID.MoltenMetal, centerAtTarget: true)
+{
     private readonly WPos[] waypoints = [new WPos(520.0f, -440.0f), new WPos(520.0f, -400.0f)];
 
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
-        if (spell.Action.ID == (uint)AID.MoltenMetalBaitCircle) {
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.MoltenMetalBaitCircle)
+        {
             CurrentBaits.Clear();
         }
     }
 
-    public override void AddHints(int slot, Actor actor, TextHints hints) {
-        if (CurrentBaits.Count == 0) {
+    public override void AddHints(int slot, Actor actor, TextHints hints)
+    {
+        if (CurrentBaits.Count == 0)
+        {
             return;
         }
 
         hints.Add("Bait far away on one side of the map!");
     }
 
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
-        if (CurrentBaits.Count == 0 || !IsBaitTarget(actor)) {
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        if (CurrentBaits.Count == 0 || !IsBaitTarget(actor))
+        {
             return;
         }
 
         List<ShapeDistance> safeSpots = [];
-        foreach (var spot in waypoints) {
+        foreach (var spot in waypoints)
+        {
             safeSpots.Add(new SDCircle(spot, 2.0f));
         }
 
-        if (safeSpots.Count == 0) {
+        if (safeSpots.Count == 0)
+        {
             return;
         }
 
-        hints.AddForbiddenZone(new SDInvertedUnion([..safeSpots]));
+        hints.AddForbiddenZone(new SDInvertedUnion([.. safeSpots]));
     }
 }
 
@@ -199,18 +222,38 @@ sealed class OverpoweringPoint(BossModule module) : Components.GenericAOEs(modul
     private readonly AOEShapeCone cone = new(40f, 65f.Degrees()); // Cones to prevent baiting towards the adds
     private readonly AOEShapeRect rect = new(60f, 3f); // Actual bait shape
     private readonly AOEShapeCircle circle = new(6f); // Circle under boss to prevent baiting under the boss
+    private readonly List<Actor> statues = module.Enemies((uint)OID.ThanatosIdlePiece);
+    private bool baiting;
+
+    private bool AnyStatue()
+    {
+        var count = statues.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            if (!statues[i].IsDeadOrDestroyed)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.OverpoweringPoint)
         {
-            aoes.Add(new(cone, Arena.Center, Angle.AnglesCardinals[0]));
-            aoes.Add(new(cone, Arena.Center, Angle.AnglesCardinals[3]));
+            baiting = true;
+            if (!AnyStatue())
+            {
+                aoes.Add(new(cone, Arena.Center, Angle.AnglesCardinals[0]));
+                aoes.Add(new(cone, Arena.Center, Angle.AnglesCardinals[3]));
+            }
             aoes.Add(new(circle, Module.PrimaryActor.Position, Module.PrimaryActor.Rotation));
         }
 
         if (spell.Action.ID == (uint)AID.OverpoweringPoint2)
         {
+            baiting = false;
             aoes.Clear();
             aoes.Add(new(rect, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell)));
         }
@@ -220,6 +263,7 @@ sealed class OverpoweringPoint(BossModule module) : Components.GenericAOEs(modul
     {
         if (spell.Action.ID == (uint)AID.OverpoweringPoint2)
         {
+            baiting = false;
             if (aoes.Count > 0)
             {
                 aoes.Clear();
@@ -228,13 +272,67 @@ sealed class OverpoweringPoint(BossModule module) : Components.GenericAOEs(modul
     }
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(aoes);
+
+    public override void AddHints(int slot, Actor actor, TextHints hints)
+    {
+        base.AddHints(slot, actor, hints);
+        if (baiting && AnyStatue())
+        {
+            hints.Add("Don't aim the line at a statue!");
+        }
+    }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        base.AddAIHints(slot, actor, assignment, hints);
+        if (!baiting)
+        {
+            return;
+        }
+
+        var source = Module.PrimaryActor.Position;
+        var count = statues.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            var statue = statues[i];
+            if (statue.IsDeadOrDestroyed)
+            {
+                continue;
+            }
+            var offset = statue.Position - source;
+            var distance = offset.Length();
+            if (distance > 0f)
+            {
+                hints.AddForbiddenZone(new SDCone(source, 100f, Angle.FromDirection(offset), Angle.Atan2(rect.HalfWidth + statue.HitboxRadius, distance)));
+            }
+        }
+    }
+
+    public override void DrawArenaForeground(int pcSlot, Actor pc)
+    {
+        base.DrawArenaForeground(pcSlot, pc);
+        if (!baiting)
+        {
+            return;
+        }
+
+        var count = statues.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            var statue = statues[i];
+            if (!statue.IsDeadOrDestroyed)
+            {
+                Arena.ZoneCircleOutline(statue.Position, statue.HitboxRadius, Colors.Vulnerable);
+            }
+        }
+    }
 }
 
 sealed class BeastlyAura(BossModule module) : Components.GenericKnockback(module)
 {
     public readonly List<Knockback> knockbacks = [];
     private static readonly AOEShapeRect shape = new(80f, 40f);
-    private ShapeDistance distance;
+    private ShapeDistance? distance;
     private const float knockbackDistance = 20f;
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
@@ -277,7 +375,7 @@ sealed class BeastlyAura(BossModule module) : Components.GenericKnockback(module
 
         var activation = knockbacks[0].Activation;
 
-        if (!IsImmune(slot, activation))
+        if (!IsImmune(slot, activation) && distance != null)
         {
             hints.AddForbiddenZone(distance, activation);
             // Handles the sides of the center of the map (left & right)
@@ -323,6 +421,8 @@ sealed class GuttlerTheGutterStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.GuttlerTheGutter, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14592u, SortOrder = 8)]
+[PreferredKinship(BST.Kinship.Vile, "Ignore Beastly Aura's knockbacks")]
+[PreferredKinship(BST.Kinship.Ash, "Cleanse Poison from Deadly Demesne")]
 public sealed class GuttlerTheGutter : BossModule
 {
     protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)

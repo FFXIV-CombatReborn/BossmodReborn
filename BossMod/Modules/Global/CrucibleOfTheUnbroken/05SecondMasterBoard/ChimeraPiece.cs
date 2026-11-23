@@ -20,6 +20,11 @@ public enum AID : uint
     TheRamsRoarBoss = 49311, // ChimeraPiece->self, 6.0+1.0s cast, single-target
     TheRamsRoar = 49315, // Helper->self, 7.0s cast, range 12 circle
 
+    TheDragonsRoarBoss = 49312, // ChimeraPiece->self, 6.0s cast, single-target
+    TheDragonsRoarBoss2 = 49313, // ChimeraPiece->self, 6.0s cast, single-target
+    TheDragonsRoarBoss3 = 49314, // ChimeraPiece->self, 6.0s cast, single-target
+    TheDragonsRoar = 49316, // Helper->self, 7.0s cast, range 8-40 donut
+
     TheLionsBreath = 49304, // Helper->self, 7.0s cast, range 60 240.000-degree cone
     TheRamsBreath = 49300, // Helper->self, 7.0s cast, range 60 240.000-degree cone
     TheDragonsBreath = 49302, // Helper->self, 7.0s cast, range 60 240.000-degree cone
@@ -63,6 +68,7 @@ public enum TetherID : uint
 
 sealed class ToxicTantrum(BossModule module) : Components.RaidwideCast(module, (uint)AID.ToxicTantrum, "Raidwide + applies poison");
 sealed class TheRamsRoar(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TheRamsRoar, 12f);
+sealed class TheDragonsRoar(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TheDragonsRoar, new AOEShapeDonut(8f, 40f));
 sealed class TheLionsBreath(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.TheLionsBreath, (uint)AID.TheRamsBreath,
         (uint)AID.TheDragonsBreath], new AOEShapeCone(60f, 120f.Degrees()));
 
@@ -87,7 +93,7 @@ sealed class IcePuddle(BossModule module) : Components.GenericAOEs(module)
     {
         if (actor.OID is (uint)OID.IcePuddle)
         {
-            puddles.Add(new(shape, actor.Position));
+            puddles.Add(new(shape, actor.Position, actorID: actor.InstanceID));
         }
     }
 
@@ -95,9 +101,15 @@ sealed class IcePuddle(BossModule module) : Components.GenericAOEs(module)
     {
         if (actor.OID == (uint)OID.IcePuddle && state == 4)
         {
-            if (puddles.Count > 0)
+            var count = puddles.Count;
+            var id = actor.InstanceID;
+            for (var i = 0; i < count; ++i)
             {
-                puddles.RemoveAt(0);
+                if (puddles[i].ActorID == id)
+                {
+                    puddles.RemoveAt(i);
+                    return;
+                }
             }
         }
     }
@@ -146,7 +158,8 @@ sealed class BallLightning(BossModule module) : Components.GenericAOEs(module)
     public override void Update()
     {
         var count = puddles.Count;
-        aoes = new AOEInstance[count];
+        if (aoes.Length != count)
+            aoes = new AOEInstance[count];
         for (var i = 0; i < count; ++i)
         {
             var puddle = puddles[i];
@@ -242,6 +255,7 @@ sealed class ChimeraPieceStates : StateMachineBuilder
     {
         TrivialPhase()
             .ActivateOnEnter<ToxicTantrum>()
+            .ActivateOnEnter<TheDragonsRoar>()
             .ActivateOnEnter<TheRamsRoar>()
             .ActivateOnEnter<TheLionsBreath>()
             .ActivateOnEnter<TheRamsKeeperBait>()
@@ -253,7 +267,8 @@ sealed class ChimeraPieceStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.ChimeraPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1092u, NameID = 14663u, SortOrder = 8)]
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.ChimeraPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1092u, NameID = 14663u, SortOrder = 8)]
+[PreferredKinship(BST.Kinship.Ash, "Cleanse Poison, Frostbite and Ball Lightning's Paralysis")]
 public sealed class ChimeraPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f))
 {
     private readonly string[] _prePullHints = [

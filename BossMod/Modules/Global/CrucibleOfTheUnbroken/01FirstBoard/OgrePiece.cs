@@ -1,4 +1,4 @@
-namespace BossMod.Global.CrucibleOfTheUnbroken.FirstBoard.OgrePiece;
+﻿namespace BossMod.Global.CrucibleOfTheUnbroken.FirstBoard.OgrePiece;
 
 public enum OID : uint
 {
@@ -29,6 +29,7 @@ public enum AID : uint
     ScorchedEarth1 = 49728, // GreatWispPiece->self, no cast, range 60 circle
     FireCall = 46921, // OgrePiece->self, 4.0s cast, single-target : Summons BallOfFire and tethers to player
     ArmOfPurgatory = 46922, // BallOfFire->self, 1.0s cast, range 10 circle
+    StraightPunch = 46920, // OgrePiece->player, 5.0s cast, single-target
 
 }
 
@@ -45,6 +46,8 @@ public enum TetherID : uint
 sealed class ScorchingSmite(BossModule module)
     : Components.SimpleAOEGroups(module, [(uint)AID.ScorchingSmite1, (uint)AID.ScorchingSmite4], new AOEShapeCone(40f, 60f.Degrees()));
 
+sealed class StraightPunch(BossModule module) : Components.SingleTargetCast(module, (uint)AID.StraightPunch);
+
 //Magma = 46916, // Helper->location, 3.0s cast, range 3 circle
 sealed class Magma(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Magma, 3f);
 
@@ -57,13 +60,29 @@ sealed class MagmaPuddle(BossModule module) : Components.Voidzone(module, 5.0f, 
 sealed class BurningWardPuddle(BossModule module) : Components.Voidzone(module, 5.0f, m => m.Enemies((uint)OID.BurningWardPuddle).Where(z => z.EventState != 7));
 
 sealed class WispAdds(BossModule module)
-    : Components.AddsMulti(module, [(uint)OID.WispPiece, (uint)OID.GreatWispPiece], 1);
+    : Components.AddsMulti(module, [(uint)OID.WispPiece, (uint)OID.GreatWispPiece], 1)
+{
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        var ogre = Module.PrimaryActor.Position;
+        var count = hints.PotentialTargets.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            var e = hints.PotentialTargets[i];
+            if (e.Actor.OID is (uint)OID.WispPiece or (uint)OID.GreatWispPiece)
+            {
+                var distance = (e.Actor.Position - ogre).Length();
+                e.Priority = Math.Clamp(1 + (int)((20f - distance) / 5f), 1, 5);
+            }
+        }
+    }
+}
 
 sealed class RaidWideFires(BossModule module)
-    : Components.RaidwideCasts(module, [(uint)AID.Allfire, (uint)AID.ScorchedEarth, (uint)AID.ScorchedEarth1]);
+    : Components.RaidwideCasts(module, [(uint)AID.Allfire]);
 
-// Ball of Fire will be treated as a moving void zone in order to avoid it blowing up on pc. May need to increase size if it isn't enough room to avoid.
-sealed class BallOfFireVoidZone(BossModule module) : Components.Voidzone(module, 6.0f, m => m.Enemies((uint)OID.BallOfFire).Where(z => z.EventState != 7));
+// Ball of Fire chases the player and explodes into an r10 circle on contact or after 15s, so keep out of its full explosion radius.
+sealed class BallOfFireVoidZone(BossModule module) : Components.Voidzone(module, 10.0f, m => m.Enemies((uint)OID.BallOfFire).Where(z => z.EventState != 7));
 
 // When Ball of Fire explodes it is a large r10 circle.
 sealed class ArmOfPurgatory(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ArmOfPurgatory, 10f);
@@ -73,6 +92,7 @@ sealed class OgrePieceStates : StateMachineBuilder
     public OgrePieceStates(BossModule module) : base(module)
     {
         TrivialPhase()
+            .ActivateOnEnter<StraightPunch>()
             .ActivateOnEnter<ScorchingSmite>()
             .ActivateOnEnter<RaidWideFires>()
             .ActivateOnEnter<Magma>()
@@ -81,8 +101,7 @@ sealed class OgrePieceStates : StateMachineBuilder
             .ActivateOnEnter<BurningWardPuddle>()
             .ActivateOnEnter<WispAdds>()
             .ActivateOnEnter<BallOfFireVoidZone>()
-            .ActivateOnEnter<ArmOfPurgatory>()
-            ;
+            .ActivateOnEnter<ArmOfPurgatory>();
     }
 }
 
@@ -92,6 +111,6 @@ sealed class OgrePieceStates : StateMachineBuilder
     GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken,
     GroupID = 1088u,
     NameID = 14538u,
-    SortOrder = 4)]
+    SortOrder = 5)]
 
 public sealed class OgrePiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f));

@@ -157,8 +157,10 @@ sealed class ArborealStorm(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
-sealed class TreantPieceStates : StateMachineBuilder {
-    public TreantPieceStates(BossModule module) : base(module) {
+sealed class TreantPieceStates : StateMachineBuilder
+{
+    public TreantPieceStates(BossModule module) : base(module)
+    {
         TrivialPhase()
             .ActivateOnEnter<RustlingBreezeLeftRight>()
             .ActivateOnEnter<RustlingBreezeMiddle>()
@@ -170,8 +172,10 @@ sealed class TreantPieceStates : StateMachineBuilder {
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.TreantPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1091u, NameID = 14618u, SortOrder = 8)]
-public sealed class TreantPiece : BossModule {
-    public TreantPiece(WorldState ws, Actor primary) : base(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f)) {
+public sealed class TreantPiece : BossModule
+{
+    public TreantPiece(WorldState ws, Actor primary) : base(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f))
+    {
         ActivateComponent<BossPuddle>();
     }
 

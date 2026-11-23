@@ -20,6 +20,10 @@ public enum AID : uint
     RingingBlade = 49293, // Helper->self, 7.0s cast, range 5-60 donut
     CirclingBladeBoss = 49294, // MedusaPiece->self, no cast, single-target
     CirclingBlade = 49295, // Helper->self, 9.0s cast, range 6 circle
+    RipplingEvisceration = 49288, // MedusaPiece->self, 6.5s cast, single-target
+    CirclingBladeFirst = 49289, // Helper->self, 7.0s cast, range 6 circle
+    RingingBladeBoss = 49290, // MedusaPiece->self, no cast, single-target
+    RingingBladeSecond = 49291, // Helper->self, 9.0s cast, range 5-60 donut
     PetrifyingPassionBoss = 49279, // MedusaPiece->self, 3.0s cast, single-target
     PetrifyingPassionLock = 49280, // MedusaPiece->self, no cast, single-target
     PetrifyingPassion = 49281, // Helper->self, 3.0s cast, range 60 45.000-degree cone
@@ -28,6 +32,8 @@ public enum AID : uint
     // LamiaPiece
     AutoAttackFire = 48622, // 4CFA->player, no cast, single-target
     Raise = 49287, // 4CFA->4CFA, 10.0s cast, single-target
+    CircleOfFlames = 49284, // 4CFA->location, 4.0s cast, range 5 circle
+    TerrorizingMiasma = 49286, // 4CFA->self, 4.0s cast, range 6 circle
 
     // CyclopsPiece
     AutoAttackCyclopsPiece = 50937, // 4CFB->player, no cast, single-target
@@ -59,6 +65,8 @@ public enum TetherID : uint
 
 sealed class Glower(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Glower, new AOEShapeRect(40f, 1.5f));
 sealed class Raise(BossModule module) : Components.CastInterruptHint(module, (uint)AID.Raise, showNameInHint: true);
+sealed class CircleOfFlames(BossModule module) : Components.SimpleAOEs(module, (uint)AID.CircleOfFlames, 5f);
+sealed class TerrorizingMiasma(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TerrorizingMiasma, 6f);
 
 sealed class PetrifyingRegardBait(BossModule module) : Components.BaitAwayIcon(module, new AOEShapeCone(60f, 22.5f.Degrees()), (uint)IconID.PetrifyingRegardLockOn, activationDelay: 5.8d)
 {
@@ -202,9 +210,9 @@ sealed class RingCircleBlade(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID is var id && id is (uint)AID.RingingBlade or (uint)AID.CirclingBlade)
+        if (spell.Action.ID is var id && id is (uint)AID.RingingBlade or (uint)AID.CirclingBlade or (uint)AID.CirclingBladeFirst or (uint)AID.RingingBladeSecond)
         {
-            AOEShape shape = id == (uint)AID.CirclingBlade ? ringingBladeShape : circlingBladeShape;
+            AOEShape shape = id is (uint)AID.CirclingBlade or (uint)AID.CirclingBladeFirst ? circlingBladeShape : ringingBladeShape;
             var loc = spell.LocXZ;
             _aoes.Add(new(shape, spell.LocXZ, default, Module.CastFinishAt(spell), shapeDistance: shape.Distance(loc, default)));
             SortHelpers.SortAOEByActivation(_aoes);
@@ -213,7 +221,7 @@ sealed class RingCircleBlade(BossModule module) : Components.GenericAOEs(module)
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID is (uint)AID.RingingBlade or (uint)AID.CirclingBlade)
+        if (spell.Action.ID is (uint)AID.RingingBlade or (uint)AID.CirclingBlade or (uint)AID.CirclingBladeFirst or (uint)AID.RingingBladeSecond)
         {
             if (_aoes.Count > 0)
             {
@@ -262,14 +270,11 @@ sealed class PetrifyingPassionBait(BossModule module) : Components.GenericBaitAw
             return;
         }
 
-        increment = iconID switch
+        if (iconID is (uint)IconID.TurnLeft or (uint)IconID.TurnRight)
         {
-            (uint)IconID.TurnLeft => 30f.Degrees(),
-            (uint)IconID.TurnRight => -30f.Degrees(),
-            _ => default
-        };
-
-        InitIfReady();
+            increment = iconID == (uint)IconID.TurnLeft ? 30f.Degrees() : -30f.Degrees();
+            InitIfReady();
+        }
     }
 
     public override void OnEventDirectorUpdate(uint updateID, uint param1, uint param2, uint param3, uint param4)
@@ -431,14 +436,11 @@ sealed class PetrifyingPassion(BossModule module) : Components.GenericRotatingAO
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
     {
-        increment = iconID switch
+        if (iconID is (uint)IconID.TurnLeft or (uint)IconID.TurnRight)
         {
-            (uint)IconID.TurnLeft => 30f.Degrees(),
-            (uint)IconID.TurnRight => -30f.Degrees(),
-            _ => default
-        };
-
-        InitIfReady();
+            increment = iconID == (uint)IconID.TurnLeft ? 30f.Degrees() : -30f.Degrees();
+            InitIfReady();
+        }
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
@@ -519,6 +521,8 @@ sealed class MedusaPieceStates : StateMachineBuilder
     {
         TrivialPhase()
             .ActivateOnEnter<Glower>()
+            .ActivateOnEnter<CircleOfFlames>()
+            .ActivateOnEnter<TerrorizingMiasma>()
             .ActivateOnEnter<Raise>()
             .ActivateOnEnter<PetrifyingRegardBait>()
             .ActivateOnEnter<PetrifyingRegard>()
@@ -530,7 +534,8 @@ sealed class MedusaPieceStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.MedusaPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1092u, NameID = 14660u, SortOrder = 7)]
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.MedusaPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1092u, NameID = 14660u, SortOrder = 7)]
+[PreferredKinship(BST.Kinship.Soul, "Interrupt Lamia Piece's Raise")]
 public sealed class MedusaPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsRect(20f, 20f))
 {
     protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)

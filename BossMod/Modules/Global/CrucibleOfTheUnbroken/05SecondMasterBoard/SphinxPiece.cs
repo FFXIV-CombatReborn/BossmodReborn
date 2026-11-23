@@ -79,6 +79,7 @@ sealed class BanishCone(BossModule module) : Components.SimpleAOEGroups(module, 
     new AOEShapeCone(60f, 90f.Degrees()));
 sealed class BanishCircle(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BanishCircle, 18f);
 sealed class NumericRiddle(BossModule module) : Components.RaidwideCast(module, (uint)AID.NumericRiddle);
+sealed class MnemonicRiddleRaidwide(BossModule module) : Components.RaidwideCast(module, (uint)AID.MnemonicRiddle1);
 sealed class LostHope(BossModule module) : Components.TemporaryMisdirection(module, (uint)AID.LostHope);
 
 sealed class Assignment : Components.GenericAOEs
@@ -166,17 +167,17 @@ sealed class Assignment : Components.GenericAOEs
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        var count = _aoes.Count;
-        if (count == 0 || debuffs[slot].Count == 0)
+        var aoes = ActiveAOEs(slot, actor);
+        var count = aoes.Length;
+        if (count == 0)
         {
             return;
         }
 
         var sdfs = new ShapeDistance[count];
-        var aoes = CollectionsMarshal.AsSpan(_aoes);
         for (var i = 0; i < count; ++i)
         {
-            ref var aoe = ref aoes[i];
+            ref readonly var aoe = ref aoes[i];
             sdfs[i] = shapeForAI.Distance(aoe.Origin, aoe.Rotation);
         }
 
@@ -199,7 +200,13 @@ sealed class Assignment : Components.GenericAOEs
             _ => 0u
         };
 
-        return oid == 0u ? null : Module.Enemies(oid)[0];
+        if (oid == 0u)
+        {
+            return null;
+        }
+
+        var tiles = Module.Enemies(oid);
+        return tiles.Count != 0 ? tiles[0] : null;
     }
 }
 
@@ -311,6 +318,7 @@ sealed class SphinxPieceStates : StateMachineBuilder
             .ActivateOnEnter<BanishCone>()
             .ActivateOnEnter<BanishCircle>()
             .ActivateOnEnter<NumericRiddle>()
+            .ActivateOnEnter<MnemonicRiddleRaidwide>()
             .ActivateOnEnter<Assignment>()
             .ActivateOnEnter<LostHope>()
             .ActivateOnEnter<MnemonicRiddle>();
@@ -332,7 +340,7 @@ public sealed class SphinxPiece(WorldState ws, Actor primary) : BossModule(ws, p
                 (uint)OID.PugilPiece => 2,
                 (uint)OID.PukPiece => 2,
                 (uint)OID.OpoOpoPiece => 2,
-                (uint)OID.SphinxPiece => 1,
+                (uint)OID.SphinxPiece => e.Actor.FindStatus((uint)SID.VulnerabilityDown) != null ? AIHints.Enemy.PriorityPointless : 1,
                 _ => 0
             };
         }
