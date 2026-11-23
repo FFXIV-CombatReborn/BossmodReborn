@@ -14,36 +14,42 @@ public sealed class PresetDatabase
 
     private readonly FileInfo _dbPath;
 
-    public List<Preset> AllPresets
-    {
-        get
-        {
-            var countD = DefaultPresets.Count;
-            var countU = UserPresets.Count;
-            List<Preset> presets = [with(countD + countU)];
-            for (var i = 0; i < countD; ++i)
-            {
-                var def = DefaultPresets[i];
-                if (def.HiddenByDefault == _cfg.HideDefaultPresets || def.Name == "VBM Multibox" || def.Name == "Movement Only")
-                {
-                    presets.Add(def);
-                }
-            }
-            for (var i = 0; i < countU; ++i)
-            {
-                presets.Add(UserPresets[i]);
-            }
-            return presets;
-        }
-    }
+    public List<Preset> AllPresets => CollectPresets(true); // presets that can be activated by name (commands, ipc, ai)
+    public List<Preset> VisiblePresets => CollectPresets(false); // presets that are listed in menus
 
-    public PresetDatabase(string rootPath, params FileInfo[] defaultPresets)
+    public PresetDatabase(string rootPath, FileInfo rebornPresets, FileInfo vbmPresets)
     {
         _dbPath = new(rootPath + ".db.json");
-        DefaultPresets = [];
-        foreach (var file in defaultPresets)
-            DefaultPresets.AddRange(LoadPresetsFromFile(file));
+        DefaultPresets = LoadPresetsFromFile(rebornPresets);
+        foreach (var preset in LoadPresetsFromFile(vbmPresets))
+        {
+            preset.HiddenByDefault = true;
+            DefaultPresets.Add(preset);
+        }
         UserPresets = LoadPresetsFromFile(_dbPath);
+    }
+
+    public bool IsHidden(Preset preset) => preset.HiddenByDefault && _cfg.HideDefaultPresets;
+
+    private List<Preset> CollectPresets(bool includeHiddenMultibox)
+    {
+        var countD = DefaultPresets.Count;
+        var countU = UserPresets.Count;
+        List<Preset> presets = [with(countD + countU)];
+        for (var i = 0; i < countD; ++i)
+        {
+            var def = DefaultPresets[i];
+            // commands and ipc can activate multibox by name even while menus hide it
+            if (!IsHidden(def) || includeHiddenMultibox && def.Name == "VBM Multibox")
+            {
+                presets.Add(def);
+            }
+        }
+        for (var i = 0; i < countU; ++i)
+        {
+            presets.Add(UserPresets[i]);
+        }
+        return presets;
     }
 
     private List<Preset> LoadPresetsFromFile(FileInfo file)
@@ -95,7 +101,7 @@ public sealed class PresetDatabase
 
     public List<Preset> PresetsForClass(Class c)
     {
-        var visible = AllPresets;
+        var visible = VisiblePresets;
         var count = visible.Count;
         List<Preset> presets = [with(count)];
         for (var i = 0; i < count; ++i)

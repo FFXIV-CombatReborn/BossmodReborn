@@ -51,12 +51,16 @@ class DoubleHammer(BossModule module) : Components.GenericAOEs(module)
     public static readonly AOEShapeCone Cone = new(30f, 90f.Degrees());
     private static readonly Angle[] angles = [89.999f.Degrees(), -90.004f.Degrees()];
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _aoes.Count;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var aoe = _aoes[i];
@@ -65,7 +69,7 @@ class DoubleHammer(BossModule module) : Components.GenericAOEs(module)
             else
                 aoes[i] = aoe with { Risky = false };
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

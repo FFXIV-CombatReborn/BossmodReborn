@@ -9,10 +9,14 @@ abstract class Tilt(BossModule module) : Components.GenericKnockback(module, (ui
     public Angle Direction;
     public DateTime Activation;
 
+    private readonly Knockback[] _oneKnockback = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (Distance > 0)
-            return new Knockback[1] { new(default, Distance, Activation, null, Direction, Kind.DirForward) };
+            {
+                _oneKnockback[0] = new(default, Distance, Activation, null, Direction, Kind.DirForward);
+                return _oneKnockback;
+            }
         return [];
     }
 

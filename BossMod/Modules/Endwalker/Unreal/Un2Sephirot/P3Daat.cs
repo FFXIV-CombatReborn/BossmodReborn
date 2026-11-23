@@ -6,7 +6,7 @@ sealed class P3Daat(BossModule module) : Components.CastCounter(module, (uint)AI
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, radius).Any())
+        if (Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, radius))
             hints.Add("Spread!");
     }
 

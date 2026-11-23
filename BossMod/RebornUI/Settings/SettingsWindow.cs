@@ -94,6 +94,8 @@ internal sealed partial class SettingsWindow : RebornFoldWindow
 
     private static float Scale => M3.Scale;
 
+    private static float IconStripWidth => MathF.Max(44f * Scale, UiBuilder.IconFont.FontSize * 1.25f + 8f * Scale);
+
     private bool Searching => _searchText.Length > 0;
 
     private bool RailSearchOpen => _railSearch || Searching;
@@ -200,8 +202,6 @@ internal sealed partial class SettingsWindow : RebornFoldWindow
         base.OnClose();
     }
 
-    protected override M3Density Density => SettingsDensity;
-
     protected override M3WindowAction[] WindowActions => _windowActions;
 
     protected override void OnWindowAction(int index)
@@ -285,15 +285,18 @@ internal sealed partial class SettingsWindow : RebornFoldWindow
     {
         var available = MathF.Max(1f, ImGui.GetContentRegionAvail().X);
         var spacing = ImGui.GetStyle().ItemSpacing.X;
-        var expanded = available >= 600f * Scale;
-        var sidebarWidth = expanded ? MathF.Min(DrawerWidth(), available * 0.4f) : MathF.Min(84f * Scale, available * 0.3f);
+        var iconsOnly = M3.Settings.UiIconSidebar;
+        var expanded = !iconsOnly && available >= 600f * Scale;
+        var sidebarWidth = iconsOnly ? MathF.Min(IconStripWidth, available * 0.3f)
+            : expanded ? MathF.Min(DrawerWidth(), available * 0.4f)
+            : MathF.Min(84f * Scale, available * 0.3f);
 
         var origin = ImGui.GetCursorScreenPos();
         var paneHeight = MathF.Max(1f, ImGui.GetContentRegionAvail().Y);
         var dividerX = origin.X + sidebarWidth + spacing * 0.5f;
         ImGui.GetWindowDrawList().AddLine(new(dividerX, origin.Y), new(dividerX, origin.Y + paneHeight), M3.U32(M3.Scheme.OutlineVariant, 0.45f), 1f * Scale);
 
-        DrawNavigation(sidebarWidth, expanded);
+        DrawNavigation(sidebarWidth, expanded, iconsOnly);
         ImGui.SameLine(0f, spacing);
         DrawBody(expanded);
 
@@ -310,7 +313,7 @@ internal sealed partial class SettingsWindow : RebornFoldWindow
         return MathF.Max(190f * Scale, widest + 24f * Scale + M3Style.Spacing(16f, 12f) + M3Style.Spacing(14f, 10f) + 20f * Scale);
     }
 
-    private void DrawNavigation(float width, bool expanded)
+    private void DrawNavigation(float width, bool expanded, bool iconsOnly)
     {
         using var child = ImRaii.Child("##bmr_nav", new(width, -1f), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
         if (!child)
@@ -346,7 +349,7 @@ internal sealed partial class SettingsWindow : RebornFoldWindow
         }
         ImGui.Dummy(new(0f, M3.Space1));
 
-        using var list = ImRaii.Child("##bmr_nav_list", new(-1f, -1f), false);
+        using var list = ImRaii.Child("##bmr_nav_list", new(-1f, -1f), false, iconsOnly ? ImGuiWindowFlags.NoScrollbar : ImGuiWindowFlags.None);
         if (!list)
         {
             return;
@@ -358,7 +361,7 @@ internal sealed partial class SettingsWindow : RebornFoldWindow
             _navItems[i] = _navItems[i] with { Selected = !Searching && _pages[i] == _page, Accent = _pages[i].Section == SectionTools ? tools : null };
         }
 
-        if (M3Navigation.Draw("bmr_nav", _navItems, expanded) is { } clicked)
+        if (M3Navigation.Draw("bmr_nav", _navItems, expanded, iconsOnly) is { } clicked)
         {
             ShowPage(clicked);
         }
@@ -367,7 +370,7 @@ internal sealed partial class SettingsWindow : RebornFoldWindow
     private void DrawBrand(float width, bool expanded)
     {
         var s = M3.Scheme;
-        var size = 40f * Scale;
+        var size = MathF.Min(40f * Scale, width);
         var origin = ImGui.GetCursorScreenPos();
         var height = size + 2f * M3.Space1;
 

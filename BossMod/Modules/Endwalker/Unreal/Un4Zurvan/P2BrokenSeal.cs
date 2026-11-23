@@ -31,8 +31,15 @@ sealed class P2BrokenSeal(BossModule module) : BossComponent(module)
             Color.Ice => _iceTowers,
             _ => null
         };
-        if (towers?.Count > 0 && !towers.Any(t => actor.Position.InCircle(t.Position, 2)))
+        if (towers?.Count > 0)
+        {
+            for (var i = 0; i < towers.Count; ++i)
+            {
+                if (actor.Position.InCircle(towers[i].Position, 2f))
+                    return;
+            }
             hints.Add("Soak the tower!");
+        }
     }
 
     public override PlayerPriority CalcPriority(int pcSlot, Actor pc, int playerSlot, Actor player, ref uint customColor)

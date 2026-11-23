@@ -17,6 +17,8 @@ internal static class SettingsRenderer
         public readonly string? Format = layout?.Format;
         public readonly string[]? Options = layout?.Options ?? meta.Combo?.Values;
         public readonly M3ColorChoice[]? Choices = layout?.Choices;
+        public readonly float Step = layout?.Step ?? 0f;
+        public readonly float Factor = layout?.Factor ?? 1f;
         public readonly (float Min, float Max, bool Logarithmic)? Slider = layout is { Min: { } min, Max: { } max } ? (min, max, false)
             : meta.Slider is { } slider ? (slider.Min, slider.Max, slider.Logarithmic) : null;
         public string Section = "";
@@ -526,7 +528,7 @@ internal static class SettingsRenderer
 
     private static bool DrawProperty(in RowText row, ConfigNode node, FieldView field, float v)
     {
-        var changed = field.Slider is { } slider ? DrawSliderRow(row, ref v, slider, field.Format) : DrawNumberRow(row, ref v);
+        var changed = field.Slider is { } slider ? DrawSliderRow(row, ref v, slider, field) : DrawNumberRow(row, ref v);
         if (changed)
         {
             field.Meta.Setter(node, v);
@@ -537,7 +539,7 @@ internal static class SettingsRenderer
     private static bool DrawProperty(in RowText row, ConfigNode node, FieldView field, double v)
     {
         var f = (float)v;
-        var changed = field.Slider is { } slider ? DrawSliderRow(row, ref f, slider, field.Format) : DrawNumberRow(row, ref f);
+        var changed = field.Slider is { } slider ? DrawSliderRow(row, ref f, slider, field) : DrawNumberRow(row, ref f);
         if (changed)
         {
             field.Meta.Setter(node, (double)f);
@@ -789,14 +791,22 @@ internal static class SettingsRenderer
         return changed;
     }
 
-    private static bool DrawSliderRow(in RowText row, ref float v, (float Min, float Max, bool Logarithmic) slider, string? format)
+    private static bool DrawSliderRow(in RowText row, ref float v, (float Min, float Max, bool Logarithmic) slider, FieldView field)
     {
-        var range = slider.Max - slider.Min;
-        format ??= range >= 50f ? "%.0f" : range >= 5f ? "%.1f" : "%.2f";
+        var factor = field.Factor;
+        var min = slider.Min * factor;
+        var max = slider.Max * factor;
+        var range = max - min;
+        var format = field.Format ?? (range >= 50f ? "%.0f" : range >= 5f ? "%.1f" : "%.2f");
+        var shown = v * factor;
         var trackWidth = 150f * Scale;
-        var info = BeginRow(row, new(trackWidth + ReadoutGutter(FormatReadout(format, slider.Min), FormatReadout(format, slider.Max)), M3Widgets.ButtonHeight));
-        var changed = M3Widgets.Slider($"##{row.Id}", ref v, slider.Min, slider.Max, FormatReadout(format, v), trackWidth, slider.Logarithmic, row.Enabled);
+        var info = BeginRow(row, new(trackWidth + ReadoutGutter(FormatReadout(format, min), FormatReadout(format, max)), M3Widgets.ButtonHeight));
+        var changed = M3Widgets.Slider($"##{row.Id}", ref shown, min, max, FormatReadout(format, shown), trackWidth, slider.Logarithmic, row.Enabled, field.Step * factor);
         M3SettingRow.End(info);
+        if (changed)
+        {
+            v = field.Step > 0f ? MathF.Round(shown / factor, 4) : shown / factor;
+        }
         return changed;
     }
 

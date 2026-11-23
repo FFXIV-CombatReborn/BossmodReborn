@@ -20,7 +20,7 @@ public sealed class AutorotationConfig : ConfigNode
     [PropertyRadio]
     public DtrStatus ShowDTR = DtrStatus.None;
 
-    [PropertyDisplay("Hide VBM Default preset", tooltip: "If you've created your own presets and no longer need the included default, this option will prevent it from being shown in the Autorotation and Preset Editor windows.")]
+    [PropertyDisplay("Hide VBM default presets", tooltip: "If you don't need the included VBM Default, VBM AI and VBM Multibox presets, this option will prevent them from being shown in the Autorotation, AI and Preset Editor windows.")]
     public bool HideDefaultPresets = true;
 
     public bool SuggestHealerAI = true;

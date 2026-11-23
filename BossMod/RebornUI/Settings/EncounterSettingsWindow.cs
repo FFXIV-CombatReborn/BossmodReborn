@@ -16,8 +16,6 @@ internal sealed class EncounterSettingsWindow(BossModuleRegistry.Info info, Worl
     private readonly UITree _tree = new();
     private int _tab;
 
-    protected override M3Density Density => SettingsDensity;
-
     public override void Draw()
     {
         var clicked = M3Navigation.Tabs("##tabs", _tabs, _tab);
