@@ -19,8 +19,8 @@ public enum AID : uint
     AsuriChakra = 35994, // Boss->self, 6.0s cast, range 5 circle
     Chakra1 = 35995, // Helper->self, 6.0s cast, range 6-8 donut
     Chakra2 = 35996, // Helper->self, 6.0s cast, range 9-11 donut
-    Chakra4 = 35997, // Helper->self, 6.0s cast, range 12-14 donut
-    Chakra3 = 35998, // Helper->self, 6.0s cast, range 15-17 donut
+    Chakra3 = 35997, // Helper->self, 6.0s cast, range 12-14 donut
+    Chakra4 = 35998, // Helper->self, 6.0s cast, range 15-17 donut
     Chakra5 = 35999, // Helper->self, 6.0s cast, range 18-20 donut
 
     CuttingJewel = 36000, // Boss->players, 5.0s cast, range 4 circle, tankbuster

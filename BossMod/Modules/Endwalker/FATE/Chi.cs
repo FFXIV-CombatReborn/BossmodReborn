@@ -302,6 +302,6 @@ sealed class ChiStates : StateMachineBuilder
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "Malediktus", GroupType = BossModuleInfo.GroupType.Fate, GroupID = 1855, NameID = 10400)]
 public sealed class Chi(WorldState ws, Actor primary) : BossModule(ws, primary, new(650f, default), new ArenaBoundsSquare(29.5f))
 {
-    protected override bool CheckPull() => base.CheckPull() && (Center - Raid.Player()!.Position).LengthSq() < 900f;
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && (Center - player.Position).LengthSq() < 900f;
 }
 

@@ -32,7 +32,13 @@ sealed class VisceralWhirl(BossModule module) : Components.GenericAOEs(module)
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID is (uint)AID.VisceralWhirlRAOE1 or (uint)AID.VisceralWhirlRAOE2 or (uint)AID.VisceralWhirlLAOE1 or (uint)AID.VisceralWhirlLAOE2)
-            _aoes.RemoveAll(a => a.Rotation.AlmostEqual(spell.Rotation, 0.05f));
+        {
+            for (var i = _aoes.Count - 1; i >= 0; --i)
+            {
+                if (_aoes[i].Rotation.AlmostEqual(spell.Rotation, 0.05f))
+                    _aoes.RemoveAt(i);
+            }
+        }
     }
 }
 
@@ -60,19 +66,23 @@ sealed class VoidBio(BossModule module) : Components.GenericAOEs(module)
 
     private readonly AOEShapeCapsule _shape = new(2f, 3f); // TODO: verify explosion radius
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var voidzones = GetVoidzones(Module);
         var count = voidzones.Length;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var vz = voidzones[i];
             aoes[i] = new(_shape, vz.Position);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)

@@ -5,10 +5,14 @@ sealed class DragonsDescent(BossModule module) : Components.GenericKnockback(mod
     private Actor? _source;
     private DateTime _activation;
 
+    private readonly Knockback[] _oneKnockback = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (_source != null && _source != actor)
-            return new Knockback[1] { new(_source.Position, 13f, _activation, ignoreImmunes: true) };
+        {
+            _oneKnockback[0] = new(_source.Position, 13f, _activation, ignoreImmunes: true);
+            return _oneKnockback;
+        }
         return [];
     }
 
@@ -33,7 +37,13 @@ sealed class DoubleMeteor(BossModule module) : Components.UniformStackSpread(mod
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         if (spell.Action.ID is (uint)AID.DoubleMeteorAOE1 or (uint)AID.DoubleMeteorAOE2)
-            Spreads.RemoveAll(s => s.Target.InstanceID == spell.MainTargetID);
+        {
+            for (var i = Spreads.Count - 1; i >= 0; --i)
+            {
+                if (Spreads[i].Target.InstanceID == spell.MainTargetID)
+                    Spreads.RemoveAt(i);
+            }
+        }
     }
 }
 

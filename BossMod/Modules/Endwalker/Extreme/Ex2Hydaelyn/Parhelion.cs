@@ -5,18 +5,27 @@ sealed class Parhelion(BossModule module) : BossComponent(module)
     private readonly List<Actor> _completedParhelions = [];
     private bool _subparhelions;
 
-    private static readonly AOEShapeRect _beacon = new(45, 3);
+    private static readonly AOEShapeRect _beacon = new(45f, 3f);
+    private readonly List<Actor> _active = [];
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (ActiveParhelions().Any(p => _beacon.Check(actor.Position, p)))
-            hints.Add("GTFO from aoe!");
+        var active = ActiveParhelions();
+        for (var i = 0; i < active.Count; ++i)
+        {
+            if (_beacon.Check(actor.Position, active[i]))
+            {
+                hints.Add("GTFO from aoe!");
+                return;
+            }
+        }
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
-        foreach (var p in ActiveParhelions())
-            _beacon.Draw(Arena, p);
+        var active = ActiveParhelions();
+        for (var i = 0; i < active.Count; ++i)
+            _beacon.Draw(Arena, active[i]);
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
@@ -33,11 +42,24 @@ sealed class Parhelion(BossModule module) : BossComponent(module)
         }
     }
 
-    private IEnumerable<Actor> ActiveParhelions()
+    private List<Actor> ActiveParhelions()
     {
+        _active.Clear();
         if (_subparhelions)
-            return _completedParhelions.Take(10);
+        {
+            var count = Math.Min(10, _completedParhelions.Count);
+            for (var i = 0; i < count; ++i)
+                _active.Add(_completedParhelions[i]);
+        }
         else
-            return Module.Enemies((uint)OID.Parhelion).Where(p => p.CastInfo != null);
+        {
+            var parhelions = Module.Enemies((uint)OID.Parhelion);
+            for (var i = 0; i < parhelions.Count; ++i)
+            {
+                if (parhelions[i].CastInfo != null)
+                    _active.Add(parhelions[i]);
+            }
+        }
+        return _active;
     }
 }

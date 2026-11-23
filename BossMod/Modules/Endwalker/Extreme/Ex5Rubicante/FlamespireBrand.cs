@@ -46,6 +46,8 @@ sealed class Flamerake(BossModule module) : Components.GenericAOEs(module)
     private readonly AOEShapeCross _first = new(20f, 6f);
     private readonly AOEShapeRect _rest = new(8f, 20f);
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_activation == default)
@@ -53,18 +55,24 @@ sealed class Flamerake(BossModule module) : Components.GenericAOEs(module)
 
         if (NumCasts == 0)
         {
-            return new AOEInstance[1] { new(_first, Arena.Center.Quantized(), _offset, _activation) };
+            {
+                _oneAOEInstance[0] = new(_first, Arena.Center.Quantized(), _offset, _activation);
+                return _oneAOEInstance;
+            }
         }
         else
         {
-            var aoes = new AOEInstance[4];
+            var aoesLen = 4;
+            if (_aoesBuffer.Length < aoesLen)
+                _aoesBuffer = new AOEInstance[aoesLen];
+            var aoes = _aoesBuffer;
             float offset = NumCasts == 1 ? 6 : 14;
             for (var i = 0; i < 4; ++i)
             {
                 var dir = i * 90f.Degrees() + _offset;
                 aoes[i] = new(_rest, (Arena.Center + offset * dir.ToDirection()).Quantized(), dir, _activation);
             }
-            return aoes;
+            return aoes.AsSpan(0, aoesLen);
         }
     }
 

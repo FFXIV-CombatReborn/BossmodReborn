@@ -6,6 +6,7 @@ sealed class SilveredEdge(BossModule module) : Components.GenericAOEs(module)
     private bool active;
     private bool casting;
     private Angle _rotation;
+    private readonly AOEInstance[] _aoes = new AOEInstance[3];
 
     private static readonly AOEShapeRect rect = new(40f, 3f);
 
@@ -14,7 +15,7 @@ sealed class SilveredEdge(BossModule module) : Components.GenericAOEs(module)
         if (active)
         {
             var pos = Module.PrimaryActor.Position;
-            Span<AOEInstance> aoes = new AOEInstance[3];
+            var aoes = _aoes;
             var angle = casting ? Angle.FromDirection(actor.Position - pos) : _rotation;
             for (var i = 0; i < 3; ++i)
             {
@@ -40,7 +41,8 @@ sealed class SilveredEdge(BossModule module) : Components.GenericAOEs(module)
         if (spell.Action.ID == (uint)AID.SilveredEdge)
         {
             casting = false;
-            _rotation = Angle.FromDirection(Raid.Player()!.Position - caster.Position);
+            if (Raid.Player() is Actor player)
+                _rotation = Angle.FromDirection(player.Position - caster.Position);
         }
     }
 

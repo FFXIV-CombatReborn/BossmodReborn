@@ -16,8 +16,16 @@ sealed class Ania(BossModule module) : BossComponent(module)
 
         if (actor == _target)
         {
-            if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _aoeRadius).Any())
-                hints.Add("GTFO from raid!");
+            var party = Raid.WithoutSlot(false, true, true);
+            for (var i = 0; i < party.Length; ++i)
+            {
+                var p = party[i];
+                if (p != actor && p.Position.InCircle(actor.Position, _aoeRadius))
+                {
+                    hints.Add("GTFO from raid!");
+                    break;
+                }
+            }
             if (Module.PrimaryActor.TargetID == _target.InstanceID)
                 hints.Add("Pass aggro!");
         }

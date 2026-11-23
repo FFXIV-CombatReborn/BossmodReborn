@@ -26,7 +26,7 @@ sealed class ParhelicCircle(BossModule module) : Components.GenericAOEs(module)
         }
     }
 
-    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         if (spell.Action.ID == (uint)AID.Incandescence)
         {

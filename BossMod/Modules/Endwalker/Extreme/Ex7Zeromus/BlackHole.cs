@@ -16,8 +16,16 @@ sealed class BlackHole(BossModule module) : BossComponent(module)
     {
         if (Baiter == actor)
         {
-            if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _startingRadius).Any())
-                hints.Add("GTFO from raid!");
+            var party = Raid.WithoutSlot(false, true, true);
+            for (var i = 0; i < party.Length; ++i)
+            {
+                var p = party[i];
+                if (p != actor && p.Position.InCircle(actor.Position, _startingRadius))
+                {
+                    hints.Add("GTFO from raid!");
+                    break;
+                }
+            }
         }
         else if (Baiter != null)
         {
@@ -86,6 +94,7 @@ sealed class FracturedEventide(BossModule module) : Components.GenericAOEs(modul
     private readonly AOEShapeRect _shape = new(60f, 4f);
     private const int _maxCasts = 21;
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_source == null)
@@ -95,7 +104,10 @@ sealed class FracturedEventide(BossModule module) : Components.GenericAOEs(modul
         if (count <= 0)
             return [];
 
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         var index = 0;
 
         for (var i = NumCasts + 1; i < _maxCasts; ++i)
@@ -103,7 +115,7 @@ sealed class FracturedEventide(BossModule module) : Components.GenericAOEs(modul
 
         if (NumCasts < _maxCasts)
             aoes[index++] = new(_shape, _source.Position, _startingRotation + NumCasts * _increment, _startingActivation.AddSeconds(0.5d * NumCasts), Colors.Danger);
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

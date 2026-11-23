@@ -14,14 +14,20 @@ sealed class Lightwave1(BossModule module) : LightwaveCommon(module)
         // try to find two helpers with Z=70 before first cast
         if (Waves.Count == 0)
         {
-            foreach (var wave in Module.Enemies((uint)OID.Helper).Where(a => a.PosRot.Z < 71f))
+            var helpers = Module.Enemies((uint)OID.Helper);
+            var leftWave = false;
+            for (var i = 0; i < helpers.Count; ++i)
             {
-                Waves.Add(wave);
+                var wave = helpers[i];
+                if (wave.PosRot.Z < 71f)
+                {
+                    Waves.Add(wave);
+                    leftWave |= wave.PosRot.X < 90f;
+                }
             }
 
             if (Waves.Count > 0)
             {
-                var leftWave = Waves.Any(w => w.PosRot.X < 90f);
                 _safeCrystal = new(leftWave ? 110f : 90f, 92f);
                 _firstHitCrystal = new(100f, 86f);
                 _secondHitCrystal = new(leftWave ? 90f : 110f, 92f);
@@ -35,8 +41,14 @@ sealed class Lightwave1(BossModule module) : LightwaveCommon(module)
         if (Waves.Count == 0)
             return;
 
-        if (Waves.Any(w => WaveAOE.Check(actor.Position, w)))
-            hints.Add("GTFO from wave!");
+        for (var i = 0; i < Waves.Count; ++i)
+        {
+            if (WaveAOE.Check(actor.Position, Waves[i]))
+            {
+                hints.Add("GTFO from wave!");
+                break;
+            }
+        }
 
         var safe = NumCasts switch
         {

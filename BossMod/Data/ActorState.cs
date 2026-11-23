@@ -825,8 +825,8 @@ public sealed class ActorState : IEnumerable<Actor>
             {
                 var effects = prev.Effects.ValidEffects();
                 var lenE = effects.Length;
-            done:
-                for (var i = 0; i < lenE; ++i)
+                var removed = false;
+                for (var i = 0; i < lenE && !removed; ++i)
                 {
                     ref readonly var e = ref effects[i];
                     if (e.Type is >= ActionEffectType.Knockback and <= ActionEffectType.AttractCustom3)
@@ -839,7 +839,8 @@ public sealed class ActorState : IEnumerable<Actor>
                             if (p.GlobalSequence == prevSeq && p.TargetIndex == prevIdx && !p.RequiresEffectResult)
                             {
                                 actor.PendingKnockbacks.RemoveAt(j);
-                                break done;
+                                removed = true;
+                                break;
                             }
                         }
                     }

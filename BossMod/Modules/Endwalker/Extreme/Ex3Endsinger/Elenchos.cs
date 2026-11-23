@@ -10,7 +10,10 @@ sealed class Elenchos(BossModule module) : BossComponent(module)
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (_aoeCenter.Check(actor.Position, _center) || _sides.Any(s => _aoeSides.Check(actor.Position, s)))
+        var inAOE = _aoeCenter.Check(actor.Position, _center);
+        for (var i = 0; i < _sides.Count && !inAOE; ++i)
+            inAOE = _aoeSides.Check(actor.Position, _sides[i]);
+        if (inAOE)
             hints.Add("GTFO from aoe!");
     }
 

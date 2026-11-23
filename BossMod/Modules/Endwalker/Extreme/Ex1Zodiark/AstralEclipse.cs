@@ -14,31 +14,51 @@ sealed class AstralEclipse(BossModule module) : BossComponent(module)
     private const float _centerOffset = 14f;
     private readonly Vector3[] _basisX = [-Vector3.UnitZ, -Vector3.UnitX, Vector3.UnitZ];
     private readonly Vector3[] _basisY = [-Vector3.UnitX, Vector3.UnitZ, Vector3.UnitX];
+    private readonly List<WPos> _spots = [with(9)];
+    private readonly List<(WPos From, WPos To)> _moves = [with(3)];
+
+    private int NextPattern()
+    {
+        for (var i = 0; i < _patterns.Length; ++i)
+        {
+            if (_patterns[i] != 0)
+                return _patterns[i];
+        }
+        return 0;
+    }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        var nextPattern = _patterns.SkipWhile(p => p == 0).FirstOrDefault();
-        if (PatternSpots(nextPattern).Any(p => _aoe.Check(actor.Position, p)))
-            hints.Add("GTFO from explosion!");
+        var spots = PatternSpots(NextPattern());
+        for (var i = 0; i < spots.Count; ++i)
+        {
+            if (_aoe.Check(actor.Position, spots[i]))
+            {
+                hints.Add("GTFO from explosion!");
+                return;
+            }
+        }
     }
 
     public override void AddMovementHints(int slot, Actor actor, MovementHints movementHints)
     {
-        foreach (var (from, to) in EnumMovementHints(actor.Position))
-            movementHints.Add(from, to, Colors.Safe);
+        var moves = MovementPath(actor.Position);
+        for (var i = 0; i < moves.Count; ++i)
+            movementHints.Add(moves[i].From, moves[i].To, Colors.Safe);
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
-        var nextPattern = _patterns.SkipWhile(p => p == 0).FirstOrDefault();
-        foreach (var p in PatternSpots(nextPattern))
-            _aoe.Draw(Arena, p);
+        var spots = PatternSpots(NextPattern());
+        for (var i = 0; i < spots.Count; ++i)
+            _aoe.Draw(Arena, spots[i]);
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
-        foreach (var (from, to) in EnumMovementHints(pc.Position))
-            Arena.AddLine(from, to, Colors.Safe);
+        var moves = MovementPath(pc.Position);
+        for (var i = 0; i < moves.Count; ++i)
+            Arena.AddLine(moves[i].From, moves[i].To, Colors.Safe);
     }
 
     public override void OnMapEffect(byte index, uint state)
@@ -70,26 +90,52 @@ sealed class AstralEclipse(BossModule module) : BossComponent(module)
         return 0x777 & ~BuildMask(seq, safe1) & ~BuildMask(seq, safe2);
     }
 
-    private IEnumerable<WPos> PatternSpots(int pattern)
+    private List<WPos> PatternSpots(int pattern)
     {
+        _spots.Clear();
         if (pattern != 0)
+        {
+            var center = Arena.Center;
             for (var z = -1; z <= 1; ++z)
                 for (var x = -1; x <= 1; ++x)
                     if ((pattern & (1 << ((z + 1) * 4 + (x + 1)))) != 0)
-                        yield return Arena.Center + _centerOffset * new WDir(x, z);
+                        _spots.Add(center + _centerOffset * new WDir(x, z));
+        }
+        return _spots;
     }
 
-    private IEnumerable<(WPos, WPos)> EnumMovementHints(WPos startingPosition)
+    // path through the safe spots of each known pattern, starting from the player, tested in an unsynced but idk might need work TODO: run full party or get full log
+    private List<(WPos From, WPos To)> MovementPath(WPos startingPosition)
     {
+        _moves.Clear();
         var prev = startingPosition;
-        foreach (var p in _patterns.Where(p => p != 0))
+        var boss = Module.PrimaryActor.Position;
+        for (var i = 0; i < _patterns.Length; ++i)
         {
+            var p = _patterns[i];
+            if (p == 0)
+                continue;
             if (p == 0xFFFF)
                 break;
 
-            var next = PatternSpots(~p).MinBy(pos => (pos - prev).LengthSq() + (pos - Module.PrimaryActor.Position).LengthSq() * 0.2f); // slightly penalize far positions...
-            yield return (prev, next);
+            var safe = PatternSpots(~p);
+            if (safe.Count == 0)
+                break;
+            var next = safe[0];
+            var best = float.MaxValue;
+            for (var j = 0; j < safe.Count; ++j)
+            {
+                var pos = safe[j];
+                var score = (pos - prev).LengthSq() + (pos - boss).LengthSq() * 0.2f;
+                if (score < best)
+                {
+                    best = score;
+                    next = pos;
+                }
+            }
+            _moves.Add((prev, next));
             prev = next;
         }
+        return _moves;
     }
 }

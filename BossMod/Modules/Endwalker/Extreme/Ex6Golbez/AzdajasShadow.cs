@@ -45,8 +45,18 @@ sealed class FlamesOfEventide(BossModule module) : Components.GenericBaitAway(mo
         {
             if (_playerStacks[slot] >= 2)
                 hints.Add("Pass aggro!");
-            if (Raid.WithoutSlot(false, true, true).Exclude(actor).InShape(_shape, Module.PrimaryActor.Position, Angle.FromDirection(actor.Position - Module.PrimaryActor.Position)).Count != 0)
-                hints.Add("GTFO from raid!");
+            var boss = Module.PrimaryActor.Position;
+            var dir = Angle.FromDirection(actor.Position - boss);
+            var party = Raid.WithoutSlot(false, true, true);
+            for (var i = 0; i < party.Length; ++i)
+            {
+                var p = party[i];
+                if (p != actor && _shape.Check(p.Position, boss, dir))
+                {
+                    hints.Add("GTFO from raid!");
+                    break;
+                }
+            }
         }
         else if (CurrentBaits.Count > 0)
         {

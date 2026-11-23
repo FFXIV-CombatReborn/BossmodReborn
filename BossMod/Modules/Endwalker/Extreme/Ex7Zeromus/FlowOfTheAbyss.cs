@@ -60,13 +60,17 @@ sealed class ChasmicNails(BossModule module) : Components.GenericAOEs(module)
 
     private readonly AOEShapeCone _shape = new(60f, 20f.Degrees());
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _aoes.Count;
         if (count == 0)
             return [];
         var max = count > 3 ? 3 : count;
-        var aoes = new AOEInstance[max];
+        var aoesLen = max;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
 
         for (var i = 0; i < max; ++i)
         {
@@ -76,7 +80,7 @@ sealed class ChasmicNails(BossModule module) : Components.GenericAOEs(module)
             else
                 aoes[i] = aoe;
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
