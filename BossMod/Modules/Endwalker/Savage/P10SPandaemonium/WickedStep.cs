@@ -7,13 +7,15 @@ sealed class WickedStep(BossModule module) : Components.GenericKnockback(module)
     private const float _towerRadius = 4f;
     private const float _knockbackRadius = 36f;
 
+    private readonly List<Knockback> _sourcesBuffer = [];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         var len = _towers.Length;
         if (len == 0)
             return [];
 
-        var sources = new List<Knockback>();
+        var sources = _sourcesBuffer;
+        sources.Clear();
 
         for (var i = 0; i < len; ++i)
         {
@@ -31,7 +33,7 @@ sealed class WickedStep(BossModule module) : Components.GenericKnockback(module)
     {
         base.AddHints(slot, actor, hints);
 
-        var soaking = _towers.Any(t => t?.Position.InCircle(actor.Position, _towerRadius) ?? false);
+        var soaking = (_towers[0]?.Position.InCircle(actor.Position, _towerRadius) ?? false) || (_towers[1]?.Position.InCircle(actor.Position, _towerRadius) ?? false);
         var shouldSoak = actor.Role == Role.Tank;
         if (soaking != shouldSoak)
             hints.Add(shouldSoak ? "Soak the tower!" : "GTFO from tower!");

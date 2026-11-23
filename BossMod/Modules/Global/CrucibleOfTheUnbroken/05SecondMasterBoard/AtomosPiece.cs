@@ -99,7 +99,7 @@ sealed class Shockwave(BossModule module) : Components.SimpleKnockbacks(module, 
             return;
         }
 
-        hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOrigin(Arena.Center, knockback.Origin, 16f, 19f));
+        hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOrigin(Arena.Center, knockback.Origin, 16f, 19f), activation);
     }
 }
 
@@ -120,7 +120,7 @@ sealed class WaterIII(BossModule module) : Components.SimpleKnockbacks(module, (
             return;
         }
 
-        hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOrigin(Arena.Center, knockback.Origin, 20f, 20f));
+        hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOrigin(Arena.Center, knockback.Origin, 20f, 20f), activation);
     }
 }
 
@@ -245,6 +245,7 @@ sealed class AtomosPieceStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.AtomosPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1092u, NameID = 14642u, SortOrder = 5)]
+[PreferredKinship(BST.Kinship.Vile, "Ignore Shockwave and Water III knockbacks")]
 public sealed class AtomosPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f))
 {
     protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)

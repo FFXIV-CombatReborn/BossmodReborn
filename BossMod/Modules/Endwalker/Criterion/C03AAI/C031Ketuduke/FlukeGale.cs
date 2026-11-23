@@ -23,7 +23,16 @@ sealed class FlukeGale(BossModule module) : Components.GenericKnockback(module)
         if (_resolution != Resolve.None && _debuffs[slot] != Debuff.None && Gales.Count == 4 && _crystals != null)
         {
             var finalPos = CalculateMovements(slot, actor).LastOrDefault((actor.Position, actor.Position)).Item2;
-            if (!SafeZones(slot).Any(c => _safeZone.Check(finalPos, c, default)))
+            var inSafeZone = false;
+            foreach (var c in SafeZones(slot))
+            {
+                if (_safeZone.Check(finalPos, c, default))
+                {
+                    inSafeZone = true;
+                    break;
+                }
+            }
+            if (!inSafeZone)
                 hints.Add("Aim towards safe zone!");
         }
     }
@@ -73,17 +82,31 @@ sealed class FlukeGale(BossModule module) : Components.GenericKnockback(module)
         }
     }
 
-    private IEnumerable<WPos> SafeZones(int slot)
+    private readonly List<WPos> _safeZonesBuffer = [];
+
+    // note: returns a shared buffer, which is overwritten by the next call
+    private List<WPos> SafeZones(int slot)
     {
+        _safeZonesBuffer.Clear();
         if (_resolution == Resolve.None || _debuffs[slot] == Debuff.None || Gales.Count < 4 || _crystals == null)
-            yield break;
+            return _safeZonesBuffer;
         // bind will stay, bubble will always end in '1', so bind has to end in '1' or '2' depending on stack/spread
         var wantedOrder = _debuffs[slot] == Debuff.FoamyFetters && _resolution == Resolve.Spread ? 2 : 0;
         foreach (var c in _crystals.SafeZoneCenters)
         {
-            var order = Gales.FindIndex(s => s.Shape!.Check(c, s.Origin, s.Direction));
+            var order = -1;
+            for (var i = 0; i < Gales.Count; ++i)
+            {
+                var s = Gales[i];
+                if (s.Shape!.Check(c, s.Origin, s.Direction))
+                {
+                    order = i;
+                    break;
+                }
+            }
             if (order == wantedOrder || order == wantedOrder + 1)
-                yield return c;
+                _safeZonesBuffer.Add(c);
         }
+        return _safeZonesBuffer;
     }
 }

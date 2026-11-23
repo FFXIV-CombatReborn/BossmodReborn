@@ -55,9 +55,29 @@ sealed class Intemperance(BossModule module) : BossComponent(module)
         }
     }
 
+    private bool AnyoneElseInCell(Actor actor, int cell)
+    {
+        var party = Raid.WithoutSlot(false, true, true);
+        for (var i = 0; i < party.Length; ++i)
+        {
+            if (party[i] != actor && PositionFromCoords(party[i].Position) == cell)
+                return true;
+        }
+        return false;
+    }
+
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (_delimiterCenters.Any(c => _delimiterAOE.Check(actor.Position, c.Item1, c.Item2)))
+        var inDelimiter = false;
+        for (var i = 0; i < _delimiterCenters.Length; ++i)
+        {
+            if (_delimiterAOE.Check(actor.Position, _delimiterCenters[i].Item1, _delimiterCenters[i].Item2))
+            {
+                inDelimiter = true;
+                break;
+            }
+        }
+        if (inDelimiter)
         {
             hints.Add("GTFO from delimiter!");
         }
@@ -72,7 +92,7 @@ sealed class Intemperance(BossModule module) : BossComponent(module)
                     hints.Add("Go to assigned cell!");
                 }
             }
-            else if (Raid.WithoutSlot(false, true, true).Exclude(actor).Any(other => PositionFromCoords(other.Position) == actorCell))
+            else if (AnyoneElseInCell(actor, actorCell))
             {
                 hints.Add("Stand in own cell!");
             }

@@ -53,14 +53,23 @@ sealed class WreathOfThorns4(BossModule module) : BossComponent(module)
             if (_playerIcons[slot] == (uint)IconID.AkanthaiWater)
             {
                 hints.Add("Break tether!");
-                if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _waterExplosionRange).Any())
+                if (Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, _waterExplosionRange))
                 {
                     hints.Add("GTFO from others!");
                 }
             }
             else if (_playerIcons[slot] == (uint)IconID.AkanthaiDark)
             {
-                var soakedTower = _playerTetherSource.Zip(_playerIcons).Where(si => si.First != null && si.Second == (uint)IconID.AkanthaiWater).Select(si => si.First!).InRadius(actor.Position, P4S2.WreathTowerRadius).FirstOrDefault();
+                Actor? soakedTower = null;
+                for (var i = 0; i < _playerTetherSource.Length; ++i)
+                {
+                    var src = _playerTetherSource[i];
+                    if (src != null && _playerIcons[i] == (uint)IconID.AkanthaiWater && src.Position.InCircle(actor.Position, P4S2.WreathTowerRadius))
+                    {
+                        soakedTower = src;
+                        break;
+                    }
+                }
                 hints.Add("Soak the tower!", soakedTower == null);
             }
         }
@@ -211,7 +220,13 @@ sealed class WreathOfThorns4(BossModule module) : BossComponent(module)
     {
         var ccw = Service.Config.Get<P4S2Config>().Act4DarkSoakCCW;
         var pos = RotateCW(source.Position, (ccw ? -1 : 1) * 45f.Degrees(), 18f);
-        return _playerTetherSource.FirstOrDefault(x => x != null && x.Position.InCircle(pos, 4f));
+        for (var i = 0; i < _playerTetherSource.Length; ++i)
+        {
+            var x = _playerTetherSource[i];
+            if (x != null && x.Position.InCircle(pos, 4f))
+                return x;
+        }
+        return null;
     }
 
     private Actor? NextAOE()

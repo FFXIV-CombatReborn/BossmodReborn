@@ -1,6 +1,7 @@
 ﻿namespace BossMod.Global.CrucibleOfTheUnbroken.FirstMasterBoard.ProgenitrixPiece;
 
-public enum OID : uint {
+public enum OID : uint
+{
     ProgenitrixPiece = 0x4CD2,
     BombPiece = 0x4CD4, // R0.900, x0 (spawn during fight)
     SnollPiece = 0x4CD5, // R0.900, x0 (spawn during fight)
@@ -11,7 +12,8 @@ public enum OID : uint {
     Helper = 0x233C
 }
 
-public enum AID : uint {
+public enum AID : uint
+{
     AutoAttack = 50786, // ProgenitrixPiece->player, no cast, single-target
     Teleport = 48797, // ProgenitrixPiece->location, no cast, single-target
 
@@ -42,7 +44,8 @@ public enum AID : uint {
     ToxicFumes = 48796, // Helper->self, 4.0s cast, range 40 20.000-degree cone
 }
 
-public enum SID : uint {
+public enum SID : uint
+{
     Invincibility = 4410, // none->ProgenitrixPiece, extra=0x0
     Swelling = 5182, // none->4CD3, extra=0x1/0x2/0x3/0x5/0x6/0x7/0x8/0x9/0xA/0xB/0xC/0xD/0x4
     Bind = 2518, // ProgenitrixPiece->player, extra=0x0
@@ -54,23 +57,27 @@ public enum SID : uint {
     Bleeding1 = 3078, // none->player, extra=0x0
 }
 
-public enum IconID : uint {
+public enum IconID : uint
+{
     MeltdownTankBuster = 412, // player->self
 }
 
-public enum TetherID : uint {
+public enum TetherID : uint
+{
     InvincibilityTether = 5, // 4CD3->ProgenitrixPiece
 }
 
 sealed class ScaldingScolding(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ScaldingScolding, new AOEShapeCone(40f, 90f.Degrees()));
-sealed class MassiveExplosion(BossModule module) : Components.RaidwideCast(module, (uint)AID.MassiveExplosion);
+sealed class MassiveExplosion(BossModule module) : Components.RaidwideCasts(module, [(uint)AID.MassiveExplosion, (uint)AID.MassiveExplosionBoss]);
+sealed class IceSpikes(BossModule module) : Components.Dispel(module, (uint)SID.IceSpikes, (uint)AID.IceSpikes);
 sealed class ToxicFumes(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ToxicFumes, new AOEShapeCone(40f, 10f.Degrees()));
-sealed class FireII(BossModule module) : Components.SimpleAOEs(module, (uint)AID.FireII, 6f);
+sealed class FireII(BossModule module) : Components.SimpleAOEs(module, (uint)AID.FireII, 5f);
 
 sealed class Meltdown(BossModule module) : Components.BaitAwayIcon(module, new AOEShapeRect(40f, 6f), (uint)IconID.MeltdownTankBuster, (uint)AID.Meltdown,
     activationDelay: 7.9d, tankbuster: true);
 
-sealed class MeltdownKnockback(BossModule module) : Components.SimpleKnockbacks(module, default, 15f, kind: Kind.AwayFromOrigin) {
+sealed class MeltdownKnockback(BossModule module) : Components.SimpleKnockbacks(module, default, 15f, kind: Kind.AwayFromOrigin)
+{
     private Actor? target;
     private DateTime activation = default;
 
@@ -78,10 +85,13 @@ sealed class MeltdownKnockback(BossModule module) : Components.SimpleKnockbacks(
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell) { }
 
-    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID) {
-        if (iconID == (uint)IconID.MeltdownTankBuster) {
+    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
+    {
+        if (iconID == (uint)IconID.MeltdownTankBuster)
+        {
             var targetPlayer = WorldState.Actors.Find(targetID);
-            if (targetPlayer == null) {
+            if (targetPlayer == null)
+            {
                 return;
             }
 
@@ -90,44 +100,53 @@ sealed class MeltdownKnockback(BossModule module) : Components.SimpleKnockbacks(
         }
     }
 
-    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
-        if (spell.Action.ID == (uint)AID.Meltdown) {
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID == (uint)AID.Meltdown)
+        {
             target = null;
             activation = default;
         }
     }
 
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         var count = Casters.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return;
         }
 
         var knockbacks = CollectionsMarshal.AsSpan(Casters);
         ref var knockback = ref knockbacks[0];
 
-        if (IsImmune(slot, knockback.Activation)) {
+        if (IsImmune(slot, knockback.Activation))
+        {
             return;
         }
 
         hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOrigin(Arena.Center, knockback.Origin, knockback.Distance, 19.0f), knockback.Activation);
     }
 
-    public override void Update() {
+    public override void Update()
+    {
         Casters.Clear();
 
-        if (target == null) {
+        if (target == null)
+        {
             return;
         }
 
-        var minDist = KnockbackKind == Kind.TowardsOrigin ? (MinDistance + (MinDistanceBetweenHitboxes ? Raid.Player()!.HitboxRadius + Module.PrimaryActor.HitboxRadius : default)) : MinDistance;
+        var minDist = KnockbackKind == Kind.TowardsOrigin ? (MinDistance + (MinDistanceBetweenHitboxes ? (Raid.Player()?.HitboxRadius ?? default) + Module.PrimaryActor.HitboxRadius : default)) : MinDistance;
         Casters.Add(new(Module.PrimaryActor.Position, Distance, activation, Shape, default, KnockbackKind, minDist, [], default, IgnoreImmunes,
             ResolveArenaProjectionLayer(target.Position.Z), RestrictToArenaProjectionLayer));
     }
 }
 
-sealed class FirePuddles(BossModule module) : Components.Voidzone(module, 6f, GetVoidzones) {
-    private static Actor[] GetVoidzones(BossModule module) {
+sealed class FirePuddles(BossModule module) : Components.Voidzone(module, 6f, GetVoidzones)
+{
+    private static Actor[] GetVoidzones(BossModule module)
+    {
         var enemies = module.Enemies((uint)OID.FirePuddle);
         var count = enemies.Count;
         if (count == 0)
@@ -135,7 +154,8 @@ sealed class FirePuddles(BossModule module) : Components.Voidzone(module, 6f, Ge
 
         var voidzones = new Actor[count];
         var index = 0;
-        for (var i = 0; i < count; ++i) {
+        for (var i = 0; i < count; ++i)
+        {
             var z = enemies[i];
             if (z.EventState != 7)
                 voidzones[index++] = z;
@@ -144,26 +164,32 @@ sealed class FirePuddles(BossModule module) : Components.Voidzone(module, 6f, Ge
     }
 }
 
-sealed class FieryFuryKnockback(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.FieryFuryKnockback, 15f, maxCasts: 2) {
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+sealed class FieryFuryKnockback(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.FieryFuryKnockback, 15f, maxCasts: 2)
+{
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         var count = Casters.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return;
         }
 
         var knockbacks = CollectionsMarshal.AsSpan(Casters);
         ref var knockback = ref knockbacks[0];
 
-        if (IsImmune(slot, knockback.Activation)) {
+        if (IsImmune(slot, knockback.Activation))
+        {
             return;
         }
 
-        if (count == 3) {
+        if (count == 3)
+        {
             hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOriginMulti3(Arena.Center, [.. knockbacks], knockback.Distance, 19.0f), knockback.Activation);
             return;
         }
 
-        if (count == 2) {
+        if (count == 2)
+        {
             hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOriginMulti2(Arena.Center, [.. knockbacks], knockback.Distance, 19.0f), knockback.Activation);
             return;
         }
@@ -171,28 +197,35 @@ sealed class FieryFuryKnockback(BossModule module) : Components.SimpleKnockbacks
         hints.AddForbiddenZone(new SDKnockbackInCircleAwayFromOrigin(Arena.Center, knockback.Origin, knockback.Distance, 19.0f), knockback.Activation);
     }
 }
-sealed class FieryFuryAOE : Components.SimpleAOEs {
-    public FieryFuryAOE(BossModule module) : base(module, (uint)AID.FieryFuryAOE, 6f, maxCasts: 2) {
+sealed class FieryFuryAOE : Components.SimpleAOEs
+{
+    public FieryFuryAOE(BossModule module) : base(module, (uint)AID.FieryFuryAOE, 6f, maxCasts: 2)
+    {
         MaxDangerColor = 1;
     }
 }
 
-sealed class SnollPieceTarget(BossModule module) : Components.Adds(module, (uint)OID.SnollPiece, AIHints.Enemy.PriorityForbidden) {
+sealed class SnollPieceTarget(BossModule module) : Components.Adds(module, (uint)OID.SnollPiece, AIHints.Enemy.PriorityForbidden)
+{
     private readonly FirePuddles? firePuddles = module.FindComponent<FirePuddles>();
 
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         base.AddAIHints(slot, actor, assignment, hints);
 
         // Are any enemy of this type alive
         var enemies = CollectionsMarshal.AsSpan(ActiveActors);
         var count = enemies.Length;
-        if (count == 0 || firePuddles == null) {
+        if (count == 0 || firePuddles == null)
+        {
             return;
         }
 
         // Do we have any fire puddles available? If not just let the player kill them
-        if (!firePuddles.Sources(Module).Any()) {
-            foreach (var enemy in enemies) {
+        if (!firePuddles.Sources(Module).Any())
+        {
+            foreach (var enemy in enemies)
+            {
                 hints.SetPriority(enemy, 2);
             }
             return;
@@ -201,9 +234,11 @@ sealed class SnollPieceTarget(BossModule module) : Components.Adds(module, (uint
         // Find the closest puddle
         Actor? closestPuddle = null;
         var closestDistance = float.MaxValue;
-        foreach (var puddle in firePuddles.Sources(Module)) {
+        foreach (var puddle in firePuddles.Sources(Module))
+        {
             var distance = (puddle.Position - actor.Position).Length();
-            if (distance < closestDistance) {
+            if (distance < closestDistance)
+            {
                 closestDistance = distance;
                 closestPuddle = puddle;
             }
@@ -211,22 +246,27 @@ sealed class SnollPieceTarget(BossModule module) : Components.Adds(module, (uint
 
         // Case: Checks if we are close enough to a puddle & the enemy is close enough. We check these together as we need to ensure both are valid for it to work
         var nearPuddle = closestPuddle != null && closestDistance <= 8.0f;
-        for (var i = 0; i < count; i++) {
+        for (var i = 0; i < count; i++)
+        {
             ref var enemy = ref enemies[i];
             var mainAggro = enemy.TargetID == actor.InstanceID;
             var enemyCloseEnough = mainAggro && (enemy.Position - actor.Position).Length() <= 5.0f; // Melee range of the enemy to player
             var ready = enemyCloseEnough && nearPuddle;
             hints.SetPriority(enemy, ready ? 2 : AIHints.Enemy.PriorityForbidden);
-            if (mainAggro && !ready && closestPuddle != null) {
+            if (mainAggro && !ready && closestPuddle != null)
+            {
                 hints.GoalZones.Add(AIHints.GoalDonut(closestPuddle.Position, 6.0f, 8.0f, 5.0f));
             }
         }
     }
 }
 
-sealed class ProgenitrixPieceStates : StateMachineBuilder {
-    public ProgenitrixPieceStates(BossModule module) : base(module) {
+sealed class ProgenitrixPieceStates : StateMachineBuilder
+{
+    public ProgenitrixPieceStates(BossModule module) : base(module)
+    {
         TrivialPhase()
+            .ActivateOnEnter<IceSpikes>()
             .ActivateOnEnter<ScaldingScolding>()
             .ActivateOnEnter<MassiveExplosion>()
             .ActivateOnEnter<ToxicFumes>()
@@ -241,17 +281,25 @@ sealed class ProgenitrixPieceStates : StateMachineBuilder {
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.ProgenitrixPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1091u, NameID = 14623u, SortOrder = 9)]
-public sealed class ProgenitrixPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f)) {
-    protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+[PreferredKinship(BST.Kinship.Wave, "Remove Ice Spikes")]
+[PreferredKinship(BST.Kinship.Vile, "Ignore Meltdown and Fiery Fury knockbacks")]
+[PreferredKinship(BST.Kinship.Ash, "Cleanse Slow from hitting Ice Spikes")]
+public sealed class ProgenitrixPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f))
+{
+    protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         var count = hints.PotentialTargets.Count;
-        for (var i = 0; i < count; ++i) {
+        for (var i = 0; i < count; ++i)
+        {
             var e = hints.PotentialTargets[i];
 
-            if (e.Actor.OID == (uint)OID.SnollPiece) {
+            if (e.Actor.OID == (uint)OID.SnollPiece)
+            {
                 continue;
             }
 
-            e.Priority = e.Actor.OID switch {
+            e.Priority = e.Actor.OID switch
+            {
                 (uint)OID.GrenadePiece => 5,
                 (uint)OID.PyrobolusPiece => 4,
                 (uint)OID.BombPiece => 3,
@@ -261,7 +309,8 @@ public sealed class ProgenitrixPiece(WorldState ws, Actor primary) : BossModule(
         }
     }
 
-    protected override void DrawEnemies(int pcSlot, Actor pc) {
+    protected override void DrawEnemies(int pcSlot, Actor pc)
+    {
         Arena.Actor(PrimaryActor);
         Arena.Actors(Enemies((uint)OID.GrenadePiece), Colors.Vulnerable);
         Arena.Actors(Enemies((uint)OID.PyrobolusPiece));

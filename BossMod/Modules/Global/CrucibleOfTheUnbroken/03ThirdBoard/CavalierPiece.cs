@@ -22,6 +22,7 @@ public enum AID : uint
     Valfodr = 48462, // Helper->self, 6.0s cast, range 60 width 8 rect
     CrushingBlade = 48471, // CavalierPiece->player, 5.0s cast, single-target
     FeintedCavalierTeleport = 50552, // 4C8F->CavalierPiece, no cast, single-target
+    SoulDouse = 50693, // BoneBishop->self, 5.0s cast, range 60 circle
 
     Unknown1 = 50551, // 4C92->CavalierPiece, no cast, single-target - most likely the orb teleport
 }
@@ -37,6 +38,7 @@ public enum TetherID : uint
 }
 
 sealed class Steelripper(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Steelripper, new AOEShapeCone(60.0f, 65.0f.Degrees()));
+sealed class SoulDouse(BossModule module) : Components.CastHint(module, (uint)AID.SoulDouse, "Kill Bone Bishop before it self-destructs!", true);
 
 sealed class MenaceValfodr(BossModule module) : Components.GenericAOEs(module)
 {
@@ -66,11 +68,31 @@ sealed class MenaceValfodr(BossModule module) : Components.GenericAOEs(module)
             }
         }
 
-        if (spell.Action.ID is (uint)AID.Menace or (uint)AID.Valfodr)
+        if (spell.Action.ID is var id && id is (uint)AID.Menace or (uint)AID.Valfodr)
         {
-            if (aoes.Count > 0)
+            var index = IndexOfClosestAOE(aoes, caster.Position, id == (uint)AID.Menace ? circle : rectangle);
+            if (index >= 0)
             {
-                aoes.RemoveAt(0);
+                aoes.RemoveAt(index);
+            }
+        }
+    }
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID is var id && id is (uint)AID.Menace or (uint)AID.Valfodr)
+        {
+            AOEShape shape = id == (uint)AID.Menace ? circle : rectangle;
+            var loc = spell.LocXZ;
+            var aoe = new AOEInstance(shape, loc, spell.Rotation, Module.CastFinishAt(spell));
+            var index = IndexOfClosestAOE(aoes, loc, shape);
+            if (index >= 0)
+            {
+                aoes[index] = aoe;
+            }
+            else
+            {
+                aoes.Add(aoe);
             }
         }
     }
@@ -128,11 +150,15 @@ sealed class CrushingBlade(BossModule module) : Components.GenericKnockback(modu
         }
     }
 
+    private readonly Knockback[] _oneKnockback = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (affectedPlayers[slot] && activation != default && source != null)
         {
-            return new Knockback[1] { new(source.Position, KnockbackDistance, activation) };
+            {
+                _oneKnockback[0] = new(source.Position, KnockbackDistance, activation);
+                return _oneKnockback;
+            }
         }
 
         return [];
@@ -154,6 +180,7 @@ sealed class CavalierPieceStates : StateMachineBuilder
     public CavalierPieceStates(BossModule module) : base(module)
     {
         TrivialPhase()
+            .ActivateOnEnter<SoulDouse>()
             .ActivateOnEnter<Steelripper>()
             .ActivateOnEnter<MenaceValfodr>()
             .ActivateOnEnter<CrushingBlade>();
@@ -161,6 +188,7 @@ sealed class CavalierPieceStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.CavalierPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14564u, SortOrder = 1)]
+[PreferredKinship(BST.Kinship.Vile, "Ignore Crushing Blade's knockback")]
 public sealed class CavalierPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsSquare(20f))
 {
     protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)

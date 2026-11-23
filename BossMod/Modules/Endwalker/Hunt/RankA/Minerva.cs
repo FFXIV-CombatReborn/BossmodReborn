@@ -29,10 +29,14 @@ class BallisticMissile(BossModule module) : Components.GenericAOEs(module)
     private static readonly AOEShapeCircle circle = new(6f);
     private static readonly AOEShapeDonut donut = new(6f, 20f);
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_activeMissile != null)
-            return new AOEInstance[1] { new(_activeMissile, _activeTarget?.Position ?? _activeLocation) };
+        {
+            _oneAOEInstance[0] = new(_activeMissile, _activeTarget?.Position ?? _activeLocation);
+            return _oneAOEInstance;
+        }
         return [];
     }
 

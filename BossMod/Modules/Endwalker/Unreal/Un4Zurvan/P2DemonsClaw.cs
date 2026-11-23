@@ -8,10 +8,10 @@ sealed class P2DemonsClawKnockback(BossModule module) : Components.GenericKnockb
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (_caster?.CastInfo?.TargetID == actor.InstanceID)
-            {
-                _oneKnockback[0] = new(_caster.Position, 17f, Module.CastFinishAt(_caster.CastInfo), ignoreImmunes: true);
-                return _oneKnockback;
-            }
+        {
+            _oneKnockback[0] = new(_caster.Position, 17f, Module.CastFinishAt(_caster.CastInfo), ignoreImmunes: true);
+            return _oneKnockback;
+        }
         return [];
     }
 

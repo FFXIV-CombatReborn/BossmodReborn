@@ -18,9 +18,16 @@ abstract class BirdDistance(BossModule module, uint watchedBirdsID) : BossCompon
         for (var i = 0; i < watchedBirds.Count; ++i)
         {
             var bird = watchedBirds[i];
-            if (!bird.IsDead && watchedBirds.Where(other => other.IsDead).InRadius(bird.Position, _radius).Any())
+            if (bird.IsDead)
+                continue;
+            for (var j = 0; j < watchedBirds.Count; ++j)
             {
-                _birdsAtRisk.Set(i);
+                var other = watchedBirds[j];
+                if (other.IsDead && other.Position.InCircle(bird.Position, _radius))
+                {
+                    _birdsAtRisk.Set(i);
+                    break;
+                }
             }
         }
     }

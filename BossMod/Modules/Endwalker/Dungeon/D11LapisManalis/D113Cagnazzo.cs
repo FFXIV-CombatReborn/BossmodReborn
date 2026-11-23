@@ -87,7 +87,7 @@ sealed class StygianDelugeArenaChange(BossModule module) : Components.GenericAOE
 
 sealed class VoidTorrent(BossModule module) : Components.BaitAwayCast(module, (uint)AID.VoidTorrent, new AOEShapeRect(60f, 4f), tankbuster: true, damageType: AIHints.PredictedDamageType.Tankbuster);
 
-sealed class Voidcleaver(BossModule module) : Components.RaidwideCast(module, (uint)AID.Voidcleaver);
+sealed class Voidcleaver(BossModule module) : Components.RaidwideCast(module, (uint)AID.VoidcleaverVisual);
 sealed class VoidMiasmaBait(BossModule module) : Components.BaitAwayTethers(module, new AOEShapeCone(50f, 15f.Degrees()), (uint)TetherID.BaitAway);
 
 sealed class LifescleaverVoidMiasma(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.VoidMiasma, (uint)AID.Lifescleaver], new AOEShapeCone(50f, 15f.Degrees()));

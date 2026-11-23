@@ -23,17 +23,21 @@ sealed class NearFarSight : BossComponent
             ReportError($"Failed to initialize near/far sight, unexpected cast {Module.PrimaryActor.CastInfo?.Action}");
     }
 
+    private readonly List<(int, Actor)> _sorted = new(PartyState.MaxPartySize);
+
     public override void Update()
     {
         _targets = _inAOE = default;
         if (CurState == State.Done)
             return;
 
-        var playersByRange = Raid.WithSlot(false, true, true).SortedByRange(Module.PrimaryActor.Position);
-        foreach ((var i, var player) in CurState == State.Near ? playersByRange.Take(2) : playersByRange.TakeLast(2))
+        Raid.WithSlot(false, true, true).SortedByRange(Module.PrimaryActor.Position, _sorted);
+        var first = CurState == State.Near ? 0 : Math.Max(0, _sorted.Count - 2);
+        for (var k = first; k < _sorted.Count && k < first + 2; ++k)
         {
+            var (i, player) = _sorted[k];
             _targets.Set(i);
-            _inAOE |= Raid.WithSlot(false, true, true).InRadiusExcluding(player, _aoeRadius).Mask();
+            _inAOE |= Raid.WithSlot(false, true, true).MaskInRadiusExcluding(player, _aoeRadius);
         }
     }
 

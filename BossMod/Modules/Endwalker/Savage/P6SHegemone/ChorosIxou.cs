@@ -7,6 +7,7 @@ sealed class ChorosIxou(BossModule module) : Components.GenericAOEs(module)
     private readonly AOEShapeCone _cone = new(40f, 45f.Degrees());
     private readonly List<Angle> _directions = [];
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (SecondDone)
@@ -15,10 +16,13 @@ sealed class ChorosIxou(BossModule module) : Components.GenericAOEs(module)
         // TODO: timing
         var offset = (FirstDone ? 90f : 0f).Degrees();
         var count = _directions.Count;
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
             aoes[i] = new(_cone, Module.PrimaryActor.Position, _directions[i] + offset);
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

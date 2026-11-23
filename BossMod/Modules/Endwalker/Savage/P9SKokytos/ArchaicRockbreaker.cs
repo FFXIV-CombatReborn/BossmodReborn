@@ -60,8 +60,9 @@ sealed class ArchaicRockbreakerPairs : Components.UniformStackSpread
 {
     public ArchaicRockbreakerPairs(BossModule module) : base(module, 6f, default, 2)
     {
-        foreach (var p in Raid.WithoutSlot(true, true, true).Where(p => p.Class.IsSupport()))
-            AddStack(p, WorldState.FutureTime(7.8f));
+        foreach (var p in Raid.WithoutSlot(true, true, true))
+            if (p.Class.IsSupport())
+                AddStack(p, WorldState.FutureTime(7.8f));
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)

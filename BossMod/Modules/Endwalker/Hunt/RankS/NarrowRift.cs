@@ -40,10 +40,14 @@ class EmptyPromise(BossModule module) : Components.GenericAOEs(module)
     private static readonly AOEShapeCircle _shapeCircle = new(10f);
     private static readonly AOEShapeDonut _shapeDonut = new(6f, 40f);
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_pendingShapes.Count > 0)
-            return new AOEInstance[1] { new(_pendingShapes[0], Module.PrimaryActor.Position, default, Module.CastFinishAt(Module.PrimaryActor.CastInfo)) };
+        {
+            _oneAOEInstance[0] = new(_pendingShapes[0], Module.PrimaryActor.Position, default, Module.CastFinishAt(Module.PrimaryActor.CastInfo));
+            return _oneAOEInstance;
+        }
         return [];
     }
 
@@ -82,10 +86,14 @@ class VanishingRay(BossModule module) : Components.GenericAOEs(module)
     private DateTime _activation;
     private static readonly AOEShapeRect _shape = new(50f, 4f);
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_activation != default)
-            return new AOEInstance[1] { new(_shape, Module.PrimaryActor.Position, Module.PrimaryActor.Rotation, _activation) };
+        {
+            _oneAOEInstance[0] = new(_shape, Module.PrimaryActor.Position, Module.PrimaryActor.Rotation, _activation);
+            return _oneAOEInstance;
+        }
         return [];
     }
 

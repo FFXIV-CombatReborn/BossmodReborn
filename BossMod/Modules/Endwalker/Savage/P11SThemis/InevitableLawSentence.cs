@@ -42,14 +42,16 @@ sealed class InevitableLawSentence(BossModule module) : Components.GenericStackS
     private void AddPartyStacks()
     {
         Stacks.Clear();
-        foreach (var t in Raid.WithoutSlot(true, true, true).Where(t => t.Role == Role.Healer))
-            Stacks.Add(new(t, 6, 4, 4, Module.StateMachine.NextTransitionWithFlag(StateMachine.StateHint.Raidwide)));
+        foreach (var t in Raid.WithoutSlot(true, true, true))
+            if (t.Role == Role.Healer)
+                Stacks.Add(new(t, 6, 4, 4, Module.StateMachine.NextTransitionWithFlag(StateMachine.StateHint.Raidwide)));
     }
 
     private void AddPairStacks()
     {
         Stacks.Clear();
-        foreach (var t in Raid.WithoutSlot(true, true, true).Where(t => t.Class.IsDD()))
-            Stacks.Add(new(t, 3, 2, 2, Module.StateMachine.NextTransitionWithFlag(StateMachine.StateHint.Raidwide)));
+        foreach (var t in Raid.WithoutSlot(true, true, true))
+            if (t.Class.IsDD())
+                Stacks.Add(new(t, 3, 2, 2, Module.StateMachine.NextTransitionWithFlag(StateMachine.StateHint.Raidwide)));
     }
 }

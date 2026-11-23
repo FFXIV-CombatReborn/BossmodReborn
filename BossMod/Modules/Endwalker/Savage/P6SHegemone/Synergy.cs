@@ -13,7 +13,7 @@ sealed class Synergy(BossModule module) : BossComponent(module)
     {
         if (!_chelic)
         {
-            if (_targets.Any(t => actor != t && _shapeNormal.Check(actor.Position, t)))
+            if (_targets[0] is var t0 && actor != t0 && _shapeNormal.Check(actor.Position, t0) || _targets[1] is var t1 && actor != t1 && _shapeNormal.Check(actor.Position, t1))
                 hints.Add("GTFO from tanks!");
 
             if (Module.PrimaryActor.TargetID == _targets[0]?.InstanceID)

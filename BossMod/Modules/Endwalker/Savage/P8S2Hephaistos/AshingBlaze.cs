@@ -5,10 +5,14 @@ sealed class AshingBlaze(BossModule module) : Components.GenericAOEs(module)
     private WPos? _origin;
     private readonly AOEShapeRect _shape = new(46f, 10f);
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_origin != null)
-            return new AOEInstance[1] { new(_shape, _origin.Value, default, Module.CastFinishAt(Module.PrimaryActor.CastInfo)) };
+        {
+            _oneAOEInstance[0] = new(_shape, _origin.Value, default, Module.CastFinishAt(Module.PrimaryActor.CastInfo));
+            return _oneAOEInstance;
+        }
         return [];
     }
 

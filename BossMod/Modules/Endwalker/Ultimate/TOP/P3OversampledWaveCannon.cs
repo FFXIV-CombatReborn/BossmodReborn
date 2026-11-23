@@ -20,15 +20,23 @@ sealed class P3OversampledWaveCannon(BossModule module) : BossComponent(module)
         if (_playerOrder[slot] != 0)
             hints.Add($"Order: {(IsMonitor(slot) != default ? "M" : "N")}{_playerOrder[slot]}", false);
 
-        var numHitBy = AOEs(slot).Count(a => !a.source && _shape.Check(actor.Position, a.origin, a.rot));
+        var aoes = AOEs(slot);
+        var numHitBy = 0;
+        for (var i = 0; i < aoes.Length; ++i)
+        {
+            var a = aoes[i];
+            if (!a.source && _shape.Check(actor.Position, a.origin, a.rot))
+                ++numHitBy;
+        }
         if (numHitBy != 1)
             hints.Add($"Hit by {numHitBy} monitors!");
     }
 
     public override void AddMovementHints(int slot, Actor actor, MovementHints movementHints)
     {
-        foreach (var p in SafeSpots(slot).Where(p => p.assigned))
-            movementHints.Add(actor.Position, p.pos, Colors.Safe);
+        foreach (var p in SafeSpots(slot))
+            if (p.assigned)
+                movementHints.Add(actor.Position, p.pos, Colors.Safe);
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
@@ -75,8 +83,8 @@ sealed class P3OversampledWaveCannon(BossModule module) : BossComponent(module)
             var dirToUnsafeCleave = actor.DirectionTo(Arena.Center).ToAngle() - _playerAngles[slot];
             al.ForbidArc(dirToUnsafeCleave - 90.Degrees(), dirToUnsafeCleave + 90f.Degrees());
 
-        foreach (var (min, max) in al.Forbidden.Segments)
-            hints.ForbiddenDirections.Add((((max + min) * 0.5f).Radians(), ((max - min) * 0.5f).Radians() + 1f.Degrees(), _resolve));
+            foreach (var (min, max) in al.Forbidden.Segments)
+                hints.ForbiddenDirections.Add((((max + min) * 0.5f).Radians(), ((max - min) * 0.5f).Radians() + 1f.Degrees(), _resolve));
         }
     }
 

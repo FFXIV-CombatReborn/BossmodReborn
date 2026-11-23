@@ -88,12 +88,16 @@ sealed class PalladionShockwave(BossModule module) : Components.GenericAOEs(modu
     private WPos _origin = module.PrimaryActor.Position;
     private DateTime _activation = module.CastFinishAt(module.PrimaryActor.CastInfo, 0.3d);
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_palladion != null && NumCasts < _palladion.JumpTargets.Length && _palladion.JumpTargets[NumCasts] is var target && target != null && actor != target && actor != _palladion.Partners[NumCasts])
         {
             var toTarget = target.Position.Quantized() - _origin;
-            return new AOEInstance[1] { new(new AOEShapeRect(toTarget.Length(), 2f), _origin, Angle.FromDirection(toTarget), _activation) };
+            {
+                _oneAOEInstance[0] = new(new AOEShapeRect(toTarget.Length(), 2f), _origin, Angle.FromDirection(toTarget), _activation);
+                return _oneAOEInstance;
+            }
         }
         return [];
     }
@@ -183,10 +187,14 @@ sealed class PalladionClearCut(BossModule module) : Components.GenericAOEs(modul
 
     private readonly AOEShapeCircle _shape = new(4f); // note: it's really a 270? degree cone, but we don't really know rotation early enough, and we just shouldn't stay in center anyway
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_palladion != null && _palladion.NumBaitsDone < _palladion.NumBaitsAssigned && !_palladion.BaitOrder[_palladion.NumBaitsDone])
-            return new AOEInstance[1] { new(_shape, Arena.Center) };
+        {
+            _oneAOEInstance[0] = new(_shape, Arena.Center);
+            return _oneAOEInstance;
+        }
         return [];
     }
 }
@@ -204,12 +212,17 @@ sealed class PalladionWhiteFlame : Components.GenericBaitAway
         UpdateBaiters();
     }
 
+    private readonly List<Actor> _sorted = new(PartyState.MaxPartySize);
+
     public override void Update()
     {
         CurrentBaits.Clear();
         if (_palladion != null && _palladion.NumBaitsDone < _palladion.NumBaitsAssigned && _palladion.BaitOrder[_palladion.NumBaitsDone])
-            foreach (var t in Raid.WithoutSlot(false, true, true).SortedByRange(Arena.Center).Take(2))
-                CurrentBaits.Add(new(FakeActor, t, _shape));
+        {
+            Raid.WithoutSlot(false, true, true).SortedByRange(Arena.Center, _sorted);
+            for (var i = 0; i < _sorted.Count && i < 2; ++i)
+                CurrentBaits.Add(new(FakeActor, _sorted[i], _shape));
+        }
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
@@ -257,8 +270,12 @@ sealed class PalladionDestroyPlatforms(BossModule module) : Components.GenericAO
 {
     private readonly AOEShapeRect _shape = new(10f, 20f, 10f);
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        return new AOEInstance[1] { new(_shape, Arena.Center) };
+        {
+            _oneAOEInstance[0] = new(_shape, Arena.Center);
+            return _oneAOEInstance;
+        }
     }
 }

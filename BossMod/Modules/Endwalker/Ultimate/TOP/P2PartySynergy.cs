@@ -180,10 +180,14 @@ sealed class P2PartySynergyOpticalLaser(TOP module) : Components.GenericAOEs(mod
         _activation = WorldState.FutureTime(6.8d);
     }
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_activation != default && _source != null)
-            return new AOEInstance[1] { new(_shape, _source.Position.Quantized(), _source.Rotation, _activation) };
+        {
+            _oneAOEInstance[0] = new(_shape, _source.Position.Quantized(), _source.Rotation, _activation);
+            return _oneAOEInstance;
+        }
         return [];
     }
 
@@ -214,9 +218,13 @@ sealed class P2PartySynergyOpticalLaser(TOP module) : Components.GenericAOEs(mod
 
 sealed class P2PartySynergyDischarger(BossModule module) : Components.GenericKnockback(module, (uint)AID.Discharger)
 {
+    private readonly Knockback[] _oneKnockback = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
-        return new Knockback[1] { new(Arena.Center, 13f) }; // TODO: activation
+        {
+            _oneKnockback[0] = new(Arena.Center, 13f); // TODO: activation
+            return _oneKnockback;
+        }
     }
 }
 
@@ -241,15 +249,19 @@ class P2PartySynergyEfficientBladework : Components.GenericAOEs
             _firstGroup = Raid.WithSlot(true, true, true).WhereSlot(s => _synergy.PlayerStates[s].Group == 1).Mask();
     }
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_activation != default)
         {
             var count = _sources.Count;
-            var aoes = new AOEInstance[count];
+            var aoesLen = count;
+            if (_aoesBuffer.Length < aoesLen)
+                _aoesBuffer = new AOEInstance[aoesLen];
+            var aoes = _aoesBuffer;
             for (var i = 0; i < count; ++i)
                 aoes[i] = new(_shape, _sources[i].Position.Quantized(), default, _activation);
-            return aoes;
+            return aoes.AsSpan(0, aoesLen);
         }
         return [];
     }

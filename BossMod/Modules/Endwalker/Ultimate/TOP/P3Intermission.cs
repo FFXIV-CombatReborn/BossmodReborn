@@ -66,8 +66,9 @@ sealed class P3SniperCannon(BossModule module) : Components.UniformStackSpread(m
             slotsInPriorityOrder[a.group] = a.slot;
 
         int[] assignedRoles = [0, 0, 0];
-        foreach (var s in slotsInPriorityOrder.Where(s => s >= 0))
-            _playerStates[s].Order = ++assignedRoles[(int)_playerStates[s].Role];
+        foreach (var s in slotsInPriorityOrder)
+            if (s >= 0)
+                _playerStates[s].Order = ++assignedRoles[(int)_playerStates[s].Role];
     }
 
     private List<WPos> EnumerateSafeSpots(int slot)

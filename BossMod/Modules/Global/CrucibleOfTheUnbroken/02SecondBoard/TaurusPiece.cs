@@ -40,6 +40,7 @@ public enum AID : uint
     MortalGazeVisual = 48152, // 4C57->self, 4.5+0.5s cast, single-target
     MortalGaze = 48153, // Helper->self, 5.0s cast, range 50 circle
     Stone = 48625, // 4C57->player, no cast, single-target
+    EyesOnMe = 48372, // 4C57->self, 10.0s cast, range 60 circle
 }
 
 public enum SID : uint
@@ -144,6 +145,7 @@ sealed class Doom(BossModule module) : BossComponent(module)
     }
 }
 sealed class MortalRay(BossModule module) : Components.RaidwideCast(module, (uint)AID.MortalRay, "Raidwide + Doom");
+sealed class EyesOnMe(BossModule module) : Components.CastHint(module, (uint)AID.EyesOnMe, "Kill Ahriman before it self-destructs!", true);
 sealed class RuinousRing(BossModule module) : Components.SimpleAOEs(module, (uint)AID.RuinousRing1, new AOEShapeDonut(8f, 40f));
 sealed class RuinousLocus(BossModule module) : Components.SimpleAOEs(module, (uint)AID.RuinousLocus1, 8f);
 sealed class RayOfIgnorance(BossModule module) : BossComponent(module)
@@ -348,6 +350,7 @@ sealed class TaurusPieceStates : StateMachineBuilder
     public TaurusPieceStates(BossModule module) : base(module)
     {
         TrivialPhase()
+            .ActivateOnEnter<EyesOnMe>()
             .ActivateOnEnter<Doom>()
             .ActivateOnEnter<MortalRay>()
             .ActivateOnEnter<RuinousRing>()
@@ -362,5 +365,5 @@ sealed class TaurusPieceStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.TaurusPiece, Contributors = "gynorhino", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1089u, NameID = 14546u, SortOrder = 6)]
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.TaurusPiece, Contributors = "gynorhino", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1089u, NameID = 14546u, SortOrder = 2)]
 public sealed class TaurusPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(520f, 0f), new ArenaBoundsRect(19.5f, 15f));

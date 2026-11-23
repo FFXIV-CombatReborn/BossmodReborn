@@ -25,7 +25,7 @@ sealed class Pinax(BossModule module) : BossComponent(module)
             {
                 hints.Add("GTFO from acid square!");
             }
-            hints.Add("Spread!", Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _acidAOERadius).Any());
+            hints.Add("Spread!", Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, _acidAOERadius));
         }
         if (_fire != null)
         {
@@ -33,7 +33,7 @@ sealed class Pinax(BossModule module) : BossComponent(module)
             {
                 hints.Add("GTFO from fire square!");
             }
-            hints.Add("Stack in fours!", Raid.WithoutSlot(false, true, true).Where(x => x.Role == Role.Healer).InRadius(actor.Position, _fireAOERadius).Count() != 1);
+            hints.Add("Stack in fours!", Raid.WithoutSlot(false, true, true).CountInRadius(actor.Position, _fireAOERadius, Role.Healer) != 1);
         }
         if (_water != null)
         {

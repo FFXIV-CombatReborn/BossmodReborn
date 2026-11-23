@@ -12,6 +12,16 @@ sealed class Dartboard(BossModule module) : BossComponent(module)
     public Color ForbiddenColor;
     public BitMask Bullseye;
 
+    private bool SharesColor(Actor actor, Color color)
+    {
+        foreach (var (i, p) in Raid.WithSlot(true, true, true))
+        {
+            if (p != actor && Bullseye[i] && PosToColor(p.Position) == color)
+                return true;
+        }
+        return false;
+    }
+
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         if (Bullseye[slot] || ForbiddenColor != Color.None)
@@ -21,7 +31,7 @@ sealed class Dartboard(BossModule module) : BossComponent(module)
             {
                 hints.Add("GTFO from forbidden color!");
             }
-            else if (Bullseye[slot] && Raid.WithSlot(true, true, true).Exclude(actor).WhereSlot(i => Bullseye[i]).WhereActor(p => PosToColor(p.Position) == color).Any())
+            else if (Bullseye[slot] && SharesColor(actor, color))
             {
                 hints.Add("Stay on different segments!");
             }

@@ -16,14 +16,21 @@ abstract class NestOfFlamevipersCommon(BossModule module) : Components.CastCount
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (Raid.WithSlot(false, true, true).IncludedInMask(BaitingPlayers).WhereActor(p => p != actor && _shape.Check(actor.Position, Module.PrimaryActor.Position, Angle.FromDirection(p.Position - Module.PrimaryActor.Position))).Any())
-            hints.Add("GTFO from baited aoe!");
+        foreach (var (s, p) in Raid.WithSlot(false, true, true))
+        {
+            if (BaitingPlayers[s] && p != actor && _shape.Check(actor.Position, Module.PrimaryActor.Position, Angle.FromDirection(p.Position - Module.PrimaryActor.Position)))
+            {
+                hints.Add("GTFO from baited aoe!");
+                break;
+            }
+        }
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
-        foreach (var (_, player) in Raid.WithSlot(false, true, true).IncludedInMask(BaitingPlayers))
-            _shape.Outline(Arena, Module.PrimaryActor.Position, Angle.FromDirection(player.Position - Module.PrimaryActor.Position));
+        foreach (var (s_, player) in Raid.WithSlot(false, true, true))
+            if (BaitingPlayers[s_])
+                _shape.Outline(Arena, Module.PrimaryActor.Position, Angle.FromDirection(player.Position - Module.PrimaryActor.Position));
     }
 }
 
@@ -33,9 +40,17 @@ sealed class NestOfFlamevipersBaited(BossModule module) : NestOfFlamevipersCommo
     private BitMask _forbiddenPlayers;
     public bool Active => NumCasts == 0 && _forbiddenPlayers.Any();
 
+    private readonly List<(int, Actor)> _sorted = new(PartyState.MaxPartySize);
+
     public override void Update()
     {
-        BaitingPlayers = Active ? Raid.WithSlot(false, true, true).SortedByRange(Module.PrimaryActor.Position).Take(4).Mask() : default;
+        BaitingPlayers = default;
+        if (Active)
+        {
+            Raid.WithSlot(false, true, true).SortedByRange(Module.PrimaryActor.Position, _sorted);
+            for (var i = 0; i < _sorted.Count && i < 4; ++i)
+                BaitingPlayers.Set(_sorted[i].Item1);
+        }
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)

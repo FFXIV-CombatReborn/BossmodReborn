@@ -13,8 +13,15 @@ sealed class HellsSting(BossModule module) : BossComponent(module)
         if (NumCasts >= _directions.Count * 2)
             return;
 
-        if (ConeDirections().Any(x => actor.Position.InCone(Module.PrimaryActor.Position, x, _cone.HalfAngle)))
-            hints.Add("GTFO from cone!");
+        var offset = ConeOffset;
+        for (var i = 0; i < _directions.Count; ++i)
+        {
+            if (actor.Position.InCone(Module.PrimaryActor.Position, _directions[i] + offset, _cone.HalfAngle))
+            {
+                hints.Add("GTFO from cone!");
+                break;
+            }
+        }
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
@@ -22,8 +29,9 @@ sealed class HellsSting(BossModule module) : BossComponent(module)
         if (NumCasts >= _directions.Count * 2)
             return;
 
-        foreach (var dir in ConeDirections())
-            _cone.Draw(Arena, Module.PrimaryActor.Position, dir);
+        var offset = ConeOffset;
+        for (var i = 0; i < _directions.Count; ++i)
+            _cone.Draw(Arena, Module.PrimaryActor.Position, _directions[i] + offset);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
@@ -38,8 +46,6 @@ sealed class HellsSting(BossModule module) : BossComponent(module)
             ++NumCasts;
     }
 
-    private IEnumerable<Angle> ConeDirections()
-    {
-        return NumCasts < _directions.Count ? _directions : _directions.Select(x => x + 22.5f.Degrees());
-    }
+    // second set of cones is rotated by half a cone
+    private Angle ConeOffset => NumCasts < _directions.Count ? default : 22.5f.Degrees();
 }

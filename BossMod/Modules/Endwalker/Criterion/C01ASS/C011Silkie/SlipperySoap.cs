@@ -23,10 +23,14 @@ sealed class SlipperySoapCharge(BossModule module) : Components.GenericKnockback
 
     public bool ChargeImminent => _chargeTarget != null;
 
+    private readonly Knockback[] _oneKnockback = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (_chargeTarget != null && _color == SlipperySoap.Color.Green)
-            return new Knockback[1] { new(Module.PrimaryActor.Position, 15f, _chargeResolve, _chargeShape, _chargeDir, Kind.DirForward) };
+        {
+            _oneKnockback[0] = new(Module.PrimaryActor.Position, 15f, _chargeResolve, _chargeShape, _chargeDir, Kind.DirForward);
+            return _oneKnockback;
+        }
         else
             return [];
     }
@@ -109,6 +113,8 @@ sealed class SlipperySoapAOE(BossModule module) : Components.GenericAOEs(module)
 
     public bool Active => _color != SlipperySoap.Color.None;
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         // TODO: activation
@@ -116,18 +122,27 @@ sealed class SlipperySoapAOE(BossModule module) : Components.GenericAOEs(module)
         switch (_color)
         {
             case SlipperySoap.Color.Green:
-                return new AOEInstance[1] { new(shapeGreen, Module.PrimaryActor.Position, Module.PrimaryActor.Rotation) };
+                {
+                    _oneAOEInstance[0] = new(shapeGreen, Module.PrimaryActor.Position, Module.PrimaryActor.Rotation);
+                    return _oneAOEInstance;
+                }
             case SlipperySoap.Color.Blue:
-                return new AOEInstance[1] { new(shapeBlue, Module.PrimaryActor.Position, Module.PrimaryActor.Rotation) };
+                {
+                    _oneAOEInstance[0] = new(shapeBlue, Module.PrimaryActor.Position, Module.PrimaryActor.Rotation);
+                    return _oneAOEInstance;
+                }
             case SlipperySoap.Color.Yellow:
-                var aoes = new AOEInstance[4];
+                var aoesLen = 4;
+                if (_aoesBuffer.Length < aoesLen)
+                    _aoesBuffer = new AOEInstance[aoesLen];
+                var aoes = _aoesBuffer;
                 var primaryPos = Module.PrimaryActor.Position;
                 var primaryRot = Module.PrimaryActor.Rotation;
                 for (var i = 0; i < 4; ++i)
                 {
                     aoes[i] = new AOEInstance(shapeYellow, primaryPos, primaryRot + (45f + i * 90f).Degrees());
                 }
-                return aoes;
+                return aoes.AsSpan(0, aoesLen);
             default:
                 return [];
         }

@@ -179,12 +179,17 @@ sealed class PalladianRayBait(BossModule module) : Components.GenericBaitAway(mo
 
     private readonly AOEShapeCone _shape = new(100f, 15f.Degrees());
 
+    private readonly List<Actor> _sorted = new(PartyState.MaxPartySize);
+
     public override void Update()
     {
         CurrentBaits.Clear();
         foreach (var d in _dummies)
-            foreach (var p in Raid.WithoutSlot(false, true, true).SortedByRange(d).Take(4))
-                CurrentBaits.Add(new(d, p, _shape));
+        {
+            Raid.WithoutSlot(false, true, true).SortedByRange(d, _sorted);
+            for (var i = 0; i < _sorted.Count && i < 4; ++i)
+                CurrentBaits.Add(new(d, _sorted[i], _shape));
+        }
     }
 }
 

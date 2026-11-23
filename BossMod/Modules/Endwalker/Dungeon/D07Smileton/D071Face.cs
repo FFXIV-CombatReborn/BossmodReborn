@@ -49,8 +49,61 @@ public enum TetherID : uint
 {
     Tether169 = 169, // 34D0->Boss
 }
-class OffMyLawnKnockback(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.OffMyLawnKnockback, 8, kind: Kind.DirForward, stopAtWall: true);
-class TemperTemperSpread(BossModule module) : Components.SpreadFromCastTargets(module, (uint)AID.TemperTemperSpread, 5);
+class OffMyLawnKnockback(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.OffMyLawnKnockback, 8f, shape: new AOEShapeRect(31f, 15f), kind: Kind.DirForward, stopAtWall: true);
+class TemperTemperSpread(BossModule module) : Components.SpreadFromCastTargets(module, (uint)AID.TemperTemperSpread, 5f);
+class MixedFeelings(BossModule module) : Components.SimpleAOEs(module, (uint)AID.MixedFeelings, new AOEShapeRect(60f, 1f));
+
+sealed class FaceLines(BossModule module) : Components.GenericAOEs(module)
+{
+    private static readonly AOEShapeRect _shape = new(45f, 3f);
+    private readonly List<(Actor Caster, bool Smiley)> _casters = [];
+    private readonly List<AOEInstance> _aoes = [];
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
+    {
+        var count = _casters.Count;
+        if (count == 0)
+        {
+            return [];
+        }
+        _aoes.Clear();
+        var hasSmiley = actor.FindStatus((uint)SID.SmileyFace) != null;
+        var hasFrowny = actor.FindStatus((uint)SID.FrownyFace) != null;
+        for (var i = 0; i < count; ++i)
+        {
+            var (c, smiley) = _casters[i];
+            if (c.CastInfo is not ActorCastInfo cast)
+            {
+                continue;
+            }
+            var risky = smiley ? hasSmiley : hasFrowny;
+            _aoes.Add(new(_shape, c.Position, cast.Rotation, Module.CastFinishAt(cast), risky ? default : Colors.SafeFromAOE, risky));
+        }
+        return CollectionsMarshal.AsSpan(_aoes);
+    }
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID is (uint)AID.SmileyFace or (uint)AID.FrownyFace)
+        {
+            _casters.Add((caster, spell.Action.ID == (uint)AID.SmileyFace));
+        }
+    }
+
+    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID is (uint)AID.SmileyFace or (uint)AID.FrownyFace)
+        {
+            for (var i = _casters.Count - 1; i >= 0; --i)
+            {
+                if (_casters[i].Caster == caster)
+                {
+                    _casters.RemoveAt(i);
+                }
+            }
+        }
+    }
+}
 
 class TempersFlare(BossModule module) : Components.RaidwideCast(module, (uint)AID.TempersFlare);
 
@@ -60,10 +113,12 @@ class D071FaceStates : StateMachineBuilder
     {
         TrivialPhase()
             .ActivateOnEnter<OffMyLawnKnockback>()
+            .ActivateOnEnter<MixedFeelings>()
+            .ActivateOnEnter<FaceLines>()
             .ActivateOnEnter<TemperTemperSpread>()
             .ActivateOnEnter<TempersFlare>();
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, Contributors = "The Combat Reborn Team", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 794, NameID = 10331)]
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, Contributors = "The Combat Reborn Team (LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 794, NameID = 10331)]
 public class D071Face(WorldState ws, Actor primary) : BossModule(ws, primary, new(-45, -20), new ArenaBoundsSquare(20));

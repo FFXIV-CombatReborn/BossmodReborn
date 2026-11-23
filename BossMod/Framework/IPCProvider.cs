@@ -18,6 +18,9 @@ sealed class IPCProvider : IDisposable
         // Timeline IPC endpoints for external plugin integration (e.g. RotationSolverReborn)
         Register("HasActiveModule", () => bossmod.ActiveModule?.StateMachine.ActiveState != null);
         Register("ActiveModuleName", () => bossmod.ActiveModule?.PrimaryActor.Name.ToString());
+        Register("ActiveModuleType", () => bossmod.ActiveModule?.GetType().FullName);
+
+        Register("Crucible.PreferredKinships", CruciblePreferredKinships.Json);
 
         // Debug endpoint: walks the state machine and reports what it finds
         Register("Debug.TimelineWalk", () =>

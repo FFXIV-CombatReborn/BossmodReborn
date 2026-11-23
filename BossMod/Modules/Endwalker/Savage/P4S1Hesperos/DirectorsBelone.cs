@@ -42,7 +42,7 @@ sealed class DirectorsBelone(BossModule module) : BossComponent(module)
             if (_debuffTargets.None())
             {
                 // debuffs not assigned yet => spread and prepare to grab
-                var stacked = Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _debuffPassRange).Any();
+                var stacked = Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, _debuffPassRange);
                 hints.Add("Debuffs: spread and prepare to handle!", stacked);
             }
             else if (_debuffImmune[slot])
@@ -63,7 +63,15 @@ sealed class DirectorsBelone(BossModule module) : BossComponent(module)
             // we should be passing debuff
             if (_debuffTargets.None())
             {
-                var badStack = Raid.WithSlot(false, true, true).Exclude(slot).IncludedInMask(_debuffForbidden).OutOfRadius(actor.Position, _debuffPassRange).Any();
+                var badStack = false;
+                foreach (var (s, p) in Raid.WithSlot(false, true, true))
+                {
+                    if (s != slot && _debuffForbidden[s] && !p.Position.InCircle(actor.Position, _debuffPassRange))
+                    {
+                        badStack = true;
+                        break;
+                    }
+                }
                 hints.Add("Debuffs: stack and prepare to pass!", badStack);
             }
             else if (_debuffTargets[slot])
@@ -79,7 +87,7 @@ sealed class DirectorsBelone(BossModule module) : BossComponent(module)
 
     public override void AddGlobalHints(Actor actor, GlobalHints hints)
     {
-        var forbidden = Raid.WithSlot(true, true, true).IncludedInMask(_debuffForbidden).FirstOrDefault().Item2;
+        var forbidden = _debuffForbidden.Any() ? Raid[_debuffForbidden.LowestSetBit()] : null;
         if (forbidden != null)
         {
             hints.Add($"Stack: {(forbidden.Role is Role.Tank or Role.Healer ? "Tanks/Healers" : "DD")}");

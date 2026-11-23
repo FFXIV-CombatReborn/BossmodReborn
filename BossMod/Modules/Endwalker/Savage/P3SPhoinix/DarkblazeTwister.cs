@@ -34,6 +34,7 @@ sealed class DarkTwister(BossModule module) : Components.SimpleKnockbacks(module
     private TwisterVoidzone? _aoe1 = module.FindComponent<TwisterVoidzone>();
     private BurningTwister? _aoe2 = module.FindComponent<BurningTwister>();
 
+    private readonly List<Actor> _burningTwistersBuffer = [];
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
         base.DrawArenaForeground(pcSlot, pc);
@@ -50,7 +51,8 @@ sealed class DarkTwister(BossModule module) : Components.SimpleKnockbacks(module
 
         List<Actor> BurningTwisters()
         {
-            List<Actor> burningTwisters = [];
+            var burningTwisters = _burningTwistersBuffer;
+            burningTwisters.Clear();
             var twisters = Module.Enemies((uint)OID.DarkblazeTwister);
             var count = twisters.Count;
             for (var i = 0; i < count; ++i)

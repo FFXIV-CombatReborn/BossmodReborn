@@ -28,18 +28,22 @@ class QuintupleSneeze(BossModule module) : Components.GenericAOEs(module)
 
     private static readonly AOEShapeCone _shape = new(40f, 60f.Degrees());
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_nextSneeze != default)
         {
             var count = _pendingOffsets.Count;
             var max = count > 2 ? 2 : count;
-            var aoes = new AOEInstance[max];
+            var aoesLen = max;
+            if (_aoesBuffer.Length < aoesLen)
+                _aoesBuffer = new AOEInstance[aoesLen];
+            var aoes = _aoesBuffer;
             for (var i = 0; i < max; ++i)
             {
                 aoes[i] = new(_shape, Module.PrimaryActor.Position, _referenceAngle + _pendingOffsets[i], i == 0 ? _nextSneeze : _nextSneeze.AddSeconds(2.2d), count > 1 && i == 0 ? Colors.Danger : default);
             }
-            return aoes;
+            return aoes.AsSpan(0, aoesLen);
         }
         return [];
     }

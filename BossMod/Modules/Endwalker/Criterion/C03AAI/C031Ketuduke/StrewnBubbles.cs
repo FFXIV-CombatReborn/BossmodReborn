@@ -6,16 +6,20 @@ sealed class StrewnBubbles(BossModule module) : Components.GenericAOEs(module)
 
     private readonly AOEShapeRect _shape = new(20f, 5f);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _aoes.Count;
         if (count == 0)
             return [];
         var max = count > 4 ? 4 : count;
-        var aoes = new AOEInstance[max];
+        var aoesLen = max;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < max; ++i)
             aoes[i] = _aoes[i];
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnActorCreated(Actor actor)

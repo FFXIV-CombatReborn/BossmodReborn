@@ -33,8 +33,10 @@ sealed class Ashplume : BossComponent
             var numStacked = 0;
             var haveTanks = actor.Role == Role.Tank;
             var haveHealers = actor.Role == Role.Healer;
-            foreach (var pair in Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _stackRadius))
+            foreach (var pair in Raid.WithoutSlot(false, true, true))
             {
+                if (!(pair != actor && pair.Position.InCircle(actor.Position, _stackRadius)))
+                    continue;
                 ++numStacked;
                 haveTanks |= pair.Role == Role.Tank;
                 haveHealers |= pair.Role == Role.Healer;
@@ -50,7 +52,7 @@ sealed class Ashplume : BossComponent
         }
         else if (CurState == State.Spread)
         {
-            if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _spreadRadius).Any())
+            if (Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, _spreadRadius))
             {
                 hints.Add("Spread!");
             }

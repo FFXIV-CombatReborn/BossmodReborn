@@ -19,9 +19,13 @@ sealed class ElementalBelone : BossComponent
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (_imminentExplodingCorners.Any(p => actor.Position.InRect(p, new WDir(1, 0), 10, 10, 10)))
+        for (var i = 0; i < _imminentExplodingCorners.Count; ++i)
         {
-            hints.Add($"GTFO from exploding square");
+            if (actor.Position.InRect(_imminentExplodingCorners[i], new WDir(1f, default), 10f, 10f, 10f))
+            {
+                hints.Add("GTFO from exploding square");
+                break;
+            }
         }
     }
 

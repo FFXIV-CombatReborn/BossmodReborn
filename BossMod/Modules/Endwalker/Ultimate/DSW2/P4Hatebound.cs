@@ -23,8 +23,10 @@ sealed class P4Hatebound(BossModule module) : BossComponent(module)
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
-        foreach (var o in _orbs.Where(o => !o.exploded))
+        foreach (var o in _orbs)
         {
+            if (!!o.exploded)
+                continue;
             Arena.Actor(o.orb, Colors.Object, true);
             if (OrbReady(o.orb))
                 Arena.ZoneCircleOutline(o.orb.Position, 6, _playerColors[pcSlot] == Color.Red ? Colors.Safe : default);
@@ -82,7 +84,7 @@ sealed class P4MirageDive(BossModule module) : Components.CastCounter(module, (u
             // note: not showing this hint, since typically pc will wait until someone swaps the color
             //if (_forbidden[slot])
             //    hints.Add("Pass the tether!");
-            if (!_forbidden[slot] && Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _radius).Any())
+            if (!_forbidden[slot] && Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, _radius))
                 hints.Add("GTFO from raid!");
         }
         else if (Raid.WithSlot(true, true, true).IncludedInMask(_baiters).ExcludedFromMask(_forbidden).InRadius(actor.Position, _radius).Any())
@@ -96,8 +98,10 @@ sealed class P4MirageDive(BossModule module) : Components.CastCounter(module, (u
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
         var pcCanSwap = !_forbidden[pcSlot] && !_baiters[pcSlot];
-        foreach (var (slot, player) in Raid.WithSlot(true, true, true).IncludedInMask(_baiters))
+        foreach (var (slot, player) in Raid.WithSlot(true, true, true))
         {
+            if (!_baiters[slot])
+                continue;
             var canSwap = pcCanSwap && _forbidden[slot];
             Arena.ZoneCircleOutline(player.Position, _radius, canSwap ? Colors.Safe : Colors.Danger);
         }

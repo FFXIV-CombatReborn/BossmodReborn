@@ -49,8 +49,9 @@ sealed class P4IntermissionSkyblindBait(BossModule module) : BossComponent(modul
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
-        foreach (var (_, player) in Raid.WithSlot(false, true, true).IncludedInMask(_baiters))
-            Arena.ZoneCircleOutline(player.Position, _radius, Colors.Danger);
+        foreach (var (s_, player) in Raid.WithSlot(false, true, true))
+            if (_baiters[s_])
+                Arena.ZoneCircleOutline(player.Position, _radius, Colors.Danger);
     }
 
     public override void OnStatusGain(Actor actor, ref ActorStatus status)

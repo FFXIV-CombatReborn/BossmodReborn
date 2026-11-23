@@ -225,7 +225,7 @@ public abstract class Trash1Arena(WorldState ws, Actor primary, bool savage) : B
     public static readonly uint[] TrashNormal = [(uint)OID.NYuki, (uint)OID.NFuko, (uint)OID.NFurutsubaki, (uint)OID.NRaiko, (uint)OID.NPenghou];
     public static readonly uint[] TrashSavage = [(uint)OID.SYuki, (uint)OID.SFuko, (uint)OID.SFurutsubaki, (uint)OID.SRaiko, (uint)OID.SPenghou];
 
-    protected override bool CheckPull() => !Raid.Player()!.IsDead && IsAnyActorInCombat(savage ? TrashSavage : TrashNormal);
+    protected override bool CheckPull() => Raid.Player() is Actor player && !player.IsDead && IsAnyActorInCombat(savage ? TrashSavage : TrashNormal);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

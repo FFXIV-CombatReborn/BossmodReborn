@@ -12,6 +12,18 @@ sealed class VengefulBelone(BossModule module) : BossComponent(module)
 
     private Role OrbTarget(ulong instanceID) => _orbTargets.GetValueOrDefault(instanceID, Role.None);
 
+    private bool NearLethalOrb(int slot, Actor actor)
+    {
+        var orbs = Module.Enemies((uint)OID.Orb);
+        for (var i = 0; i < orbs.Count; ++i)
+        {
+            var orb = orbs[i];
+            if (orb.Position.InCircle(actor.Position, _burstRadius) && IsOrbLethal(slot, actor, OrbTarget(orb.InstanceID)))
+                return true;
+        }
+        return false;
+    }
+
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         if (_orbTargets.Count == 0 || _orbsExploded == _orbTargets.Count)
@@ -23,7 +35,7 @@ sealed class VengefulBelone(BossModule module) : BossComponent(module)
             hints.Add("Failed orbs...");
         }
 
-        if (Module.Enemies((uint)OID.Orb).Where(orb => IsOrbLethal(slot, actor, OrbTarget(orb.InstanceID))).InRadius(actor.Position, _burstRadius).Any())
+        if (NearLethalOrb(slot, actor))
         {
             hints.Add("GTFO from wrong orb!");
         }
@@ -61,8 +73,10 @@ sealed class VengefulBelone(BossModule module) : BossComponent(module)
             }
 
             int goodInRange = 0, badInRange = 0;
-            foreach ((var i, var player) in Raid.WithSlot(false, true, true).InRadius(orb.Position, _burstRadius))
+            foreach ((var i, var player) in Raid.WithSlot(false, true, true))
             {
+                if (!(player.Position.InCircle(orb.Position, _burstRadius)))
+                    continue;
                 if (IsOrbLethal(i, player, orbRole))
                     ++badInRange;
                 else
@@ -75,7 +89,7 @@ sealed class VengefulBelone(BossModule module) : BossComponent(module)
 
         foreach ((var i, var player) in Raid.WithSlot(false, true, true))
         {
-            var nearLethalOrb = orbs.Where(orb => IsOrbLethal(i, player, OrbTarget(orb.InstanceID))).InRadius(player.Position, _burstRadius).Any();
+            var nearLethalOrb = NearLethalOrb(i, player);
             Arena.Actor(player, nearLethalOrb ? Colors.PlayerInteresting : Colors.PlayerGeneric, drawWorld: nearLethalOrb ? true : null);
         }
     }

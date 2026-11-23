@@ -12,9 +12,25 @@ sealed class P7Trinity(DSW2 module) : Components.GenericBaitAway(module, centerA
         CurrentBaits.Clear();
         if (_source != null)
         {
-            foreach (var target in Raid.WithoutSlot(false, true, true).Where(p => p.Role == Role.Tank))
-                CurrentBaits.Add(new(_source, target, _shape));
-            var closest = Raid.WithoutSlot(false, true, true).Where(p => p.Role != Role.Tank).Closest(_source.Position);
+            var party = Raid.WithoutSlot(false, true, true);
+            Actor? closest = null;
+            var closestDistSq = float.MaxValue;
+            var sourcePos = _source.Position;
+            for (var i = 0; i < party.Length; ++i)
+            {
+                var target = party[i];
+                if (target.Role == Role.Tank)
+                {
+                    CurrentBaits.Add(new(_source, target, _shape));
+                    continue;
+                }
+                var distSq = (target.Position - sourcePos).LengthSq();
+                if (distSq < closestDistSq)
+                {
+                    closestDistSq = distSq;
+                    closest = target;
+                }
+            }
             if (closest != null)
                 CurrentBaits.Add(new(_source, closest, _shape));
         }

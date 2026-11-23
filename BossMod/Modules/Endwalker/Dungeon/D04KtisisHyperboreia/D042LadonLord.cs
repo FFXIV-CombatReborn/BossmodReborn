@@ -42,12 +42,16 @@ class PyricBreath(BossModule module) : Components.GenericAOEs(module)
     private static readonly Angle angle = 120f.Degrees();
     private static readonly AOEShapeCone cone = new(40f, 60f.Degrees());
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _aoes.Count;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var aoe = _aoes[i];
@@ -56,7 +60,7 @@ class PyricBreath(BossModule module) : Components.GenericAOEs(module)
             else
                 aoes[i] = aoe;
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnStatusGain(Actor actor, ref ActorStatus status)

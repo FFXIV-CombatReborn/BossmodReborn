@@ -6,6 +6,7 @@ sealed class SilkenPuff(BossModule module) : Components.GenericAOEs(module)
     private static readonly AOEShapeCapsule capsule = new(Radius, Length);
     private readonly List<Actor> puffs = [with(7)];
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = puffs.Count;
@@ -13,13 +14,16 @@ sealed class SilkenPuff(BossModule module) : Components.GenericAOEs(module)
         {
             return [];
         }
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var h = puffs[i];
             aoes[i] = new(capsule, h.Position, h.Rotation);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnActorPlayActionTimelineEvent(Actor actor, ushort id)

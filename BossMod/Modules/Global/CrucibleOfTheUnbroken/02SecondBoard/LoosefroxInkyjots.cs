@@ -1,5 +1,4 @@
-﻿
-namespace BossMod.Global.CrucibleOfTheUnbroken.SecondBoard.LooserfroxInkyjots;
+﻿namespace BossMod.Global.CrucibleOfTheUnbroken.SecondBoard.LoosefroxInkyjots;
 
 public enum OID : uint
 {
@@ -42,12 +41,14 @@ public enum AID : uint
     GoblinHammer = 48233, // Helper->self, 5.0s cast, range 8 circle
     Earthquake = 48239, // ChewchumPopoto->self, 5.0s cast, range 60 circle
     EarthquakeRest = 48240, // ChewchumPopoto->self, no cast, range 60 circle
+    GoblinRush = 48517, // LoosefroxInkyjots->player, 5.0s cast, single-target
 }
 
 public enum SID : uint
 {
     Blind = 5381, // Helper->player, extra=0x0
     PopotoSkin = 5423, // LoosefroxInkyjots->LoosefroxInkyjots, extra=0x0
+    SixFulmsUnder = 567, // none->player, extra=0x522
 }
 
 public enum IconID : uint
@@ -55,31 +56,35 @@ public enum IconID : uint
     Exclamation_8s_x = 569, // Helper->self
 }
 
-sealed class BurrowSandPillar(BossModule module) : Components.CastCounter(module, (uint)AID.Burrow)
+sealed class Quicksand(BossModule module) : BossComponent(module)
 {
-    // Burrow at current position
-    // 1st SandPillar happens near but not exactly at sandpit, 4-5f away
-    // Kinsburrow = 4f dist, Regular/Burrow = 5f?
-    // can bounce between sandpits before stopping for breath, anywhere from 6-14 SandPillar so far
-    private readonly WPos[] _sandpits = [new(533f, -434f), new(538f, -421f), new(529.65f, -407f), new(510.35f, -407f), new(504f, -423f), new(516f, -439f)];
-    private const float _radius = 6f;
+    private const float Radius = 6f;
+    private readonly List<Actor> quicksands = module.Enemies((uint)OID.Quicksand);
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
-        var count = _sandpits.Length;
+        var count = quicksands.Count;
         for (var i = 0; i < count; ++i)
         {
-            Arena.ZoneCircle(_sandpits[i], _radius, default);
+            Arena.ZoneCircle(quicksands[i].Position, Radius, Colors.AOE);
+        }
+    }
+
+    public override void AddHints(int slot, Actor actor, TextHints hints)
+    {
+        if (actor.FindStatus((uint)SID.SixFulmsUnder) != null)
+        {
+            hints.Add("Leave the quicksand!");
         }
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        var count = _sandpits.Length;
+        var drown = actor.FindStatus((uint)SID.SixFulmsUnder)?.ExpireAt ?? DateTime.MaxValue;
+        var count = quicksands.Count;
         for (var i = 0; i < count; ++i)
         {
-            var sd = new SDCircle(_sandpits[i], _radius);
-            hints.AddForbiddenZone(sd);
+            hints.AddForbiddenZone(new SDCircle(quicksands[i].Position, Radius), drown);
         }
     }
 }
@@ -90,6 +95,8 @@ sealed class GobspinHeadlopsDonut(BossModule module) : Components.SimpleAOEs(mod
 sealed class GoblinHammer(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GoblinHammer, 8f);
 sealed class GobbieBombs(BossModule module) : Components.AddsMulti(module, [(uint)OID.GobbieBombBig, (uint)OID.GobbieBombSmall], AIHints.Enemy.PriorityUndesirable);
 sealed class Earthquake(BossModule module) : Components.RaidwideCast(module, (uint)AID.Earthquake);
+sealed class Kinborrow(BossModule module) : Components.Dispel(module, (uint)SID.PopotoSkin, (uint)AID.Kinborrow);
+sealed class GoblinRush(BossModule module) : Components.SingleTargetCast(module, (uint)AID.GoblinRush);
 sealed class Explosion(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = [with(4)];
@@ -219,7 +226,9 @@ sealed class LoosefroxInkyjotsStates : StateMachineBuilder
     public LoosefroxInkyjotsStates(BossModule module) : base(module)
     {
         TrivialPhase()
-            .ActivateOnEnter<BurrowSandPillar>()
+            .ActivateOnEnter<Kinborrow>()
+            .ActivateOnEnter<GoblinRush>()
+            .ActivateOnEnter<Quicksand>()
             .ActivateOnEnter<SandBreath>()
             .ActivateOnEnter<GobspinHeadlops>()
             .ActivateOnEnter<BombToss>()
@@ -233,14 +242,16 @@ sealed class LoosefroxInkyjotsStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.LoosefroxInkyjots, Contributors = "gynorhino", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1089u, NameID = 14561u, SortOrder = 5)]
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.LoosefroxInkyjots, Contributors = "gynorhino", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1089u, NameID = 14561u, SortOrder = 7)]
+[PreferredKinship(BST.Kinship.Wave, "Remove Popoto Skin from Kinborrow")]
+[PreferredKinship(BST.Kinship.Ash, "Cleanse Blind from Sand Breath")]
 public sealed class LoosefroxInkyjots(WorldState ws, Actor primary) : BossModule(ws, primary, new(520f, -420f), new ArenaBoundsCircle(22f))
 {
     public static readonly uint[] Bosses = [(uint)OID.LoosefroxInkyjots, (uint)OID.ChewchumPopoto];
     private Actor? _loosefrox;
     private Actor? _chewchum;
 
-    public Actor? Loosefrom() => _loosefrox;
+    public Actor? Loosefrox() => _loosefrox;
     public Actor? Chewchum() => _chewchum;
 
     protected override void UpdatePreModuleActivation()

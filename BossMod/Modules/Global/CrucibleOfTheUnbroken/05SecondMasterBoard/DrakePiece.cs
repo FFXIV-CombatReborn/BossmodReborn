@@ -44,6 +44,7 @@ public enum SID : uint
     WitsEnd = 5146, // 4CF5->player, extra=0x1/0x2/0x3/0x4/0x5/0x6/0x7/0x8/0x9/0xA
     Confused = 1283, // 4CF5->player, extra=0x0
     Gen = 3572, // 4CF4->4CF5, extra=0x12
+    Rehabilitation = 989, // none->AbaddonPiece, extra=0x5/0xB/0x10
 }
 
 public enum IconID : uint
@@ -61,84 +62,108 @@ sealed class SeedingNeedles(BossModule module) : Components.SimpleAOEs(module, (
 
 sealed class BlazeSpikes(BossModule module) : Components.Dispel(module, (uint)SID.BlazeSpikes, (uint)AID.BlazeSpikes);
 
-sealed class BlazeSpikesTarget(BossModule module) : Components.Adds(module, (uint)OID.DrakePiece, 1) {
+sealed class BlazeSpikesTarget(BossModule module) : Components.Adds(module, (uint)OID.DrakePiece, 1)
+{
     private readonly List<Actor> avoidBosses = [];
 
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
-        if (spell.Action.ID == (uint)AID.BlazeSpikes) {
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.BlazeSpikes)
+        {
             avoidBosses.Add(caster);
         }
     }
 
-    public override void OnStatusLose(Actor actor, ref ActorStatus status) {
-        if (status.ID == (uint)SID.BlazeSpikes) {
+    public override void OnStatusLose(Actor actor, ref ActorStatus status)
+    {
+        if (status.ID == (uint)SID.BlazeSpikes)
+        {
             avoidBosses.Remove(actor);
         }
     }
 
-    public override void AddHints(int slot, Actor actor, TextHints hints) {
+    public override void AddHints(int slot, Actor actor, TextHints hints)
+    {
         var count = avoidBosses.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return;
         }
 
-        for (var i = 0; i < count; i++) {
-            if (avoidBosses[i].InstanceID == actor.TargetID) {
+        for (var i = 0; i < count; i++)
+        {
+            if (avoidBosses[i].InstanceID == actor.TargetID)
+            {
                 hints.Add("Attacking boss with spikes debuff!");
             }
         }
     }
 
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         var enemies = ActiveActors;
         var count = enemies.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return;
         }
 
-        for (var i = 0; i < count; i++) {
+        for (var i = 0; i < count; i++)
+        {
             var enemy = enemies[i];
             hints.SetPriority(enemy, avoidBosses.Contains(enemy) ? AIHints.Enemy.PriorityForbidden : 1);
         }
     }
 }
 
-sealed class NeedlesOutTarget(BossModule module) : Components.Adds(module, (uint)OID.BarbmolePiece, 2) {
+sealed class NeedlesOutTarget(BossModule module) : Components.Adds(module, (uint)OID.BarbmolePiece, 2)
+{
     private readonly List<Actor> avoidBosses = [];
 
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
-        if (spell.Action.ID == (uint)AID.NeedlesOut) {
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.NeedlesOut)
+        {
             avoidBosses.Add(caster);
         }
     }
 
-    public override void OnStatusLose(Actor actor, ref ActorStatus status) {
-        if (status.ID == (uint)SID.NeedlesOut) {
+    public override void OnStatusLose(Actor actor, ref ActorStatus status)
+    {
+        if (status.ID == (uint)SID.NeedlesOut)
+        {
             avoidBosses.Remove(actor);
         }
     }
 
-    public override void AddHints(int slot, Actor actor, TextHints hints) {
+    public override void AddHints(int slot, Actor actor, TextHints hints)
+    {
         var count = avoidBosses.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return;
         }
 
-        for (var i = 0; i < count; i++) {
-            if (avoidBosses[i].InstanceID == actor.TargetID) {
+        for (var i = 0; i < count; i++)
+        {
+            if (avoidBosses[i].InstanceID == actor.TargetID)
+            {
                 hints.Add("Attacking boss with spikes debuff!");
             }
         }
     }
 
-    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints) {
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
         var enemies = ActiveActors;
         var count = enemies.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return;
         }
 
-        for (var i = 0; i < count; i++) {
+        for (var i = 0; i < count; i++)
+        {
             var enemy = enemies[i];
             hints.SetPriority(enemy, avoidBosses.Contains(enemy) ? AIHints.Enemy.PriorityForbidden : 2);
         }
@@ -261,7 +286,6 @@ sealed class BallOfFireRing(BossModule module) : Components.GenericAOEs(module)
     }
 }
 
-// TODO the player must have aggro - need a way to do this
 sealed class AbaddonEat(DrakePiece module) : BossComponent(module)
 {
     private readonly AOEShapeCircle shape = new(1f);
@@ -272,7 +296,7 @@ sealed class AbaddonEat(DrakePiece module) : BossComponent(module)
     {
         abaddon ??= module.Abaddon;
 
-        if (abaddon == null || abaddon.TargetID != actor.InstanceID)
+        if (abaddon == null || abaddon.IsDeadOrDestroyed)
         {
             return;
         }
@@ -291,6 +315,12 @@ sealed class AbaddonEat(DrakePiece module) : BossComponent(module)
 
         if (spots.Count == 0)
         {
+            return;
+        }
+
+        if (abaddon.TargetID != actor.InstanceID)
+        {
+            hints.FindEnemy(abaddon)?.PreferProvoking = true;
             return;
         }
 
@@ -323,6 +353,7 @@ sealed class DrakePieceStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.DrakePiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1092u, NameID = 14651u, SortOrder = 4)]
+[PreferredKinship(BST.Kinship.Wave, "Remove Blaze Spikes")]
 public sealed class DrakePiece : BossModule
 {
     public static readonly uint[] Bosses = [(uint)OID.AbaddonPiece, (uint)OID.MorphoPiece, (uint)OID.BarbmolePiece, (uint)OID.DrakePiece];
@@ -352,15 +383,19 @@ public sealed class DrakePiece : BossModule
         var AbaddonPieceAlive = Abaddon?.IsDeadOrDestroyed == false;
 
         var count = hints.PotentialTargets.Count;
-        for (var i = 0; i < count; ++i) {
+        for (var i = 0; i < count; ++i)
+        {
             var e = hints.PotentialTargets[i];
 
-            if (e.Actor.OID is (uint)OID.DrakePiece or (uint)OID.BarbmolePiece) {
+            if (e.Actor.OID is (uint)OID.DrakePiece or (uint)OID.BarbmolePiece)
+            {
                 continue;
             }
 
-            e.Priority = e.Actor.OID switch {
-                (uint)OID.AbaddonPiece => morphoPieceAlive ? AIHints.Enemy.PriorityForbidden : 4,
+            e.Priority = e.Actor.OID switch
+            {
+                (uint)OID.AbaddonPiece => morphoPieceAlive ? AIHints.Enemy.PriorityForbidden
+                    : (e.Actor.FindStatus((uint)SID.Rehabilitation)?.Extra ?? 0) > 4 ? AIHints.Enemy.PriorityPointless : 4,
                 (uint)OID.MorphoPiece => AbaddonPieceAlive ? AIHints.Enemy.PriorityForbidden : 3, // This should never happen, but it could
                 _ => 0
             };

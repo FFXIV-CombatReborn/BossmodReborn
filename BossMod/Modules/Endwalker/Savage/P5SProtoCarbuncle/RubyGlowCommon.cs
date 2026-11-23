@@ -172,7 +172,7 @@ abstract class RubyGlowRecolor(BossModule module, int expectedMagicStones) : Rub
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         base.AddHints(slot, actor, hints);
-        if (VenomPoolActive && Raid.WithoutSlot(false, true, true).Where(a => a.Role == Role.Healer).InRadius(actor.Position, _recolorRadius).Count() != 1)
+        if (VenomPoolActive && Raid.WithoutSlot(false, true, true).CountInRadius(actor.Position, _recolorRadius, Role.Healer) != 1)
             hints.Add("Stack with healer!");
     }
 
@@ -188,8 +188,9 @@ abstract class RubyGlowRecolor(BossModule module, int expectedMagicStones) : Rub
                     Arena.Actor(o, Colors.Vulnerable, true);
 
         if (VenomPoolActive)
-            foreach (var a in Raid.WithoutSlot(false, true, true).Where(a => a.Role == Role.Healer))
-                Arena.ZoneCircleOutline(a.Position, _recolorRadius, Colors.Safe);
+            foreach (var a in Raid.WithoutSlot(false, true, true))
+                if (a.Role == Role.Healer)
+                    Arena.ZoneCircleOutline(a.Position, _recolorRadius, Colors.Safe);
     }
 
     public override void OnActorEAnim(Actor actor, uint state)

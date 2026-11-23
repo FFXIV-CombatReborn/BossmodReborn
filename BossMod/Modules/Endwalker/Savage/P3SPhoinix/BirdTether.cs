@@ -47,9 +47,9 @@ sealed class BirdTether(BossModule module) : BossComponent(module)
                 var fromTo = nextTarget.Position - bird.Position;
                 var len = fromTo.Length();
                 fromTo /= len;
-                foreach ((var j, var player) in Raid.WithSlot(false, true, true).Exclude(nextTarget))
+                foreach ((var j, var player) in Raid.WithSlot(false, true, true))
                 {
-                    if (player.Position.InRect(bird.Position, fromTo, len, 0, _chargeHalfWidth))
+                    if (player != nextTarget && player.Position.InRect(bird.Position, fromTo, len, 0, _chargeHalfWidth))
                     {
                         _playersInAOE.Set(j);
                     }
@@ -61,8 +61,10 @@ sealed class BirdTether(BossModule module) : BossComponent(module)
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         var birdsLarge = Module.Enemies((uint)OID.SunbirdLarge);
-        foreach ((var bird, (var p1, var p2, var numCharges)) in birdsLarge.Zip(_chains))
+        for (var zi = 0; zi < birdsLarge.Count && zi < _chains.Length; ++zi)
         {
+            var bird = birdsLarge[zi];
+            var (p1, p2, numCharges) = _chains[zi];
             if (numCharges == 2)
                 continue;
 
@@ -88,8 +90,10 @@ sealed class BirdTether(BossModule module) : BossComponent(module)
     {
         // draw aoe zones for imminent charges, except one towards player
         var birdsLarge = Module.Enemies((uint)OID.SunbirdLarge);
-        foreach ((var bird, (var p1, var p2, var numCharges)) in birdsLarge.Zip(_chains))
+        for (var zi = 0; zi < birdsLarge.Count && zi < _chains.Length; ++zi)
         {
+            var bird = birdsLarge[zi];
+            var (p1, p2, numCharges) = _chains[zi];
             if (numCharges == 2)
                 continue;
 
@@ -114,8 +118,10 @@ sealed class BirdTether(BossModule module) : BossComponent(module)
         }
 
         // draw chains containing player
-        foreach ((var bird, (var p1, var p2, var numCharges)) in birdsLarge.Zip(_chains))
+        for (var zi = 0; zi < birdsLarge.Count && zi < _chains.Length; ++zi)
         {
+            var bird = birdsLarge[zi];
+            var (p1, p2, numCharges) = _chains[zi];
             if (numCharges == 2)
                 continue;
 

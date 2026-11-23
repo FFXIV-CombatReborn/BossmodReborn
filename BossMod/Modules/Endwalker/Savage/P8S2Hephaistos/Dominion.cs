@@ -20,7 +20,7 @@ sealed class Dominion : Components.UniformStackSpread
 
         if (NumDeformations >= 4)
         {
-            hints.Add($"Soak order: {(_secondOrder[slot] ? "2" : "1")}", ShouldSoak(slot) && !ActiveTowers().Any(t => actor.Position.InCircle(t.Position, _towerRadius)));
+            hints.Add($"Soak order: {(_secondOrder[slot] ? "2" : "1")}", ShouldSoak(slot) && !InActiveTower(actor));
         }
     }
 
@@ -61,13 +61,15 @@ sealed class Dominion : Components.UniformStackSpread
 
     private bool ShouldSoak(int slot) => NumShifts == (_secondOrder[slot] ? 4 : 0);
 
-    private IEnumerable<Actor> ActiveTowers()
+    // first four towers before the shifts, last four after them
+    private ReadOnlySpan<Actor> ActiveTowers()
     {
         if (NumShifts == 0 && Casters.Count >= 4)
-            foreach (var c in Casters.Take(4))
-                yield return c;
-        else if (NumShifts == 4 && Casters.Count == 8)
-            foreach (var c in Casters.Skip(4))
-                yield return c;
+            return Casters.SpanRange(0, 4);
+        if (NumShifts == 4 && Casters.Count == 8)
+            return Casters.SpanRange(4);
+        return [];
     }
+
+    private bool InActiveTower(Actor actor) => ActiveTowers().AnyInRadius(actor.Position, _towerRadius);
 }

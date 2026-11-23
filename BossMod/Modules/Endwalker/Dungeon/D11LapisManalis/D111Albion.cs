@@ -95,8 +95,15 @@ sealed class WildlifeCrossing(BossModule module) : Components.GenericAOEs(module
             return;
         }
 
-        _stampedes[numActiveStampedes] = new Stampede(true, pos, pos.X == 4f ? Angle.AnglesCardinals[3] : Angle.AnglesCardinals[0], []);
-        ++numActiveStampedes;
+        for (var i = 0; i < 2; ++i)
+        {
+            if (!_stampedes[i].Active)
+            {
+                _stampedes[i] = new Stampede(true, pos, pos.X == 4f ? Angle.AnglesCardinals[3] : Angle.AnglesCardinals[0], []);
+                ++numActiveStampedes;
+                return;
+            }
+        }
     }
 
     public override void Update()
@@ -118,25 +125,20 @@ sealed class WildlifeCrossing(BossModule module) : Components.GenericAOEs(module
             {
                 _stampedes[i] = default;
                 --numActiveStampedes;
-                if (numActiveStampedes == 0)
-                {
-                    _aoes.Clear();
-                }
-                return;
+                continue; // keep processing the other stampede this frame
             }
 
             var count = animals.Count;
 
-            HashSet<Actor> updatedBeasts = [.. s.Beasts];
+            var currentbeasts = s.Beasts;
             for (var j = 0; j < count; ++j)
             {
                 var b = animals[j];
-                if (b.Position.InRect(s.Position, s.Rotation, default, 10f, 5f))
+                if (b.Position.InRect(s.Position, s.Rotation, default, 10f, 5f) && !currentbeasts.Contains(b))
                 {
-                    updatedBeasts.Add(b);
+                    currentbeasts.Add(b);
                 }
             }
-            var currentbeasts = s.Beasts = [.. updatedBeasts];
             _aoes.Add(currentbeasts.Count == 0 ? new(rect, s.Position, Angle.AnglesCardinals[3])
             : new(new AOEShapeRect((currentbeasts[0].Position - currentbeasts[^1].Position).Length() + 30f, 5f), new(currentbeasts[^1].PosRot.X, s.Position.Z), s.Rotation));
         }

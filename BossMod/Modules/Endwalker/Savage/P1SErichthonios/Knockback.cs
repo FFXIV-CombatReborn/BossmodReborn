@@ -51,7 +51,7 @@ sealed class Knockback : BossComponent
                 {
                     hints.Add("GTFO from co-tank!");
                 }
-                if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, aoeRange).Count() < 7)
+                if (Raid.WithoutSlot(false, true, true).CountInRadius(actor.Position, aoeRange) - 1 < 7 /* minus self */)
                 {
                     hints.Add("Stack with raid!");
                 }
@@ -63,7 +63,7 @@ sealed class Knockback : BossComponent
                 {
                     hints.Add("Press invul!");
                 }
-                if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, aoeRange).Any())
+                if (Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, aoeRange))
                 {
                     hints.Add("GTFO from raid!");
                 }

@@ -39,28 +39,35 @@ sealed class Earthrender(BossModule module) : Components.SimpleAOEs(module, (uin
 sealed class SandTempest(BossModule module) : Components.RaidwideCast(module, (uint)AID.SandTempest, "Applies blind debuff");
 
 // Eventcast is triggered but the bait actually resolves a little bit later, so a timer of 1.0 second is added
-sealed class EarthShaker : Components.BaitAwayIcon {
+sealed class EarthShaker : Components.BaitAwayIcon
+{
     private const double additionalActivationTime = 1d;
     private DateTime? eventCastActivation;
 
-    public EarthShaker(BossModule module) : base(module, new AOEShapeCone(60f, 75f.Degrees()), (uint)IconID.EarthShake, (uint)AID.EarthShaker, 3.3d) {
+    public EarthShaker(BossModule module) : base(module, new AOEShapeCone(60f, 75f.Degrees()), (uint)IconID.EarthShake, (uint)AID.EarthShaker, 3.3d)
+    {
         AllowPetTargets = true;
     }
 
-    public override void OnEventCast(Actor caster, ActorCastEvent spell) {
-        if (CurrentBaits.Count != 0 && spell.Action.ID == WatchedAction) {
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (CurrentBaits.Count != 0 && spell.Action.ID == WatchedAction)
+        {
             eventCastActivation = WorldState.CurrentTime;
         }
     }
 
-    public override void Update() {
+    public override void Update()
+    {
         base.Update();
 
-        if (eventCastActivation == null || CurrentBaits.Count == 0) {
+        if (eventCastActivation == null || CurrentBaits.Count == 0)
+        {
             return;
         }
 
-        if (eventCastActivation.Value.AddSeconds(additionalActivationTime) > WorldState.CurrentTime) {
+        if (eventCastActivation.Value.AddSeconds(additionalActivationTime) > WorldState.CurrentTime)
+        {
             return;
         }
 
@@ -81,13 +88,26 @@ sealed class Burst(BossModule module) : Components.GenericAOEs(module)
         }
     }
 
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.Burst)
+        {
+            var index = IndexOfClosestAOE(aoes, caster.Position);
+            if (index >= 0)
+            {
+                aoes[index] = new(shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell));
+            }
+        }
+    }
+
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         if (spell.Action.ID == (uint)AID.Burst)
         {
-            if (aoes.Count > 0)
+            var index = IndexOfClosestAOE(aoes, caster.Position);
+            if (index >= 0)
             {
-                aoes.RemoveAt(0);
+                aoes.RemoveAt(index);
             }
         }
     }
@@ -115,15 +135,24 @@ sealed class Rockslide(BossModule module) : Components.GenericAOEs(module, (uint
         {
             active = true;
         }
+        else if (spell.Action.ID == (uint)AID.Rockslide)
+        {
+            var index = IndexOfClosestAOE(aoes, spell.LocXZ);
+            if (index >= 0)
+            {
+                aoes[index] = new(shape, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell));
+            }
+        }
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         if (spell.Action.ID == (uint)AID.Rockslide)
         {
-            if (aoes.Count > 0)
+            var index = IndexOfClosestAOE(aoes, caster.Position);
+            if (index >= 0)
             {
-                aoes.RemoveAt(0);
+                aoes.RemoveAt(index);
             }
         }
 
@@ -246,6 +275,7 @@ sealed class LakhamuPieceStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.LakhamuPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1090u, NameID = 14580u, SortOrder = 5)]
+[PreferredKinship(BST.Kinship.Vile, "Ignore Landslip's knockback")]
 public sealed class LakhamuPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsRect(20f, 20f))
 {
     protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)

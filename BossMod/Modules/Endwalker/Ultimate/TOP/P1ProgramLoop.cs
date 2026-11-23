@@ -42,7 +42,7 @@ sealed class P1ProgramLoop(BossModule module) : P1CommonAssignments(module)
         {
             if (!_tethers[slot])
                 hints.Add("Grab the tether!");
-            else if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _tetherRadius).Any())
+            else if (Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, _tetherRadius))
                 hints.Add("GTFO from raid!");
         }
     }
@@ -70,8 +70,10 @@ sealed class P1ProgramLoop(BossModule module) : P1CommonAssignments(module)
 
         var grabThisTether = ps.Order == NextTethersOrder();
         var grabNextTether = ps.Order == NextTethersOrder(1);
-        foreach (var (s, t) in Raid.WithSlot(false, true, true).IncludedInMask(_tethers))
+        foreach (var (s, t) in Raid.WithSlot(false, true, true))
         {
+            if (!_tethers[s])
+                continue;
             var ts = PlayerStates[s];
             var correctSoaker = ts.Order == NextTethersOrder();
             var tetherToGrab = ts.Group == ps.Group && (grabNextTether ? correctSoaker : grabThisTether && NumTethersDone > 0 && ts.Order == NextTethersOrder(-1));

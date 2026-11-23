@@ -23,11 +23,11 @@ sealed class PredatoryAvarice(BossModule module) : BossComponent(module)
         {
             if (_playersWithTides[i])
             {
-                _playersInTides |= Raid.WithSlot(false, true, true).InRadiusExcluding(player, _tidesRadius).Mask();
+                _playersInTides |= Raid.WithSlot(false, true, true).MaskInRadiusExcluding(player, _tidesRadius);
             }
             else if (_playersWithDepths[i])
             {
-                _playersInDepths |= Raid.WithSlot(false, true, true).InRadiusExcluding(player, _depthsRadius).Mask();
+                _playersInDepths |= Raid.WithSlot(false, true, true).MaskInRadiusExcluding(player, _depthsRadius);
             }
         }
     }
@@ -39,7 +39,7 @@ sealed class PredatoryAvarice(BossModule module) : BossComponent(module)
 
         if (_playersWithTides[slot])
         {
-            if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _tidesRadius).Any())
+            if (Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, _tidesRadius))
             {
                 hints.Add("GTFO from raid!");
             }

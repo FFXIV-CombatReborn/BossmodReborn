@@ -90,6 +90,30 @@ public abstract class GenericAOEs(BossModule module, uint aid = default, string 
         }
         return bestIndex;
     }
+
+    public static int IndexOfClosestAOE(List<AOEInstance> aoes, WPos position, AOEShape? shape = null)
+    {
+        var bestIndex = -1;
+        var bestDistSq = float.MaxValue;
+        var span = CollectionsMarshal.AsSpan(aoes);
+        var len = span.Length;
+        for (var i = 0; i < len; ++i)
+        {
+            ref readonly var aoe = ref span[i];
+            if (shape != null && aoe.Shape != shape)
+            {
+                continue;
+            }
+
+            var distSq = (aoe.Origin - position).LengthSq();
+            if (distSq < bestDistSq)
+            {
+                bestDistSq = distSq;
+                bestIndex = i;
+            }
+        }
+        return bestIndex;
+    }
 }
 
 // For simple AOEs, formerly known as SelfTargetedAOEs and LocationTargetedAOEs, that happens at the end of the cast

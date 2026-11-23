@@ -61,6 +61,37 @@ sealed class DeadMansDirgeOuter(BossModule module) : Components.SimpleAOEs(modul
 sealed class DeadMansDirgeInner(BossModule module) : Components.SimpleAOEs(module, (uint)AID.DeadMansDirgeInner, new AOEShapeDonut(3f, 43f));
 sealed class Wallop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Wallop, new AOEShapeRect(5f, 1.5f));
 
+sealed class CrawlingPiece(BossModule module) : BossComponent(module)
+{
+    private readonly List<Actor> crawlers = module.Enemies((uint)OID.CrawlingPiece);
+
+    public override void AddHints(int slot, Actor actor, TextHints hints)
+    {
+        if (actor.FindStatus((uint)SID.Bind) != null)
+        {
+            hints.Add("Kill the crawler holding you!");
+        }
+    }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        if (actor.FindStatus((uint)SID.Bind) != null)
+        {
+            return;
+        }
+
+        var count = crawlers.Count;
+        for (var i = 0; i < count; ++i)
+        {
+            var crawler = crawlers[i];
+            if (!crawler.IsDeadOrDestroyed)
+            {
+                hints.AddForbiddenZone(new SDCapsule(crawler.Position, crawler.Rotation, 5f, 2f), DateTime.MaxValue);
+            }
+        }
+    }
+}
+
 sealed class UnmooringMelody(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> aoes = [];
@@ -105,9 +136,10 @@ sealed class Burst(BossModule module) : Components.GenericAOEs(module)
     {
         if (spell.Action.ID == (uint)AID.Burst)
         {
-            if (aoes.Count > 0)
+            var index = IndexOfClosestAOE(aoes, caster.Position);
+            if (index >= 0)
             {
-                aoes.RemoveAt(0);
+                aoes.RemoveAt(index);
             }
         }
     }
@@ -155,6 +187,7 @@ sealed class SirenPieceStates : StateMachineBuilder
     public SirenPieceStates(BossModule module) : base(module)
     {
         TrivialPhase()
+            .ActivateOnEnter<CrawlingPiece>()
             .ActivateOnEnter<SongOfTorment>()
             .ActivateOnEnter<UnmooringMelody>()
             .ActivateOnEnter<FeralLunge>()

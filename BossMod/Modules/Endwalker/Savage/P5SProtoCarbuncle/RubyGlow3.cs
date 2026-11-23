@@ -6,6 +6,7 @@ sealed class RubyGlow3(BossModule module) : RubyGlowCommon(module, (uint)AID.Rub
 {
     private readonly BitMask[] _aoeQuadrants = new BitMask[4]; // [i] = danger quardants at explosion #i, bits: 0=NW, 1=NE, 2=SW, 3=SE
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var aoeQuadrants = NumCasts switch
@@ -19,10 +20,13 @@ sealed class RubyGlow3(BossModule module) : RubyGlowCommon(module, (uint)AID.Rub
         // TODO: correct explosion time
         var quadrants = aoeQuadrants.SetBits();
         var len = quadrants.Length;
-        var aoes = new AOEInstance[len];
+        var aoesLen = len;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < len; ++i)
             aoes[i] = new(ShapeQuadrant, QuadrantCenter(quadrants[i]));
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void AddGlobalHints(Actor actor, GlobalHints hints)

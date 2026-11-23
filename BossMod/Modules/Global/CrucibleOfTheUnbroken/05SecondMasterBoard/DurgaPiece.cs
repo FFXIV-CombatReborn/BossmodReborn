@@ -60,16 +60,21 @@ sealed class GroundingJoltBig(BossModule module) : Components.SimpleAOEs(module,
 sealed class GroundingJoltSmall(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GroundingJoltSmall, 6f);
 
 sealed class Missile(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Voyage, new AOEShapeRect(100f, 2f));
-sealed class MissileBait(BossModule module) : Components.GenericBaitAway(module) {
+sealed class MissileBait(BossModule module) : Components.GenericBaitAway(module)
+{
     private readonly AOEShapeRect shape = new(100f, 2f);
 
-    public override void OnActorPlayActionTimelineEvent(Actor actor, ushort id) {
-        if (actor.OID == (uint)OID.Missile && id == 4565) {
+    public override void OnActorPlayActionTimelineEvent(Actor actor, ushort id)
+    {
+        if (actor.OID == (uint)OID.Missile && id == 4565)
+        {
             var party = Raid.WithoutSlot();
             var len = party.Length;
 
-            for (var i = 0; i < len; i++) {
-                if (party[i].Type == ActorType.Pet) {
+            for (var i = 0; i < len; i++)
+            {
+                if (party[i].Type == ActorType.Pet)
+                {
                     continue;
                 }
 
@@ -78,14 +83,16 @@ sealed class MissileBait(BossModule module) : Components.GenericBaitAway(module)
         }
     }
 
-    public override void OnCastStarted(Actor caster, ActorCastInfo spell) {
-        if (spell.Action.ID == (uint)AID.Voyage) {
-            if (CurrentBaits.Count > 0) {
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.Voyage)
+        {
+            if (CurrentBaits.Count > 0)
+            {
                 CurrentBaits.RemoveAt(0);
             }
         }
     }
-
 }
 
 sealed class ThermobaricChargeBait(BossModule module) : Components.BaitAwayIcon(module, 2f, (uint)IconID.ThermobaricChargeLockOn, (uint)AID.ThermobaricChargeBoss)
@@ -189,6 +196,7 @@ sealed class DurgaPieceStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.DurgaPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1092u, NameID = 14657u, SortOrder = 6)]
+[PreferredKinship(BST.Kinship.Vile, "Ignore Thermobaric Charge's knockback")]
 public sealed class DurgaPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsRect(20f, 20f))
 {
     protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)

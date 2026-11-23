@@ -117,6 +117,7 @@ sealed class FireSpread(BossModule module) : Components.GenericAOEs(module)
 
     private readonly AOEShapeRect _shape = new(20f, 2.5f, -8f);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = 0;
@@ -131,7 +132,10 @@ sealed class FireSpread(BossModule module) : Components.GenericAOEs(module)
         if (count == 0)
             return [];
 
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         var index = 0;
         var center = Arena.Center.Quantized();
         for (var i = 0; i < countS; ++i)
@@ -151,7 +155,7 @@ sealed class FireSpread(BossModule module) : Components.GenericAOEs(module)
                 aoes[index++] = new(_shape, center, s.NextRotation, s.NextActivation, Colors.Danger);
             }
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)

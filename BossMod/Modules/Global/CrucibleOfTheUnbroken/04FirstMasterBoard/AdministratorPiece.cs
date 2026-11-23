@@ -127,6 +127,8 @@ sealed class AdministratorPieceStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.AdministratorPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1091u, NameID = 14610u, SortOrder = 6)]
+[PreferredKinship(BST.Kinship.Soul, "Interrupt Confound")]
+[PreferredKinship(BST.Kinship.Ash, "Cleanse Poison from Cobra Piece")]
 public sealed class AdministratorPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, -420f), new ArenaBoundsCircle(20f))
 {
     protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
@@ -155,7 +157,7 @@ public sealed class AdministratorPiece(WorldState ws, Actor primary) : BossModul
         Arena.Actors(Enemies((uint)OID.CobraPiece), Colors.Vulnerable);
         Arena.Actors(Enemies((uint)OID.DronePiece));
         Arena.Actors(Enemies((uint)OID.FootmanPiece));
-        Arena.Actors(Enemies((uint)OID.CobraPiece));
+        Arena.Actors(Enemies((uint)OID.DreadnaughtPiece));
     }
 
     private readonly string[] _prePullHints = [

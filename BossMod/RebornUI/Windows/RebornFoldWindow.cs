@@ -73,6 +73,11 @@ public abstract class RebornFoldWindow : RebornWindow
     public override void PreDraw()
     {
         base.PreDraw();
+        if (IsPinned || IsClickthrough)
+        {
+            IsPinned = false;
+            IsClickthrough = false;
+        }
         Flags = FoldFlags | ExtraFlags;
         if (_fold.Prepare(this, ShownActions, Brand))
         {

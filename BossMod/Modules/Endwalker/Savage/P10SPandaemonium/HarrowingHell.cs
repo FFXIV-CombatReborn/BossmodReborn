@@ -8,7 +8,27 @@ sealed class HarrowingHell(BossModule module) : BossComponent(module)
     public override void Update()
     {
         // boss always points to (0,1) => offset dot dir == z + const
-        _closestTargets = Raid.WithSlot(false, true, true).OrderBy(ia => ia.Item2.PosRot.Z).Take(2).Mask();
+        // the two players with the lowest z
+        _closestTargets = default;
+        int first = -1, second = -1;
+        float z1 = float.MaxValue, z2 = float.MaxValue;
+        foreach (var (i, p) in Raid.WithSlot(false, true, true))
+        {
+            var z = p.PosRot.Z;
+            if (z < z1)
+            {
+                (second, z2) = (first, z1);
+                (first, z1) = (i, z);
+            }
+            else if (z < z2)
+            {
+                (second, z2) = (i, z);
+            }
+        }
+        if (first >= 0)
+            _closestTargets.Set(first);
+        if (second >= 0)
+            _closestTargets.Set(second);
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)

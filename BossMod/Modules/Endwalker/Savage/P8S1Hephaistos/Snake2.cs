@@ -6,12 +6,16 @@ sealed class Gorgospit(BossModule module) : Components.GenericAOEs(module, (uint
 
     private readonly AOEShapeRect _shape = new(60f, 5f);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = Casters.Count;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var c = Casters[i];
@@ -20,7 +24,7 @@ sealed class Gorgospit(BossModule module) : Components.GenericAOEs(module, (uint
             else
                 aoes[i] = new(_shape, c.caster.CastInfo.LocXZ, c.caster.CastInfo.Rotation, Module.CastFinishAt(c.caster.CastInfo));
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnActorPlayActionTimelineEvent(Actor actor, ushort id)

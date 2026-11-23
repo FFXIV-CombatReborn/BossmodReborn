@@ -16,17 +16,67 @@ public enum AID : uint
     Entrench = 25521, // Helper->self, 7.5s cast, range 41 width 8 rect
     Tread1 = 25516, // Boss->location, no cast, width 8 rect charge
     Tread2 = 25517, // Boss->location, no cast, width 8 rect charge
-    Unknown1 = 25514, // Boss->location, no cast, single-target
-    Unknown2 = 25518, // Helper->location, 1.5s cast, width 8 rect charge
+    AutoMobileAssaultCannonStart = 25514, // Boss->location, no cast, single-target
+    TreadTelegraph = 25518, // Helper->location, 1.5s cast, width 8 rect charge
     WaveCannon = 25519, // Boss->self, 2.5s cast, range 40 180-degree cone
     Wheel = 25525 // Boss->player, 5.0s cast, single-target //Tankbuster
 }
 
-class Tread1(BossModule module) : Components.ChargeAOEs(module, (uint)AID.Tread1, 4);
-class Tread2(BossModule module) : Components.ChargeAOEs(module, (uint)AID.Tread2, 4);
-class Unknown2(BossModule module) : Components.ChargeAOEs(module, (uint)AID.Unknown2, 4);
+public enum IconID : uint
+{
+    SniperCannon1 = 79,
+    SniperCannon4 = 82
+}
 
-class AutoMobileSniperCannon2(BossModule module) : Components.SimpleAOEs(module, (uint)AID.AutoMobileSniperCannon2, new AOEShapeRect(40, 3));
+sealed class AutoMobileSniperCannon(BossModule module) : Components.GenericBaitAway(module, (uint)AID.AutoMobileSniperCannon2)
+{
+    private static readonly AOEShapeRect rect = new(40f, 3f);
+    private readonly Dictionary<uint, (Actor? Helper, Actor? Player)> _pairs = [];
+
+    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
+    {
+        if (iconID is < (uint)IconID.SniperCannon1 or > (uint)IconID.SniperCannon4)
+        {
+            return;
+        }
+        var pair = _pairs.GetValueOrDefault(iconID);
+        if (actor.OID == (uint)OID.Helper)
+        {
+            pair.Helper = actor;
+        }
+        else
+        {
+            pair.Player = actor;
+        }
+        if (pair.Helper != null && pair.Player != null)
+        {
+            CurrentBaits.Add(new(pair.Helper, pair.Player, rect, WorldState.FutureTime(7.5d)));
+            _pairs.Remove(iconID);
+        }
+        else
+        {
+            _pairs[iconID] = pair;
+        }
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (spell.Action.ID == WatchedAction)
+        {
+            ++NumCasts;
+            var count = CurrentBaits.Count;
+            for (var i = count - 1; i >= 0; --i)
+            {
+                if (CurrentBaits[i].Source == caster)
+                {
+                    CurrentBaits.RemoveAt(i);
+                }
+            }
+        }
+    }
+}
+
+class Tread(BossModule module) : Components.ChargeAOEs(module, (uint)AID.TreadTelegraph, 4f);
 class Entrench(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Entrench, new AOEShapeRect(41, 4));
 
 class WaveCannon(BossModule module) : Components.SimpleAOEs(module, (uint)AID.WaveCannon, new AOEShapeCone(40, 90.Degrees()));
@@ -39,16 +89,14 @@ class D082ArchLambdaStates : StateMachineBuilder
     public D082ArchLambdaStates(BossModule module) : base(module)
     {
         TrivialPhase()
-            .ActivateOnEnter<Tread1>()
-            .ActivateOnEnter<Tread2>()
-            .ActivateOnEnter<Unknown2>()
-            .ActivateOnEnter<AutoMobileSniperCannon2>()
+            .ActivateOnEnter<Tread>()
             .ActivateOnEnter<Entrench>()
+            .ActivateOnEnter<AutoMobileSniperCannon>()
             .ActivateOnEnter<WaveCannon>()
             .ActivateOnEnter<AtomicFlame>()
             .ActivateOnEnter<Wheel>();
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, Contributors = "The Combat Reborn Team", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 784, NameID = 10403)]
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, Contributors = "The Combat Reborn Team (LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 784, NameID = 10403)]
 public class D082ArchLambda(WorldState ws, Actor primary) : BossModule(ws, primary, new(0, 0), new ArenaBoundsCircle(20));

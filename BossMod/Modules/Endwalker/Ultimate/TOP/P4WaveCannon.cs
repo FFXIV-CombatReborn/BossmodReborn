@@ -68,8 +68,9 @@ sealed class P4WaveCannonStack : BossComponent
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
         if (Imminent)
-            foreach (var (_, p) in Raid.WithSlot(true).IncludedInMask(_targets))
-                _shape.Outline(Arena, Arena.Center, Angle.FromDirection(p.Position - Arena.Center), Colors.Safe);
+            foreach (var (s_, p) in Raid.WithSlot(true))
+                if (_targets[s_])
+                    _shape.Outline(Arena, Arena.Center, Angle.FromDirection(p.Position - Arena.Center), Colors.Safe);
 
         var safeDir = SafeDir(pcSlot);
         if (safeDir != default)

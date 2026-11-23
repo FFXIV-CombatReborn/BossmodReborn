@@ -8,6 +8,7 @@ sealed class SpatialTactics(BossModule module) : Components.GenericAOEs(module)
 
     private static readonly AOEShapeCross _shape = new(50f, 4f);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_array == null)
@@ -34,7 +35,10 @@ sealed class SpatialTactics(BossModule module) : Components.GenericAOEs(module)
         if (count == 0)
             return [];
 
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         var index = 0;
 
         for (var i = 0; i < max; ++i)
@@ -49,7 +53,7 @@ sealed class SpatialTactics(BossModule module) : Components.GenericAOEs(module)
                 }
             }
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)

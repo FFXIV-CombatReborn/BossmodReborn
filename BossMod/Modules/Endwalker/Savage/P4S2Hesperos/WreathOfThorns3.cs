@@ -15,9 +15,10 @@ sealed class WreathOfThorns3(BossModule module) : BossComponent(module)
     private BitMask _coneTargets;
     private BitMask _playersInAOE;
 
-    private IEnumerable<Actor> RangedTowers => _relevantHelpers.Take(4);
+    private ReadOnlySpan<Actor> RangedTowers => _relevantHelpers.SpanRange(0, 4);
     //private IEnumerable<Actor> _knockbackThorn => _relevantHelpers.Skip(4).Take(1);
-    private IEnumerable<Actor> MeleeTowers => _relevantHelpers.Skip(5);
+    private ReadOnlySpan<Actor> MeleeTowers => _relevantHelpers.SpanRange(5);
+    private readonly List<(int, Actor)> _sorted = new(PartyState.MaxPartySize);
 
     private const float _jumpAOERadius = 10f;
 
@@ -26,18 +27,24 @@ sealed class WreathOfThorns3(BossModule module) : BossComponent(module)
         _coneTargets = _playersInAOE = default;
         if (NumCones == NumJumps)
         {
-            _jumpTarget = Raid.WithoutSlot(false, true, true).SortedByRange(Module.PrimaryActor.Position).LastOrDefault();
-            _playersInAOE = _jumpTarget != null ? Raid.WithSlot(false, true, true).InRadiusExcluding(_jumpTarget, _jumpAOERadius).Mask() : default;
+            _jumpTarget = Raid.WithoutSlot(false, true, true).FarthestFrom(Module.PrimaryActor.Position);
+            _playersInAOE = _jumpTarget != null ? Raid.WithSlot(false, true, true).MaskInRadiusExcluding(_jumpTarget, _jumpAOERadius) : default;
         }
         else
         {
-            foreach ((var i, var player) in Raid.WithSlot(false, true, true).SortedByRange(Module.PrimaryActor.Position).Take(3))
+            Raid.WithSlot(false, true, true).SortedByRange(Module.PrimaryActor.Position, _sorted);
+            for (var k = 0; k < _sorted.Count && k < 3; ++k)
             {
+                var (i, player) = _sorted[k];
                 _coneTargets.Set(i);
                 if (player.Position != Module.PrimaryActor.Position)
                 {
                     var direction = (player.Position - Module.PrimaryActor.Position).Normalized();
-                    _playersInAOE |= Raid.WithSlot(false, true, true).Exclude(i).WhereActor(p => p.Position.InCone(Module.PrimaryActor.Position, direction, _coneAOE.HalfAngle)).Mask();
+                    foreach (var (j, p) in Raid.WithSlot(false, true, true))
+                    {
+                        if (j != i && p.Position.InCone(Module.PrimaryActor.Position, direction, _coneAOE.HalfAngle))
+                            _playersInAOE.Set(j);
+                    }
                 }
             }
         }
@@ -49,7 +56,7 @@ sealed class WreathOfThorns3(BossModule module) : BossComponent(module)
         {
             // TODO: consider raid comps with 3+ melee or ranged...
             var shouldSoakTower = CurState == State.RangedTowers ? actor.Role is Role.Ranged or Role.Healer : actor.Role is Role.Melee or Role.Tank;
-            var soakedTower = (CurState == State.RangedTowers ? RangedTowers : MeleeTowers).InRadius(actor.Position, P4S2.WreathTowerRadius).FirstOrDefault();
+            var soakedTower = (CurState == State.RangedTowers ? RangedTowers : MeleeTowers).FirstInRadius(actor.Position, P4S2.WreathTowerRadius);
             if (shouldSoakTower)
             {
                 hints.Add("Soak the tower!", soakedTower == null);
@@ -78,9 +85,10 @@ sealed class WreathOfThorns3(BossModule module) : BossComponent(module)
     {
         if (_coneTargets.Any())
         {
-            foreach ((_, var player) in Raid.WithSlot(false, true, true).IncludedInMask(_coneTargets))
+            foreach (var (s, player) in Raid.WithSlot(false, true, true))
             {
-                _coneAOE.Draw(Arena, Module.PrimaryActor.Position, Angle.FromDirection(player.Position - Module.PrimaryActor.Position));
+                if (_coneTargets[s])
+                    _coneAOE.Draw(Arena, Module.PrimaryActor.Position, Angle.FromDirection(player.Position - Module.PrimaryActor.Position));
             }
         }
     }
@@ -101,8 +109,9 @@ sealed class WreathOfThorns3(BossModule module) : BossComponent(module)
 
         if (NumCones != NumJumps)
         {
-            foreach ((_, var player) in Raid.WithSlot(false, true, true).IncludedInMask(_coneTargets))
-                Arena.Actor(player, Colors.Danger, drawWorld: true);
+            foreach (var (s, player) in Raid.WithSlot(false, true, true))
+                if (_coneTargets[s])
+                    Arena.Actor(player, Colors.Danger, drawWorld: true);
             Arena.Actor(_jumpTarget, Colors.Vulnerable, drawWorld: true);
         }
         else if (_jumpTarget != null)

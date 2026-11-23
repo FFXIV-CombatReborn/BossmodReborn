@@ -36,7 +36,10 @@ class Disassembler(BossModule module) : Components.SimpleAOEGroups(module, [(uin
 class LevelingMissile2(BossModule module) : Components.SpreadFromCastTargets(module, (uint)AID.LevelingMissile2, 6f);
 class ElectricArc(BossModule module) : Components.StackWithCastTargets(module, (uint)AID.ElectricArc, 6f, 4, 4);
 
-class Excavated(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Excavated, 8f);
+class Excavated(BossModule module) : Components.Voidzone(module, 8f, GetVoidzones)
+{
+    private static List<Actor> GetVoidzones(BossModule module) => module.Enemies((uint)OID.ExcavationBomb1);
+}
 
 class IronKiss(BossModule module) : Components.SimpleAOEs(module, (uint)AID.IronKiss, 16f);
 
@@ -56,5 +59,5 @@ class D073BigCheeseStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, Contributors = "The Combat Reborn Team", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 794, NameID = 10336)]
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, Contributors = "The Combat Reborn Team (LTS)", GroupType = BossModuleInfo.GroupType.CFC, GroupID = 794, NameID = 10336)]
 public class D073BigCheese(WorldState ws, Actor primary) : BossModule(ws, primary, new(-22, -44), new ArenaBoundsRect(14.5f, 10));

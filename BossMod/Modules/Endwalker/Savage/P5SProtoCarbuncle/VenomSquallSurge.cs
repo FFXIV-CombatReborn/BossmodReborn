@@ -16,11 +16,11 @@ sealed class VenomSquallSurge(BossModule module) : BossComponent(module)
         switch (NextMechanic)
         {
             case Mechanic.Rain:
-                if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _radius).Any())
+                if (Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, _radius))
                     hints.Add("Spread!");
                 break;
             case Mechanic.Pool:
-                if (Raid.WithoutSlot(false, true, true).InRadius(actor.Position, _radius).Count(p => p.Role == Role.Healer) != 1)
+                if (Raid.WithoutSlot(false, true, true).CountInRadius(actor.Position, _radius, Role.Healer) != 1)
                     hints.Add("Stack with healer!");
                 break;
         }
@@ -45,8 +45,9 @@ sealed class VenomSquallSurge(BossModule module) : BossComponent(module)
                     Arena.ZoneCircleOutline(p.Position, _radius, Colors.Danger);
                 break;
             case Mechanic.Pool: // party stacks
-                foreach (var p in Raid.WithoutSlot(false, true, true).Where(p => p.Role == Role.Healer))
-                    Arena.ZoneCircleOutline(p.Position, _radius, Colors.Danger);
+                foreach (var p in Raid.WithoutSlot(false, true, true))
+                    if (p.Role == Role.Healer)
+                        Arena.ZoneCircleOutline(p.Position, _radius, Colors.Danger);
                 break;
         }
     }

@@ -52,16 +52,40 @@ public enum TetherID : uint
 }
 
 sealed class VoidThunderIII(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.VoidThunderIIITankBuster, (uint)AID.VoidThunderIIITB, 6f, 5.1d);
-sealed class VoidThunderIIICross(BossModule module) : Components.SimpleAOEs(module, (uint)AID.VoidThunderIIICross, new AOEShapeCross(50f, 5f));
+sealed class VoidThunderIIICross(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.VoidThunderIIICross, (uint)AID.VoidThunderIIICross1],
+    new AOEShapeCross(50f, 5f));
 sealed class VoidParalyzeIII(BossModule module) : Components.RaidwideCast(module, (uint)AID.VoidParalyzeIII, "Raidwide + Applies Paralysis");
 
 sealed class VoidWaterIII(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.VoidWaterIIIIcon, (uint)AID.VoidWaterIII, 8f, 5.1d);
 
 sealed class WaterPuddles : Components.PersistentInvertibleVoidzone
 {
+    private readonly VoidThunderIII? buster;
+
     public WaterPuddles(BossModule module) : base(module, 8f, GetVoidzones)
     {
         InvertResolveAt = WorldState.CurrentTime;
+        buster = module.FindComponent<VoidThunderIII>();
+    }
+
+    private DateTime BusterActivation(Actor actor)
+    {
+        if (buster == null)
+        {
+            return default;
+        }
+
+        var spreads = CollectionsMarshal.AsSpan(buster.Spreads);
+        var len = spreads.Length;
+        for (var i = 0; i < len; ++i)
+        {
+            ref readonly var spread = ref spreads[i];
+            if (spread.Target == actor)
+            {
+                return spread.Activation;
+            }
+        }
+        return default;
     }
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
@@ -71,7 +95,28 @@ sealed class WaterPuddles : Components.PersistentInvertibleVoidzone
             return;
         }
 
+        if (BusterActivation(actor) != default)
+        {
+            hints.Add("Bait the buster away from puddles!");
+            return;
+        }
+
         base.AddHints(slot, actor, hints);
+    }
+
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        var activation = BusterActivation(actor);
+        if (activation == default)
+        {
+            base.AddAIHints(slot, actor, assignment, hints);
+            return;
+        }
+
+        foreach (var puddle in Sources(Module))
+        {
+            hints.AddForbiddenZone(new SDCircle(puddle.Position, Shape.Radius), activation);
+        }
     }
 
     public static Actor[] GetVoidzones(BossModule module)
@@ -228,6 +273,7 @@ sealed class MindflayerPieceStates : StateMachineBuilder
 }
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.MindflayerPiece, Contributors = "Equilius", GroupType = BossModuleInfo.GroupType.CrucibleOfTheUnbroken, GroupID = 1092u, NameID = 14633u, SortOrder = 2)]
+[PreferredKinship(BST.Kinship.Ash, "Cleanse Paralysis from Void Paralyze III")]
 public sealed class MindflayerPiece(WorldState ws, Actor primary) : BossModule(ws, primary, new(120f, 0f), new ArenaBoundsRect(20f, 20f))
 {
     protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
@@ -238,12 +284,19 @@ public sealed class MindflayerPiece(WorldState ws, Actor primary) : BossModule(w
         for (var i = 0; i < count; ++i)
         {
             var e = hints.PotentialTargets[i];
-            e.Priority = e.Actor.OID switch
+            if (e.Actor.OID == (uint)OID.MyconidPiece)
             {
-                (uint)OID.MyconidPiece => InsidePuddle(e.Actor, puddles) ? 2 : AIHints.Enemy.PriorityForbidden,
-                (uint)OID.MindflayerPiece => 1,
-                _ => 0
-            };
+                var inPuddle = InsidePuddle(e.Actor, puddles);
+                e.Priority = inPuddle ? 2 : AIHints.Enemy.PriorityForbidden;
+                if (!inPuddle && e.Actor.TargetID != actor.InstanceID)
+                {
+                    e.PreferProvoking = true;
+                }
+            }
+            else
+            {
+                e.Priority = e.Actor.OID == (uint)OID.MindflayerPiece ? 1 : 0;
+            }
         }
     }
 

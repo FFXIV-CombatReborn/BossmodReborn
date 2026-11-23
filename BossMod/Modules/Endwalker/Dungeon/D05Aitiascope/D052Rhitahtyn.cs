@@ -100,12 +100,14 @@ class ArenaChanges(BossModule module) : BossComponent(module)
 class ShieldSkewer(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ShieldSkewer, new AOEShapeRect(40f, 7f))
 {
     private readonly ArenaChanges _arena = module.FindComponent<ArenaChanges>()!;
+    private readonly AOEInstance[] _aoe = new AOEInstance[1];
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (Casters.Count == 0)
             return [];
-        return new AOEInstance[1] { Casters[0] with { Risky = !_arena.Safespots } };
+        _aoe[0] = Casters[0] with { Risky = !_arena.Safespots };
+        return _aoe;
     }
 }
 

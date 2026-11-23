@@ -84,13 +84,13 @@ abstract class NearDistantWorld(BossModule module) : Components.GenericStackSpre
         }
         if (numDone <= 1 && start != null)
         {
-            start = close ? Raid.WithoutSlot(false, true, true).Exclude(start).Closest(start.Position) : Raid.WithoutSlot(false, true, true).Exclude(start).Farthest(start.Position);
+            start = close ? Raid.WithoutSlot(false, true, true).ClosestTo(start.Position, start) : Raid.WithoutSlot(false, true, true).FarthestFrom(start.Position, start);
             if (start != null)
                 AddSpread(start, 4f, 1);
         }
         if (numDone <= 2 && start != null)
         {
-            start = close ? Raid.WithoutSlot(false, true, true).Exclude(start).Closest(start.Position) : Raid.WithoutSlot(false, true, true).Exclude(start).Farthest(start.Position);
+            start = close ? Raid.WithoutSlot(false, true, true).ClosestTo(start.Position, start) : Raid.WithoutSlot(false, true, true).FarthestFrom(start.Position, start);
             if (start != null)
                 AddSpread(start, 4f, 2);
         }

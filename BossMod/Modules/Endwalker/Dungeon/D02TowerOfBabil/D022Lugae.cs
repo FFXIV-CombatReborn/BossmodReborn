@@ -39,12 +39,16 @@ sealed class DownpourMagitekChakram(BossModule module) : Components.GenericAOEs(
     private BitMask _status;
     private bool avoidSquares;
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (CurrentMechanic == Mechanic.None)
             return [];
 
-        var aoes = new AOEInstance[2];
+        var aoesLen = 2;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         if (CurrentMechanic == Mechanic.Downpour)
         {
             var breathless = _status[slot];
@@ -57,7 +61,7 @@ sealed class DownpourMagitekChakram(BossModule module) : Components.GenericAOEs(
             aoes[0] = new(minimum ? squareInv : square, mini, color: minimum ? Colors.SafeFromAOE : default);
             aoes[1] = new(square, toad);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnStatusGain(Actor actor, ref ActorStatus status)

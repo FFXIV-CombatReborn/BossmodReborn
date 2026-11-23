@@ -15,11 +15,11 @@ sealed class Coherence(BossModule module) : Components.CastCounter(module, (uint
     public override void Update()
     {
         _inRay.Reset();
-        _rayTarget = Raid.WithoutSlot(false, true, true).Exclude(_tetherTarget).Closest(Module.PrimaryActor.Position);
+        _rayTarget = Raid.WithoutSlot(false, true, true).ClosestTo(Module.PrimaryActor.Position, _tetherTarget);
         if (_rayTarget != null)
         {
             _rayDirection = Angle.FromDirection(_rayTarget.Position - Module.PrimaryActor.Position);
-            _inRay = Raid.WithSlot(false, true, true).InShape(_rayShape, Module.PrimaryActor.Position, _rayDirection).Mask();
+            _inRay = Raid.WithSlot(false, true, true).MaskInShape(_rayShape, Module.PrimaryActor.Position, _rayDirection);
         }
     }
 
@@ -31,7 +31,7 @@ sealed class Coherence(BossModule module) : Components.CastCounter(module, (uint
             {
                 hints.Add("Pass tether to tank!");
             }
-            else if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _aoeRadius).Any())
+            else if (Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, _aoeRadius))
             {
                 hints.Add("GTFO from raid!");
             }

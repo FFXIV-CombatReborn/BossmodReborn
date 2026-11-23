@@ -24,7 +24,7 @@ sealed class WreathOfThorns5(BossModule module) : BossComponent(module)
 
         if (_playersOrder.Count < 8)
         {
-            hints.Add("Spread!", Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _impulseAOERadius).Any());
+            hints.Add("Spread!", Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, _impulseAOERadius));
         }
     }
 

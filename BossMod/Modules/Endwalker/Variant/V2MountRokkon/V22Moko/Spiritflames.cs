@@ -9,18 +9,22 @@ sealed class Spiritflames(BossModule module) : Components.GenericAOEs(module)
     private static readonly AOEShapeCapsule capsule = new(Radius, Length);
     private readonly List<Actor> _flames = [];
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _flames.Count;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var f = _flames[i];
             aoes[i] = new(capsule, f.Position, f.Rotation);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnActorPlayActionTimelineEvent(Actor actor, ushort id)

@@ -28,10 +28,14 @@ class Aspect(BossModule module) : Components.GenericAOEs(module)
     private static readonly AOEShapeDonut donut = new(10f, 40f);
     private static readonly AOEShapeCircle circle = new(22f);
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_imminentAOE != null)
-            return new AOEInstance[1] { new(_imminentAOE, Module.PrimaryActor.Position, Module.PrimaryActor.CastInfo?.Rotation ?? Module.PrimaryActor.Rotation, _activation) };
+        {
+            _oneAOEInstance[0] = new(_imminentAOE, Module.PrimaryActor.Position, Module.PrimaryActor.CastInfo?.Rotation ?? Module.PrimaryActor.Rotation, _activation);
+            return _oneAOEInstance;
+        }
         return [];
     }
 
