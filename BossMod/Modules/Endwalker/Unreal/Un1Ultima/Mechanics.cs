@@ -29,6 +29,18 @@ sealed class Mechanics(BossModule module) : BossComponent(module)
             _orbKiters.Clear();
     }
 
+    private bool BitHits(Actor actor)
+    {
+        var bits = Module.Enemies((uint)OID.MagitekBit);
+        for (var i = 0; i < bits.Count; ++i)
+        {
+            var bit = bits[i];
+            if (bit.CastInfo != null && _aoeAssaultCannon.Check(actor.Position, bit))
+                return true;
+        }
+        return false;
+    }
+
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         var mtSlot = WorldState.Party.FindSlot(Module.PrimaryActor.TargetID);
@@ -58,7 +70,7 @@ sealed class Mechanics(BossModule module) : BossComponent(module)
         //    hints.Add("Move from boss");
         //}
 
-        //if (Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _homingLasersRange).Any())
+        //if (Raid.WithoutSlot(false, true, true).AnyInRadiusExcluding(actor, _homingLasersRange))
         //{
         //    hints.Add("Spread");
         //}
@@ -73,7 +85,7 @@ sealed class Mechanics(BossModule module) : BossComponent(module)
             hints.Add("Kite the orb!");
         }
 
-        if (Module.Enemies((uint)OID.MagitekBit).Any(bit => bit.CastInfo != null && _aoeAssaultCannon.Check(actor.Position, bit)))
+        if (BitHits(actor))
         {
             hints.Add("GTFO from bit aoe!");
         }
@@ -86,15 +98,18 @@ sealed class Mechanics(BossModule module) : BossComponent(module)
         if (_magitekOffset != null)
             _aoeMagitekRay.Draw(Arena, Module.PrimaryActor.Position, Module.PrimaryActor.Rotation + _magitekOffset.Value);
 
-        foreach (var bit in Module.Enemies((uint)OID.MagitekBit).Where(bit => bit.CastInfo != null))
-            _aoeAssaultCannon.Draw(Arena, bit);
+        foreach (var bit in Module.Enemies((uint)OID.MagitekBit))
+            if (bit.CastInfo != null)
+                _aoeAssaultCannon.Draw(Arena, bit);
     }
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
         var mt = WorldState.Actors.Find(Module.PrimaryActor.TargetID);
-        foreach (var player in Raid.WithoutSlot(false, true, true).Exclude(pc))
+        foreach (var player in Raid.WithoutSlot(false, true, true))
         {
+            if (!(player != pc))
+                continue;
             if (player == pc)
             {
                 continue;
@@ -108,15 +123,19 @@ sealed class Mechanics(BossModule module) : BossComponent(module)
         //if (pc.Role is Role.Healer or Role.Ranged)
         //    Arena.ZoneCircleOutline(Module.PrimaryActor.Position, _ceruleumVentRange, Colors.Danger);
 
-        foreach (var orb in Module.Enemies((uint)OID.Ultimaplasm).Where(orb => !_orbsSharedExploded.Contains(orb.InstanceID)))
+        foreach (var orb in Module.Enemies((uint)OID.Ultimaplasm))
         {
+            if (!(!_orbsSharedExploded.Contains(orb.InstanceID)))
+                continue;
             // TODO: line between paired orbs
             Arena.Actor(orb, Colors.Danger, true);
             Arena.ZoneCircleOutline(orb.Position, _orbSharedRange, Colors.Safe);
         }
 
-        foreach (var orb in Module.Enemies((uint)OID.Aetheroplasm).Where(orb => !_orbsKitedExploded.Contains(orb.InstanceID)))
+        foreach (var orb in Module.Enemies((uint)OID.Aetheroplasm))
         {
+            if (!(!_orbsKitedExploded.Contains(orb.InstanceID)))
+                continue;
             // TODO: line from corresponding target
             Arena.Actor(orb, Colors.Danger, true);
             Arena.ZoneCircleOutline(orb.Position, _orbFixateRange, Colors.Danger);

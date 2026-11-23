@@ -13,8 +13,23 @@ sealed class TitanIfrit(BossModule module) : BossComponent(module)
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (_activeSimpleAOEs.Any(e => e.Item2.Check(actor.Position, e.Item1.CastInfo!.LocXZ)) || _crimsonCyclone.Any(a => _aoeCrimsonCyclone.Check(actor.Position, a)))
-            hints.Add("GTFO from aoe!");
+        for (var i = 0; i < _activeSimpleAOEs.Count; ++i)
+        {
+            var (caster, shape) = _activeSimpleAOEs[i];
+            if (caster.CastInfo is ActorCastInfo ci && shape.Check(actor.Position, ci.LocXZ))
+            {
+                hints.Add("GTFO from aoe!");
+                return;
+            }
+        }
+        for (var i = 0; i < _crimsonCyclone.Count; ++i)
+        {
+            if (_aoeCrimsonCyclone.Check(actor.Position, _crimsonCyclone[i]))
+            {
+                hints.Add("GTFO from aoe!");
+                return;
+            }
+        }
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)

@@ -8,6 +8,7 @@ sealed class P3Earthshaker(BossModule module) : Components.GenericAOEs(module, (
 
     private readonly AOEShape _shape = new AOEShapeCone(60f, 15f.Degrees());
 
+    private readonly List<AOEInstance> _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var origin = Module.Enemies((uint)OID.BossP3).FirstOrDefault();
@@ -15,7 +16,8 @@ sealed class P3Earthshaker(BossModule module) : Components.GenericAOEs(module, (
             return [];
 
         // TODO: timing...
-        var aoes = new List<AOEInstance>();
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         foreach (var target in Raid.WithSlot(true, true, true).IncludedInMask(_targets))
             aoes.Add(new(_shape, origin.Position, Angle.FromDirection(target.Item2.Position - origin.Position)));
         return CollectionsMarshal.AsSpan(aoes);

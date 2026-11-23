@@ -298,6 +298,7 @@ sealed class ThermalDivideSides(BossModule module) : Components.GenericAOEs(modu
     private DateTime activation;
     private BitMask soulOfFire, soulOfIce;
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (pattern is bool pat)
@@ -306,17 +307,20 @@ sealed class ThermalDivideSides(BossModule module) : Components.GenericAOEs(modu
         }
         return [];
 
-        AOEInstance[] HandleAOEs(bool condition)
+        ReadOnlySpan<AOEInstance> HandleAOEs(bool condition)
         {
             var center = Arena.Center;
             var pos1 = center + offset;
             var pos2 = center - offset;
 
             var check = condition ? 1f : -1f;
-            var aoes = new AOEInstance[2];
+            var aoesLen = 2;
+            if (_aoesBuffer.Length < aoesLen)
+                _aoesBuffer = new AOEInstance[aoesLen];
+            var aoes = _aoesBuffer;
             aoes[0] = new(cone, condition ? pos1 : pos2, rotation + check * a90, activation);
             aoes[1] = new(coneInv, condition ? pos2 : pos1, rotation - check * a90, activation, Colors.SafeFromAOE);
-            return aoes;
+            return aoes.AsSpan(0, aoesLen);
         }
     }
 

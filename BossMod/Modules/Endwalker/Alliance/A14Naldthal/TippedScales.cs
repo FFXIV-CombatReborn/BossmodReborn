@@ -8,6 +8,7 @@ sealed class TippedScales(BossModule module) : Components.GenericAOEs(module, (u
     private readonly Angle a90 = 90f.Degrees();
     private DateTime activation;
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = weightsByActor.Count;
@@ -39,7 +40,10 @@ sealed class TippedScales(BossModule module) : Components.GenericAOEs(module, (u
         }
         else
         {
-            return new AOEInstance[1] { new(rect, Arena.Center, westWeight > eastWeight ? a90 : -a90, activation, Colors.SafeFromAOE, false) };
+            {
+                _oneAOEInstance[0] = new(rect, Arena.Center, westWeight > eastWeight ? a90 : -a90, activation, Colors.SafeFromAOE, false);
+                return _oneAOEInstance;
+            }
         }
     }
 
@@ -108,7 +112,7 @@ sealed class TippedScales(BossModule module) : Components.GenericAOEs(module, (u
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if (spell.Action.ID == (uint)AID.TippedScales)
+        if (spell.Action.ID is (uint)AID.TippedScalesAOE or (uint)AID.TippedScalesEnrage)
         {
             activation = Module.CastFinishAt(spell);
         }

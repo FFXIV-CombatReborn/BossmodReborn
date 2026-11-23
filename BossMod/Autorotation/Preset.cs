@@ -8,7 +8,7 @@ namespace BossMod.Autorotation;
 [JsonConverter(typeof(JsonPresetConverter))]
 public sealed record class Preset(string Name)
 {
-    public bool HiddenByDefault;
+    public bool HiddenByDefault; // set for presets inherited from VBM, menus leave them out while AutorotationConfig.HideDefaultPresets is on
 
     public enum Modifier
     {

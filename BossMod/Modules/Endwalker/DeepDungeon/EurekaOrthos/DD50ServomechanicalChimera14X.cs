@@ -37,6 +37,7 @@ class RamsDragonVoice(BossModule module) : Components.GenericAOEs(module)
     private readonly List<AOEInstance> _aoes = [with(2)];
     private readonly List<(AOEShape, DateTime)> _shapes = [with(2)];
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var countA = _aoes.Count;
@@ -60,7 +61,10 @@ class RamsDragonVoice(BossModule module) : Components.GenericAOEs(module)
         var countS = _shapes.Count;
         if (countS != 0)
         {
-            var aoes = new AOEInstance[countS];
+            var aoesLen = countS;
+            if (_aoesBuffer.Length < aoesLen)
+                _aoesBuffer = new AOEInstance[aoesLen];
+            var aoes = _aoesBuffer;
             var shapes = CollectionsMarshal.AsSpan(_shapes);
             var pos = Module.PrimaryActor.Position.Quantized();
             for (var i = 0; i < countS; ++i)
@@ -68,7 +72,7 @@ class RamsDragonVoice(BossModule module) : Components.GenericAOEs(module)
                 ref readonly var shape = ref shapes[i];
                 aoes[i] = new(shape.Item1, pos, default, shape.Item2, i == 0 && countS > 1 ? Colors.Danger : 0u, i != 0);
             }
-            return aoes;
+            return aoes.AsSpan(0, aoesLen);
         }
         return [];
     }
@@ -143,15 +147,19 @@ class Cacophony(BossModule module) : Components.GenericAOEs(module)
     private static readonly AOEShapeCircle circle = new(6);
     private readonly List<Actor> _orbs = [with(2)];
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _orbs.Count;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
             aoes[i] = new(circle, _orbs[i].Position);
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnTethered(Actor source, in ActorTetherInfo tether)

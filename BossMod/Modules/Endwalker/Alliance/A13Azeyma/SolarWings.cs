@@ -12,6 +12,7 @@ sealed class SolarFlair(BossModule module) : Components.GenericAOEs(module)
     private const float _kickDistance = 18f;
     private static readonly AOEShapeCircle _shape = new(15f);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _sunstorms.Count;
@@ -19,12 +20,15 @@ sealed class SolarFlair(BossModule module) : Components.GenericAOEs(module)
         {
             return [];
         }
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             aoes[i] = new(_shape, _sunstorms[i].Quantized());
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnActorCreated(Actor actor)

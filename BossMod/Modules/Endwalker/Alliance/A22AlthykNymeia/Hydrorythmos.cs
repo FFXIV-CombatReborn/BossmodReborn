@@ -8,9 +8,11 @@ sealed class Hydrorythmos(BossModule module) : Components.GenericAOEs(module)
     private readonly AOEShapeRect _shapeFirst = new(25f, 5f, 25f);
     private readonly AOEShapeRect _shapeRest = new(25f, 2.5f, 25f);
 
+    private readonly List<AOEInstance> _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        var aoes = new List<AOEInstance>();
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         if (NumCasts > 0)
         {
             var offset = (2.5f + ((NumCasts + 1) >> 1) * 5f) * _dir.ToDirection().OrthoL();

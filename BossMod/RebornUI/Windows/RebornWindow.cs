@@ -8,9 +8,7 @@ public abstract class RebornWindow(string name, bool detached, Vector2 initialSi
     private static readonly InterfaceConfig _interfaceConfig = Service.Config.Get<InterfaceConfig>();
     private M3Style.Scope _theme;
 
-    public static M3Density SettingsDensity => _interfaceConfig.CompactSettings ? M3Density.Tight : M3Density.Comfortable;
-
-    protected virtual M3Density Density => M3Density.Compact;
+    protected virtual M3Density Density => _interfaceConfig.CompactSettings ? M3Density.Tight : M3Density.Compact;
 
     public override void PreDraw()
     {

@@ -232,7 +232,7 @@ sealed class AIManagementWindow : UIWindow
         ImGui.SetNextItemWidth(250f);
         ImGui.SetNextWindowSizeConstraints(default, new Vector2(float.MaxValue, ImGui.GetTextLineHeightWithSpacing() * 50f));
         var aipreset = _config.AIAutorotPresetName;
-        var presets = _manager.Autorot.Database.Presets.AllPresets;
+        var presets = _manager.Autorot.Database.Presets.VisiblePresets;
 
         var count = presets.Count;
         List<string> presetNames = [with(count + 1)];

@@ -18,8 +18,6 @@ public sealed class UIPresetDatabaseEditor(RotationDatabase rotationDB)
     private Type? _selectedModuleType; // we want module selection to be persistent when changing presets
     private UIPresetEditor? _selectedPreset;
 
-    private readonly AutorotationConfig _cfg = Service.Config.Get<AutorotationConfig>();
-
     private bool HaveUnsavedModifications => _selectedPreset?.Modified ?? false;
 
     public void Draw()
@@ -107,8 +105,7 @@ public sealed class UIPresetDatabaseEditor(RotationDatabase rotationDB)
         {
             if (combo)
             {
-                if (!_cfg.HideDefaultPresets)
-                    DrawPresetListElements(true);
+                DrawPresetListElements(true);
                 DrawPresetListElements(false);
             }
         }
@@ -129,7 +126,7 @@ public sealed class UIPresetDatabaseEditor(RotationDatabase rotationDB)
         if (UIMisc.Button("Copy", 0, (HaveUnsavedModifications, "Current preset is modified, save or discard changes"), (_selectedPresetIndex < 0, "No preset is selected")))
             CreateNewPreset(_selectedPresetIndex, _selectedPresetDefault);
         ImGui.SameLine();
-        if (UIMisc.Button("Delete", 0, (_selectedPresetDefault, "The default preset can't be deleted. If you would like to hide it, you can do so in Settings -> Autorotation."), (!ImGui.GetIO().KeyShift, "Hold shift to delete"), (_selectedPresetIndex < 0, "No preset is selected")))
+        if (UIMisc.Button("Delete", 0, (_selectedPresetDefault, "Default presets can't be deleted. If you would like to hide the VBM ones, you can do so in Settings -> Autorotation."), (!ImGui.GetIO().KeyShift, "Hold shift to delete"), (_selectedPresetIndex < 0, "No preset is selected")))
             DeleteCurrentPreset();
         ImGui.SameLine();
         if (UIMisc.Button("Export", _selectedPreset == null, "No preset is selected"))
@@ -145,6 +142,9 @@ public sealed class UIPresetDatabaseEditor(RotationDatabase rotationDB)
         for (var i = 0; i < presets.Count; ++i)
         {
             var preset = presets[i];
+            if (PresetDB.IsHidden(preset))
+                continue;
+
             if (ImGui.Selectable(preset.Name, _selectedPresetDefault == defaultPresets && _selectedPresetIndex == i))
             {
                 _pendingSelectPresetIndex = i;

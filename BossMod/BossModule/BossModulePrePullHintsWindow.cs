@@ -15,8 +15,6 @@ public sealed class BossModulePrePullHintsWindow : RebornUI.RebornWindow
     private BossModule? _dismissedModule;
     private bool _permanentlySuppressing;
 
-    protected override M3Density Density => SettingsDensity;
-
     public BossModulePrePullHintsWindow(BossModuleManager mgr) : base(WindowID, false, new(450f, 180f))
     {
         _mgr = mgr;
