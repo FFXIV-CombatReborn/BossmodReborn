@@ -21,7 +21,8 @@ sealed class AkhMorn(BossModule module) : Components.GenericBaitAway(module, cen
     {
         if (spell.Action.ID == (uint)AID.AkhMorn)
         {
-            CurrentBaits.Add(new(Module.PrimaryActor, Raid.Player()!, circle));
+            if (Raid.Player() is Actor player)
+                CurrentBaits.Add(new(Module.PrimaryActor, player, circle));
             _activation = Module.CastFinishAt(spell);
         }
     }

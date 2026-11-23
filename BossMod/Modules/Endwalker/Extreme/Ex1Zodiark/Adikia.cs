@@ -11,8 +11,14 @@ sealed class Adikia(BossModule module) : BossComponent(module)
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (_casters.Any(c => _shape.Check(actor.Position, c)))
-            hints.Add("GTFO from side smash aoe!");
+        for (var i = 0; i < _casters.Count; ++i)
+        {
+            if (_shape.Check(actor.Position, _casters[i]))
+            {
+                hints.Add("GTFO from side smash aoe!");
+                return;
+            }
+        }
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)

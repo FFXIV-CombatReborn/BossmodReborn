@@ -7,8 +7,12 @@ sealed class Spectrum(BossModule module) : Components.CastCounter(module, (uint)
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
         int tanksInRange = 0, nonTanksInRange = 0;
-        foreach (var other in Raid.WithoutSlot(false, true, true).InRadiusExcluding(actor, _radius))
+        var party = Raid.WithoutSlot(false, true, true);
+        for (var i = 0; i < party.Length; ++i)
         {
+            var other = party[i];
+            if (other == actor || !other.Position.InCircle(actor.Position, _radius))
+                continue;
             if (other.Role == Role.Tank)
                 ++tanksInRange;
             else

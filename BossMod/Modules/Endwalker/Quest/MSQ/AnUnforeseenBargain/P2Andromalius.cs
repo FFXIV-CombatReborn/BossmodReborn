@@ -66,18 +66,22 @@ sealed class StraightSpindle(BossModule module) : Components.GenericAOEs(module)
     private readonly List<AOEInstance> _aoes = [with(6)];
     public static readonly AOEShapeRect rect = new(51.08f, 2.5f);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _aoes.Count;
         if (count == 0)
             return [];
         var max = count > 3 ? 3 : count;
-        var aoes = new AOEInstance[max];
+        var aoesLen = max;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < max; ++i)
         {
             aoes[i] = _aoes[i];
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
@@ -202,7 +206,7 @@ sealed class AndromaliusStates : StateMachineBuilder
 public sealed class Andromalius(WorldState ws, Actor primary) : BossModule(ws, primary, P1Furcas.Furcas.ArenaBounds.Center, P1Furcas.Furcas.ArenaBounds)
 {
     private static readonly uint[] trash = [(uint)OID.VisitantTaurus, (uint)OID.VisitantVoidskipper1, (uint)OID.VisitantVoidskipper2,
-    (uint)OID.VisitantOgre1, (uint)OID.VisitantOgre2, (uint)OID.VisitantBlackguard1, (uint)OID.VisitantVoidskipper2, (uint)OID.Voidcluster, (uint)OID.Voidcluster];
+    (uint)OID.VisitantOgre1, (uint)OID.VisitantOgre2, (uint)OID.VisitantBlackguard1, (uint)OID.VisitantBlackguard2, (uint)OID.Voidcluster];
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

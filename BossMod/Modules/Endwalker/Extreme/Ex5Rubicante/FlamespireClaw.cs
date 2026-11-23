@@ -34,8 +34,9 @@ sealed class FlamespireClaw(BossModule module) : Components.GenericBaitAway(modu
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
         base.DrawArenaForeground(pcSlot, pc);
-        foreach (var (_, player) in Raid.WithSlot(true, true, true).IncludedInMask(_tethers))
-            Arena.AddLine(player.Position, Module.PrimaryActor.Position, Colors.Danger);
+        foreach (var (s_, player) in Raid.WithSlot(true, true, true))
+            if (_tethers[s_])
+                Arena.AddLine(player.Position, Module.PrimaryActor.Position, Colors.Danger);
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)

@@ -21,22 +21,44 @@ sealed class Paradeigma(BossModule module) : BossComponent(module)
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (RotatedBirds().Any(b => _birdAOE.Check(actor.Position, b)) || RotatedBehemoths().Any(b => _behemothAOE.Check(actor.Position, b)))
+        var pos = actor.Position;
+        var inBirdBehemoth = false;
+        for (var i = 0; i < _birds.Count && !inBirdBehemoth; ++i)
+            inBirdBehemoth = _birdAOE.Check(pos, RotatedPosition(_birds[i]));
+        for (var i = 0; i < _behemoths.Count && !inBirdBehemoth; ++i)
+            inBirdBehemoth = _behemothAOE.Check(pos, RotatedPosition(_behemoths[i]));
+        if (inBirdBehemoth)
             hints.Add("GTFO from bird/behemoth aoe!");
-        if (RotatedSnakes().Any(s => _snakeAOE.Check(actor.Position, s.Item1, s.Item2)))
-            hints.Add("GTFO from snake aoe!");
-        if (_fireLine.Any(c => InFireAOE(c, actor.Position)))
-            hints.Add("GTFO from fire aoe!");
+        for (var i = 0; i < _snakes.Count; ++i)
+        {
+            var (p, r) = RotatedPosRot(_snakes[i]);
+            if (_snakeAOE.Check(pos, p, r))
+            {
+                hints.Add("GTFO from snake aoe!");
+                break;
+            }
+        }
+        for (var i = 0; i < _fireLine.Count; ++i)
+        {
+            if (InFireAOE(_fireLine[i], pos))
+            {
+                hints.Add("GTFO from fire aoe!");
+                break;
+            }
+        }
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
-        foreach (var b in RotatedBirds())
-            _birdAOE.Draw(Arena, b);
-        foreach (var b in RotatedBehemoths())
-            _behemothAOE.Draw(Arena, b);
-        foreach (var s in RotatedSnakes())
-            _snakeAOE.Draw(Arena, s.Item1, s.Item2);
+        for (var i = 0; i < _birds.Count; ++i)
+            _birdAOE.Draw(Arena, RotatedPosition(_birds[i]));
+        for (var i = 0; i < _behemoths.Count; ++i)
+            _behemothAOE.Draw(Arena, RotatedPosition(_behemoths[i]));
+        for (var i = 0; i < _snakes.Count; ++i)
+        {
+            var (p, r) = RotatedPosRot(_snakes[i]);
+            _snakeAOE.Draw(Arena, p, r);
+        }
         foreach (var c in _fireLine)
             Arena.ZoneTri(Arena.Center + c, RotatedPosition(c), Arena.Center, Colors.AOE);
     }
@@ -143,10 +165,6 @@ sealed class Paradeigma(BossModule module) : BossComponent(module)
             _ => (Arena.Center + posRot.Item1, posRot.Item2)
         };
     }
-
-    private IEnumerable<WPos> RotatedBirds() => _birds.Select(RotatedPosition);
-    private IEnumerable<WPos> RotatedBehemoths() => _behemoths.Select(RotatedPosition);
-    private IEnumerable<(WPos, Angle)> RotatedSnakes() => _snakes.Select(RotatedPosRot);
 
     private bool InFireAOE(WDir corner, WPos pos)
     {

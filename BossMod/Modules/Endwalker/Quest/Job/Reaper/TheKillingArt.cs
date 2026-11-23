@@ -45,16 +45,20 @@ class CarnemLevareDonut(BossModule module) : Components.GenericAOEs(module)
     private static readonly Angle a90 = 90.Degrees();
     private static readonly AOEShapeDonutSector[] sectors = [new(12, 17, a90), new(2, 7, a90), new(17, 22, a90), new(7, 12, a90)];
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _aoes.Count;
         if (count == 0)
             return [];
         var max = count > 4 ? 4 : count;
-        var aoes = new AOEInstance[max];
+        var aoesLen = max;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < max; ++i)
             aoes[i] = _aoes[i];
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

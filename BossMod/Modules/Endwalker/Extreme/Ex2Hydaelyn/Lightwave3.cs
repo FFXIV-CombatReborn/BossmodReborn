@@ -8,9 +8,11 @@ sealed class Lightwave3(BossModule module) : LightwaveCommon(module)
         // try to find two helpers with Z=70 before first cast
         if (Waves.Count == 0)
         {
-            foreach (var wave in Module.Enemies((uint)OID.Helper).Where(IsInitialLightwave))
+            var helpers = Module.Enemies((uint)OID.Helper);
+            for (var i = 0; i < helpers.Count; ++i)
             {
-                Waves.Add(wave);
+                if (IsInitialLightwave(helpers[i]))
+                    Waves.Add(helpers[i]);
             }
         }
     }
@@ -20,8 +22,14 @@ sealed class Lightwave3(BossModule module) : LightwaveCommon(module)
         if (Waves.Count == 0)
             return;
 
-        if (Waves.Any(w => WaveAOE.Check(actor.Position, w)))
-            hints.Add("GTFO from wave!");
+        for (var i = 0; i < Waves.Count; ++i)
+        {
+            if (WaveAOE.Check(actor.Position, Waves[i]))
+            {
+                hints.Add("GTFO from wave!");
+                break;
+            }
+        }
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)

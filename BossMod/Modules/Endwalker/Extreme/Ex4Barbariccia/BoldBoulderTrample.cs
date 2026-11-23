@@ -11,7 +11,13 @@ sealed class BoldBoulderTrample(BossModule module) : Components.UniformStackSpre
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.BoldBoulder)
-            Spreads.RemoveAll(s => s.Target.InstanceID == spell.TargetID);
+        {
+            for (var i = Spreads.Count - 1; i >= 0; --i)
+            {
+                if (Spreads[i].Target.InstanceID == spell.TargetID)
+                    Spreads.RemoveAt(i);
+            }
+        }
     }
 
     public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
@@ -23,6 +29,12 @@ sealed class BoldBoulderTrample(BossModule module) : Components.UniformStackSpre
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         if (spell.Action.ID == (uint)AID.Trample)
-            Stacks.RemoveAll(s => s.Target.InstanceID == spell.MainTargetID);
+        {
+            for (var i = Stacks.Count - 1; i >= 0; --i)
+            {
+                if (Stacks[i].Target.InstanceID == spell.MainTargetID)
+                    Stacks.RemoveAt(i);
+            }
+        }
     }
 }

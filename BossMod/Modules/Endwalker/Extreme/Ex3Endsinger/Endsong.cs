@@ -8,8 +8,14 @@ sealed class Endsong(BossModule module) : BossComponent(module)
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (_active.Any(a => _aoe.Check(actor.Position, a)))
-            hints.Add("GTFO from aoe!");
+        for (var i = 0; i < _active.Count; ++i)
+        {
+            if (_aoe.Check(actor.Position, _active[i]))
+            {
+                hints.Add("GTFO from aoe!");
+                return;
+            }
+        }
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)

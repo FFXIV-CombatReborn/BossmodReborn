@@ -9,18 +9,32 @@ sealed class Exoterikos(BossModule module) : BossComponent(module)
     private readonly AOEShapeCone _aoeTriangle = new(47f, 30f.Degrees());
     private readonly AOEShapeRect _aoeRay = new(42f, 7f);
 
+    private readonly List<(Actor, AOEShape)> _active = [];
+
     public bool Done => _sources.Count == 0;
 
     public override void AddHints(int slot, Actor actor, TextHints hints)
     {
-        if (ActiveKnockbacks().Any(actShape => actShape.Item2.Check(actor.Position, actShape.Item1)))
-            hints.Add("GTFO from exo aoe!");
+        var active = ActiveKnockbacks();
+        for (var i = 0; i < active.Count; ++i)
+        {
+            var (src, shape) = active[i];
+            if (shape.Check(actor.Position, src))
+            {
+                hints.Add("GTFO from exo aoe!");
+                return;
+            }
+        }
     }
 
     public override void DrawArenaBackground(int pcSlot, Actor pc)
     {
-        foreach (var (src, shape) in ActiveKnockbacks())
+        var active = ActiveKnockbacks();
+        for (var i = 0; i < active.Count; ++i)
+        {
+            var (src, shape) = active[i];
             shape.Draw(Arena, src);
+        }
     }
 
     public override void OnTethered(Actor source, in ActorTetherInfo tether)
@@ -38,13 +52,23 @@ sealed class Exoterikos(BossModule module) : BossComponent(module)
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         var shape = ShapeForSigil(caster);
-        if (shape != null && !_sources.Any(actShape => actShape.Item1 == caster))
-            _sources.Add((caster, shape));
+        if (shape == null)
+            return;
+        for (var i = 0; i < _sources.Count; ++i)
+        {
+            if (_sources[i].Item1 == caster)
+                return;
+        }
+        _sources.Add((caster, shape));
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        _sources.RemoveAll(actShape => actShape.Item1 == caster);
+        for (var i = _sources.Count - 1; i >= 0; --i)
+        {
+            if (_sources[i].Item1 == caster)
+                _sources.RemoveAt(i);
+        }
     }
 
     private AOEShape? ShapeForSigil(Actor sigil)
@@ -58,8 +82,9 @@ sealed class Exoterikos(BossModule module) : BossComponent(module)
         };
     }
 
-    private IEnumerable<(Actor, AOEShape)> ActiveKnockbacks()
+    private List<(Actor, AOEShape)> ActiveKnockbacks()
     {
+        _active.Clear();
         var hadSideSquare = false; // we don't show multiple side-squares, since that would cover whole arena and be useless
         DateTime lastRay = default; // we only show first rays, otherwise triple rays would cover whole arena and be useless
         foreach (var (actor, shape) in _sources)
@@ -76,7 +101,8 @@ sealed class Exoterikos(BossModule module) : BossComponent(module)
                     continue;
                 lastRay = Module.CastFinishAt(actor.CastInfo);
             }
-            yield return (actor, shape);
+            _active.Add((actor, shape));
         }
+        return _active;
     }
 }

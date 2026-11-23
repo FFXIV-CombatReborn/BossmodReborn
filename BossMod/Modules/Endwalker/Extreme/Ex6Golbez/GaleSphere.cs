@@ -9,19 +9,23 @@ sealed class GaleSphere(BossModule module) : Components.GenericAOEs(module)
 
     private readonly AOEShapeRect _shape = new(30f, 2.5f);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (NumCasts < _spheres.Length)
         {
             var spheres = _spheres[NumCasts];
             var count = spheres.Count;
-            var aoes = new AOEInstance[count];
+            var aoesLen = count;
+            if (_aoesBuffer.Length < aoesLen)
+                _aoesBuffer = new AOEInstance[aoesLen];
+            var aoes = _aoesBuffer;
             for (var i = 0; i < count; ++i)
             {
                 var s = spheres[i];
                 aoes[i] = new(_shape, s.Position.Quantized(), s.CastInfo?.Rotation ?? s.Rotation, Module.CastFinishAt(s.CastInfo));
             }
-            return aoes;
+            return aoes.AsSpan(0, aoesLen);
         }
         return [];
     }

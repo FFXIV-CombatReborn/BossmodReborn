@@ -49,9 +49,15 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
                 }
                 finally
                 {
-                    parseThrottle.Release();
+                    try
+                    {
+                        parseThrottle.Release();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+                    tcs.TrySetResult(result);
                 }
-                tcs.TrySetResult(result);
             }, TaskScheduler.Default);
         }
 
@@ -140,18 +146,23 @@ public sealed class ReplayManager(RotationDatabase rotationDB, string logDirecto
             pending.Add(e.Replay);
             e.Dispose();
         }
+        var allCompleted = true;
         if (pending.Count > 0)
         {
             try
             {
-                Task.WhenAll(pending).Wait(TimeSpan.FromSeconds(5));
+                allCompleted = Task.WhenAll(pending).Wait(TimeSpan.FromSeconds(5));
             }
             catch (Exception ex)
             {
+                allCompleted = false;
                 Service.Log($"[ReplayManager] Error waiting for replay parse shutdown: {ex}");
             }
         }
-        _parseThrottle.Dispose();
+        if (allCompleted)
+        {
+            _parseThrottle.Dispose();
+        }
     }
 
     public void Update()

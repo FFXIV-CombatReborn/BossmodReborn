@@ -492,6 +492,16 @@ public sealed class ReplayRecorder : IDisposable
         public override void FlushPending()
         {
             FlushPendingFrame();
+            if (_deferredMove.Count == 0)
+            {
+                return;
+            }
+            var ids = new ulong[_deferredMove.Count];
+            _deferredMove.Keys.CopyTo(ids, 0);
+            for (var i = 0; i < ids.Length; ++i)
+            {
+                FlushDeferredMove(ids[i]);
+            }
         }
 
         public override void WriteOp(WorldState.Operation op)

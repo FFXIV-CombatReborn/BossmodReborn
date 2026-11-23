@@ -18,7 +18,17 @@ sealed class Lightwave2(BossModule module) : LightwaveCommon(module)
         if (NumCasts == 4 && (Module.PrimaryActor.CastInfo?.IsSpell(AID.HerosGlory) ?? false) && Module.PrimaryActor.PosRot != _safeCrystalOrigin)
         {
             _safeCrystalOrigin = Module.PrimaryActor.PosRot;
-            _safeCrystal = new[] { _crystalTL, _crystalTR, _crystalBL, _crystalBR }.FirstOrDefault(c => !_gloryAOE.Check(c, Module.PrimaryActor));
+            // first crystal outside the glory cone (heh)
+            _safeCrystal = default;
+            ReadOnlySpan<WPos> crystals = [_crystalTL, _crystalTR, _crystalBL, _crystalBR];
+            for (var i = 0; i < crystals.Length; ++i)
+            {
+                if (!_gloryAOE.Check(crystals[i], Module.PrimaryActor))
+                {
+                    _safeCrystal = crystals[i];
+                    break;
+                }
+            }
         }
     }
 

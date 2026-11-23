@@ -175,9 +175,13 @@ sealed class MeteorImpactCharge(BossModule module) : Components.GenericAOEs(modu
 
     private bool IsClippedByOthers(Actor player)
     {
-        foreach (var (i, p) in Raid.WithSlot(true, true, true).Exclude(player))
-            if (SourceIfActive(i) is var src && src != null && IsClipped(src.Position, p.Position, player.Position))
+        var party = Raid.WithSlot(true, true, true);
+        for (var j = 0; j < party.Length; ++j)
+        {
+            var (i, p) = party[j];
+            if (p != player && SourceIfActive(i) is Actor src && IsClipped(src.Position, p.Position, player.Position))
                 return true;
+        }
         return false;
     }
 }
