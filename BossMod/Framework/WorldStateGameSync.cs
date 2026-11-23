@@ -790,8 +790,8 @@ sealed class WorldStateGameSync : IDisposable
             var cid = m.ContentId;
             if (cid != 0ul)
             {
-                // slot was occupied by player => see if it's still in party; either update to current state or clear if it's no longer in party
-                var member = group->GetPartyMemberByContentId(cid);
+                // clear the current POV's previous slot after a replay viewpoint change, so the former POV can be added below
+                var member = cid == playerContentId ? null : group->GetPartyMemberByContentId(cid);
                 UpdatePartySlot(i, BuildPartyMember(member));
             }
             else if (m.InstanceId is var iid && iid != 0ul)
