@@ -105,7 +105,8 @@ sealed class A24MenphinaStates : StateMachineBuilder
         Cast(id, AID.CrateringChill, delay, 3f);
         ComponentCondition<CrateringChill>(id + 2u, 1.5f, static comp => comp.Casters.Count > 0)
             .ActivateOnEnter<CrateringChill>();
-        Cast(id + 0x10, AID.WinterSolstice, 2.7f, 3);
+        Cast(id + 0x10, AID.WinterSolstice, 2.7f, 3)
+            .ActivateOnEnter<ThinIce>();
         ComponentCondition<CrateringChill>(id + 0x20u, 0.3f, static comp => comp.NumCasts > 0, "Proximity + icy floor")
             .DeactivateOnExit<CrateringChill>();
         CastMulti(id + 0x30u, [AID.PlayfulOrbit1, AID.PlayfulOrbit2], 1.6f, 2.6f);
@@ -114,7 +115,8 @@ sealed class A24MenphinaStates : StateMachineBuilder
             .ActivateOnEnter<WinterHalo>();
         ComponentCondition<WinterHalo>(id + 0x42u, 0.2f, static comp => comp.NumCasts > 0, "Donut + half-arena cleave")
             .DeactivateOnExit<MidnightFrostWaxingClaw>()
-            .DeactivateOnExit<WinterHalo>();
+            .DeactivateOnExit<WinterHalo>()
+            .DeactivateOnExit<ThinIce>();
     }
 
     private void LovesLightNormalOne(uint id, float delay)

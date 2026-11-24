@@ -44,18 +44,22 @@ class TerminusEst(BossModule module) : Components.GenericAOEs(module)
     private readonly List<Actor> casters = [];
     private static readonly AOEShapeRect rect = new(40f, 2f);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (casting)
         {
             var count = casters.Count;
-            var aoes = new AOEInstance[count];
+            var aoesLen = count;
+            if (_aoesBuffer.Length < aoesLen)
+                _aoesBuffer = new AOEInstance[aoesLen];
+            var aoes = _aoesBuffer;
             for (var i = 0; i < count; ++i)
             {
                 var c = casters[i];
                 aoes[i] = new(rect, c.Position, c.Rotation, Module.CastFinishAt(Module.PrimaryActor.CastInfo));
             }
-            return aoes;
+            return aoes.AsSpan(0, aoesLen);
         }
         return [];
     }

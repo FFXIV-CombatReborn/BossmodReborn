@@ -40,7 +40,7 @@ abstract class SpinnersWheelGaze(BossModule module, bool inverted, uint aid, uin
     {
         if (status.ID == sid)
         {
-            _activation = status.ExpireAt;
+            _activation = status.Extra == 0x28 ? WorldState.FutureTime(1.7d) : status.ExpireAt;
             _affected.Set(Raid.FindSlot(actor.InstanceID));
         }
     }
@@ -58,11 +58,11 @@ sealed class SpinnersWheelStayMove(BossModule module) : Components.StayMove(modu
         {
             case (uint)SID.ArcaneFever:
                 if (Raid.FindSlot(actor.InstanceID) is var feverSlot && feverSlot >= 0)
-                    PlayerStates[feverSlot] = new(Requirement.Stay, status.ExpireAt);
+                    PlayerStates[feverSlot] = new(Requirement.Stay, status.Extra == 0x28 ? WorldState.FutureTime(1.7d) : status.ExpireAt);
                 break;
             case (uint)SID.FeverReversed:
                 if (Raid.FindSlot(actor.InstanceID) is var revSlot && revSlot >= 0)
-                    PlayerStates[revSlot] = new(Requirement.Move, status.ExpireAt);
+                    PlayerStates[revSlot] = new(Requirement.Move, status.Extra == 0x28 ? WorldState.FutureTime(1.7d) : status.ExpireAt);
                 break;
             case (uint)SID.Pyretic:
             case (uint)SID.FreezingUp:

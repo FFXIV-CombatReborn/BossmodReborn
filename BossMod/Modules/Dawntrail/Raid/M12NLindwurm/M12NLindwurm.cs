@@ -23,7 +23,7 @@ sealed class SerpentineScourge(BossModule module) : Components.GenericAOEs(modul
     {
         if (spell.Action.ID is var action && action is (uint)AID.BloodshedLeft or (uint)AID.BloodshedRight)
         {
-            _aoe = [(new(_rect, new WPos(action == (uint)AID.BloodshedLeft ? 90f : 110f, 85f).Quantized(), Angle.AnglesCardinals[1], WorldState.FutureTime(7.5d)))];
+            _aoe = [(new(_rect, new WPos(action == (uint)AID.BloodshedLeft ? 90f : 110f, 85f).Quantized(), Angle.AnglesCardinals[1], WorldState.FutureTime(8.6d)))];
         }
     }
 
@@ -58,10 +58,47 @@ sealed class RavenousReach(BossModule module) : Components.SimpleAOEs(module, (u
 sealed class Splattershed(BossModule module) : Components.RaidwideCastsDelay(module, [(uint)AID.Splattershed1Visual1, (uint)AID.Splattershed1Visual2, (uint)AID.Splattershed2Visual],
 [(uint)AID.Splattershed1, (uint)AID.Splattershed2], 2.3d);
 sealed class BringDownTheHouse(BossModule module) : Components.SimpleAOEs(module, (uint)AID.BringDownTheHouse, new AOEShapeRect(15f, 5f));
+
+sealed class FloorBreak(BossModule module) : Components.GenericAOEs(module)
+{
+    private readonly AOEShapeRect rect = new(7.5f, 5f, 7.5f);
+    private readonly List<AOEInstance> _aoes = new(4);
+    private DateTime _activation;
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(_aoes);
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        var id = spell.Action.ID;
+        if (id == (uint)AID.GrandEntrance1)
+        {
+            var pos = caster.Position;
+            var tile = new WPos(85f + 10f * Math.Clamp((int)((pos.X - 80f) * 0.1f), 0, 3), pos.Z < 100f ? 92.5f : 107.5f);
+            var count = _aoes.Count;
+            if (count == 0)
+            {
+                _activation = WorldState.FutureTime(10.1d);
+            }
+            var aoes = CollectionsMarshal.AsSpan(_aoes);
+            for (var i = 0; i < count; ++i)
+            {
+                if (aoes[i].Origin.AlmostEqual(tile, 1f))
+                {
+                    return;
+                }
+            }
+            _aoes.Add(new(rect, tile, default, _activation));
+        }
+        else if (id == (uint)AID.BringDownTheHouse)
+        {
+            _aoes.Clear();
+        }
+    }
+}
 sealed class SplitScourge(BossModule module) : Components.SimpleAOEs(module, (uint)AID.SplitScourge, new AOEShapeRect(30f, 5f));
 sealed class VenomousScourge(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.VenomousScourge, (uint)AID.VenomousScourge, 5f, 5d);
 sealed class GrandEntrance(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.GrandEntrance1, (uint)AID.GrandEntrance2], 2f);
-sealed class VisceralBurst(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.TankBait, (uint)AID.VisceralBurst, 6f, 5d);
+sealed class VisceralBurst(BossModule module) : Components.BaitAwayIcon(module, 6f, (uint)IconID.TankBait, (uint)AID.VisceralBurst, 5.1d, tankbuster: true, damageType: AIHints.PredictedDamageType.Tankbuster);
 sealed class MindlessFlesh(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.MindlessFlesh1, (uint)AID.MindlessFlesh2, (uint)AID.MindlessFlesh3, (uint)AID.MindlessFlesh4, (uint)AID.MindlessFlesh5], new AOEShapeRect(30f, 4f), 2, 2);
 
 sealed class MindlessFleshBig(BossModule module) : Components.SimpleAOEs(module, (uint)AID.MindlessFleshBig, new AOEShapeRect(30f, 17.5f), riskyWithSecondsLeft: 9d)

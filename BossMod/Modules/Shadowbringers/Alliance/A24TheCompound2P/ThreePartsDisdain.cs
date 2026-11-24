@@ -1,6 +1,4 @@
-using BossMod.Global.DeepDungeon;
-
-namespace BossMod.Shadowbringers.Alliance.A24TheCompound2P;
+﻿namespace BossMod.Shadowbringers.Alliance.A24TheCompound2P;
 
 sealed class ThreePartsDisdainStack(BossModule module) : Components.GenericStackSpread(module)
 {
@@ -39,6 +37,7 @@ sealed class ThreePartsDisdainKnockback(BossModule module) : Components.GenericK
     private readonly DateTime[] activation = new DateTime[3];
     private readonly A24TheCompound2P bossmod = (A24TheCompound2P)module;
 
+    private Knockback[] _knockbackBuffer = [];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (target == null)
@@ -50,12 +49,15 @@ sealed class ThreePartsDisdainKnockback(BossModule module) : Components.GenericK
         {
             var primaryPos = bossmod.BossP2!.Position;
             var count = 3 - NumCasts;
-            var knockback = new Knockback[count];
+            var knockbackLen = count;
+            if (_knockbackBuffer.Length < knockbackLen)
+                _knockbackBuffer = new Knockback[knockbackLen];
+            var knockback = _knockbackBuffer;
             for (var i = 0; i < count; ++i)
             {
                 knockback[i] = new Knockback(primaryPos, i != count - 1 ? 8f : 12f, activation[i], direction: Angle.FromDirection(target.Position - primaryPos), kind: Kind.DirForward, ignoreImmunes: true);
             }
-            return knockback;
+            return knockback.AsSpan(0, knockbackLen);
         }
         return [];
     }

@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Dungeon.D13Paglthan.D133LunarBahamut;
+﻿namespace BossMod.Shadowbringers.Dungeon.D13Paglthan.D133LunarBahamut;
 
 public enum OID : uint
 {
@@ -45,6 +45,7 @@ sealed class MegaflareDive(BossModule module) : Components.SimpleAOEs(module, (u
 sealed class LunarFlareBig(BossModule module) : Components.SimpleAOEs(module, (uint)AID.LunarFlareBig, 11f);
 sealed class LunarFlareSmall(BossModule module) : Components.SimpleAOEs(module, (uint)AID.LunarFlareSmall, 6f);
 sealed class Gigaflare(BossModule module) : Components.RaidwideCast(module, (uint)AID.Gigaflare);
+sealed class TwistedScream(BossModule module) : Components.RaidwideCast(module, (uint)AID.TwistedScream);
 sealed class Flatten(BossModule module) : Components.SingleTargetDelayableCast(module, (uint)AID.Flatten);
 
 sealed class AkhMorn(BossModule module) : Components.UniformStackSpread(module, 4f, default, 4, 4)
@@ -146,6 +147,7 @@ sealed class D133LunarBahamutStates : StateMachineBuilder
             .ActivateOnEnter<LunarFlareBig>()
             .ActivateOnEnter<LunarFlareSmall>()
             .ActivateOnEnter<Gigaflare>()
+            .ActivateOnEnter<TwistedScream>()
             .ActivateOnEnter<Flatten>()
             .ActivateOnEnter<AkhMorn>()
             .ActivateOnEnter<KanRhaiBait>()

@@ -67,10 +67,9 @@ sealed class FleshTele(BossModule module) : Components.GenericKnockback(module, 
         var act = _activation;
         var aoes = CollectionsMarshal.AsSpan(_burst.Positions);
         var len = aoes.Length;
-        var rot = actor.Rotation;
         var pos = actor.Position;
+        var facingOffset = forwardKb[slot] ? default : 180f.Degrees();
 
-        var moveDir = (forwardKb[slot] ? rot : rot + 180f.Degrees()).ToDirection();
         const float distSq = 15f * 15f;
         const float radiusSq = 12f * 12f;
         const float distSqRadiusSq = distSq - radiusSq;
@@ -80,17 +79,14 @@ sealed class FleshTele(BossModule module) : Components.GenericKnockback(module, 
             var origin = aoes[i];
             var d = origin - pos;
             var dist = d.Length();
-            if (dist is <= 12f or >= 27f) // inside aoe or max distance 15 + 12 radius
+            if (dist is <= 3f or >= 27f)
             {
-                continue; // inside aoe or impossible to run into this from current position
+                continue;
             }
-            var forward = d.Dot(moveDir);
-            var sideways = d.Dot(moveDir.OrthoL());
-
-            hints.ForbiddenDirections.Add(new(Angle.Atan2(sideways, forward), Angle.Acos((dist * dist + distSqRadiusSq) / (2f * dist * 15f)), act));
+            hints.ForbiddenDirections.Add(new(Angle.FromDirection(d) + facingOffset, Angle.Acos((dist * dist + distSqRadiusSq) / (2f * dist * 15f)), act));
         }
 
-        Arena.Bounds.Shape.AddForbiddenDirections(actor.Position - Arena.Center, forwardKb[slot] ? default : 180f.Degrees(), hints, _activation, 15f, 1f);
+        Arena.Bounds.Shape.AddForbiddenDirections(pos - Arena.Center, facingOffset, hints, act, 15f, 1f);
 
         // probably not needed since the cone resolves a long time after the knockback
         // if (_reach.ActiveCasters is var aoe && aoe.Length != 0 && _reach.Shape is AOEShapeCone cone)

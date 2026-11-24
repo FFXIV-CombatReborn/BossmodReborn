@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Dungeon.D05MtGulg.D055ForgivenObscenity;
+﻿namespace BossMod.Shadowbringers.Dungeon.D05MtGulg.D055ForgivenObscenity;
 
 public enum OID : uint
 {
@@ -43,6 +43,7 @@ sealed class Orbs(BossModule module) : Components.GenericAOEs(module, default, "
     private const float Radius = 3f;
     private static readonly AOEShapeCircle circle = new(Radius);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _orbs.Count;
@@ -50,7 +51,10 @@ sealed class Orbs(BossModule module) : Components.GenericAOEs(module, default, "
             return [];
         var rings = Module.Enemies((uint)OID.Rings);
         var countR = rings.Count;
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var o = _orbs[i];
@@ -70,7 +74,7 @@ sealed class Orbs(BossModule module) : Components.GenericAOEs(module, default, "
                 aoes[i] = new(circle, o.Position);
             }
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnActorCreated(Actor actor)

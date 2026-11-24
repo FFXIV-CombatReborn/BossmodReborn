@@ -14,6 +14,7 @@ class AncientBlizzard(BossModule module) : Components.SimpleAOEs(module, (uint)A
 class KeenMoonbeam(BossModule module) : Components.SpreadFromCastTargets(module, (uint)AID.KeenMoonbeamAOE, 6);
 class RiseOfTheTwinMoons(BossModule module) : Components.CastCounter(module, (uint)AID.RiseOfTheTwinMoons);
 class CrateringChill(BossModule module) : Components.SimpleAOEs(module, (uint)AID.CrateringChillAOE, 20);
+sealed class ThinIce(BossModule module) : Components.ThinIce(module, 10f, true);
 class MoonsetRays(BossModule module) : Components.StackWithCastTargets(module, (uint)AID.MoonsetRaysAOE, 6, 4);
 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, GroupType = BossModuleInfo.GroupType.CFC, GroupID = 911, NameID = 12063, PlanLevel = 90)]

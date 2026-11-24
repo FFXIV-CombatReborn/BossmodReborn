@@ -13,6 +13,7 @@ sealed class M12NLindwurmStates : StateMachineBuilder
             .ActivateOnEnter<VisceralBurst>()
             .ActivateOnEnter<Splattershed>()
             .ActivateOnEnter<BringDownTheHouse>()
+            .ActivateOnEnter<FloorBreak>()
             .ActivateOnEnter<SplitScourge>()
             .ActivateOnEnter<VenomousScourge>()
             .ActivateOnEnter<GrandEntrance>()

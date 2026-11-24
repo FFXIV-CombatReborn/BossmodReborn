@@ -26,6 +26,19 @@ sealed class Hydrorythmos(BossModule module) : Components.GenericAOEs(module)
         return CollectionsMarshal.AsSpan(aoes);
     }
 
+    public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
+    {
+        base.AddAIHints(slot, actor, assignment, hints);
+        if (_activation == default)
+        {
+            return;
+        }
+        var center = Arena.Center;
+        var normal = _dir.ToDirection().OrthoL();
+        var limit = NumCasts == 0 ? 7f : 5f;
+        hints.GoalZones.Add(p => Math.Abs((p - center).Dot(normal)) < limit ? 1f : 0f);
+    }
+
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.HydrorythmosFirst)

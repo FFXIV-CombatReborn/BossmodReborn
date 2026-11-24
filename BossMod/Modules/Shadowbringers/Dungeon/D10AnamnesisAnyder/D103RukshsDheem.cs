@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Dungeon.D10AnamnesisAnyder.D103RukshsDheem;
+﻿namespace BossMod.Shadowbringers.Dungeon.D10AnamnesisAnyder.D103RukshsDheem;
 
 public enum OID : uint
 {
@@ -68,6 +68,7 @@ class Wavebreaker(BossModule module) : Components.GenericAOEs(module)
     private static readonly AOEShapeRect rectNarrow = new(36f, 4f);
     private static readonly AOEShapeRect rectWide = new(21f, 5f);
 
+    private AOEInstance[] _aoes1Buffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _aoes.Count;
@@ -76,7 +77,10 @@ class Wavebreaker(BossModule module) : Components.GenericAOEs(module)
 
         if (Arena.Bounds == D103RukshsDheem.SplitBounds)
         {
-            var aoes1 = new AOEInstance[count];
+            var aoes1Len = count;
+            if (_aoes1Buffer.Length < aoes1Len)
+                _aoes1Buffer = new AOEInstance[aoes1Len];
+            var aoes1 = _aoes1Buffer;
             for (var i = 0; i < count; ++i)
             {
                 var aoe = _aoes[i];
@@ -85,7 +89,7 @@ class Wavebreaker(BossModule module) : Components.GenericAOEs(module)
                 else
                     aoes1[i] = aoe;
             }
-            return aoes1;
+            return aoes1.AsSpan(0, aoes1Len);
         }
         if (Arena.Bounds == D103RukshsDheem.DefaultBounds)
             return CollectionsMarshal.AsSpan(_aoes);
@@ -162,13 +166,17 @@ class Drains(BossModule module) : Components.GenericAOEs(module)
 
     private static readonly AOEShapeRect square = new(SideLength, SideLength, SideLength);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (activation == default)
             return [];
         var countA = activeDrains.Count;
         var countS = solvedDrains.Count;
-        var aoes = new AOEInstance[countA + countS];
+        var aoesLen = countA + countS;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         var index = 0;
         for (var i = 0; i < countA; ++i)
             aoes[index++] = new(square, activeDrains[i], color: Colors.SafeFromAOE, risky: false);
@@ -177,7 +185,7 @@ class Drains(BossModule module) : Components.GenericAOEs(module)
             var drain = solvedDrains[i];
             aoes[index++] = new(square, drain, color: IsBlockingDrain(actor, drain) ? Colors.SafeFromAOE : default, risky: false);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public static bool IsBlockingDrain(Actor actor, WPos pos) => actor.Position.InRect(pos, dir, SideLength, SideLength, SideLength);

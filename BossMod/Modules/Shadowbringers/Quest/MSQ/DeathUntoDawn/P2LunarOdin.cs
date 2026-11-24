@@ -94,6 +94,7 @@ class GunmetalSoul(BossModule module) : Components.GenericAOEs(module)
 {
     private static readonly AOEShapeDonut donut = new(4f, 100f);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var enemies = Module.Enemies(0x1EB1D5);
@@ -108,7 +109,10 @@ class GunmetalSoul(BossModule module) : Components.GenericAOEs(module)
         if (count == 0)
             return [];
 
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         var index = 0;
 
         for (var i = 0; i < countE; ++i)
@@ -117,7 +121,7 @@ class GunmetalSoul(BossModule module) : Components.GenericAOEs(module)
             if (e.EventState != 7)
                 aoes[index++] = new(donut, e.Position);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 }
 class LunarGungnir1(BossModule module) : Components.StackWithCastTargets(module, (uint)AID.LunarGungnir, 6f);
@@ -147,5 +151,5 @@ public class LunarOdinStates : StateMachineBuilder
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, GroupType = BossModuleInfo.GroupType.Quest, GroupID = 69602, NameID = 10034)]
 public class LunarOdin(WorldState ws, Actor primary) : BossModule(ws, primary, new(146.5f, 84.5f), new ArenaBoundsCircle(20f))
 {
-    protected override bool CheckPull() => Raid.Player()!.InCombat;
+    protected override bool CheckPull() => Raid.Player()?.InCombat == true;
 }

@@ -287,14 +287,23 @@ sealed class EclipticMeteor(BossModule module) : Components.GenericLineOfSightAO
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID == (uint)AID.EclipticMeteor)
-            Modify(Module.Center, Module.Enemies((uint)OID.Comet).Where(c => !c.IsDead && c.ModelState.AnimState2 != 1).Select(c => (c.Position, c.HitboxRadius)), Module.CastFinishAt(spell, 2.6f));
+        {
+            Modify(Module.Center, Module.Enemies((uint)OID.Comet).Where(c => !c.IsDead && c.ModelState.AnimState2 != 1).Select(c => (c.Position, c.HitboxRadius)), Module.CastFinishAt(spell, 1.9f));
+            Safezones.Clear();
+            AddSafezone(NextExplosion);
+        }
     }
+
+    public override void OnCastFinished(Actor caster, ActorCastInfo spell) { }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         base.OnEventCast(caster, spell);
         if (spell.Action.ID == (uint)AID.EclipticMeteorAOE)
+        {
             Modify(null, []);
+            Safezones.Clear();
+        }
     }
 }
 

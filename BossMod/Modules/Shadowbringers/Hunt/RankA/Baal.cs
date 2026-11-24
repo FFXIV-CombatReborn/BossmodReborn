@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Hunt.RankA.Baal;
+﻿namespace BossMod.Shadowbringers.Hunt.RankA.Baal;
 
 public enum OID : uint
 {
@@ -26,12 +26,16 @@ class SewageWave(BossModule module) : Components.GenericAOEs(module)
     private static readonly AOEShapeCone cone = new(30f, 90f.Degrees());
     private readonly List<AOEInstance> _aoes = [with(2)];
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _aoes.Count;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var aoe = _aoes[i];
@@ -40,7 +44,7 @@ class SewageWave(BossModule module) : Components.GenericAOEs(module)
             else if (i == 1)
                 aoes[i] = aoe with { Risky = false };
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

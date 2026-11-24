@@ -1,15 +1,7 @@
 ﻿namespace BossMod.Dawntrail.Raid.M12NLindwurm;
 
-sealed class BurstingGrotesquerie(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.SpreadBurstingGrotesquerie, (uint)AID.DramaticLysis, 5f, 5d)
+sealed class BurstingGrotesquerie(BossModule module) : Components.SpreadFromIcon(module, (uint)IconID.SpreadBurstingGrotesquerie, (uint)AID.DramaticLysis, 6f, 5.1d)
 {
-    public override void OnStatusLose(Actor actor, ref ActorStatus status)
-    {
-        if (status.ID == (uint)SID.BurstingGrotesquerie)
-        {
-            Spreads.Clear();
-        }
-    }
-
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         // copied from base class, in 2nd phase uses spread icons without status
@@ -52,31 +44,24 @@ sealed class DirectedGrotesquerie(BossModule module) : Components.GenericBaitAwa
             }
 
             var slot = Raid.FindSlot(actor.InstanceID);
-            if (slot >= 0)
-            {
-                _direction[slot] = status.Extra;
-            }
-        }
-    }
-
-    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
-    {
-        if (iconID == (uint)IconID.Countdown)
-        {
-            var slot = Raid.FindSlot(actor.InstanceID);
             if (slot < 0)
             {
                 return;
             }
-            var extra = _direction[slot];
-            if (extra == 0)
+            var extra = status.Extra;
+            _direction[slot] = extra;
+            AOEShapeCone cone = new(60f, 15f.Degrees(), ((extra - 0x408) * -90f).Degrees());
+            var activation = actor.FindStatus((uint)SID.DirectedGrotesquerie) is ActorStatus s ? s.ExpireAt : WorldState.FutureTime(7.1d);
+            var count = CurrentBaits.Count;
+            var baits = CollectionsMarshal.AsSpan(CurrentBaits);
+            for (var i = 0; i < count; ++i)
             {
-                return;
+                if (baits[i].Target == actor)
+                {
+                    CurrentBaits.RemoveAt(i);
+                    break;
+                }
             }
-
-            var rotation = ((extra - 0x408) * -90f).Degrees();
-            AOEShapeCone cone = new(60f, 15f.Degrees(), rotation);
-            var activation = actor.FindStatus((uint)SID.DirectedGrotesquerie) is ActorStatus s ? s.ExpireAt : WorldState.FutureTime(5.5d);
             CurrentBaits.Add(new(actor, actor, cone, activation));
         }
     }

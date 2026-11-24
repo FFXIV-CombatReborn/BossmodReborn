@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Dungeon.D09GrandCosmos.D093Lugus;
+﻿namespace BossMod.Shadowbringers.Dungeon.D09GrandCosmos.D093Lugus;
 
 public enum OID : uint
 {
@@ -290,15 +290,19 @@ class FiresIreBait(BossModule module) : Components.GenericBaitAway(module)
         {
             var b = baitsOnActor.Ref(0).Activation;
             var furniture = MortalFlame.Furniture(Module);
-            List<Actor> party = [.. Raid.WithoutSlot(false, true, true)];
-            party.Remove(actor);
-            var total = furniture.Count + party.Count;
-            var actors = new List<Actor>(total);
-            actors.AddRange(furniture);
-            actors.AddRange(party);
-            for (var i = 0; i < total; ++i)
+            var countF = furniture.Count;
+            for (var i = 0; i < countF; ++i)
             {
-                hints.AddForbiddenZone(new SDCircle(actors[i].Position, 10f), b);
+                hints.AddForbiddenZone(new SDCircle(furniture[i].Position, 10f), b);
+            }
+            var party = Raid.WithoutSlot(false, true, true);
+            for (var i = 0; i < party.Length; ++i)
+            {
+                var p = party[i];
+                if (p != actor)
+                {
+                    hints.AddForbiddenZone(new SDCircle(p.Position, 10f), b);
+                }
             }
         }
     }

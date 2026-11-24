@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Alliance.A35FalseIdol;
+﻿namespace BossMod.Shadowbringers.Alliance.A35FalseIdol;
 
 sealed class Energy(BossModule module) : Components.GenericAOEs(module)
 {
@@ -6,6 +6,7 @@ sealed class Energy(BossModule module) : Components.GenericAOEs(module)
     private static readonly AOEShapeCapsule capsule = new(Radius, Length);
     private readonly List<Actor> _energy = [with(23)];
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _energy.Count;
@@ -13,13 +14,16 @@ sealed class Energy(BossModule module) : Components.GenericAOEs(module)
         {
             return [];
         }
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var h = _energy[i];
             aoes[i] = new(capsule, h.Position, h.Rotation);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnActorPlayActionTimelineEvent(Actor actor, ushort id)

@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Dungeon.D13Paglthan.D132MagitekFortress;
+﻿namespace BossMod.Shadowbringers.Dungeon.D13Paglthan.D132MagitekFortress;
 
 public enum OID : uint
 {
@@ -95,6 +95,7 @@ sealed class MagitekMissile(BossModule module) : Components.GenericAOEs(module)
     private readonly AOEShapeCapsule capsule = new(Radius, Length);
     private readonly List<Actor> _missiles = [with(15)];
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _missiles.Count;
@@ -102,13 +103,16 @@ sealed class MagitekMissile(BossModule module) : Components.GenericAOEs(module)
         {
             return [];
         }
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var m = _missiles[i];
             aoes[i] = new(capsule, m.Position, m.Rotation);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnActorCreated(Actor actor)

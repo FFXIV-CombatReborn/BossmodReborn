@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Alliance.A34XunZiMengZi;
+﻿namespace BossMod.Shadowbringers.Alliance.A34XunZiMengZi;
 
 sealed class HighPoweredLaser(BossModule module) : Components.GenericAOEs(module)
 {
@@ -6,6 +6,7 @@ sealed class HighPoweredLaser(BossModule module) : Components.GenericAOEs(module
     private static readonly AOEShapeRect rect = new(70f, 2f);
     private DateTime activation;
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = casters.Count;
@@ -13,14 +14,17 @@ sealed class HighPoweredLaser(BossModule module) : Components.GenericAOEs(module
         {
             return [];
         }
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         var isRisky = WorldState.CurrentTime > activation.AddSeconds(-1d); // lasers stop tracking about 1s before activation
         for (var i = 0; i < count; ++i)
         {
             var c = casters[i];
             aoes[i] = new(rect, c.Position.Quantized(), c.Rotation, activation, risky: isRisky);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnStatusGain(Actor actor, ref ActorStatus status)
