@@ -140,7 +140,7 @@ sealed class CE53HereComesTheCavalryStates : StateMachineBuilder
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "Malediktus", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 778, NameID = 22)] // bnpcname=9929
 public sealed class CE53HereComesTheCavalry(WorldState ws, Actor primary) : BossModule(ws, primary, new(-750f, 790f), new ArenaBoundsCircle(25f))
 {
-    protected override bool CheckPull() => PrimaryActor.InCombat && Raid.Player()!.Position.InCircle(Arena.Center, 25f); // not targetable at start
+    protected override bool CheckPull() => PrimaryActor.InCombat && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 25f); // not targetable at start
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

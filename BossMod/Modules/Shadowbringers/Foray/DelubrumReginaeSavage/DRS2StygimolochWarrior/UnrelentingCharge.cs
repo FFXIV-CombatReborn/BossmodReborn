@@ -5,10 +5,14 @@ sealed class UnrelentingCharge(BossModule module) : Components.GenericKnockback(
     private Actor? _source;
     private DateTime _activation;
 
+    private readonly Knockback[] _oneKnockback = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (_source != null)
-            return new Knockback[1] { new(_source.Position, 10f, _activation) };
+        {
+            _oneKnockback[0] = new(_source.Position, 10f, _activation);
+            return _oneKnockback;
+        }
         return [];
     }
 

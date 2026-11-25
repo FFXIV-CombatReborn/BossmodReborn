@@ -6,13 +6,17 @@ sealed class P2EarthMissileIce(BossModule module) : Components.VoidzoneAtCastTar
 {
     private static IEnumerable<Actor> Voidzones(BossModule m)
     {
-        foreach (var z in m.Enemies((uint)OID.VoidzoneEarthMissileIceSmall).Where(z => z.EventState != 7))
+        foreach (var z in m.Enemies((uint)OID.VoidzoneEarthMissileIceSmall))
         {
+            if (!(z.EventState != 7))
+                continue;
             yield return z;
             yield break;
         }
-        foreach (var z in m.Enemies((uint)OID.VoidzoneEarthMissileIceLarge).Where(z => z.EventState != 7))
+        foreach (var z in m.Enemies((uint)OID.VoidzoneEarthMissileIceLarge))
         {
+            if (!(z.EventState != 7))
+                continue;
             yield return z;
             yield break;
         }

@@ -8,17 +8,21 @@ sealed class WindsOfWeight(BossModule module) : Components.GenericAOEs(module)
 
     private readonly AOEShapeCircle _shape = new(20f);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var actors = _invertedPlayers[slot] ? _purple : _green;
         var count = actors.Count;
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var c = actors[i];
             aoes[i] = new(_shape, c.CastInfo!.LocXZ, c.CastInfo.Rotation, Module.CastFinishAt(c.CastInfo));
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnStatusGain(Actor actor, ref ActorStatus status)

@@ -51,13 +51,15 @@ class ResonantFrequencyCorrupted(BossModule module) : Components.SimpleAOEs(modu
 
 class CrystallineStingers(BossModule module) : Components.CastLineOfSightAOE(module, (uint)AID.CrystallineStingers, 60f)
 {
+    private readonly List<Actor> _actorsBuffer = [];
     public override ReadOnlySpan<Actor> BlockerActors()
     {
         var crystals = Module.Enemies((uint)OID.DimCrystal);
         var count = crystals.Count;
         if (count == 0)
             return [];
-        var actors = new List<Actor>();
+        var actors = _actorsBuffer;
+        actors.Clear();
         for (var i = 0; i < count; ++i)
         {
             var c = crystals[i];
@@ -70,13 +72,15 @@ class CrystallineStingers(BossModule module) : Components.CastLineOfSightAOE(mod
 
 class AetherialStingers(BossModule module) : Components.CastLineOfSightAOE(module, (uint)AID.AetherialStingers, 60f)
 {
+    private readonly List<Actor> _actorsBuffer = [];
     public override ReadOnlySpan<Actor> BlockerActors()
     {
         var crystals = Module.Enemies((uint)OID.CorruptedCrystal);
         var count = crystals.Count;
         if (count == 0)
             return [];
-        var actors = new List<Actor>();
+        var actors = _actorsBuffer;
+        actors.Clear();
         for (var i = 0; i < count; ++i)
         {
             var c = crystals[i];
@@ -200,13 +204,15 @@ public class CE41WithDiremiteAndMain(WorldState ws, Actor primary) : BossModule(
     public static readonly uint[] Crystals = [(uint)OID.DimCrystal, (uint)OID.CorruptedCrystal];
     private static readonly ArenaBoundsCustom arena = new([new Polygon(new(-220f, 530f), 29.5f, 32)]);
 
+    private readonly List<Actor> _filteredcrystalsBuffer = [];
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         base.DrawEnemies(pcSlot, pc);
 
         var crystals = Enemies(Crystals);
         var count = crystals.Count;
-        var filteredcrystals = new List<Actor>(count);
+        var filteredcrystals = _filteredcrystalsBuffer;
+        filteredcrystals.Clear();
 
         for (var i = 0; i < count; ++i)
         {
@@ -217,5 +223,5 @@ public class CE41WithDiremiteAndMain(WorldState ws, Actor primary) : BossModule(
         Arena.Actors(filteredcrystals, Colors.Object, true);
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 30f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 30f);
 }

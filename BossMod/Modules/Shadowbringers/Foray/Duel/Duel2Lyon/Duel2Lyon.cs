@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Foray.Duel.Duel2Lyon;
+﻿namespace BossMod.Shadowbringers.Foray.Duel.Duel2Lyon;
 
 sealed class Duel2LyonStates : StateMachineBuilder
 {
@@ -37,5 +37,5 @@ public sealed class Duel2Lyon : BossModule
         return (arena.Center, arena);
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 25f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 25f);
 }

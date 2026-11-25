@@ -1,6 +1,6 @@
 ﻿namespace BossMod.Shadowbringers.Foray.TheDalriada.DAL2Cuchulainn;
 
-sealed class PutrifiedSoulBurgeoningDreadGhastlyAura(BossModule module) : Components.RaidwideCasts(module, [(uint)AID.PutrifiedSoul1, (uint)AID.PutrifiedSoul1, (uint)AID.BurgeoningDread1, (uint)AID.BurgeoningDread2,
+sealed class PutrifiedSoulBurgeoningDreadGhastlyAura(BossModule module) : Components.RaidwideCasts(module, [(uint)AID.PutrifiedSoul1, (uint)AID.PutrifiedSoul2, (uint)AID.BurgeoningDread1, (uint)AID.BurgeoningDread2,
 (uint)AID.GhastlyAura1, (uint)AID.GhastlyAura2]);
 sealed class MightOfMalice(BossModule module) : Components.SingleTargetCast(module, (uint)AID.MightOfMalice);
 sealed class NecroticBillow(BossModule module) : Components.SimpleAOEs(module, (uint)AID.NecroticBillow, 8f);

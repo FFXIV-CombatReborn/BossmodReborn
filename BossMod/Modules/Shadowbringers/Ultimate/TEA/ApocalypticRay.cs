@@ -9,10 +9,14 @@ abstract class ApocalypticRay(BossModule module, bool faceCenter) : Components.G
 
     private readonly AOEShapeCone _shape = new(25.5f, 45f.Degrees());
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (Source != null)
-            return new AOEInstance[1] { new(_shape, Source.Position, _rotation, _activation) };
+        {
+            _oneAOEInstance[0] = new(_shape, Source.Position, _rotation, _activation);
+            return _oneAOEInstance;
+        }
         return [];
     }
 

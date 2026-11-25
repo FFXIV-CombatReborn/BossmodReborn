@@ -10,5 +10,5 @@ sealed class LeftArmWave(BossModule module) : Components.SimpleAOEs(module, (uin
 [ModuleInfo(BossModuleInfo.Maturity.Verified, GroupType = BossModuleInfo.GroupType.BozjaDuel, GroupID = 778, NameID = 19)] // bnpcname=9958
 public sealed class Duel4Dabog(WorldState ws, Actor primary) : BossModule(ws, primary, new(250f, 710f), new ArenaBoundsCircle(20f))
 {
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 20f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 20f);
 }

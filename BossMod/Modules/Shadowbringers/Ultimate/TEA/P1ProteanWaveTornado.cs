@@ -16,7 +16,7 @@ abstract class P1ProteanWaveTornado : Components.GenericBaitAway
         CurrentBaits.Clear();
         foreach (var tornado in _liquidRage)
         {
-            var target = Raid.WithoutSlot(false, true, true).Closest(tornado.Position);
+            var target = Raid.WithoutSlot(false, true, true).ClosestTo(tornado.Position);
             if (target != null)
                 CurrentBaits.Add(new(tornado, target, cone));
         }

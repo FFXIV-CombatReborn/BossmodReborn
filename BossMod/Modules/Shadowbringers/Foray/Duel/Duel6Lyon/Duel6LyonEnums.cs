@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Foray.Duel.Duel6Lyon;
+﻿namespace BossMod.Shadowbringers.Foray.Duel.Duel6Lyon;
 
 public enum OID : uint
 {
@@ -37,7 +37,7 @@ public enum AID : uint
     NaturesBlood2 = 23849, // Helper->self, no cast, range 4 circle
     SplittingRage = 23863, // Boss->self, 3.0s cast, range 50 circle
     DuelOrDie = 23836,
-    WildfireCrucible = 23836 //enrage, 25s cast time
+    WildfireCrucible = 23867 // enrage, 25s cast time
 }
 
 public enum SID : uint

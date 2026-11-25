@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Foray.Duel.Duel2Lyon;
+﻿namespace BossMod.Shadowbringers.Foray.Duel.Duel2Lyon;
 
 sealed class Enaero(BossModule module) : Components.Dispel(module, (uint)SID.Enaero, (uint)AID.RagingWinds1);
 
@@ -35,6 +35,7 @@ sealed class RavenousGale(BossModule module) : Components.GenericAOEs(module)
     private readonly List<AOEInstance> _aoes = [];
     private bool casting;
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _aoes.Count;
@@ -42,7 +43,10 @@ sealed class RavenousGale(BossModule module) : Components.GenericAOEs(module)
         if (countAdj == 0)
             return [];
 
-        var aoes = new AOEInstance[countAdj];
+        var aoesLen = countAdj;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         var index = 0;
 
         if (casting)
@@ -53,7 +57,7 @@ sealed class RavenousGale(BossModule module) : Components.GenericAOEs(module)
             aoes[index++] = _aoes[i];
         }
 
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnActorCreated(Actor actor)
@@ -96,10 +100,14 @@ sealed class WindsPeakKB(BossModule module) : Components.GenericKnockback(module
     private bool watched;
     private DateTime _activation;
 
+    private readonly Knockback[] _oneKnockback = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (watched && WorldState.CurrentTime < Time.AddSeconds(4.4d))
-            return new Knockback[1] { new(Module.PrimaryActor.Position, 15f, _activation) };
+        {
+            _oneKnockback[0] = new(Module.PrimaryActor.Position, 15f, _activation);
+            return _oneKnockback;
+        }
         else
             return [];
     }

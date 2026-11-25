@@ -103,18 +103,22 @@ sealed class P4FateCalibrationAlphaSacrament(BossModule module) : Components.Gen
 
     private readonly AOEShapeCross _shape = new(100f, 8f);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _casters.Count;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var c = _casters[i];
             aoes[i] = new(_shape, c.caster.Position, c.caster.Rotation, c.activation);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void AddMovementHints(int slot, Actor actor, MovementHints movementHints)

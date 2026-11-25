@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Foray.CriticalEngagement.CE24PatriotGames;
+﻿namespace BossMod.Shadowbringers.Foray.CriticalEngagement.CE24PatriotGames;
 
 public enum OID : uint
 {
@@ -190,5 +190,5 @@ sealed class CE24PatriotGamesStates : StateMachineBuilder
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 735, NameID = 10)]
 public sealed class CE24PatriotGames(WorldState ws, Actor primary) : BossModule(ws, primary, new(-239.999f, 413.999f), new ArenaBoundsSquare(24.5f))
 {
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InSquare(Arena.Center, 25f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InSquare(Arena.Center, 25f);
 }

@@ -224,5 +224,5 @@ public class CE44FamiliarFace(WorldState ws, Actor primary) : BossModule(ws, pri
     public static readonly Polygon[] ArenaPolygon = [new Polygon(new(330f, 390f), 29.5f, 32)];
     public static readonly ArenaBoundsCustom DefaultArena = new(ArenaPolygon);
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 30f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 30f);
 }

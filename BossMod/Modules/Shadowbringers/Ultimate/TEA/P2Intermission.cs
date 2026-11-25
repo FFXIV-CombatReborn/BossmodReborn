@@ -9,13 +9,17 @@ sealed class P2IntermissionHawkBlaster(BossModule module) : Components.GenericAO
     private const float _blasterOffset = 14f;
     private readonly AOEShapeCircle _blasterShape = new(10f);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var future = FutureBlasterCenters();
         var imminent = ImminentBlasterCenters();
         var lenF = future.Length;
         var lenI = imminent.Length;
-        var aoes = new AOEInstance[lenF + lenI];
+        var aoesLen = lenF + lenI;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < lenF; ++i)
         {
             aoes[i] = new(_blasterShape, future[i], risky: false);
@@ -24,7 +28,7 @@ sealed class P2IntermissionHawkBlaster(BossModule module) : Components.GenericAO
         {
             aoes[i + lenF] = new(_blasterShape, imminent[i], color: Colors.Danger);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     // TODO: reconsider

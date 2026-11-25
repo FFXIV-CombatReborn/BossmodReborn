@@ -7,9 +7,13 @@ sealed class P1ProteanWaveLiquidInvisFixed(BossModule module) : Components.Gener
 {
     private readonly AOEShapeCone cone = new(40f, 15f.Degrees());
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        return new AOEInstance[1] { new(cone, Module.PrimaryActor.Position, Module.PrimaryActor.Rotation) };
+        {
+            _oneAOEInstance[0] = new(cone, Module.PrimaryActor.Position, Module.PrimaryActor.Rotation);
+            return _oneAOEInstance;
+        }
     }
 }
 

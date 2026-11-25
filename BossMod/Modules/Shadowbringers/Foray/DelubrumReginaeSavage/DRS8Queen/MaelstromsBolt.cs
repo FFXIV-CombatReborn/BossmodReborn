@@ -8,8 +8,10 @@ sealed class MaelstromsBolt(BossModule module) : Components.CastCounter(module, 
 
     public override void DrawArenaForeground(int pcSlot, Actor pc)
     {
-        foreach (var b in _ballLightnings.Where(b => !b.IsDead))
+        foreach (var b in _ballLightnings)
         {
+            if (!(!b.IsDead))
+                continue;
             Arena.Actor(b, Colors.Object, true);
             Arena.ZoneCircleOutline(b.Position, 8, Colors.Object);
         }

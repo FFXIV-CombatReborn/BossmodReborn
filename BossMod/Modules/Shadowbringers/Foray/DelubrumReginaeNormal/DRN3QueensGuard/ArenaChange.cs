@@ -17,7 +17,7 @@ sealed class ArenaChange(BossModule module) : Components.GenericAOEs(module)
             for (var i = 0; i < count; ++i)
             {
                 var f = features[i];
-                if (f.EventState == default && f.Position.AlmostEqual(new(244f, -129f), 1f))
+                if (f.EventState == default && f.LayoutID == 0x826E8Du)
                 {
                     var center = Arena.Center;
                     _aoe = [new(donut, center, default, WorldState.FutureTime(5d), shapeDistance: donut.Distance(center, default))];

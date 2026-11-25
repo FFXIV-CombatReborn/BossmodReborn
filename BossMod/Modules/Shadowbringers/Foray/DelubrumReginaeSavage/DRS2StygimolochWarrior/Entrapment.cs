@@ -4,9 +4,13 @@ sealed class EntrapmentAttract(BossModule module) : Components.GenericKnockback(
 {
     private DateTime _activation;
 
+    private readonly Knockback[] _oneKnockback = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
-        return new Knockback[1] { new(new(Arena.Center.X, Arena.Center.Z + Arena.Bounds.Radius), 60f, _activation, kind: Kind.TowardsOrigin, ignoreImmunes: true) };
+        {
+            _oneKnockback[0] = new(new(Arena.Center.X, Arena.Center.Z + Arena.Bounds.Radius), 60f, _activation, kind: Kind.TowardsOrigin, ignoreImmunes: true);
+            return _oneKnockback;
+        }
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

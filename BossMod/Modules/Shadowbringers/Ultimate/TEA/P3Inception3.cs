@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Ultimate.TEA;
+﻿namespace BossMod.Shadowbringers.Ultimate.TEA;
 
 sealed class P3Inception3Sacrament(TEA module) : Components.GenericAOEs(module, (uint)AID.SacramentInception)
 {
@@ -9,11 +9,15 @@ sealed class P3Inception3Sacrament(TEA module) : Components.GenericAOEs(module, 
     private WPos initialPos;
     private DateTime activation;
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_aoe.Length == 0 && initialPos != default && initialPos != boss!.Position) // only relevant if one or more crystals didn't get destroyed
         {
-            return new AOEInstance[1] { new(cross, boss.Position, boss.Rotation, activation) };
+            {
+                _oneAOEInstance[0] = new(cross, boss.Position, boss.Rotation, activation);
+                return _oneAOEInstance;
+            }
         }
         return _aoe;
     }

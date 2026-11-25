@@ -47,18 +47,25 @@ sealed class TimeEruptionBombReproduce(BossModule module) : Components.GenericAO
     private static readonly AOEShapeRect _shapeCyclone = new(60f, 10f);
     private static readonly AOEShapeRect _shapeEruption = new(10f, 10f, 10f);
 
+    private AOEInstance[] _aoesBBuffer = [];
+    private AOEInstance[] _clockAOEs = [];
+    private AOEInstance[] _clockAOEsFor(int n) => _clockAOEs.Length >= n ? _clockAOEs : (_clockAOEs = new AOEInstance[n]);
+
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_bombsActivation != default)
         {
             var countB = _bombs.Count;
-            var aoesB = new AOEInstance[countB];
+            var aoesBLen = countB;
+            if (_aoesBBuffer.Length < aoesBLen)
+                _aoesBBuffer = new AOEInstance[aoesBLen];
+            var aoesB = _aoesBBuffer;
             for (var i = 0; i < countB; ++i)
             {
                 var b = _bombs[i];
                 aoesB[i] = new(_shapeBomb, b.Position, b.Rotation, _bombsActivation);
             }
-            return aoesB;
+            return aoesB.AsSpan(0, aoesBLen);
         }
         else if (_cycloneAOEs.Count != 0)
         {
@@ -68,13 +75,13 @@ sealed class TimeEruptionBombReproduce(BossModule module) : Components.GenericAO
         {
             var countC = _clocks.Count;
             var max = countC > 2 ? countC - 2 : countC;
-            var aoesC = new AOEInstance[max];
+            var aoesC = _clockAOEsFor(max);
             for (var i = 0; i < max; ++i)
             {
                 var e = _clocks[i];
                 aoesC[i] = new(_shapeEruption, e.pos, default, _eruptionStart.AddSeconds(e.delay));
             }
-            return aoesC;
+            return aoesC.AsSpan(0, max);
         }
         return [];
     }
@@ -178,5 +185,5 @@ sealed class CE52TimeToBurnStates : StateMachineBuilder
 [ModuleInfo(BossModuleInfo.Maturity.Verified, GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 778, NameID = 26)] // bnpcname=9930
 public sealed class CE52TimeToBurn(WorldState ws, Actor primary) : BossModule(ws, primary, new(-550f, default), new ArenaBoundsSquare(29.5f), onlyLoadIfTargetable: true)
 {
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InSquare(Arena.Center, 30f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InSquare(Arena.Center, 30f);
 }

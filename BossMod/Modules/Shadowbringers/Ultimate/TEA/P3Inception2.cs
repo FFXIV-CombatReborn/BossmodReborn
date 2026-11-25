@@ -22,7 +22,7 @@ sealed class P3Inception2 : Components.GenericBaitAway
         if (_numAetheroplasmsDone >= 4) // do not show anything until all aetheroplasms (part 1 of the mechanic) are done
         {
             var source = bruteJustice;
-            var target = source != null ? Raid.WithoutSlot(false, true, true).Closest(source.Position) : null;
+            var target = source != null ? Raid.WithoutSlot(false, true, true).ClosestTo(source.Position) : null;
             if (source != null && target != null)
                 CurrentBaits.Add(new(source, target, _shape));
         }

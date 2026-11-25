@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Foray.Duel.Duel6Lyon;
+﻿namespace BossMod.Shadowbringers.Foray.Duel.Duel6Lyon;
 
 sealed class OnFire(BossModule module) : BossComponent(module)
 {
@@ -108,10 +108,14 @@ sealed class WindsPeakKB(BossModule module) : Components.GenericKnockback(module
     private bool _watched;
     private DateTime _activation;
 
+    private readonly Knockback[] _oneKnockback = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (_watched && WorldState.CurrentTime < _time.AddSeconds(4.4d))
-            return new Knockback[1] { new(Module.PrimaryActor.Position, 15f, _activation) };
+        {
+            _oneKnockback[0] = new(Module.PrimaryActor.Position, 15f, _activation);
+            return _oneKnockback;
+        }
         else
             return [];
     }

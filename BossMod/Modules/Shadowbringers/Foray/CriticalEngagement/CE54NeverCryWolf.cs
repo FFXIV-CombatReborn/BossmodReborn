@@ -200,5 +200,5 @@ public sealed class CE54NeverCryWolf(WorldState ws, Actor primary) : BossModule(
         Arena.Actors(Enemies((uint)OID.Imaginifer));
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InSquare(Arena.Center, 24f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InSquare(Arena.Center, 24f);
 }

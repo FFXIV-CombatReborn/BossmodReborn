@@ -98,16 +98,17 @@ public abstract class DuelFarm<Duel> : ZoneModule where Duel : struct, Enum
         // only need to check "undesirable" targets, as mobs already attacking party members will be handled by autofarm
         static bool canTarget(AIHints.Enemy enemy) => enemy.Priority == AIHints.Enemy.PriorityUndesirable && (!globalConfig.AssistMode || enemy.Actor.InCombat);
 
-        foreach (var e in hints.PotentialTargets.Where(t => t.Actor.NameID == farmNameID))
-            if (canTarget(e) && (e.Actor.Position - player.Position).LengthSq() <= farmRange * farmRange)
-            {
-                if (e.Actor.InCombat)
-                    // someone else pulled
-                    e.Priority = 0;
-                else
-                    // we pull
-                    e.ShouldBeTargeted = true;
-            }
+        foreach (var e in hints.PotentialTargets)
+            if (e.Actor.NameID == farmNameID)
+                if (canTarget(e) && (e.Actor.Position - player.Position).LengthSq() <= farmRange * farmRange)
+                {
+                    if (e.Actor.InCombat)
+                        // someone else pulled
+                        e.Priority = 0;
+                    else
+                        // we pull
+                        e.ShouldBeTargeted = true;
+                }
     }
 
     public override void DrawExtra()
