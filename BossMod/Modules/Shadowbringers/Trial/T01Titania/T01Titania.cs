@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Trial.T01Titania;
+﻿namespace BossMod.Shadowbringers.Trial.T01Titania;
 
 public enum OID : uint
 {
@@ -42,7 +42,7 @@ public enum AID : uint
     Leafstorm1 = 15701, // Helper->self, 3.0s cast, range 50 20.000-degree cone
     Pease = 15698, // Helper->player, 5.0s cast, range 6 circle
     Peasebomb = 15668, // Peaseblossom->self, 5.0s cast, single-target : spread markers with pease 6circle?
-    Pummel = 15700, // Puck->player, 4.0s cast, single-target
+    Pummel = 15700, // Puck->player, 4.0s cast, single-target, tankbuster
     LoveInIdleness = 15677, // Titania->self, 4.0s cast, single-target : Revive the trees and make them giant.
     _Spell_ = 17888, // Helper->Puck/Peaseblossom/Mustardseed, no cast, single-target
     _AutoAttack_ = 18059, // PuckGiant->player, no cast, single-target
@@ -102,6 +102,7 @@ sealed class WarAndPease(BossModule module) : Components.BaitAwayCast(module, (u
 sealed class PucksBreath(BossModule module) : Components.StackWithCastTargets(module, (uint)AID.PucksBreath, 6f);
 
 sealed class PucksCaprice(BossModule module) : Components.RaidwideCast(module, (uint)AID.PucksCaprice);
+sealed class AddTankbusters(BossModule module) : Components.SingleTargetCasts(module, [(uint)AID.Pummel, (uint)AID.HardSwipe]);
 
 sealed class BeingMortal1(BossModule module) : Components.RaidwideCast(module, (uint)AID.BeingMortal1);
 
@@ -149,10 +150,16 @@ sealed class WoodsEmbrace(BossModule module) : Components.GenericBaitAway(module
 
     public override void Update()
     {
-        if (CurrentBaits.Count > 0 && Module.Enemies((uint)OID.RootGrowth).All(x => x.IsDead))
+        if (CurrentBaits.Count == 0)
+            return;
+        // if adds die baits get cancelled
+        var roots = Module.Enemies((uint)OID.RootGrowth);
+        for (var i = 0; i < roots.Count; ++i)
         {
-            CurrentBaits.Clear(); // if adds die baits get cancelled
+            if (!roots[i].IsDead)
+                return;
         }
+        CurrentBaits.Clear();
     }
 }
 
@@ -286,7 +293,6 @@ sealed class WaterTowers(BossModule module) : Components.GenericTowers(module)
 
 sealed class FlameRune(BossModule module) : Components.StackWithIcon(module, (uint)IconID.FireStackIcon, (uint)AID.FlameHammer, 5f, 3d, 8, 8);
 
-
 sealed class TitaniaStates : StateMachineBuilder
 {
     public TitaniaStates(BossModule module) : base(module)
@@ -309,6 +315,7 @@ sealed class TitaniaStates : StateMachineBuilder
             .ActivateOnEnter<PucksBreath>()
             .ActivateOnEnter<PucksRebuke2>()
             .ActivateOnEnter<PucksCaprice>()
+            .ActivateOnEnter<AddTankbusters>()
             .ActivateOnEnter<Pease>()
             .ActivateOnEnter<PeasebombSpread>()
             .ActivateOnEnter<BeingMortal1>()
@@ -316,7 +323,6 @@ sealed class TitaniaStates : StateMachineBuilder
             ;
     }
 }
-
 
 [ModuleInfo(BossModuleInfo.Maturity.Contributed,
     StatesType = typeof(TitaniaStates),

@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Trial.T03Hades;
+﻿namespace BossMod.Shadowbringers.Trial.T03Hades;
 
 public enum OID : uint
 {
@@ -54,6 +54,7 @@ public enum AID : uint
     PolydegmonsPurgation = 16754, // 233C->self, 5.0s cast, range 100 width 16 rect
     PolydegmonsPurgation1 = 16753, // 233C->self, 5.0s cast, range 100 width 16 rect
     PolydegmonsPurgation2 = 16752, // 294A->self, 5.0s cast, single-target
+    WailOfTheLost = 16741, // 294A->self, 5.0s cast, range 40 width 40 rect
     HellbornYawp = 16750, // 294A->self, 5.0s cast, single-target
     HellbornYawp1 = 16751, // 233C->self, 4.0s cast, range 100 60.000-degree cone
     EchoOfTheLost1 = 16739, // 294A->self, 7.0s cast, range 100 ?-degree cone
@@ -144,7 +145,11 @@ sealed class BrokenFaith(BossModule module) : Components.SimpleAOEs(module, (uin
     {
         if (actor.OID == (uint)OID.BrokenFaithObject)
         {
-            Casters.RemoveAll(cast => cast.Origin == actor.Position);
+            for (var i = Casters.Count - 1; i >= 0; --i)
+            {
+                if (Casters[i].Origin == actor.Position)
+                    Casters.RemoveAt(i);
+            }
         }
     }
 }
@@ -191,7 +196,8 @@ sealed class AetherialGaol(BossModule module) : BossComponent(module)
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        _gaoler = Module.Enemies((uint)OID.AetherialGaol).FirstOrDefault();
+        var gaols = Module.Enemies((uint)OID.AetherialGaol);
+        _gaoler = gaols.Count != 0 ? gaols[0] : null;
         base.AddAIHints(slot, actor, assignment, hints);
         var attackRadius = 8;
 
@@ -259,12 +265,28 @@ sealed class NetherBlast(BossModule module) : Components.BaitAwayTethers(module,
         if (spell.Action.ID == WatchedAction && CurrentBaits.Count != 0)
         {
             // remove bait if player dies during tether
-            CurrentBaits.RemoveAll(tether => tether.Target.IsDead);
+            for (var i = CurrentBaits.Count - 1; i >= 0; --i)
+            {
+                if (CurrentBaits[i].Target.IsDead)
+                    CurrentBaits.RemoveAt(i);
+            }
         }
     }
 }
 
-sealed class LastPhaseRaidwides(BossModule module) : Components.RaidwideCasts(module, [(uint)AID.LifeInCaptivity, (uint)AID.BlackCauldron, (uint)AID.TheDarkDevours, (uint)AID.ChorusOfTheLost]);
+sealed class LastPhaseRaidwides(BossModule module) : Components.RaidwideCasts(module, [(uint)AID.LifeInCaptivity, (uint)AID.TheDarkDevours, (uint)AID.ChorusOfTheLost]);
+sealed class WailOfTheLost(BossModule module) : Components.SimpleAOEs(module, (uint)AID.WailOfTheLost, new AOEShapeRect(40f, 20f));
+
+// neither the visual nor the hit is cast; the raidwide lands ~0.5s after the boss's visual
+sealed class BlackCauldron(BossModule module) : Components.RaidwideInstant(module, (uint)AID.BlackCauldron1, 0.5d)
+{
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        base.OnEventCast(caster, spell);
+        if (spell.Action.ID == (uint)AID.BlackCauldron)
+            Activation = WorldState.FutureTime(Delay);
+    }
+}
 
 sealed class HadesStates : StateMachineBuilder
 {
@@ -292,11 +314,24 @@ sealed class HadesStates : StateMachineBuilder
             .ActivateOnEnter<HellbornYawp>()
             .ActivateOnEnter<EchoOfTheLostCone>()
             .ActivateOnEnter<LastPhaseRaidwides>()
+            .ActivateOnEnter<WailOfTheLost>()
+            .ActivateOnEnter<BlackCauldron>()
             .ActivateOnEnter<CaptivityBait>()
             .ActivateOnEnter<AetherialGaol>()
             .ActivateOnEnter<DoomTowers>()
             .ActivateOnEnter<NetherBlast>()
-            .Raw.Update = () => module.PrimaryActor.IsDeadOrDestroyed && module.Enemies((uint)OID.HadesBig).All(k => k.IsDeadOrDestroyed);
+            .Raw.Update = () =>
+            {
+                if (!module.PrimaryActor.IsDeadOrDestroyed)
+                    return false;
+                var big = module.Enemies((uint)OID.HadesBig);
+                for (var i = 0; i < big.Count; ++i)
+                {
+                    if (!big[i].IsDeadOrDestroyed)
+                        return false;
+                }
+                return true;
+            };
     }
 }
 
@@ -322,6 +357,10 @@ public sealed class Hades(WorldState ws, Actor primary) : BossModule(ws, primary
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         base.DrawEnemies(pcSlot, pc);
-        Arena.Actors(WorldState.Actors.Where(a => !a.IsAlly), Colors.Enemy);
+        foreach (var a in WorldState.Actors)
+        {
+            if (!a.IsAlly)
+                Arena.Actor(a);
+        }
     }
 }
