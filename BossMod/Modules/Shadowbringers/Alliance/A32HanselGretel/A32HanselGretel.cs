@@ -28,7 +28,15 @@ sealed class MagicalConfluence(BossModule module) : Components.GenericAOEs(modul
     private readonly List<Actor> voidzones = module.Enemies((uint)OID.MagicalConfluence);
     private readonly AOEShapeCircle circle = new(4f);
     private readonly AOEShapeArcCapsule arcCW = new(4f, 30f.Degrees(), module.Arena.Center), arcCCW = new(4f, -30f.Degrees(), module.Arena.Center);
+    private readonly AOEShapeCapsule capsule = new(4f, 10f);
 
+    private static bool MovesStraight(Actor vz, WPos center)
+    {
+        var offset = center - vz.Position;
+        return offset.LengthSq() < 9f || Math.Abs(vz.Rotation.ToDirection().Dot(offset.Normalized())) > 0.7f;
+    }
+
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = voidzones.Count;
@@ -36,7 +44,10 @@ sealed class MagicalConfluence(BossModule module) : Components.GenericAOEs(modul
         {
             return [];
         }
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         var center = Arena.Center;
         for (var i = 0; i < count; ++i)
         {
@@ -46,6 +57,10 @@ sealed class MagicalConfluence(BossModule module) : Components.GenericAOEs(modul
             {
                 aoes[i] = new(circle, pos.Quantized());
             }
+            else if (MovesStraight(vz, center))
+            {
+                aoes[i] = new(capsule, pos.Quantized(), vz.Rotation);
+            }
             else
             {
                 var dir = pos - center;
@@ -53,7 +68,7 @@ sealed class MagicalConfluence(BossModule module) : Components.GenericAOEs(modul
                 aoes[i] = new(ccw ? arcCCW : arcCW, pos.Quantized());
             }
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
@@ -78,7 +93,14 @@ sealed class MagicalConfluence(BossModule module) : Components.GenericAOEs(modul
             var ccw = vz.Rotation.ToDirection().OrthoR().Dot(dir) < 0f;
             var mult = ccw ? -1f : 1f;
             var mov = vz.LastFrameMovement != default;
-            if (mov)
+            if (mov && MovesStraight(vz, center))
+            {
+                var heading = vz.Rotation.ToDirection();
+                hints.AddForbiddenZone(new SDCapsule(pos, heading, 6f, 4f), forbiddenNearFuture);
+                hints.AddForbiddenZone(new SDCapsule(pos, heading, 10f, 4f), forbiddenSoon);
+                hints.AddForbiddenZone(new SDCapsule(pos, heading, 14f, 4f), forbiddenFarFuture);
+            }
+            else if (mov)
             {
                 hints.AddForbiddenZone(new SDArcCapsule(pos, center, mult * a15, 4f), forbiddenNearFuture);
                 hints.AddForbiddenZone(new SDArcCapsule(pos, center, mult * a25, 4f), forbiddenSoon);

@@ -9,11 +9,15 @@ sealed class GreatBallOfFire(BossModule module) : Components.GenericAOEs(module)
     private readonly AOEShapeCircle _shapeSmall = new(10f);
     private readonly AOEShapeCircle _shapeBig = new(18f);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var countS = _smallFlames.Count;
         var countB = _bigFlames.Count;
-        var aoes = new AOEInstance[countS + countB];
+        var aoesLen = countS + countB;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         var index = 0;
         for (var i = 0; i < countS; ++i)
         {
@@ -25,7 +29,7 @@ sealed class GreatBallOfFire(BossModule module) : Components.GenericAOEs(module)
             var f = _bigFlames[i];
             aoes[index++] = new(_shapeBig, f.Position, default, Module.CastFinishAt(f.CastInfo, 0, _activation));
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)

@@ -13,6 +13,7 @@ sealed class AboveBoard(BossModule module) : Components.GenericAOEs(module)
 
     private static readonly AOEShapeCircle circle = new(10);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var imminentBombs = AreBigBombsDangerous(slot) ? _bigBombs : _smallBombs;
@@ -21,13 +22,16 @@ sealed class AboveBoard(BossModule module) : Components.GenericAOEs(module)
         if (count == 0)
             return [];
 
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
 
         for (var i = 0; i < count; ++i)
         {
             aoes[i] = new(circle, imminentBombs[i].Position, default, _activation);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnStatusGain(Actor actor, ref ActorStatus status)

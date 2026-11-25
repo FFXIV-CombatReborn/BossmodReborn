@@ -18,19 +18,23 @@ class FreedomOfBozja : TemperatureAOE
         InitOrb((uint)OID.RoaringOrb, +2);
     }
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var playerTemp = Temperature(actor);
         var count = _orbs.Count;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var o = _orbs[i];
             aoes[i] = new(_shape, o.orb.Position, o.orb.Rotation, _activation, o.temperature == -playerTemp ? Colors.SafeFromAOE : 0, _risky);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)

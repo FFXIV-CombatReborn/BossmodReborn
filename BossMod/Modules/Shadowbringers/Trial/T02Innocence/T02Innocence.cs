@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Trial.T02Innocence;
+﻿namespace BossMod.Shadowbringers.Trial.T02Innocence;
 
 public enum OID : uint
 {
@@ -91,7 +91,9 @@ public enum TetherID : uint
 
 sealed class CrownTrash(BossModule module) : Components.AddsMulti(module, T02Innocence.CrownMobs);
 
-sealed class RealmRazer(BossModule module) : Components.RaidwideCast(module, (uint)AID.Realmrazer1);
+// the raidwide hit has no cast; warn from the boss's 5s cast
+sealed class RealmRazer(BossModule module) : Components.RaidwideCastDelay(module, (uint)AID.Realmrazer, (uint)AID.Realmrazer1, 0.5d);
+sealed class HolySword(BossModule module) : Components.SingleTargetCast(module, (uint)AID.HolySword);
 
 sealed class RighteousBolt(BossModule module) : Components.BaitAwayCast(module, (uint)AID.RighteousBolt,
     new AOEShapeCircle(3f), centerAtTarget: true, tankbuster: true);
@@ -126,12 +128,7 @@ sealed class SinSphere(BossModule module) : Components.GenericTowers(module)
     }
 }
 
-// Does pulsing raidwides to finish out phase 1
-sealed class ExaltedRaidwides(BossModule module) : Components.RaidwideCasts(module, [(uint)AID.ExaltedPlumes, (uint)AID.ExaltedWing]);
-
 sealed class HolyTrinity(BossModule module) : Components.SimpleAOEs(module, (uint)AID.HolyTrinity, new AOEShapeRect(40f, 2f));
-
-sealed class SoulAndBodyLongCast(BossModule module) : Components.SimpleAOEGroups(module, [(uint)AID.SoulAndBody, (uint)AID.SoulAndBody1], new AOEShapeDonutSector(15f, 20f, 20f.Degrees()));
 
 /*
  * This is the wavy aoe that rotates across the arena.
@@ -160,10 +157,10 @@ sealed class SoulAndBody(BossModule module) : Components.SimpleAOEs(module, (uin
             for (var i = 0; i < _genAOE; ++i)
             {
                 var rotAngFloat = 8f * i;
-                WPos futureOrigin = WPos.RotateAroundOrigin(-rotAngFloat, Arena.Center, spell.LocXZ);
-                Angle futureRot = rotation + rotAngFloat.Degrees();
+                var futureOrigin = WPos.RotateAroundOrigin(-rotAngFloat, Arena.Center, spell.LocXZ);
+                var futureRot = rotation + rotAngFloat.Degrees();
                 // The first long cast takes approx 2.7 seconds. The instants that follow every 0.6 seconds or so.
-                DateTime _activation = WorldState.FutureTime(2.7f + (0.6f * i));
+                var _activation = WorldState.FutureTime(2.7f + 0.6f * i);
 
                 Casters.Add(new(Shape, futureOrigin.Quantized(), futureRot, _activation,
                     actorID: caster.InstanceID,
@@ -175,15 +172,26 @@ sealed class SoulAndBody(BossModule module) : Components.SimpleAOEs(module, (uin
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
-        if ((spell.Action.ID is (uint)AID.SoulAndBody or (uint)AID.SoulAndBody1) && Casters.Count != 0)
-            Casters.RemoveAll(cast => cast.Activation <= WorldState.CurrentTime && cast.Shape is AOEShapeDonutSector);
+        if (spell.Action.ID is (uint)AID.SoulAndBody or (uint)AID.SoulAndBody1 && Casters.Count != 0)
+            RemoveResolved();
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         if (spell.Action.ID is (uint)AID.SoulAndBody2 && Casters.Count != 0)
         {
-            Casters.RemoveAll(cast => cast.Activation <= WorldState.CurrentTime && cast.Shape is AOEShapeDonutSector);
+            RemoveResolved();
+        }
+    }
+
+    private void RemoveResolved()
+    {
+        var now = WorldState.CurrentTime;
+        for (var i = Casters.Count - 1; i >= 0; --i)
+        {
+            var c = Casters[i];
+            if (c.Activation <= now && c.Shape is AOEShapeDonutSector)
+                Casters.RemoveAt(i);
         }
     }
 
@@ -208,7 +216,7 @@ sealed class Shadowreaver(BossModule module) : Components.RaidwideCast(module, (
 
 sealed class Manacle(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Manacle, new AOEShapeCircle(6f));
 
-sealed class PhaseTwoRaidwides(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GuiltyVerdict, (uint)AID.FlamingSword);
+sealed class HolySwordAdd(BossModule module) : Components.CastHint(module, (uint)AID.HolySword2, "Kill the tethered Shame!", true);
 
 sealed class GodRayCone(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GodRayCone, new AOEShapeCone(5f, 50f.Degrees()));
 sealed class GodRayMedium(BossModule module) : Components.SimpleAOEs(module, (uint)AID.GodRayMedium, new AOEShapeDonutSector(5f, 10f, 50f.Degrees()));
@@ -235,16 +243,15 @@ sealed class InnocenceStates : StateMachineBuilder
             .ActivateOnEnter<DayBreak>()
             .ActivateOnEnter<Enthrall>()
             .ActivateOnEnter<SinSphere>()
-            .ActivateOnEnter<ExaltedRaidwides>()
             // Phase 2
             .ActivateOnEnter<HolyTrinity>()
-            .ActivateOnEnter<SoulAndBodyLongCast>()
             .ActivateOnEnter<SoulAndBody>()
             .ActivateOnEnter<Reprobation>()
             .ActivateOnEnter<ReprobationLong>()
             .ActivateOnEnter<Shadowreaver>()
             .ActivateOnEnter<Manacle>()
-            .ActivateOnEnter<PhaseTwoRaidwides>()
+            .ActivateOnEnter<HolySwordAdd>()
+            .ActivateOnEnter<HolySword>()
             .ActivateOnEnter<GodRayCone>()
             .ActivateOnEnter<GodRayMedium>()
             .ActivateOnEnter<GodRayOuter>()
@@ -252,7 +259,18 @@ sealed class InnocenceStates : StateMachineBuilder
             .ActivateOnEnter<BeatificVision>()
             .ActivateOnEnter<DropOfLight>()
             // The first phase of the boss dies so we must make sure that the module stays active while BossP2 exists.
-            .Raw.Update = () => module.PrimaryActor.IsDeadOrDestroyed && module.Enemies((uint)OID.BossP2).All(k => k.IsDeadOrDestroyed);
+            .Raw.Update = () =>
+            {
+                if (!module.PrimaryActor.IsDeadOrDestroyed)
+                    return false;
+                var p2 = module.Enemies((uint)OID.BossP2);
+                for (var i = 0; i < p2.Count; ++i)
+                {
+                    if (!p2[i].IsDeadOrDestroyed)
+                        return false;
+                }
+                return true;
+            };
     }
 }
 
@@ -290,8 +308,12 @@ public sealed class T02Innocence(WorldState ws, Actor primary) : BossModule(ws, 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {
         base.DrawEnemies(pcSlot, pc);
-        Arena.Actors(Enemies((uint)OID.BossP2), Colors.Enemy);
-        Arena.Actors(WorldState.Actors.Where(a => !a.IsAlly), Colors.Enemy);
+        Arena.Actors(Enemies((uint)OID.BossP2));
+        foreach (var a in WorldState.Actors)
+        {
+            if (!a.IsAlly)
+                Arena.Actor(a);
+        }
     }
 
     // Update the module to stay active after initial primary actor 'dies'.

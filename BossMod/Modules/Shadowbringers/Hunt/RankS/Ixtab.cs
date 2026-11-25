@@ -35,12 +35,16 @@ class DualCastTartareanFlameThunder(BossModule module) : Components.GenericAOEs(
     private static readonly AOEShapeDonut donut = new(8f, 40f);
     private bool dualCast;
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _aoes.Count;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var aoe = _aoes[i];
@@ -49,7 +53,7 @@ class DualCastTartareanFlameThunder(BossModule module) : Components.GenericAOEs(
             else
                 aoes[i] = aoe with { Risky = false };
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

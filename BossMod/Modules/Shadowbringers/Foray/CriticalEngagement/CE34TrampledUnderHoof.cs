@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Foray.CriticalEngagement.CE34TrampledUnderHoof;
+﻿namespace BossMod.Shadowbringers.Foray.CriticalEngagement.CE34TrampledUnderHoof;
 
 public enum OID : uint
 {
@@ -185,5 +185,5 @@ public sealed class CE34TrampledUnderHoof(WorldState ws, Actor primary) : BossMo
         }
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 25f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 25f);
 }

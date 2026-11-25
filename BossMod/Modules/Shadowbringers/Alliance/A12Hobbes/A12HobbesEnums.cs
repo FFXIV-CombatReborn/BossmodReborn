@@ -1,106 +1,105 @@
-﻿// namespace BossMod.Shadowbringers.Alliance.A12Hobbes;
+﻿namespace BossMod.Shadowbringers.Alliance.A12Hobbes;
 
-// public enum OID : uint
-// {
-//     Boss = 0x2C2B, // R25.000, x?
-//     Helper2P = 0x2C66, // R0.512, x?
-//     Hobbes1 = 0x2C73, // R1.000, x?, Part type
-//     Hobbes2 = 0x2C2D, // R1.000, x?
-//     Hobbes3 = 0x2C2C, // R1.000, x?
-//     HobbesHelper = 0x233C, // R0.500, x?, 523 type
-//     Anogg = 0x2C83, // R0.500, x?
-//     Konogg = 0x2C82, // R0.500, x?
-//     SmallExploder = 0x2C62, // R0.960, x?
-// }
+public enum OID : uint
+{
+    Boss = 0x2C2B, // R25.000, x1
+    SmallExploder = 0x2C62, // R0.960, x0 (spawn during fight)
+    Helper = 0x233C, // R0.500, x?, Helper type
+    AutoPart = 0x2C73, // R1.000, x3, Part type
+    ImpactHelper = 0x2C2D, // R1.000, x1
+    RobotArm = 0x2C2C, // R1.000, x1
+    TetherHelper = 0x18D6, // R0.500, x6
+    Helper2P = 0x2C66, // R0.512, x1, 2P ally
+    Anogg = 0x2C83, // R0.500, x?
+    Konogg = 0x2C82, // R0.500, x?
+    ShockingDischargeVoidzone = 0x1EAEE6 // R0.500, EventObj type, spawn during fight
+}
 
-// public enum AID : uint
-// {
-//     Attack = 18430, // Hobbes1->player, no cast, single-target
-//     BalancedEdge = 19049, // Helper2P->self, 2.0s cast, range 5 circle
-//     BladeFlurry1 = 18608, // Helper2P->Boss, no cast, single-target
-//     BladeFlurry2 = 18609, // Helper2P->Boss, no cast, single-target
-//     ConvenientSelfDestruction = 18460, // SmallExploder->self, no cast, range 5 circle
-//     DancingBlade = 19048, // Helper2P->Boss, no cast, width 2 rect charge
-//     ElectromagneticPulse = 18457, // HobbesHelper->self, no cast, range 40 width 5 rect
+public enum AID : uint
+{
+    AutoAttack = 18430, // AutoPart->player, no cast, single-target
+    LaserResistanceTest = 18437, // Boss->self, 4.0s cast, range 50 circle
+    LaserResistanceTestRepeat = 18438, // Boss->self, no cast, range 50 circle
 
-//     FireResistanceTest1 = 18454, // HobbesHelper->self, no cast, range 70 ?-degree cone
-//     FireResistanceTest2 = 18455, // HobbesHelper->self, no cast, range 12 width 38 rect
-//     FireResistanceTest3 = 18456, // HobbesHelper->self, no cast, range 22 width 42 rect
+    ShockingDischarge = 18443, // Helper->self, 2.0s cast, range 5 circle
+    VariableCombatTestCast = 18446, // RobotArm->self, 5.0s cast, single-target
 
-//     Impact = 18450, // HobbesHelper->self, 7.7s cast, range 20 circle
+    ImpactRotation1 = 18709, // ImpactHelper->self, no cast, single-target
+    ImpactRotation2 = 18710, // ImpactHelper->self, no cast, single-target
+    ImpactRotation3 = 18711, // ImpactHelper->self, no cast, single-target
+    ImpactRotation4 = 18712, // ImpactHelper->self, no cast, single-target
+    Impact = 18450, // Helper->self, 7.7s cast, range 20 circle
+    Towerfall = 18451, // Helper->self, no cast, range 20 width 8 rect
 
-//     LaserResistanceTest1 = 18437, // Boss->self, 4.0s cast, range 50 circle
-//     LaserResistanceTest2 = 18438, // Boss->self, no cast, range 50 circle
+    FireResistanceTestInside = 18454, // Helper->self, no cast, range 70 20-degree cone
+    FireResistanceTestOutside = 18455, // Helper->self, no cast, range 12 width 38 rect
+    FireResistanceTestHalf = 18456, // Helper->self, no cast, range 22 width 42 rect
 
-//     LaserSight1 = 18440, // HobbesHelper->player, no cast, single-target
-//     LaserSight2 = 18439, // Boss->self, 8.0s cast, single-target
-//     LaserSight3 = 18441, // HobbesHelper->self, no cast, range 65 width 8 rect
+    VariableCombatConeSlow = 18885, // Helper->self, 5.7s cast, range 20 60-degree cone
+    VariableCombatCircleSlow = 18886, // Helper->self, 5.7s cast, range 2 circle
+    VariableCombatDonutSlow = 18887, // Helper->self, 5.7s cast, range 7-19 donut
+    VariableCombatConeFast = 18447, // Helper->self, 2.0s cast, range 20 60-degree cone
+    VariableCombatCircleFast = 18448, // Helper->self, 2.0s cast, range 2 circle
+    VariableCombatDonutFast = 18449, // Helper->self, 2.0s cast, range 7-19 donut
+    ConvenientSelfDestruction = 18460, // SmallExploder->self, no cast, range 5 circle
 
-//     OilWell = 18459, // HobbesHelper->self, no cast, ???
+    RingLaser1Cast = 18431, // Boss->self, 3.4s cast, single-target
+    RingLaser2Cast = 18432, // Boss->self, 1.0s cast, single-target
+    RingLaser3Cast = 18433, // Boss->self, 1.0s cast, single-target
+    RingLaser1 = 18434, // Helper->self, 4.0s cast, range 15-20 donut
+    RingLaser2 = 18435, // Helper->self, 4.0s cast, range 10-15 donut
+    RingLaser3 = 18436, // Helper->self, 4.0s cast, range 5-10 donut
 
-//     RingLaser1 = 18431, // Boss->self, 3.4s cast, single-target
-//     RingLaser2 = 18432, // Boss->self, 1.0s cast, single-target
-//     RingLaser3 = 18434, // HobbesHelper->self, 4.0s cast, range ?-20 donut
-//     RingLaser4 = 18433, // Boss->self, 1.0s cast, single-target
-//     RingLaser5 = 18435, // HobbesHelper->self, 4.0s cast, range ?-15 donut
-//     RingLaser6 = 18436, // HobbesHelper->self, 4.0s cast, range ?-10 donut
+    LaserSightCast = 18439, // Boss->self, 8.0s cast, single-target
+    LaserSightTarget = 18440, // Helper->player, no cast, single-target
+    LaserSightStack = 18441, // Helper->self, no cast, range 65 width 8 rect
 
-//     ShockingDischarge = 18443, // HobbesHelper->self, 2.0s cast, range 5 circle
-//     ShortRangeMissile1 = 18452, // HobbesHelper->self, no cast, single-target
-//     ShortRangeMissile2 = 18453, // HobbesHelper->players, 8.0s cast, range 8 circle
-//     Towerfall = 18451, // HobbesHelper->self, no cast, range 20 width 8 rect
+    UnwillingCargo = 18458, // Helper->self, no cast, range 40 width 7 rect, 15y knockback
+    ElectromagneticPulse = 18457, // Helper->self, no cast, range 40 width 5 rect
+    OilWell = 18459, // Helper->self, no cast, hits either the 4 circular platforms on SE platform or everything except the 4 circular platforms
+    ShortRangeMissile = 18453, // Helper->players, 8.0s cast, range 8 circle
 
-//     UnknownAbility1 = 18707, // Hobbes2->self, no cast, single-target
-//     UnknownAbility2 = 18710, // Hobbes2->self, no cast, single-target
-//     UnknownAbility3 = 18702, // Hobbes3->self, no cast, single-target
-//     UnknownAbility4 = 18706, // Hobbes3->self, no cast, single-target
-//     UnknownAbility5 = 18704, // Hobbes3->self, no cast, single-target
-//     UnknownAbility6 = 18711, // Hobbes2->self, no cast, single-target
-//     UnknownAbility7 = 18701, // Hobbes3->self, no cast, single-target
-//     UnknownAbility8 = 18703, // Hobbes3->self, no cast, single-target
-//     UnknownAbility9 = 18705, // Hobbes3->self, no cast, single-target
-//     UnknownAbility10 = 18683, // Helper2P->location, no cast, single-target
-//     UnknownAbility11 = 18712, // Hobbes2->self, no cast, single-target
-//     UnknownAbility12 = 18709, // Hobbes2->self, no cast, single-target
+    ArmMotion1 = 18701, // RobotArm->self, no cast, single-target
+    ArmMotion2 = 18702, // RobotArm->self, no cast, single-target
+    ArmMotion3 = 18703, // RobotArm->self, no cast, single-target
+    ArmMotion4 = 18704, // RobotArm->self, no cast, single-target
+    ArmMotion5 = 18705, // RobotArm->self, no cast, single-target
+    ArmMotion6 = 18706, // RobotArm->self, no cast, single-target
 
-//     UnknownWeaponskill1 = 18442, // Hobbes3->self, no cast, single-target
-//     UnknownWeaponskill2 = 18444, // Hobbes3->self, no cast, single-target
+    ArmUnk1 = 18442, // RobotArm->self, no cast, single-target
+    ArmUnk2 = 18444, // RobotArm->self, no cast, single-target
+    Unk1 = 18707, // ImpactHelper->self, no cast, single-target
+    UnkVariableCombatTest = 18445, // RobotArm->self, 5.0s cast, single-target
+    UnkShortRangeMissile = 18452, // Helper->self, no cast, single-target
 
-//     UnwillingCargo = 18458, // HobbesHelper->self, no cast, range 40 width 7 rect
+    // 2P ally abilities
+    BalancedEdge = 19049, // Helper2P->self, 2.0s cast, range 5 circle
+    BladeFlurry1 = 18608, // Helper2P->Boss, no cast, single-target
+    BladeFlurry2 = 18609, // Helper2P->Boss, no cast, single-target
+    DancingBlade = 19048, // Helper2P->Boss, no cast, width 2 rect charge
+    WhirlingAssault = 19050, // Helper2P->self, 2.0s cast, range 40 width 4 rect
+    Unk2P = 18683 // Helper2P->location, no cast, single-target
+}
 
-//     VariableCombatTest1 = 18446, // Hobbes3->self, 5.0s cast, single-target
-//     VariableCombatTest2 = 18885, // HobbesHelper->self, 5.7s cast, range 20 ?-degree cone
-//     VariableCombatTest3 = 18887, // HobbesHelper->self, 5.7s cast, range ?-19 donut
-//     VariableCombatTest4 = 18886, // HobbesHelper->self, 5.7s cast, range 2 circle
+public enum SID : uint
+{
+    Unknown = 2056, // RobotArm->RobotArm, extra=0x8F
+    Burns = 2199, // Helper->player, extra=0x1/0x2/0x3
+    PhysicalVulnerabilityUp = 2090, // Helper->player, extra=0x0
+    MagicVulnerabilityUp = 2091, // Helper->player, extra=0x0
+    Electrocution = 2200, // Helper->player, extra=0x1/0x2
+    Oil = 2157 // Helper->player, extra=0x32
+}
 
-//     VariableCombatTest5 = 18446, // Hobbes3->self, 5.0s cast, single-target
-//     VariableCombatTest6 = 18447, // HobbesHelper->self, 2.0s cast, range 20 ?-degree cone
-//     VariableCombatTest7 = 18449, // HobbesHelper->self, 2.0s cast, range ?-19 donut
-//     VariableCombatTest8 = 18448, // HobbesHelper->self, 2.0s cast, range 2 circle
-//     VariableCombatTest9 = 18445, // Hobbes3->self, 5.0s cast, single-target
+public enum IconID : uint
+{
+    RotateCCW = 168, // RobotArm->self
+    RotateCW = 167, // RobotArm->self
+    ShortRangeMissile = 196 // player->self
+}
 
-//     WhirlingAssault = 19050, // Helper2P->self, 2.0s cast, range 40 width 4 rect
-// }
-
-// public enum SID : uint
-// {
-//     Unknown = 2056, // Hobbes3->Hobbes3, extra=0x8F
-//     Burns = 2199, // HobbesHelper->player, extra=0x1/0x2/0x3
-//     PhysicalVulnerabilityUp = 2090, // HobbesHelper->player, extra=0x0
-//     MagicVulnerabilityUp = 2091, // HobbesHelper->player, extra=0x0
-//     Electrocution = 2200, // HobbesHelper->player, extra=0x1/0x2
-//     Oil = 2157, // HobbesHelper->player, extra=0x32
-// }
-
-// public enum IconID : uint
-// {
-//     RotateCCW = 168, // Hobbes3
-//     RotateCW = 167, // Hobbes3
-//     Stackmarker = 196, // player
-// }
-
-// public enum TetherID : uint
-// {
-//     Tether99 = 99, // 18D6->18D6
-//     Tether84 = 84, // SmallExploder->player
-// }
+public enum TetherID : uint
+{
+    BossToWall = 99, // TetherHelper->TetherHelper
+    ConvenientSelfDestruction = 84 // SmallExploder->player
+}

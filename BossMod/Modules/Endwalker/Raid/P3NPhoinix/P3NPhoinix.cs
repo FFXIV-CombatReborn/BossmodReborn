@@ -72,15 +72,60 @@ public enum IconID : uint
 }
 
 sealed class FireplumeSingle(BossModule module) : Components.SimpleAOEs(module, (uint)AID.FireplumeSingle, 15);
-sealed class FireplumeMulti(BossModule module) : Components.SimpleAOEs(module, (uint)AID.FireplumeMulti, 10);
+sealed class FireplumeMulti : Components.SimpleAOEs
+{
+    public FireplumeMulti(BossModule module) : base(module, (uint)AID.FireplumeMulti, 10f, 6)
+    {
+        MaxDangerColor = 2;
+    }
+}
 sealed class Charplume(BossModule module) : Components.SpreadFromCastTargets(module, (uint)AID.Charplume, 6);
 sealed class DevouringBrandFirst(BossModule module) : Components.SimpleAOEs(module, (uint)AID.DevouringBrandFirst, new AOEShapeRect(2, 2.5f));
-sealed class DevouringBrandCross(BossModule module) : Components.SimpleAOEs(module, (uint)AID.DevouringBrandCross, new AOEShapeCross(40, 5));
+
+sealed class DevouringBrandCross(BossModule module) : Components.GenericAOEs(module)
+{
+    private static readonly AOEShapeCross cross = new(40f, 5f);
+    private AOEInstance[] _aoe = [];
+    private int _hits;
+
+    public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => _aoe;
+
+    public override void OnCastStarted(Actor caster, ActorCastInfo spell)
+    {
+        if (spell.Action.ID == (uint)AID.DevouringBrandCross)
+        {
+            _hits = 0;
+            _aoe = [new(cross, spell.LocXZ, spell.Rotation, Module.CastFinishAt(spell))];
+        }
+    }
+
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
+    {
+        if (_aoe.Length != 0 && spell.Action.ID is (uint)AID.DevouringBrandCross or (uint)AID.DevouringBrandEnd)
+        {
+            ++NumCasts;
+            if (++_hits >= 5)
+            {
+                _aoe = [];
+            }
+            else
+            {
+                _aoe[0].Activation = WorldState.FutureTime(1.1d);
+            }
+        }
+    }
+}
 sealed class ForeCarve(BossModule module) : Components.SimpleAOEs(module, (uint)AID.ForeCarve, new AOEShapeCone(15, 90.Degrees()));
 sealed class RearCarve(BossModule module) : Components.SimpleAOEs(module, (uint)AID.RearCarve, new AOEShapeCone(15, 90.Degrees()));
 sealed class DeadRebirth(BossModule module) : Components.RaidwideCast(module, (uint)AID.DeadRebirth);
 sealed class DeadRebirthEmpowered(BossModule module) : Components.RaidwideCast(module, (uint)AID.DeadRebirthEmpowered, "Raidwide (sparkfledged linked)");
-sealed class AshenEye(BossModule module) : Components.SimpleAOEs(module, (uint)AID.AshenEye, new AOEShapeCone(60, 45.Degrees()));
+sealed class AshenEye : Components.SimpleAOEs
+{
+    public AshenEye(BossModule module) : base(module, (uint)AID.AshenEye, new AOEShapeCone(60f, 45f.Degrees()), 2)
+    {
+        MaxDangerColor = 1;
+    }
+}
 sealed class TrailOfCondemnation(BossModule module) : Components.SimpleAOEs(module, (uint)AID.TrailOfCondemnationAOE, new AOEShapeRect(40, 7.5f));
 sealed class FlareOfCondemnation(BossModule module) : Components.SpreadFromCastTargets(module, (uint)AID.FlareOfCondemnation, 6);
 sealed class HeatOfCondemnation(BossModule module) : Components.BaitAwayCast(module, (uint)AID.HeatOfCondemnationAOE, new AOEShapeCircle(6), true);

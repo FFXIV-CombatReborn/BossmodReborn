@@ -120,5 +120,5 @@ class LunarRavanaStates : StateMachineBuilder
 public class LunarRavana(WorldState ws, Actor primary) : BossModule(ws, primary, new(-144f, 83f), new ArenaBoundsCircle(20f))
 {
     protected override void DrawEnemies(int pcSlot, Actor pc) => Arena.Actors(WorldState.Actors.Where(x => !x.IsAlly));
-    protected override bool CheckPull() => Raid.Player()!.InCombat;
+    protected override bool CheckPull() => Raid.Player()?.InCombat == true;
 }

@@ -6,12 +6,16 @@ sealed class TasteOfBloodAndDuelOrDie(BossModule module) : Components.GenericAOE
     public readonly List<Actor> Casters = [];
     public readonly List<Actor> Duelers = [];
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = Casters.Count;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var caster = Casters[i];
@@ -20,7 +24,7 @@ sealed class TasteOfBloodAndDuelOrDie(BossModule module) : Components.GenericAOE
             var angle = Duelers.Contains(caster) ? caster.Rotation + 180f.Degrees() : caster.Rotation;
             aoes[i] = new(_tasteOfBloodShape, caster.Position.Quantized(), angle);
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

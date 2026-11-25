@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Trial.T04WarriorOfLightP1;
+﻿namespace BossMod.Shadowbringers.Trial.T04WarriorOfLightP1;
 
 public enum OID : uint
 {
@@ -76,7 +76,7 @@ public enum AID : uint
     ShiningWave = 20262, // 233C->self, no cast, range 50 ?-degree cone
     SuitonSanVisual = 20280, // SpectralNinja->self, 3.0s cast, single-target
     KatonSan = 20281, // SpectralNinja->self, 3.0s cast, single-target
-    _Ability_2 = 20296, // 233C->self, 6.0s cast, range 60 width 40 rect
+    RadiantSacrament = 20296, // 233C->self, 6.0s cast, range 60 width 40 rect, covers the whole arena
     SuitonSan = 20252, // 233C->self, 6.0s cast, range 60 width 60 rect
     KatonSan1 = 20253, // 233C->players, 5.0s cast, range 6 circle
     Summon = 20287, // SpectralSummoner->self, 3.0s cast, single-target
@@ -148,7 +148,7 @@ class ElementStayMove(BossModule module) : Components.StayMove(module)
     {
         if (iconID is (uint)IconID.Move)
         {
-            Requirement r = Requirement.Move;
+            var r = Requirement.Move;
 
             var p = Raid.FindSlot(actor.InstanceID);
             if (p >= 0)
@@ -239,7 +239,12 @@ class ElementStayMove(BossModule module) : Components.StayMove(module)
          * Absolute Blizzard needs a clear condition that isn't right when the spell finishes.
          * Update checks to see if the StayMove.Finish time has passed and clears move state if so.
          */
-        var slot = Raid.FindSlot(Raid.Player()!.InstanceID);
+        // the player may be missing (replays) or not in the party, which would make the slot -1
+        if (Raid.Player() is not Actor player)
+            return;
+        var slot = Raid.FindSlot(player.InstanceID);
+        if (slot < 0)
+            return;
 
         if (PlayerStates[slot].Finish != default && PlayerStates[slot].Finish <= WorldState.CurrentTime)
         {
@@ -260,6 +265,7 @@ sealed class ImbuedCoruscanceDonut(BossModule module)
 sealed class UltimateCrossover(BossModule module) : Components.RaidwideCast(module, (uint)AID.UltimateCrossover, hint: "TankLB3 when 'Transcend your limits...'");
 
 sealed class Ascendance(BossModule module) : Components.RaidwideCast(module, (uint)AID.Ascendance);
+sealed class RadiantSacrament(BossModule module) : Components.RaidwideCast(module, (uint)AID.RadiantSacrament);
 
 // Twincast happens and then there is towers to stand in. Towers only need two soakers. Max soakers is higher
 // because ai can sometimes run out of a tower when it shouldn't if you set min, max soakers to 2,2.
@@ -294,7 +300,7 @@ sealed class Twincast(BossModule module) : Components.CastTowers(module, (uint)A
     public override void OnMapEffect(byte index, uint state)
     {
         // activation time is an estimate. We use map effects to remove towers.
-        DateTime _activation = WorldState.FutureTime(10f);
+        var _activation = WorldState.FutureTime(10f);
         WPos pos;
         WPos startPos = new(100f, 89.5f);
         // We derive angle by 45 degrees times index position where 0 is North. 1 is NE, etc
@@ -314,7 +320,14 @@ sealed class Twincast(BossModule module) : Components.CastTowers(module, (uint)A
             Towers.Add(new(pos.Quantized(), 3f, 2, 2, default, _activation));
         // state 00080004 is when tower template is removed.
         if (state == 0x00080004u && pos != default)
-            Towers.RemoveAll(tower => tower.Position == pos.Quantized());
+        {
+            var q = pos.Quantized();
+            for (var i = Towers.Count - 1; i >= 0; --i)
+            {
+                if (Towers[i].Position == q)
+                    Towers.RemoveAt(i);
+            }
+        }
     }
 }
 
@@ -346,7 +359,7 @@ sealed class DelugeOfDeath(BossModule module)
             // Only targets of spreads run to corners.
             foreach (var bait in ActiveBaits)
             {
-                if (bait.Target.InstanceID == Raid.Player()!.InstanceID)
+                if (bait.Target == Raid.Player())
                 {
                     hints.AddForbiddenZone(new SDIntersection(baitZonez), _activation);
                 }
@@ -364,7 +377,7 @@ sealed class AbsoluteHoly(BossModule module)
     {
         base.OnEventIcon(actor, iconID, targetID);
         // If pc has Deluge of Death proximity bait they should not stack.
-        if (iconID == (uint)IconID.ProximityBait && targetID == Raid.Player()!.InstanceID)
+        if (iconID == (uint)IconID.ProximityBait && Raid.Player() is Actor player && targetID == player.InstanceID)
         {
             // Proximity bait target -> forbidden soakers
             BitMask forbid = default;
@@ -447,7 +460,13 @@ sealed class RadiantDesperado(BossModule module) : Components.LineStack(module, 
                 {
                     CurrentBaits.Clear();
                 }
-                CurrentBaits.RemoveAll(bait => bait.Target.TargetID == spell.MainTargetID);
+                // was comparing the bait target's own target (TargetID) instead of the bait target itself
+                var targetID = spell.MainTargetID;
+                for (var i = CurrentBaits.Count - 1; i >= 0; --i)
+                {
+                    if (CurrentBaits[i].Target.InstanceID == targetID)
+                        CurrentBaits.RemoveAt(i);
+                }
                 ++NumCasts;
             }
         }
@@ -476,7 +495,7 @@ sealed class RadiantMeteor(BossModule module) : Components.SpreadFromCastTargets
             // Only targets of spreads run to corners.
             foreach (var spread in ActiveSpreads)
             {
-                if (spread.Target.InstanceID == Raid.Player()!.InstanceID)
+                if (spread.Target == Raid.Player())
                 {
                     hints.AddForbiddenZone(new SDIntersection(baitZonez), _activation);
                 }
@@ -513,7 +532,7 @@ sealed class BrimstoneEarthGrow(BossModule module) : Components.SimpleAOEs(modul
             for (var i = 0; i < _genAOE; ++i)
             {
                 // The first long cast takes approx 6 seconds. The instants that follow every 1 seconds or so.
-                DateTime _activation = WorldState.FutureTime(5f + (1.0f * i));
+                var _activation = WorldState.FutureTime(5f + 1.0f * i);
 
                 Casters.Add(new(new AOEShapeCircle(i), spell.LocXZ.Quantized(), spell.Rotation, _activation,
                     actorID: caster.InstanceID));
@@ -525,14 +544,24 @@ sealed class BrimstoneEarthGrow(BossModule module) : Components.SimpleAOEs(modul
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action.ID is (uint)AID.BrimstoneEarth1 or (uint)AID.BrimstoneEarth2 && Casters.Count != 0)
-            Casters.RemoveAll(cast => cast.Activation <= WorldState.CurrentTime);
+            RemoveResolvedCasters();
     }
 
     public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
         if (spell.Action.ID is (uint)AID.BrimstoneEarth2 && Casters.Count != 0)
         {
-            Casters.RemoveAll(cast => cast.Activation <= WorldState.CurrentTime);
+            RemoveResolvedCasters();
+        }
+    }
+
+    private void RemoveResolvedCasters()
+    {
+        var now = WorldState.CurrentTime;
+        for (var i = Casters.Count - 1; i >= 0; --i)
+        {
+            if (Casters[i].Activation <= now)
+                Casters.RemoveAt(i);
         }
     }
 
@@ -584,7 +613,15 @@ sealed class SwordOfLight(BossModule module)
     {
         if (spell.Action.ID is (uint)AID.ShiningWave && Casters.Count != 0)
         {
-            Casters.RemoveAll(cast => cast.Activation <= WorldState.CurrentTime && cast.Shape is AOEShapeCone);
+            {
+                var now = WorldState.CurrentTime;
+                for (var i = Casters.Count - 1; i >= 0; --i)
+                {
+                    var c = Casters[i];
+                    if (c.Activation <= now && c.Shape is AOEShapeCone)
+                        Casters.RemoveAt(i);
+                }
+            }
         }
     }
 }
@@ -648,6 +685,7 @@ sealed class T04WarriorOfLightP1States : StateMachineBuilder
             .ActivateOnEnter<RadiantMeteor>()
             .ActivateOnEnter<UltimateCrossover>()
             .ActivateOnEnter<Ascendance>()
+            .ActivateOnEnter<RadiantSacrament>()
             .ActivateOnEnter<KatonSan>()
             .ActivateOnEnter<PerfectDecimation>()
             .ActivateOnEnter<FlareBreath>()

@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Foray.CriticalEngagement.CE32RiseOfTheRobots;
+﻿namespace BossMod.Shadowbringers.Foray.CriticalEngagement.CE32RiseOfTheRobots;
 
 public enum OID : uint
 {
@@ -325,5 +325,5 @@ public sealed class CE32RiseOfTheRobots(WorldState ws, Actor primary) : BossModu
     public static readonly WPos ArenaCenter = new(104f, 237f);
     private static readonly ArenaBoundsCustom startingArena = new([new Polygon(ArenaCenter, 29.5f, 32)]);
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 30f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 30f);
 }

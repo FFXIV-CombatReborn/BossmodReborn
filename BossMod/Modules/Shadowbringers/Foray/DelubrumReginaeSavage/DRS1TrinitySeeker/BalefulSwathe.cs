@@ -5,11 +5,15 @@ sealed class BalefulSwathe(BossModule module) : Components.GenericAOEs(module, (
     private readonly DateTime _activation = module.WorldState.FutureTime(7.6d); // from verdant path cast start
     private readonly AOEShapeRect _shape = new(50f, 50f, -5f);
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
-        var aoes = new AOEInstance[2];
+        var aoesLen = 2;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         aoes[0] = new(_shape, Module.PrimaryActor.Position, Module.PrimaryActor.Rotation + 90f.Degrees(), _activation);
         aoes[1] = new(_shape, Module.PrimaryActor.Position, Module.PrimaryActor.Rotation - 90f.Degrees(), _activation);
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 }

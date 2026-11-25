@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.TreasureHunt.ShiftingOubliettesOfLyheGhiah.DaenOseTheAvariciousEchidna;
+﻿namespace BossMod.Shadowbringers.TreasureHunt.ShiftingOubliettesOfLyheGhiah.DaenOseTheAvariciousEchidna;
 
 public enum OID : uint
 {
@@ -58,6 +58,7 @@ sealed class PetrifactionPlayer(BossModule module) : Components.GenericGaze(modu
     private DateTime activation;
     private Actor? target;
 
+    private readonly Eye[] _oneEye = new Eye[1];
     public override ReadOnlySpan<Eye> ActiveEyes(int slot, Actor actor)
     {
         if (target == null)
@@ -65,7 +66,10 @@ sealed class PetrifactionPlayer(BossModule module) : Components.GenericGaze(modu
             return [];
         }
         var loc = target.Position.Quantized();
-        return new Eye[1] { new(loc, activation, eyeCenter: loc) };
+        {
+            _oneEye[0] = new(loc, activation, eyeCenter: loc);
+            return _oneEye;
+        }
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)

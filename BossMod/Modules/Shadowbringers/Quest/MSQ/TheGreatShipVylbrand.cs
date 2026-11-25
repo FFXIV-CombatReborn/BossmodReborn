@@ -124,12 +124,16 @@ class Bulldoze(BossModule module) : Components.GenericAOEs(module)
 {
     private readonly List<AOEInstance> _aoes = [with(4)];
 
+    private AOEInstance[] _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _aoes.Count;
         if (count == 0)
             return [];
-        var aoes = new AOEInstance[count];
+        var aoesLen = count;
+        if (_aoesBuffer.Length < aoesLen)
+            _aoesBuffer = new AOEInstance[aoesLen];
+        var aoes = _aoesBuffer;
         for (var i = 0; i < count; ++i)
         {
             var aoe = _aoes[i];
@@ -138,7 +142,7 @@ class Bulldoze(BossModule module) : Components.GenericAOEs(module)
             else
                 aoes[i] = aoe;
         }
-        return aoes;
+        return aoes.AsSpan(0, aoesLen);
     }
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
@@ -238,7 +242,7 @@ public class SecondOrderRocksplitter(WorldState ws, Actor primary) : BossModule(
     private static readonly uint[] all = [(uint)OID.Grenade1, (uint)OID.Grenade2, (uint)OID.SecondOrderRoundsman, (uint)OID.SecondOrderRocksplitter, (uint)OID.SecondOrderPickman,
     (uint)OID.SecondOrderAlchemist, (uint)OID.Bomb, (uint)OID.Construct2, (uint)OID.OghomoroGolem];
 
-    protected override bool CheckPull() => Raid.Player()!.InCombat;
+    protected override bool CheckPull() => Raid.Player()?.InCombat == true;
     protected override void DrawEnemies(int pcSlot, Actor pc) => Arena.Actors(this, all);
 
     protected override void CalculateModuleAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)

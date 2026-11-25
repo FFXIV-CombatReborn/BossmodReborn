@@ -126,7 +126,7 @@ sealed class P4FateCalibrationBetaJJump(BossModule module) : Components.GenericB
 
         foreach (var source in _jumpers)
         {
-            var target = Raid.WithoutSlot(false, true, true).Farthest(source.Position);
+            var target = Raid.WithoutSlot(false, true, true).FarthestFrom(source.Position);
             if (target != null)
                 CurrentBaits.Add(new(source, target, _shape));
         }
@@ -208,10 +208,14 @@ sealed class P4FateCalibrationBetaRadiantSacrament(BossModule module) : Componen
 
     public void Show() => _enabled = true;
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_enabled && _caster != null)
-            return new AOEInstance[1] { new(_shape, _caster.Position) };
+        {
+            _oneAOEInstance[0] = new(_shape, _caster.Position);
+            return _oneAOEInstance;
+        }
         return [];
     }
 

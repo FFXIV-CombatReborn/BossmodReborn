@@ -1,18 +1,25 @@
-﻿namespace BossMod.Dawntrail.Unreal.Un2Shinryu;
+﻿namespace BossMod.Dawntrail.Unreal.Un5Shinryu;
 
 // phase 1 is a fixed timeline (two kills on 2026-10-18 matched within 0.3s), taken from the first earthen fury cast.
 // two slots are random: levinbolt or hypernova at 60s, hellfire or judgment bolt at 102s. dark matter is an hp push
 // (seen at 266s, 302s and 345s) and ends the phase. everything after ~300s comes from a single partial pull.
 // phases 2 and 3 are simple enough to run with everything active and no timeline.
-class Un2ShinryuStates : StateMachineBuilder
+class Un5ShinryuStates : StateMachineBuilder
 {
     private float _t = -10.2f; // timeline cursor: when the previous state ends, in seconds from the first earthen fury cast, which comes 10.2s after the pull
 
-    public Un2ShinryuStates(BossModule module) : base(module)
+    public Un5ShinryuStates(BossModule module) : base(module)
     {
         SimplePhase(0, Phase1, "Phase 1: tiles")
             .Raw.Update = () => Module.PrimaryActor.IsDestroyed || Module.PrimaryActor.CastInfo?.IsSpell(AID.DarkMatter) == true;
-        DeathPhase(1, id => AllComponents(SimpleState(id, 10000f, "Phase 2 + 3")));
+        DeathPhase(1, id => AllComponents(SimpleState(id, 10000f, "Phase 2 + 3"))
+            .ActivateOnEnter<TouchdownSpot>()
+            .ActivateOnEnter<TailSpitKnockback>()
+            .ActivateOnEnter<TailSpitSmall>()
+            .ActivateOnEnter<DoomPuddle>()
+            .ActivateOnEnter<IceStormFreeze>()
+            .ActivateOnEnter<HypernovaP3>()
+            .ActivateOnEnter<LevinboltP3Hint>());
     }
 
     private void Phase1(uint id)
@@ -136,5 +143,10 @@ class Un2ShinryuStates : StateMachineBuilder
         .ActivateOnEnter<AtomicRay>()
         .ActivateOnEnter<AetherialRay>()
         .ActivateOnEnter<Wormwail>()
-        .ActivateOnEnter<BenightingBreath>();
+        .ActivateOnEnter<BenightingBreath>()
+        .ActivateOnEnter<AkhRhaiBait>()
+        .ActivateOnEnter<AkhRhai>()
+        .ActivateOnEnter<WaterPuddles>()
+        .ActivateOnEnter<Paralysis>()
+        .ActivateOnEnter<DarkMatterPush>();
 }

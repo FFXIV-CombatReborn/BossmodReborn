@@ -11,6 +11,9 @@ abstract class Chess(BossModule module) : Components.GenericAOEs(module)
     protected GuardState[] GuardStates = new GuardState[4];
     protected readonly AOEShapeCross Shape = new(60f, 5f);
 
+    private AOEInstance[] _guardAOEs = [];
+    private AOEInstance[] _guardAOEsFor(int n) => _guardAOEs.Length >= n ? _guardAOEs : (_guardAOEs = new AOEInstance[n]);
+
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (NumCasts >= 4)
@@ -22,7 +25,7 @@ abstract class Chess(BossModule module) : Components.GenericAOEs(module)
         if (count <= 0)
             return [];
 
-        var aoes = new AOEInstance[count];
+        var aoes = _guardAOEsFor(count);
         var index = 0;
 
         for (var i = start; i < start + count; ++i)
@@ -139,6 +142,7 @@ sealed class QueensEdict(BossModule module) : Chess(module)
             _safespotZOffset = index == 0x1D ? 2 : -2;
     }
 
+    private readonly List<(WPos, WPos, uint)> _movesBuffer = [];
     private List<(WPos from, WPos to, uint color)> GetSafeSpotMoves(Actor actor)
     {
         var state = _playerStates.GetValueOrDefault(actor.InstanceID);
@@ -187,7 +191,8 @@ sealed class QueensEdict(BossModule module) : Chess(module)
 
         var color = Colors.Safe;
         var from = actor.Position;
-        var moves = new List<(WPos, WPos, uint)>();
+        var moves = _movesBuffer;
+        moves.Clear();
         var count = state.Safespots.Count;
         for (var i = NumCasts / 2; i < count; ++i)
         {
@@ -213,9 +218,11 @@ sealed class QueensEdict(BossModule module) : Chess(module)
 
     private WPos CellCenter((int x, int z) cell) => Arena.Center + 10 * new WDir(cell.x, cell.z);
 
+    private readonly List<(int x, int z)> _cellsBuffer = [];
     private List<(int x, int z)> CellsAtManhattanDistance((int x, int z) origin, int distance)
     {
-        var cells = new List<(int x, int z)>();
+        var cells = _cellsBuffer;
+        cells.Clear();
         for (var x = -2; x <= 2; ++x)
         {
             var dz = distance - Math.Abs(x - origin.x);

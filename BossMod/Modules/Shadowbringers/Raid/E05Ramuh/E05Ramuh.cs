@@ -76,6 +76,7 @@ sealed class DeadlyDischarge(BossModule module) : Components.SimpleAOEs(module, 
 }
 sealed class DeadlyDischargeKnockback(BossModule module) : Components.SimpleKnockbacks(module, (uint)AID.DeadlyDischarge, 10f)
 {
+    private Knockback[] _knockbackBuffer = [];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (Casters.Count == 0)
@@ -83,11 +84,14 @@ sealed class DeadlyDischargeKnockback(BossModule module) : Components.SimpleKnoc
             return [];
         }
 
-        var knockback = new Knockback[1];
+        var knockbackLen = 1;
+        if (_knockbackBuffer.Length < knockbackLen)
+            _knockbackBuffer = new Knockback[knockbackLen];
+        var knockback = _knockbackBuffer;
         var left = actor.Position.X < 100f;
         ref var kb = ref Casters.Ref(0);
         knockback[0] = new(kb.Origin, kb.Distance, kb.Activation, kb.Shape, kb.Direction, left ? Kind.DirLeft : Kind.DirRight, kb.MinDistance, kb.SafeWalls, kb.ActorID, kb.IgnoreImmunes, kb.ArenaProjectionLayer, kb.RestrictToArenaProjectionLayer);
-        return knockback;
+        return knockback.AsSpan(0, knockbackLen);
     }
 }
 sealed class Gallop(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Gallop, new AOEShapeRect(50f, 2.5f));
@@ -229,6 +233,6 @@ sealed class RamuhStates : StateMachineBuilder
     }
 }
 
-[ModuleInfo(BossModuleInfo.Maturity.WIP, PrimaryActorOID = (uint)OID.Ramuh, Contributors = "gynorhino", Expansion = BossModuleInfo.Expansion.Shadowbringers, Category = BossModuleInfo.Category.Raid,
+[ModuleInfo(BossModuleInfo.Maturity.Contributed, PrimaryActorOID = (uint)OID.Ramuh, Contributors = "gynorhino", Expansion = BossModuleInfo.Expansion.Shadowbringers, Category = BossModuleInfo.Category.Raid,
 GroupType = BossModuleInfo.GroupType.CFC, GroupID = 715u, NameID = 9281u, SortOrder = 1)]
 public sealed class Ramuh(WorldState ws, Actor primary) : BossModule(ws, primary, new(100f, 100f), new ArenaBoundsRect(19.5f, 14.5f));

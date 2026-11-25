@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Hunt.RankS.Aglaope;
+﻿namespace BossMod.Shadowbringers.Hunt.RankS.Aglaope;
 
 public enum OID : uint
 {
@@ -54,7 +54,8 @@ sealed class SeductiveSonata(BossModule module) : Components.GenericAOEs(module)
         // this AOE should wait for Effect Results, since they can be delayed by over 2.1s, which would cause unknowning players and AI to run back into the death zone
         if (done)
         {
-            var player = Module.Raid.Player()!;
+            if (Module.Raid.Player() is not Actor player)
+                return;
             var statuses = CollectionsMarshal.AsSpan(player.PendingStatuses);
             var len = statuses.Length;
             for (var i = 0; i < len; ++i)

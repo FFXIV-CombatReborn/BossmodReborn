@@ -4,11 +4,15 @@ sealed class FatefulWords(BossModule module) : Components.GenericKnockback(modul
 {
     private readonly Kind[] _mechanics = new Kind[PartyState.MaxPartySize];
 
+    private readonly Knockback[] _oneKnockback = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         var kind = _mechanics[slot];
         if (kind != Kind.None)
-            return new Knockback[1] { new(Arena.Center, 6f, Module.CastFinishAt(Module.PrimaryActor.CastInfo), kind: kind, ignoreImmunes: true) };
+        {
+            _oneKnockback[0] = new(Arena.Center, 6f, Module.CastFinishAt(Module.PrimaryActor.CastInfo), kind: kind, ignoreImmunes: true);
+            return _oneKnockback;
+        }
         return [];
     }
 

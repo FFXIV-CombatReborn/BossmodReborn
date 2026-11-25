@@ -1,4 +1,4 @@
-/*
+﻿/*
  * The phase 2 boss is a different actor than the phase 1 boss.
  * There is a checkpoint midway through the fight where party can restart
  * if they die after phase 2 boss has been damaged.
@@ -39,6 +39,7 @@ sealed class T04WarriorOfLightP2States : StateMachineBuilder
             .ActivateOnEnter<RadiantMeteor>()
             .ActivateOnEnter<UltimateCrossover>()
             .ActivateOnEnter<Ascendance>()
+            .ActivateOnEnter<RadiantSacrament>()
             .ActivateOnEnter<KatonSan>()
             .ActivateOnEnter<PerfectDecimation>()
             .ActivateOnEnter<FlareBreath>()

@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Foray.CriticalEngagement.CE23FiresOfWar;
+﻿namespace BossMod.Shadowbringers.Foray.CriticalEngagement.CE23FiresOfWar;
 
 public enum OID : uint
 {
@@ -142,6 +142,8 @@ sealed class TooHotToHandle(BossModule module) : Components.GenericAOEs(module)
     private readonly List<AOEInstance> _aoes = [with(9)];
     private WPos? mater;
 
+    private readonly AOEInstance[] _filteredAOEs = new AOEInstance[8];
+
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var count = _aoes.Count;
@@ -162,7 +164,7 @@ sealed class TooHotToHandle(BossModule module) : Components.GenericAOEs(module)
                     furthest = aoe.Origin;
                 }
             }
-            Span<AOEInstance> filteredAOEs = new AOEInstance[8];
+            Span<AOEInstance> filteredAOEs = _filteredAOEs;
             var index = 0;
             for (var i = 0; i < 9; ++i)
             {
@@ -170,7 +172,7 @@ sealed class TooHotToHandle(BossModule module) : Components.GenericAOEs(module)
                 if (aoe.Origin != furthest)
                     filteredAOEs[index++] = aoe;
             }
-            return filteredAOEs;
+            return filteredAOEs[..index];
         }
         return aoes;
     }
@@ -309,7 +311,7 @@ public sealed class CE23FiresOfWar(WorldState ws, Actor primary) : BossModule(ws
     private Actor? _bossMater;
     public Actor? BossMater() => _bossMater;
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 20f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 20f);
 
     protected override void UpdateModule()
     {

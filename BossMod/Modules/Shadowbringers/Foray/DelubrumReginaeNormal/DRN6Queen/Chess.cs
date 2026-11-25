@@ -8,6 +8,7 @@ sealed class Chess(BossModule module) : Components.GenericAOEs(module)
     private DateTime _activation;
     private readonly List<WPos> excludeCrosses = [with(2)];
 
+    private readonly List<AOEInstance> _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (slot is < 0 or > 23)
@@ -26,7 +27,8 @@ sealed class Chess(BossModule module) : Components.GenericAOEs(module)
         }
         var tiles = GetSquaresAtManhattanDistance(actor.Position, dist, excludeCrosses);
         var count = tiles.Count;
-        var aoes = new List<AOEInstance>(count);
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         var color = Colors.SafeFromAOE;
         for (var i = 0; i < count; ++i)
         {
@@ -195,13 +197,15 @@ sealed class Chess(BossModule module) : Components.GenericAOEs(module)
         hints.Add("Move to a safe tile!", !isInside);
     }
 
+    private readonly List<ShapeDistance> _forbiddenBuffer = [];
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         var aoes = ActiveAOEs(slot, actor);
         var len = aoes.Length;
         if (len == 0)
             return;
-        var forbidden = new List<ShapeDistance>(len);
+        var forbidden = _forbiddenBuffer;
+        forbidden.Clear();
         for (var i = 0; i < len; ++i)
         {
             ref readonly var aoe = ref aoes[i];

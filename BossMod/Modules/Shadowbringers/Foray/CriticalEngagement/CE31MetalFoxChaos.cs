@@ -29,6 +29,9 @@ sealed class MagitekBitLasers(BossModule module) : Components.GenericAOEs(module
     private static readonly AOEShapeRect rect = new(100f, 3f);
     private static readonly Angle a90 = 90f.Degrees(), a180 = 180f.Degrees();
 
+    private AOEInstance[] _bitAOEs = [];
+    private AOEInstance[] BitAOEsFor(int n) => _bitAOEs.Length >= n ? _bitAOEs : (_bitAOEs = new AOEInstance[n]);
+
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (Type == Types.None)
@@ -36,7 +39,7 @@ sealed class MagitekBitLasers(BossModule module) : Components.GenericAOEs(module
 
         var bits = Module.Enemies((uint)OID.MagitekBit);
         var count = bits.Count;
-        Span<AOEInstance> aoes = new AOEInstance[count];
+        Span<AOEInstance> aoes = BitAOEsFor(count);
         var index = 0;
         var time = WorldState.CurrentTime > _times[0];
         if (Type == Types.SatelliteLaser && time)
@@ -124,5 +127,5 @@ sealed class CE31MetalFoxChaosStates : StateMachineBuilder
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "Malediktus", GroupType = BossModuleInfo.GroupType.CriticalEngagement, GroupID = 735, NameID = 13)] // bnpcname=9424
 public sealed class CE31MetalFoxChaos(WorldState ws, Actor primary) : BossModule(ws, primary, new(-234f, 262f), new ArenaBoundsSquare(29.5f))
 {
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InSquare(Arena.Center, 30f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InSquare(Arena.Center, 30f);
 }

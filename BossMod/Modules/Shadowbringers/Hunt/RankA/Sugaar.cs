@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Hunt.RankA.Sugaar;
+﻿namespace BossMod.Shadowbringers.Hunt.RankA.Sugaar;
 
 public enum OID : uint
 {
@@ -57,10 +57,14 @@ class NumbingNoiseTailSnapAttract(BossModule module) : Components.GenericKnockba
 
     private static readonly AOEShapeCircle _shape = new(30f);
 
+    private readonly Knockback[] _oneKnockback = new Knockback[1];
     public override ReadOnlySpan<Knockback> ActiveKnockbacks(int slot, Actor actor)
     {
         if (_activation != default)
-            return new Knockback[1] { new(Module.PrimaryActor.Position, 25f, _activation, _shape, default, Kind.TowardsOrigin, Module.PrimaryActor.HitboxRadius + actor.HitboxRadius) };
+        {
+            _oneKnockback[0] = new(Module.PrimaryActor.Position, 25f, _activation, _shape, default, Kind.TowardsOrigin, Module.PrimaryActor.HitboxRadius + actor.HitboxRadius);
+            return _oneKnockback;
+        }
         else
             return [];
     }

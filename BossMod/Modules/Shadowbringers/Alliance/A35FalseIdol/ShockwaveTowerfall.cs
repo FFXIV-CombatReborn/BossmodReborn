@@ -105,12 +105,12 @@ sealed class ShockwaveKB(BossModule module) : Components.GenericKnockback(module
             {
                 var loc = kb.Origin;
                 var center = Arena.Center;
-                var dir = (-45f).Degrees().ToDirection();
-                var locAdj = (loc - center).Rotate(180f.Degrees()) + center - 20f * dir;
                 // square intentionally smaller for optimal knockbacks
                 if (NumCasts == 0)
                 {
-                    hints.AddForbiddenZone(new SDKnockbackInAABBSquareAwayFromOriginPlusRectAOE(center, loc, 35f, 20f, locAdj, dir, 40f, 7f), act);
+                    var dir = (loc - center).Normalized();
+                    var landing = center + (center - loc) + 3f * dir;
+                    hints.AddForbiddenZone(new SDKnockbackInAABBSquareAwayFromOriginPlusRectAOE(center, loc, 35f, 20f, landing, dir, 15f, 7f), act);
                 }
                 else
                 {

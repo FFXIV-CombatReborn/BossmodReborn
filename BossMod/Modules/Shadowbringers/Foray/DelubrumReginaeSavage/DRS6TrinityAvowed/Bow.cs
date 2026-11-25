@@ -41,6 +41,7 @@ abstract class ShimmeringShot(BossModule module, double spawnToActivation) : Tem
     private readonly AOEShapeRect _shapeCell = new(5f, 5f, 5f);
     private readonly int[,] _remap = { { 0, 1, 2, 3, 4 }, { 4, 2, 3, 0, 1 }, { 3, 4, 1, 2, 0 }, { 3, 4, 1, 2, 0 }, { 4, 2, 3, 0, 1 } };
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_arrowsInited.Raw != 0x1B)
@@ -52,7 +53,10 @@ abstract class ShimmeringShot(BossModule module, double spawnToActivation) : Tem
 
         var xOffset = _pattern is Pattern.EWNormal or Pattern.EWInverted ? -20f : +20f;
         var zOffset = 10f * (cell - 2);
-        return new AOEInstance[1] { new(_shapeCell, new WPos(-272f, -82f) + new WDir(xOffset, zOffset), default, _activation, Colors.SafeFromAOE, false) };
+        {
+            _oneAOEInstance[0] = new(_shapeCell, new WPos(-272f, -82f) + new WDir(xOffset, zOffset), default, _activation, Colors.SafeFromAOE, false);
+            return _oneAOEInstance;
+        }
     }
 
     public override void Update()

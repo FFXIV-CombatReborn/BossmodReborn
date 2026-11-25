@@ -9,7 +9,7 @@ sealed class P2Flarethrower(BossModule module) : Components.GenericBaitAway(modu
     public override void Update()
     {
         CurrentBaits.Clear();
-        if (_source != null && Raid.WithoutSlot(false, true, true).Closest(_source.Position) is var target && target != null)
+        if (_source != null && Raid.WithoutSlot(false, true, true).ClosestTo(_source.Position) is var target && target != null)
             CurrentBaits.Add(new(_source, target, _shape));
     }
 

@@ -1,4 +1,4 @@
-﻿namespace BossMod.Dawntrail.Unreal.Un2Shinryu;
+﻿namespace BossMod.Dawntrail.Unreal.Un5Shinryu;
 
 // ids were derived from game data (BNpcBase block mirrors the EX block, action ids = EX + 0x9E5C) and then checked
 // against a full-kill replay from 2026-10-18. everything with a comment below was seen in that replay.
@@ -24,7 +24,10 @@ public enum OID : uint
     ReiryuHelper = 0x1FA8, // R0.500, x12
     Platform = 0x1EA1A1, // EventObj, 9 tiles at (0/+-20, 0/+-20)
     WaterSpout = 0x1E8536, // EventObj, tidal wave source
-    WaterPuddle = 0x1E950D // EventObj, tidal wave puddles on tile centers
+    WaterPuddle = 0x1E950D, // EventObj, tidal wave puddles on tile centers
+    DoomPuddle = 0x1EA7E9, // R0.500, x1, EventObj type
+    JumpPadWest = 0x1EA7F1, // R0.500, x1, EventObj type
+    JumpPadEast = 0x1EA7D9 // R0.500, x1, EventObj type
 }
 
 public enum AID : uint
@@ -117,6 +120,8 @@ public enum AID : uint
 
 public enum SID : uint
 {
+    Paralysis = 17, // Helper->player, extra=0x0
+    Doom = 210, // none->player, extra=0x0
     BurningChains = 769, // Helper->player, run apart to break
     Fetters = 822, // Boss->player, after dark matter
     ThinIce = 911, // Helper->player, after diamond dust

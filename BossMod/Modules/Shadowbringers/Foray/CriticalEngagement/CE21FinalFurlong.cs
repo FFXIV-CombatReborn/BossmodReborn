@@ -126,5 +126,5 @@ public sealed class CE21FinalFurlong(WorldState ws, Actor primary) : BossModule(
 {
     private static readonly ArenaBoundsCustom arena = new([new Polygon(new(644f, 228f), 29.5f, 32)]);
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 30f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InCircle(Arena.Center, 30f);
 }

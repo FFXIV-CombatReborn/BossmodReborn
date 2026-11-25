@@ -1,4 +1,5 @@
 ﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Game.ClientState.JobGauge.Enums;
 using Dalamud.Interface.GameFonts;
 using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Interface.Textures;
@@ -192,7 +193,13 @@ internal sealed class GaugeVisualizer
 
         void drawChakra(int num)
         {
-            switch (gauge.BeastChakra[num])
+            var chakra = num switch
+            {
+                0 => gauge.BeastChakra1,
+                1 => gauge.BeastChakra2,
+                _ => gauge.BeastChakra3
+            };
+            switch (chakra)
             {
                 case BeastChakraType.OpoOpo:
                     ImGui.SetCursorPos(origin + Scale(8 + 30 * num, 8));

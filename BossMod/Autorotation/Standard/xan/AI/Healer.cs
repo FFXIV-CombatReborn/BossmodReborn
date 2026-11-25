@@ -326,7 +326,7 @@ public sealed class HealerAI(RotationModuleManager manager, Actor player) : AIBa
             if (ratio < 0.5)
             {
                 foreach (var (card, action) in SupportCards)
-                    if (gauge.CurrentCards.Contains(card))
+                    if (gauge.Card1 == card || gauge.Card2 == card || gauge.Card3 == card)
                         UseOGCD(action, target);
 
                 if (NextChargeIn(BossMod.AST.AID.CelestialIntersection) > GCD && NextChargeIn(BossMod.AST.AID.EssentialDignity) > GCD)

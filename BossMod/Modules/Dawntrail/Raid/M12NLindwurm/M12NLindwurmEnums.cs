@@ -34,6 +34,8 @@ public enum AID : uint
     CruelCoil2 = 45340, // Lindwurm->location, 3.0s cast, single-target
     ConstrictorVisual1 = 46397, // Lindwurm->location, no cast, single-target
     ConstrictorVisual2 = 48628, // Lindwurm->location, no cast, single-target
+    ConstrictorVisual4 = 46399, // Lindwurm->location, no cast, single-target
+    ConstrictorVisual5 = 48627, // Lindwurm->location, no cast, single-target
     ConstrictorVisual3 = 46198, // Helper->self, 40.0s cast, range 13 circle (for cruel coil mechanic)
     Constrictor = 46199, // Helper->self, 1.0s cast, range 13 circle
 
@@ -79,7 +81,7 @@ public enum AID : uint
     _Weaponskill_4 = 46206, // Lindwurm2->self, no cast, single-target
     _Weaponskill_5 = 46201, // Lindwurm->self, no cast, single-target
     _Weaponskill_7 = 48085, // Lindwurm->self, no cast, single-target
-    _Spell_ = 46194, // Helper->self, no cast, range 60 circle
+    CruelCoilPull = 46194, // Helper->self, no cast, range 60 circle
     _Weaponskill_9 = 48332, // Lindwurm->self, no cast, single-target
 }
 

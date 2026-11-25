@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Dungeon.D11HeroesGauntlet.D112SpectralNecromancer;
+﻿namespace BossMod.Shadowbringers.Dungeon.D11HeroesGauntlet.D112SpectralNecromancer;
 
 public enum OID : uint
 {
@@ -70,14 +70,31 @@ class PainMire(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Pain
 {
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        if (Module.Enemies((uint)OID.BleedVoidzone).Any(x => x.EventState != 7))
-        { }
-        else
+        // the bleed voidzone already covers this area once it spawns
+        if (BleedVoidzone.GetVoidzones(Module).Length == 0)
             base.AddAIHints(slot, actor, assignment, hints);
     }
 }
 
-class BleedVoidzone(BossModule module) : Components.Voidzone(module, 8f, m => m.Enemies((uint)OID.BleedVoidzone).Where(x => x.EventState != 7));
+class BleedVoidzone(BossModule module) : Components.Voidzone(module, 8f, GetVoidzones)
+{
+    public static Actor[] GetVoidzones(BossModule module)
+    {
+        var enemies = module.Enemies((uint)OID.BleedVoidzone);
+        var count = enemies.Count;
+        if (count == 0)
+            return [];
+        var voidzones = new Actor[count];
+        var index = 0;
+        for (var i = 0; i < count; ++i)
+        {
+            var z = enemies[i];
+            if (z.EventState != 7)
+                voidzones[index++] = z;
+        }
+        return voidzones[..index];
+    }
+}
 class TwistedTouch(BossModule module) : Components.SingleTargetCast(module, (uint)AID.TwistedTouch);
 class ChaosStorm(BossModule module) : Components.RaidwideCast(module, (uint)AID.ChaosStorm);
 class DarkDeluge(BossModule module) : Components.SimpleAOEs(module, (uint)AID.DarkDeluge, 5f);
@@ -87,16 +104,26 @@ class Necrobombs(BossModule module) : BossComponent(module)
 {
     private readonly NecrobombBaitAway _ba = module.FindComponent<NecrobombBaitAway>()!;
     private static readonly AOEShapeCircle circle = new(8f);
+    private readonly List<ShapeDistance> _forbidden = [];
 
     public override void AddAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
         if (_ba.ActiveBaits.Count != 0)
             return;
-        var forbidden = new List<ShapeDistance>();
-        foreach (var e in WorldState.Actors.Where(x => !x.IsAlly && x.Tether.ID == (uint)TetherID.CrawlingNecrobombs))
-            forbidden.Add(circle.Distance(e.Position, default));
-        if (forbidden.Count != 0)
-            hints.AddForbiddenZone(new SDUnion([.. forbidden]));
+        // crawling necrobombs chase their tether target; check the necrobomb OIDs instead of every actor in the world
+        _forbidden.Clear();
+        for (var oid = (uint)OID.Necrobomb1; oid <= (uint)OID.Necrobomb8; ++oid)
+        {
+            var bombs = Module.Enemies(oid);
+            for (var i = 0; i < bombs.Count; ++i)
+            {
+                var e = bombs[i];
+                if (e.Tether.ID == (uint)TetherID.CrawlingNecrobombs)
+                    _forbidden.Add(circle.Distance(e.Position, default));
+            }
+        }
+        if (_forbidden.Count != 0)
+            hints.AddForbiddenZone(new SDUnion([.. _forbidden]));
     }
 }
 

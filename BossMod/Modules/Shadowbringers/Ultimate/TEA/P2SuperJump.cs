@@ -8,7 +8,7 @@ sealed class P2SuperJump(TEA module) : Components.GenericBaitAway(module, (uint)
     {
         CurrentBaits.Clear();
         var source = module.BruteJustice();
-        var target = source != null ? Raid.WithoutSlot(false, true, true).Farthest(source.Position) : null;
+        var target = source != null ? Raid.WithoutSlot(false, true, true).FarthestFrom(source.Position) : null;
         if (source != null && target != null)
             CurrentBaits.Add(new(source, target, _shape));
     }

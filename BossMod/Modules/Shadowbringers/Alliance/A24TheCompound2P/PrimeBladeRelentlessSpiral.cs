@@ -60,8 +60,7 @@ sealed class PrimeBladeTransfer(BossModule module) : Components.GenericAOEs(modu
         };
         if (shape != null)
         {
-            var posXZ = caster.Position;
-            _casters.Add((shape, new((int)posXZ.X, (int)posXZ.Z), Module.CastFinishAt(spell)));
+            _casters.Add((shape, caster.Position, Module.CastFinishAt(spell)));
         }
     }
 
@@ -75,7 +74,7 @@ sealed class PrimeBladeTransfer(BossModule module) : Components.GenericAOEs(modu
             for (var j = countT; j >= 0; --j)
             {
                 var t = _tethers[j];
-                if (c.origin == t.target.Position)
+                if (c.origin.AlmostEqual(t.target.Position, 1f))
                 {
                     if (c.shape != Rect)
                     {

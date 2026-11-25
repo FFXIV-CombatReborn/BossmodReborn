@@ -72,6 +72,10 @@ sealed class CruelCoil(BossModule module) : Components.GenericAOEs(module, warni
             if (state == 0x00010001)
             {
                 _active = true;
+                if (_aoe.Length != 0)
+                {
+                    _aoe[0].Activation = WorldState.FutureTime(3.4d);
+                }
                 UpdateArena(index);
             }
         }

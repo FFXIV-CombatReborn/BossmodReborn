@@ -7,10 +7,12 @@ sealed class BladeOfEntropy(BossModule module) : TemperatureAOE(module)
 
     private readonly AOEShapeRect _shapeCell = new(5f, 5f, 5f);
 
+    private readonly List<AOEInstance> _aoesBuffer = [];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         var playerTemp = Math.Clamp(Temperature(actor), -2, +2);
-        var aoes = new List<AOEInstance>();
+        var aoes = _aoesBuffer;
+        aoes.Clear();
         for (var x = -2; x <= +2; ++x)
         {
             for (var z = -2; z <= +2; ++z)

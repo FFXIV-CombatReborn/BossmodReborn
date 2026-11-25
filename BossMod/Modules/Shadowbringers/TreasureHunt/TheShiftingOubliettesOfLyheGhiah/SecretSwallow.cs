@@ -66,6 +66,7 @@ sealed class SecretSwallowStates : StateMachineBuilder
             .ActivateOnEnter<Spin>()
             .ActivateOnEnter<Mash>()
             .ActivateOnEnter<Scoop>()
+            .ActivateOnEnter<MandragoraAOEs>()
             .Raw.Update = () => AllDeadOrDestroyed(SecretSwallow.All);
     }
 }

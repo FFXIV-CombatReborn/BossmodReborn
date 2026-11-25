@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Dungeon.D11HeroesGauntlet.D113SpectralBerserker;
+﻿namespace BossMod.Shadowbringers.Dungeon.D11HeroesGauntlet.D113SpectralBerserker;
 
 public enum OID : uint
 {
@@ -219,12 +219,16 @@ sealed class CratersWildRampage(BossModule module) : Components.GenericAOEs(modu
     private DateTime activation;
     private AOEShapeCustom? _aoe;
 
+    private readonly AOEInstance[] _oneAOEInstance = new AOEInstance[1];
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         if (_aoe is AOEShapeCustom aoe)
         {
             aoe.InvertForbiddenZone = invert;
-            return new AOEInstance[1] { new(aoe, Arena.Center, default, activation, invert ? Colors.SafeFromAOE : default) };
+            {
+                _oneAOEInstance[0] = new(aoe, Arena.Center, default, activation, invert ? Colors.SafeFromAOE : default);
+                return _oneAOEInstance;
+            }
         }
         return [];
     }

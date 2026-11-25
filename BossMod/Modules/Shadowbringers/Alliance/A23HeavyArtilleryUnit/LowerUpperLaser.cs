@@ -36,14 +36,12 @@ sealed class UpperLaser(BossModule module) : Components.GenericAOEs(module)
     {
         if (state == 0x00800100u && actor.OID == (uint)OID.ArenaFeatures)
         {
-            var center = Arena.Center;
-            // the lasers are placed poorly for some reason and can be off by 1-2°, so we need to round to nearest 60°
-            var angle = Angle.FromDirection(actor.Position - center).Round(60f);
-            var loc = center.Quantized();
+            var angle = LowerLaser.TurretAngle(actor);
+            var loc = Arena.Center.Quantized();
             var act = WorldState.FutureTime(9.7d);
             for (var i = 0; i < 3; ++i)
             {
-                _aoes.Add(new(donutsectors[i], center, angle, act.AddSeconds(i * 3d), risky: false));
+                _aoes.Add(new(donutsectors[i], loc, angle, act.AddSeconds(i * 3d), risky: false));
             }
             if (_aoes.Count == 9)
             {
@@ -70,15 +68,15 @@ sealed class LowerLaser(BossModule module) : Components.GenericAOEs(module)
     public readonly List<AOEInstance> AOEs = [with(3)];
     private static readonly AOEShapeCone cone = new(40f, 30f.Degrees());
 
+    public static Angle TurretAngle(Actor actor) => (180f + 60f * (int)(actor.LayoutID - 0x80D51Fu)).Degrees().Normalized();
+
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor) => CollectionsMarshal.AsSpan(AOEs);
 
     public override void OnActorEAnim(Actor actor, uint state)
     {
         if (state == 0x00100020u && actor.OID == (uint)OID.ArenaFeatures)
         {
-            var center = Arena.Center;
-            // the lasers are placed poorly for some reason and can be off by 1-2°, so we need to round to nearest 60°
-            AOEs.Add(new(cone, center.Quantized(), Angle.FromDirection(actor.Position - center).Round(60f), WorldState.FutureTime(9.7d)));
+            AOEs.Add(new(cone, Arena.Center.Quantized(), TurretAngle(actor), WorldState.FutureTime(9.7d)));
         }
     }
 

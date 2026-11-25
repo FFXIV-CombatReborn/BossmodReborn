@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Dungeon.D05MtGulg.D050ForgivenPrejudice;
+﻿namespace BossMod.Shadowbringers.Dungeon.D05MtGulg.D050ForgivenPrejudice;
 
 public enum OID : uint
 {
@@ -31,7 +31,9 @@ class D050ForgivenPrejudiceStates : StateMachineBuilder
             .ActivateOnEnter<Sanctification>()
             .ActivateOnEnter<PunitiveLight>()
             .ActivateOnEnter<SanctifiedAero>()
-            .Raw.Update = () => module.Enemies((uint)OID.Boss).All(e => e.IsDead) && module.Enemies((uint)OID.ForgivenVenery).All(e => e.IsDead) && module.Enemies((uint)OID.ForgivenExtortion).All(e => e.IsDead) && module.Enemies((uint)OID.ForgivenConformity).All(e => e.IsDead) || module.Enemies((uint)OID.ForgivenApathy).Any(e => e.InCombat) || module.Enemies((uint)OID.ForgivenApathy).Any(e => e.IsTargetable);
+            .Raw.Update = () => D050ForgivenPrejudice.AllDead(module, (uint)OID.Boss) && D050ForgivenPrejudice.AllDead(module, (uint)OID.ForgivenVenery)
+            && D050ForgivenPrejudice.AllDead(module, (uint)OID.ForgivenExtortion) && D050ForgivenPrejudice.AllDead(module, (uint)OID.ForgivenConformity)
+            || D050ForgivenPrejudice.AnyInCombat(module, (uint)OID.ForgivenApathy) || D050ForgivenPrejudice.AnyTargetable(module, (uint)OID.ForgivenApathy);
     }
 }
 
@@ -49,5 +51,45 @@ public class D050ForgivenPrejudice(WorldState ws, Actor primary) : SimpleBossMod
     }
 
     public override bool CheckReset() => false;
-    protected override bool CheckPull() => (!Enemies((uint)OID.ForgivenApathy).Any(e => e.InCombat) || !Enemies((uint)OID.ForgivenApathy).Any(e => e.IsTargetable)) && PrimaryActor.IsTargetable && PrimaryActor.InCombat || Enemies((uint)OID.ForgivenExtortion).Any(e => e.InCombat) || Enemies((uint)OID.ForgivenConformity).Any(e => e.InCombat) || Enemies((uint)OID.ForgivenVenery).Any(e => e.InCombat);
+    protected override bool CheckPull() => (!AnyInCombat(this, (uint)OID.ForgivenApathy) || !AnyTargetable(this, (uint)OID.ForgivenApathy)) && PrimaryActor.IsTargetable && PrimaryActor.InCombat
+        || AnyInCombat(this, (uint)OID.ForgivenExtortion) || AnyInCombat(this, (uint)OID.ForgivenConformity) || AnyInCombat(this, (uint)OID.ForgivenVenery);
+
+    public static bool AllDead(BossModule module, uint oid)
+    {
+        var enemies = module.Enemies(oid);
+        for (var i = 0; i < enemies.Count; ++i)
+        {
+            if (!enemies[i].IsDead)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static bool AnyInCombat(BossModule module, uint oid)
+    {
+        var enemies = module.Enemies(oid);
+        for (var i = 0; i < enemies.Count; ++i)
+        {
+            if (enemies[i].InCombat)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static bool AnyTargetable(BossModule module, uint oid)
+    {
+        var enemies = module.Enemies(oid);
+        for (var i = 0; i < enemies.Count; ++i)
+        {
+            if (enemies[i].IsTargetable)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 }

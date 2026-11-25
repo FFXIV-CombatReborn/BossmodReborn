@@ -1,6 +1,6 @@
-namespace BossMod.Shadowbringers.Foray.Duel.Duel3Sartauvoir;
+﻿namespace BossMod.Shadowbringers.Foray.Duel.Duel3Sartauvoir;
 
-sealed class Pyrolatry(BossModule module) : Components.RaidwideCast(module, (uint)AID.Pyrolatry);
+sealed class Pyrolatry(BossModule module) : Components.RaidwideCast(module, (uint)AID.PyrolatryVisual); // the helper raidwide has no cast; the boss visual does
 sealed class Flashover(BossModule module) : Components.SimpleAOEs(module, (uint)AID.Flashover, 19f);
 sealed class FlamingRain(BossModule module) : Components.SimpleAOEs(module, (uint)AID.FlamingRain, 6f);
 sealed class PillarOfFlame(BossModule module) : Components.SimpleAOEs(module, (uint)AID.PillarOfFlame, 8f);
@@ -33,5 +33,5 @@ sealed class Backdraft(BossModule module) : Components.SimpleKnockbacks(module, 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.BozjaDuel, GroupID = 735u, NameID = 12u)]
 public sealed class Duel3Sartauvoir(WorldState ws, Actor primary) : BossModule(ws, primary, new(-15f, 145f), new ArenaBoundsSquare(18f))
 {
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InSquare(Arena.Center, 20f);
-}
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is Actor player && player.Position.InSquare(Arena.Center, 20f);
+}

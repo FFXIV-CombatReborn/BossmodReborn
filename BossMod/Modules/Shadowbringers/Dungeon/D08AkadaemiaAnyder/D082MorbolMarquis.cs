@@ -1,4 +1,4 @@
-namespace BossMod.Shadowbringers.Dungeon.D08AkadaemiaAnyder.D082MorbolMarquis;
+﻿namespace BossMod.Shadowbringers.Dungeon.D08AkadaemiaAnyder.D082MorbolMarquis;
 
 public enum OID : uint
 {
@@ -48,6 +48,7 @@ sealed class ExtensibleTendrilsPutridBreath(BossModule module) : Components.Gene
     private AOEInstance[] _aoe = [];
     private DateTime activation;
     private int remainingCasts;
+    private readonly List<AOEInstance> _aoes = new(2);
 
     public override ReadOnlySpan<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
@@ -55,7 +56,8 @@ sealed class ExtensibleTendrilsPutridBreath(BossModule module) : Components.Gene
         {
             return _aoe;
         }
-        var aoes = new List<AOEInstance>(2);
+        var aoes = _aoes;
+        aoes.Clear();
         if (remainingCasts > 0)
         {
             var delay1 = activation.AddSeconds((5d - remainingCasts) * 6.1d);
